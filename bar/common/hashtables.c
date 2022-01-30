@@ -256,7 +256,6 @@ LOCAL bool findEntry(HashTable      *hashTable,
 
   assert(hashTable != NULL);
   assert(keyData != NULL);
-  assert(index != NULL);
 
   tableIndex = hash%hashTable->size;
 

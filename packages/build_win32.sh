@@ -156,12 +156,17 @@ if test -z "$winepath"; then
 fi
 
 # get ISCC
-iscc=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
-if ! test -f "$iscc"; then
-  iscc=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
-fi
-if ! test -f "$iscc"; then
-  echo >&2 ERROR: ISCC.exe not found!
+set +x
+iscc1=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
+iscc2=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
+if   test -f "$iscc1"; then
+  iscc="$iscc1"
+elif test -f "$iscc2"; then
+  iscc="$iscc2"
+else
+  echo >&2 "ERROR: ISCC.exe not found in:"
+  echo >&2 "         `dirname $iscc1`"
+  echo >&2 "         `dirname $iscc2`"
   exit 1
 fi
 
@@ -173,6 +178,9 @@ fi
 tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 
 (
+set -x
+  set -e
+
   cd $tmpDir
 
 # TODO: out-of-source build, build from source instead of extrac distribution file
@@ -191,14 +199,15 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
     --local-directory /media/extern \
     --no-verbose \
     $ADDITIONAL_DOWNLOAD_FLAGS
+#TODO: enable postgres
   $projectRoot/configure \
+--disable-postgresql \
     --host=i686-w64-mingw32 \
     --build=x86_64-linux \
-    --disable-link-static \
-    --enable-link-dynamic \
+    --enable-link-static \
+    --disable-link-dynamic \
     --disable-bfd \
---disable-epm \
-    ;
+    --disable-epm
   make
   make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
@@ -215,13 +224,18 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
   # get MD5 hash
   md5sum $sourcePath/${setupName}.exe
 
-  # debug
-  if test $debugFlag -eq 1; then
-    /bin/bash
-  fi
+  set +e
 )
+rc=$?
+
+# debug
+if test $debugFlag -eq 1; then
+  (cd $tmpDir;
+   /bin/bash
+  )
+fi
 
 # clean-up
 rm -rf $tmpDir
 
-exit 0
+exit $rc

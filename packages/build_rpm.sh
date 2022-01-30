@@ -150,6 +150,8 @@ LANG=en_US.utf8 $sourcePath/packages/changelog.pl --type rpm < $sourcePath/Chang
 # build rpm package (Note: rpmbuild require access)
 chmod 666 $distributionFileName
 (
+  set -e
+
   cd $tmpDir
 
 # TODO: out-of-source build, build from source instead of extract distribution file
@@ -172,13 +174,18 @@ chmod 666 $distributionFileName
   # get MD5 hash
   md5sum $sourcePath/$rpmFileName
 
-  # debug
-  if test $debugFlag -eq 1; then
-    /bin/bash
-  fi
+  set +e
 )
+rc=$?
+
+# debug
+if test $debugFlag -eq 1; then
+  (cd $tmpDir;
+   /bin/bash
+  )
+fi
 
 # clean-up
 rm -rf $tmpDir
 
-exit 0
+exit $rc

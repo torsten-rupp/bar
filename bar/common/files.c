@@ -1343,6 +1343,7 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         break; /* not reached */
     }
   #elif defined(PLATFORM_WINDOWS)
+    bufferLength = 0;
     switch (fileSystemPathType)
     {
       case FILE_SYSTEM_PATH_ROOT:
@@ -1763,6 +1764,8 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     free(name);
     String_delete(templateName);
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(directory);
+
     // Note: there is no Win32 function to create a temporary directory? Poor Windows...
     do
     {
@@ -1780,7 +1783,6 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       if (mkdir(name) != 0)
       {
         error = getLastError(ERROR_CODE_IO,name);
-        free(name);
         return error;
       }
     #elif (MKDIR_ARGUMENTS_COUNT == 2)
@@ -1792,7 +1794,6 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       if (mkdir(name,0777 & ~currentCreationMask) != 0)
       {
         error = getLastError(ERROR_CODE_IO,name);
-        free(name);
         return error;
       }
     #else
@@ -3847,6 +3848,7 @@ bool File_isNetworkFileSystemCString(const char *fileName)
                             || (fileSystemStat.f_type == SMB_SUPER_MAGIC);
     }
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(fileName);
   #endif /* PLATFORM_... */
 
   return isNetworkFileSystem;
@@ -4525,6 +4527,7 @@ Errors File_setOwner(ConstString fileName,
     #endif /* HAVE_CHOWN */
   #elif defined(PLATFORM_WINDOWS)
 //TODO: implement
+UNUSED_VARIABLE(fileName);
 UNUSED_VARIABLE(userId);
 UNUSED_VARIABLE(groupId);
 
@@ -5077,22 +5080,38 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
 
 String File_castToString(String string, const FileCast *fileCast)
 {
-  char s[64];
-  struct tm tm;
+  char      s[64];
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tm;
+  #else
+    struct tm *tm;
+  #endif
 
   assert(s != NULL);
   assert(fileCast != NULL);
 
   String_clear(string);
 
-  localtime_r(&fileCast->mtime,&tm);
-  strftime(s,sizeof(s),"%F %T",&tm);
+  #ifdef HAVE_LOCALTIME_R
+    localtime_r(&fileCast->mtime,&tm);
+    strftime(s,sizeof(s),"%F %T",&tm);
+  #else
+    tm = localtime(&fileCast->mtime);
+    assert(tm != NULL);
+    strftime(s,sizeof(s),"%F %T",tm);
+  #endif
   String_appendFormat(string,"mtime=%s",s);
 
   String_appendChar(string,' ');
 
-  localtime_r(&fileCast->ctime,&tm);
-  strftime(s,sizeof(s),"%F %T",&tm);
+  #ifdef HAVE_LOCALTIME_R
+    localtime_r(&fileCast->ctime,&tm);
+    strftime(s,sizeof(s),"%F %T",&tm);
+  #else
+    tm = localtime(&fileCast->ctime);
+    assert(tm != NULL);
+    strftime(s,sizeof(s),"%F %T",tm);
+  #endif
   String_appendFormat(string,"ctime=%s",s);
 
   return string;

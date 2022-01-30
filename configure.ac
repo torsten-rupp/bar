@@ -72,6 +72,9 @@ AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
       LIBS="$LIBS -l$z"
     fi
   done
+
+  # some host tests need dynamic libraries
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
 ])
 
 dnl --- check if C compiler support option
@@ -277,11 +280,13 @@ AC_DEFUN([AC_CHECK_FUNCTION],
       echo > conftest.log
 
       for ac_headers in $4 ""; do
-        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+                                        ],
                                         [`if test -z "$ac_headers"; then echo "extern void $1();"; fi`
                                          #ifdef $1
                                          #else
-                                           return (int)$1;
+                                           return (intptr_t)$1;
                                          #endif
                                         ]
                                        )
@@ -503,9 +508,9 @@ AC_DEFUN([AC_CHECK_MKDIR_ARGUMENTS],
     [number of arguments of mkdir()],
     ac_cv_mkdir_arguments_count,
     [
-      ac_cv_mkdir_arguments_count=""
+      ac_cv_mkdir_arguments_count="unknown"
 
-      if test -z "$ac_cv_mkdir_arguments_count"; then
+      if test "$ac_cv_mkdir_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <io.h>
 int main(void) { mkdir("."); return 0; }
@@ -516,7 +521,7 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_mkdir_arguments_count"; then
+      if test "$ac_cv_mkdir_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -529,9 +534,95 @@ EOF
         rm -f conftest.c conftest.o
       fi
     ]
-  )dnl
-
+  )
+  AS_IF([test "$ac_cv_mkdir_arguments_count" != "unknown"],[$1],:,[$2])
   AC_DEFINE_UNQUOTED(MKDIR_ARGUMENTS_COUNT,$ac_cv_mkdir_arguments_count,[number of mkdir() arguments])
+
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check number of arguments of bfd_section_vma
+dnl usage: AC_CHECK_BFD_SECTION_VMA_ARGUMENTS
+AC_DEFUN([AC_CHECK_BFD_SECTION_VMA_ARGUMENTS],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [number of arguments of bfd_section_vma()],
+    ac_cv_bfd_section_vma_arguments_count,
+    [
+      ac_cv_bfd_section_vma_arguments_count="unknown"
+
+      if test "$ac_cv_bfd_section_vma_arguments_count" = "unknown"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { asection *section = NULL; bfd_section_vma(section); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_vma_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test "$ac_cv_bfd_section_vma_arguments_count" = "unknown"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { bfd *abfd = NULL; asection *section = NULL; bfd_section_vma(abfd,section); (void)abfd; return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_vma_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+    ]
+  )
+  AS_IF([test "$ac_cv_bfd_section_vma_arguments_count" != "unknown"],[$1],:,[$2])
+  AC_DEFINE_UNQUOTED(BFD_SECTION_VMA_ARGUMENTS_COUNT,$ac_cv_bfd_section_vma_arguments_count,[number of bfd_section_vma() arguments])
+
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check number of arguments of bfd_section_size
+dnl usage: AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS
+AC_DEFUN([AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [number of arguments of bfd_section_size()],
+    ac_cv_bfd_section_size_arguments_count,
+    [
+      ac_cv_bfd_section_size_arguments_count="unknown"
+
+      if test "$ac_cv_bfd_section_size_arguments_count" = "unknown"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { asection *section = NULL; bfd_section_size(section); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_size_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test "$ac_cv_bfd_section_size_arguments_count" = "unknown"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { bfd *abfd = NULL; asection *section = NULL; bfd_section_size(abfd,section); (void)abfd; return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_size_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+    ]
+  )
+  AS_IF([test "$ac_cv_bfd_section_size_arguments_count" != "unknown"],[$1],:,[$2])
+  AC_DEFINE_UNQUOTED(BFD_SECTION_SIZE_ARGUMENTS_COUNT,$ac_cv_bfd_section_size_arguments_count,[number of bfd_section_size() arguments])
 
   AC_PROVIDE([$0])dnl
 ])
@@ -872,6 +963,10 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
+AC_SUBST(MYSQL)                             dnl mysql command
+AC_SUBST(PSQL)                              dnl psql command
+AC_SUBST(CREATEDB)                          dnl createdb command
+
 AC_SUBST(DOCKER)                            dnl docker
 AC_SUBST(WINE)                              dnl wine
 AC_SUBST(WINE_C_DRIVE)                      dnl wine c:-drive path
@@ -959,9 +1054,10 @@ dnl $build_cpu
 dnl $build_os
 dnl AC_WARN([host: $host cpu=$host_cpu os=$host_os])
 dnl AC_WARN([build: $build cpu=$build_cpu os=$build_os])
-case "$host_os" in
+case $host_os in
   linux-*)
     PLATFORM=LINUX
+    SYSTEM_NAME=Linux
     CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
@@ -973,8 +1069,27 @@ case "$host_os" in
       CPU_CORES=1
     fi
     ;;
+  sunos | solaris*)
+    PLATFORM=SOLARIS
+    SYSTEM_NAME=Solaris
+    CPU=$host_cpu
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
+    CPU_CORES=1
+    ;;
+  darwin*)
+    PLATFORM=MAC_OSX
+    SYSTEM_NAME=MacOSX
+    CPU=$host_cpu
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
+    CPU_CORES=1
+    ;;
   windows*|mingw*)
     PLATFORM=WINDOWS
+    SYSTEM_NAME=Windows
     CPU=$host_cpu
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
@@ -985,22 +1100,6 @@ case "$host_os" in
     else
       CPU_CORES=1
     fi
-    ;;
-  sunos | solaris*)
-    PLATFORM=SOLARIS
-    CPU=$host_cpu
-    FILE_SEPARATOR_CHAR="/"
-    JAVA_PATH_SEPARATOR=":"
-    SHELLEXT=""
-    CPU_CORES=1
-    ;;
-  darwin*)
-    PLATFORM=MAC_OSX
-    CPU=$host_cpu
-    FILE_SEPARATOR_CHAR="/"
-    JAVA_PATH_SEPARATOR=":"
-    SHELLEXT=""
-    CPU_CORES=1
     ;;
   *)
     AC_MSG_ERROR([unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os])
@@ -1130,11 +1229,6 @@ AC_ARG_ENABLE(
   [ENABLE_ISO9660=$enableval]
 )
 AC_ARG_ENABLE(
-  pcre,
-  AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
-  [ENABLE_PCRE=$enableval]
-)
-AC_ARG_ENABLE(
   mariadb,
   AC_HELP_STRING([--disable-mariadb],[disable MariaDB support]),
   [ENABLE_MARIADB=$enableval]
@@ -1143,6 +1237,11 @@ AC_ARG_ENABLE(
   postgresql,
   AC_HELP_STRING([--disable-postgresql],[disable PostgreSQL support]),
   [ENABLE_POSTGRESQL=$enableval]
+)
+AC_ARG_ENABLE(
+  pcre,
+  AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
+  [ENABLE_PCRE=$enableval]
 )
 AC_ARG_ENABLE(
   crashdump,
@@ -1498,16 +1597,16 @@ AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
 AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
 AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
-case "$host_os" in
+case $host_os in
   linux-*)
-    ;;
-  windows*|mingw*)
-    # Note: __mingw_printf, __mingw_fprintf are not recognized as format functions by mingw gcc version 7.3?
-    AC_CC_OPTION(-Wno-format,CC_WARN_FLAGS CXX_WARN_FLAGS)
     ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
+    # Note: __mingw_printf, __mingw_fprintf are not recognized as format functions by mingw gcc version 7.3?
+    AC_CC_OPTION(-Wno-format,CC_WARN_FLAGS CXX_WARN_FLAGS)
     ;;
 esac
 
@@ -1528,24 +1627,24 @@ CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
 case $host_os in
   linux-*)
     ;;
-  windows*|mingw*)
-    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600"
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
+    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600 _POSIX_C_SOURCE"
     ;;
 esac
 
 CC_INCLUDES="$CC_INCLUDES"
-case "$host_os" in
+case $host_os in
   linux-*)
-    ;;
-  windows*|mingw*)
     ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
     ;;
 esac
 
@@ -1554,18 +1653,26 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
-case "$host_os" in
+case $host_os in
   linux-*)
     if test "$ENABLE_DEBUG" = "yes"; then
       # required for printing stacktraces
       AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
     fi
     ;;
-  windows*|mingw*)
-    ;;
   sunos | solaris*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+    fi
     ;;
   darwin*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+    fi
+    ;;
+  windows*|mingw*)
     ;;
 esac
 
@@ -1595,6 +1702,20 @@ case $host_os in
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
     ;;
+  sunos | solaris*)
+    AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
+    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
+    ;;
+  darwin*)
+    AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
+    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
+    ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
     AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
@@ -1603,10 +1724,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(SHGetFolderPath,shell32,[STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"],,shlobj.h)
     AC_SEARCH_STATIC_LIBRARIES(CoTaskMemFree,ole32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"],,combaseapi.h)
     AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
-    ;;
-  sunos | solaris*)
-    ;;
-  darwin*)
+    AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
     ;;
 esac
 
@@ -1652,12 +1770,12 @@ if test -d icu -o -d "`readlink icu`"; then
       case $host_os in
         linux-*)
           ;;
-        windows*|mingw*)
-          # patch to disable usage of lib-command when RANLIB is set
-          ;;
         sunos | solaris*)
           ;;
         darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
           ;;
       esac
     fi
@@ -1728,6 +1846,10 @@ if test -d icu -o -d "`readlink icu`"; then
       case $host_os in
         linux-*)
           ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
         windows*|mingw*)
           # Note: bug in library names of older ICU versions?
           #       https://unicode-org.atlassian.net/browse/ICU-13138
@@ -1737,10 +1859,6 @@ if test -d icu -o -d "`readlink icu`"; then
           (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
-          ;;
-        sunos | solaris*)
-          ;;
-        darwin*)
           ;;
       esac
     fi
@@ -1959,6 +2077,10 @@ if test $ENABLE_LZMA = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
@@ -1968,10 +2090,6 @@ if test $ENABLE_LZMA = "yes"; then
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2056,14 +2174,14 @@ if test $ENABLE_LZO = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            # patch to fix missing --tag=CC for in libtool call
-            #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
-              (cd extern/lzo-2.10; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            # patch to fix missing --tag=CC for in libtool call
+            #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
+            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -2348,6 +2466,10 @@ if test $ENABLE_GCRYPT = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
@@ -2359,10 +2481,6 @@ if test $ENABLE_GCRYPT = "yes"; then
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2418,12 +2536,12 @@ if test $ENABLE_GCRYPT = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -2499,7 +2617,7 @@ if test $ENABLE_SSH = "yes"; then
       AC_MSG_COMPILE([openssl])
       result=1
       if test $result -eq 1; then
-        case "$host_os" in
+        case $host_os in
           linux-*)
             if test "$host_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
@@ -2548,10 +2666,6 @@ if test $ENABLE_SSH = "yes"; then
               AC_MSG_OUTPUT_LOG($tmpFile)
               result=0
             fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2607,6 +2721,10 @@ if test $ENABLE_SSH = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
@@ -2618,10 +2736,6 @@ if test $ENABLE_SSH = "yes"; then
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2660,12 +2774,12 @@ if test $ENABLE_SSH = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -2740,7 +2854,7 @@ if test $ENABLE_TLS = "yes"; then
         # Note: clean is obviously not enough, try distclean
         (cd gmp; make distclean) 1>/dev/null 2>&1
         if test "$host_cpu" = "x86_64"; then
-          case "$host_os" in
+          case $host_os in
             linux-*)
               case $host_cpu in
                 *86*)
@@ -2768,6 +2882,10 @@ if test $ENABLE_TLS = "yes"; then
                   ;;
               esac
               ;;
+            sunos | solaris*)
+              ;;
+            darwin*)
+              ;;
             windows*|mingw*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
@@ -2778,10 +2896,6 @@ if test $ENABLE_TLS = "yes"; then
                 --enable-pic \
                 --enable-fat \
               ) 1>$tmpFile 2>&1
-              ;;
-            sunos | solaris*)
-              ;;
-            darwin*)
               ;;
           esac
         else
@@ -3016,6 +3130,10 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
@@ -3028,10 +3146,6 @@ if test $ENABLE_CURL = "yes"; then
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3070,12 +3184,12 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3089,6 +3203,10 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
@@ -3101,10 +3219,6 @@ if test $ENABLE_CURL = "yes"; then
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3176,12 +3290,12 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
         esac
       fi
@@ -3195,6 +3309,10 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
@@ -3207,10 +3325,6 @@ if test $ENABLE_CURL = "yes"; then
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3251,12 +3365,12 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3371,6 +3485,7 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     AC_MSG_CREATE([sqlite3.c])
     result=1
     if test $result -eq 1; then
+      # Note: no cross-compile; create source only
       (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
         --build=$build \
         --disable-tcl \
@@ -3407,175 +3522,227 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
 fi
 
 # compile MariaDB client
-if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile MariaDB client library
+if test $ENABLE_MARIADB = "yes"; then
+  if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile MariaDB client library
 
-    cwd=`pwd`
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([MariaDB client])
-    result=1
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-        -DWITH_EXTERNAL_ZLIB=ON \
-        -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-        -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-        -DOPENSSL_FOUND=1 \
-        -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-        -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
-        -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
-        -DOPENSSL_LIBRARIES=$cwd/extern/lib \
-        -DWITH_CURL=OFF \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; \
-       make clean; \
-       make -C libmariadb mariadbclient -j$CPU_CORES; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; \
-       make -C include install PREFIX=$cwd/extern; \
-       install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
-  fi
+      AC_MSG_COMPILE([MariaDB client])
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          linux-*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          sunos | solaris*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          darwin*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
+            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
+            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>/dev/null 2>/dev/null
 
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES mariadb-connector-c"
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+              -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+              -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITH_SSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mariadb-connector-c; \
+         make clean; \
+         make -C libmariadb mariadbclient -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mariadb-connector-c; \
+         make -C include install PREFIX=$cwd/extern; \
+         install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+      result=1
     fi
-    HAVE_MARIADB=1
-    AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
-  fi
-else
-  dnl search for installed MariaDB client library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES mariadbclient"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+      fi
+      HAVE_MARIADB=1
+      AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
+    fi
   else
-    if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
-    fi
-    if test -z "$HAVE_MARIADB"; then
+    dnl search for installed MariaDB client library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    else
+      if test -z "$HAVE_MARIADB"; then
+        AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+      fi
+      if test -z "$HAVE_MARIADB"; then
+        AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+      fi
     fi
   fi
-fi
-if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
-    AC_MSG_WARN([MariaDB client not compiled: MariaDB client package missing])
+  if test -z "$HAVE_MARIADB"; then
+    if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
+      AC_MSG_WARN([MariaDB client not compiled: MariaDB client package missing])
+    fi
   fi
 fi
 
 # compile PostgreSQL client
-if test -d postgresql -o -d "`readlink postgresql`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile PostgreSQL client library
+if test $ENABLE_POSTGRESQL = "yes"; then
+  if test -d postgresql -o -d "`readlink postgresql`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile PostgreSQL client library
 
-    cwd=`pwd`
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([PostgreSQL client])
-    result=1
-    if test $result -eq 1; then
-      (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
-        --host=$host \
-        --build=$build \
-        --prefix=$cwd/extern \
-        --with-includes=$cwd/extern/include \
-        --with-libraries=$cwd/extern/lib \
-        --enable-thread-safety \
-        --with-openssl \
-        --without-readline \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      AC_MSG_COMPILE([PostgreSQL])
+      result=1
+      if test $result -eq 1; then
+        (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --with-includes=$cwd/extern/include \
+          --with-libraries=$cwd/extern/lib \
+          --enable-thread-safety \
+          `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+          --without-readline \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd postgresql; \
-       make clean; \
-       make -C src/interfaces -j$CPU_CORES; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      if test $result -eq 1; then
+        (cd postgresql; \
+         make clean; \
+         make -C src/interfaces -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd postgresql; \
-       make -C src/include install PREFIX=$cwd/extern; \
-       make -C src/interfaces install PREFIX=$cwd/extern; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      if test $result -eq 1; then
+        (cd postgresql; \
+         make -C src/include install PREFIX=$cwd/extern; \
+         make -C src/interfaces install PREFIX=$cwd/extern; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES pq pgtypes"
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+      result=1
     fi
-    HAVE_POSTGRESQL=1
-    AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
-  fi
-else
-  dnl search for installed PostgreSQL client library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-    AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES pq pgtypes"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+      fi
+      HAVE_POSTGRESQL=1
+      AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
+    fi
   else
-    if test -z "$HAVE_POSTGRESQL"; then
-      AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-      AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-    fi
-    if test -z "$HAVE_POSTGRESQL"; then
+    dnl search for installed PostgreSQL client library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
       AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+    else
+      if test -z "$HAVE_POSTGRESQL"; then
+        AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+        AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      fi
+      if test -z "$HAVE_POSTGRESQL"; then
+        AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+        AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      fi
     fi
   fi
-fi
-if test -z "$HAVE_POSTGRESQL"; then
-  if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
-    AC_MSG_WARN([PostgreSQL not compiled: PostgreSQL package missing])
+  if test -z "$HAVE_POSTGRESQL"; then
+    if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
+      AC_MSG_WARN([PostgreSQL not compiled: PostgreSQL package missing])
+    fi
   fi
 fi
 
@@ -3638,11 +3805,11 @@ if test $ENABLE_ISO9660 = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
             ;;
         esac
       fi
@@ -3751,6 +3918,10 @@ if test $ENABLE_PCRE = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
@@ -3763,10 +3934,6 @@ if test $ENABLE_PCRE = "yes"; then
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3803,13 +3970,13 @@ if test $ENABLE_PCRE = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
-            (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3851,8 +4018,12 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
-case "$host_os" in
+case $host_os in
   linux-*)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
@@ -3903,10 +4074,6 @@ case "$host_os" in
         fi
       fi
     fi
-    ;;
-  sunos | solaris*)
-    ;;
-  darwin*)
     ;;
 esac
 
@@ -4237,7 +4404,7 @@ AC_CHECK_HEADERS(\
 AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
 AC_CHECK_TYPE(ulong,AC_DEFINE(HAVE_ULONG,1,[defined if ulong is available]))
 AC_CHECK_TYPE(long long int,AC_DEFINE(HAVE_LONG_LONG,1,[defined if ulong is available]))
-dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
+dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR([long long data type not available]))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
 AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
@@ -4262,11 +4429,11 @@ case $host_os in
       AC_SEARCH_STATIC_LIBRARIES(idn_free,idn,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn"],,idn-free.h)
     fi
     ;;
-  windows*|mingw*)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
     ;;
 esac
 
@@ -4409,7 +4576,7 @@ AC_CHECK_FUNCTION(lgetxattr,           AC_DEFINE(HAVE_LGETXATTR,           1,[lg
 AC_CHECK_FUNCTION(lsetxattr,           AC_DEFINE(HAVE_LSETXATTR,           1,[lsetxattr() available]) ,,sys/xattr.h)
 AC_CHECK_FUNCTION(select,              AC_DEFINE(HAVE_SELECT,              1,[select() available]) ,,sys/select.h winsock2.h)
 AC_CHECK_FUNCTION(pselect,             AC_DEFINE(HAVE_PSELECT,             1,[pselect() available]) ,,sys/select.h winsock2.h)
-AC_CHECK_MKDIR_ARGUMENTS
+AC_CHECK_MKDIR_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of mkdir()]))
 
 AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)
 
@@ -4462,17 +4629,23 @@ AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() avai
 AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
 AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 
-AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]))
+AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
+AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
+AC_CHECK_FUNCTION(bfd_section_flags,AC_DEFINE(HAVE_BFD_SECTION_FLAGS,1,[bfd_section_flags() available]),,bfd.h)
+if test $HAVE_BFD; then
+  AC_CHECK_BFD_SECTION_VMA_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_vma()]))
+  AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_size()]))
+fi
 
 case $host_os in
   linux-*)
     ;;
-  windows*|mingw*)
-    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]),,winsock2.h)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
+    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]),,winsock2.h)
     ;;
 esac
 
@@ -4585,6 +4758,8 @@ if test $ENABLE_GCRYPT = "yes"; then
                     [#include "openssl/opensslv.h"],
                     [OPENSSL_VERSION_TEXT],
                     ["])
+fi
+if test $ENABLE_SSH = "yes"; then
   AC_CONSTANT_VALUE([ssh2 version],
                     VERSION_LIBSSH2,
                     [#include "libssh2.h"
@@ -4626,17 +4801,8 @@ if test $ENABLE_ISO9660 = "yes"; then
     AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
   fi
 fi
-if test $ENABLE_PCRE = "yes"; then
-  # Note: PCRE does not have a define for version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "pcre.h"
-              ],
-              [printf("%s",pcre_version());],
-              VERSION_PCRE=`./conftest$ac_exeext`,
-              VERSION_PCRE=unknown
-             )
-fi
 if test $ENABLE_MARIADB = "yes"; then
+  # Note: MariaDB does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
                #include "mariadb/mariadb_version.h"
               ],
@@ -4647,6 +4813,7 @@ if test $ENABLE_MARIADB = "yes"; then
              )
 fi
 if test $ENABLE_POSTGRESQL = "yes"; then
+  # Note: PostgreSQL does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
                #include "libpq-fe.h"
               ],
@@ -4654,6 +4821,16 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               ],
               VERSION_POSTGRESQL=`./conftest$ac_exeext`,
               VERSION_POSTGRESQL=unknown
+             )
+fi
+if test $ENABLE_PCRE = "yes"; then
+  # Note: PCRE does not have a define for version
+  AC_TRY_LINK([#include <stdio.h>
+               #include "pcre.h"
+              ],
+              [printf("%s",pcre_version());],
+              VERSION_PCRE=`./conftest$ac_exeext`,
+              VERSION_PCRE=unknown
              )
 fi
 
@@ -4738,7 +4915,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  crypto support     : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support        : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support       : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
-                    echo "  SCP/SFTP support   : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  SCP/SFTP support   : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
@@ -4777,6 +4954,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_MARIDDB" \
+                            -o ! "$HAVE_POSTGRESQL" \
                             -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"

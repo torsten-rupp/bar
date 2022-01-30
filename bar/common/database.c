@@ -10,6 +10,18 @@
 
 #define __DATABASE_IMPLEMENTATION__
 
+/* Note: using the binary interface of PostgreSQL would be more
+         efficient, but it is badly documented. E. g. when is int64
+         returned, when a numeric? How to convert a numeric to an int64?
+         There is a function PGTYPESnumeric_to_long(), but no
+         PGTYPESnumeric_to_int64(). If the binary interface is used
+         "wrong" - guess what may be wrong - an internal protocol error
+         may occur (08P01).  :-((
+         It looks like this "binary interface" operate direct on the
+         protocol data without any checks.
+*/
+#define _POSTGRESQL_BINARY_INTERFACE
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -28,7 +40,9 @@
 #else
   #error No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
-#include <endian.h>
+#ifdef POSTGRESQL_BINARY_INTERFACE
+  #include <endian.h>
+#endif
 #include <errno.h>
 #include <assert.h>
 
@@ -131,17 +145,14 @@ LOCAL const char *MARIADB_CHARACTER_SETS[] =
 
 // PostgreSQL specific constants
 #ifdef HAVE_POSTGRESQL
-  #define _POSTGRESQL_BINARY_INTERFACE
-            /* Note: using the binary interface of PostgreSQL would be
-                     more efficient, but it is badly documented. If it
-                     used "wrong" - guess what may be wrong - an
-                     internal protocol error may occur (08P01) :-((
-            */
+  #define MIN_POSTGRESQL_PROTOCOL_VERSION 3
 
-  /* PostgreSQL store timestamp since 2000-01-01 00:00:00 in us
-     See: https://www.postgresql.org/docs/9.1/datatype-datetime.html
-  */
-  #define POSTGRES_BASE_TIMESTAMP 946681200LL
+  #ifdef POSTGRESQL_BINARY_INTERFACE
+    /* PostgreSQL store timestamp since 2000-01-01 00:00:00 in us
+       See: https://www.postgresql.org/docs/9.1/datatype-datetime.html
+    */
+    #define POSTGRES_BASE_TIMESTAMP 946681200LL
+  #endif /* POSTGRESQL_BINARY_INTERFACE */
 #endif /* HAVE_POSTGRESQL */
 
 /***************************** Datatypes *******************************/
@@ -807,14 +818,14 @@ LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void 
     case SQLITE_TRACE_STMT:
       {
         sqlite3_stmt *statementHandle = (sqlite3_stmt*)p;
-        char         *sqlCommand;
+        char         *sqlString;
 
         if (!stringStartsWith((const char*)t,"--"))
         {
-          sqlCommand = sqlite3_expanded_sql(statementHandle);
+          sqlString = sqlite3_expanded_sql(statementHandle);
           fprintf(handle,"prepare: %s\n",sqlite3_sql(statementHandle));
-          fprintf(handle,"  expanded: %s\n",sqlCommand);
-          sqlite3_free(sqlCommand);
+          fprintf(handle,"  expanded: %s\n",sqlString);
+          sqlite3_free(sqlString);
         }
         else
         {
@@ -1579,25 +1590,25 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
 /***********************************************************************\
 * Name   : sqlite3Query
 * Purpose: do SQLite3 query
-* Input  : handle     - SQLite3 handle
-*          sqlCommand - SQL command
+* Input  : handle    - SQLite3 handle
+*          sqlString - SQL command string
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors sqlite3Exec(sqlite3    *handle,
-                         const char *sqlCommand
+                         const char *sqlString
                         )
 {
   int    sqliteResult;
   Errors error;
 
   assert(handle != NULL);
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
 
   sqliteResult = sqlite3_exec(handle,
-                              sqlCommand,
+                              sqlString,
                               CALLBACK_(NULL,NULL),
                               NULL
                              );
@@ -1613,7 +1624,7 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
     error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
-                    sqlCommand
+                    sqlString
                    );
   }
   else if (sqliteResult != SQLITE_OK)
@@ -1621,7 +1632,7 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
     error = ERRORX_(DATABASE,sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
-                    sqlCommand
+                    sqlString
                    );
   }
   else
@@ -1637,7 +1648,7 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
 * Purpose: prepare SQLite3 statement
 * Input  : statementHandle - statement handle variable
 *          handle          - SQLite3 handle
-*          sqlCommand      - SQL command
+*          sqlString       - SQL command string
 * Output : statementHandle - statement handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1645,7 +1656,7 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
 
 LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
                                      sqlite3      *handle,
-                                     const char   *sqlCommand
+                                     const char   *sqlString
                                     )
 {
   int    sqliteResult;
@@ -1653,10 +1664,10 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
 
   assert(statementHandle != NULL);
   assert(handle != NULL);
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
 
   sqliteResult = sqlite3_prepare_v2(handle,
-                                    sqlCommand,
+                                    sqlString,
                                     -1,
                                     statementHandle,
                                     NULL
@@ -1667,7 +1678,7 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
       HALT_INTERNAL_ERROR("SQLite prepare fail %d: %s: %s",
                           sqlite3_errcode(handle),
                           sqlite3_errmsg(handle),
-                          sqlCommand
+                          sqlString
                          );
     }
   #endif /* not NDEBUG */
@@ -1675,7 +1686,7 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
                         sqliteResult,sqlite3_extended_errcode(handle),
-                        sqlCommand
+                        sqlString
                        );
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
@@ -1683,7 +1694,7 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
     error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
-                    sqlCommand
+                    sqlString
                    );
   }
   else if (sqliteResult != SQLITE_OK)
@@ -1691,7 +1702,7 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
     error = ERRORX_(DATABASE,sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
-                    sqlCommand
+                    sqlString
                    );
   }
   else
@@ -1765,7 +1776,7 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 * Purpose: do SQLite3 step
 * Input  : statementHandle - statement handle
 *          handle          - SQLite3 handle
-*          sqlCommand      - SQL command
+*          timeout         - timeout [ms]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1842,27 +1853,28 @@ LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
   return error;
 }
 
+#ifdef HAVE_MARIADB
 /***********************************************************************\
 * Name   : mysqlExecute
 * Purpose: do MariaDB query
-* Input  : handle     - MySQL handle
-*          sqlCommand - SQL command
+* Input  : handle    - MySQL handle
+*          sqlString - SQL command string
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors mysqlExecute(MYSQL      *handle,
-                          const char *sqlCommand
+                          const char *sqlString
                          )
 {
   int    mysqlResult;
   Errors error;
 
   assert(handle != NULL);
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
 
-  mysqlResult = mysql_query(handle,sqlCommand);
+  mysqlResult = mysql_query(handle,sqlString);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
     HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
@@ -1876,7 +1888,7 @@ LOCAL Errors mysqlExecute(MYSQL      *handle,
                     mysql_errno(handle),
                     "%s: %s",
                     mysql_error(handle),
-                    sqlCommand
+                    sqlString
                    );
   }
   else if (mysqlResult != 0)
@@ -1885,7 +1897,7 @@ LOCAL Errors mysqlExecute(MYSQL      *handle,
                     mysql_errno(handle),
                     "%s: %s",
                     mysql_error(handle),
-                    sqlCommand
+                    sqlString
                    );
   }
   else
@@ -1899,8 +1911,8 @@ LOCAL Errors mysqlExecute(MYSQL      *handle,
 /***********************************************************************\
 * Name   : mysqlSelectDatabase_
 * Purpose: select MariaDB database
-* Input  : handle     - MySQL handle
-*          sqlCommand - SQL command
+* Input  : handle       - MySQL handle
+*          databaseName - database name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2125,7 +2137,9 @@ LOCAL DatabaseId mysqlGetLastInsertId(MYSQL_STMT *statementHandle)
 
   return (DatabaseId)mysql_stmt_insert_id(statementHandle);
 }
+#endif /* HAVE_MARIADB */
 
+#ifdef HAVE_POSTGRESQL
 /***********************************************************************\
 * Name   : postgresqlReceiveMessageHandler
 * Purpose: handle received server messages
@@ -2218,17 +2232,17 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 /***********************************************************************\
 * Name   : postgresqlPrepareStatement
 * Purpose: prepare PostgreSQL statement
-* Input  : handle           - database handle
-*          statementName    - statement name
-*          sqlString        - SQL string
-*          parameterCount   - number of parameters
-* Output : -
+* Input  : statement      - statement variable
+*          handle         - database handle
+*          sqlString      - SQL string
+*          parameterCount - number of parameters
+* Output : statement - statement
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlPrepareStatement(DatabaseHandle       *databaseHandle,
-                                        PostgresSQLStatement *statement,
+LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
+                                        DatabaseHandle       *databaseHandle,
                                         const char           *sqlString,
                                         uint                 parameterCount
                                        )
@@ -2323,19 +2337,16 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseHandle       *databaseHandle,
 /***********************************************************************\
 * Name   : postgresqlExecutePreparedStatement
 * Purpose: execute PostgreSQL prepared statement
-* Input  : handle        - database handle
-*          statementName - statement name
-*          parameterValues
-*          parameterLengths
-*          parameterFormats
+* Input  : statement      - prepared statement
+*          handle         - connection handle
 *          parameterCount
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlExecutePreparedStatement(PGconn               *handle,
-                                                PostgresSQLStatement *statement,
+LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
+                                                PGconn               *handle,
                                                 uint                 parameterCount
                                                )
 {
@@ -2345,7 +2356,6 @@ LOCAL Errors postgresqlExecutePreparedStatement(PGconn               *handle,
 
   assert(handle != NULL);
   assert(statement != NULL);
-
 
 // TODO:
 #if 1
@@ -2478,6 +2488,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
 
   return databaseId;
 }
+#endif /* HAVE_POSTGRESQL */
 
 /***********************************************************************\
 * Name   : openDatabase
@@ -2800,7 +2811,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
           }     optionValue;
           const char *password;
           ulong      serverVersion;
-          char       sqlCommand[256];
+          char       sqlString[256];
 
           SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -2873,7 +2884,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
 
             // other options
             error = mysqlExecute(databaseHandle->mysql.handle,
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                 stringFormat(sqlString,sizeof(sqlString),
                                               "SET innodb_lock_wait_timeout=%u",
                                               MARIADB_TIMEOUT
                                              )
@@ -2897,7 +2908,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
               i = 0;
               do
               {
-                stringFormat(sqlCommand,sizeof(sqlCommand),
+                stringFormat(sqlString,sizeof(sqlString),
                              "CREATE DATABASE IF NOT EXISTS %s \
                               CHARACTER SET '%s' \
                               COLLATE '%s_bin' \
@@ -2909,7 +2920,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
                              MARIADB_CHARACTER_SETS[i]
                             );
                 error = mysqlExecute(databaseHandle->mysql.handle,
-                                     sqlCommand
+                                     sqlString
                                     );
                 i++;
               }
@@ -2954,7 +2965,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
           const char     *keywords[6+1],*values[6+1];
           const char     *password;
           ConnStatusType postgreSQLStatus;
-          ulong          serverVersion;
+          int            protocolVersion;
 
           HashTable_init(&databaseHandle->postgresql.sqlStringHashTable,
                          512,  // minSize
@@ -3011,8 +3022,21 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
                                );
 
             // check for protocol version 3.0 (support PQexecParams())
-// TODO:
-//int PQprotocolVersion(const PGconn *conn);
+            protocolVersion = PQprotocolVersion(databaseHandle->postgresql.handle);
+            if (protocolVersion < MIN_POSTGRESQL_PROTOCOL_VERSION)
+            {
+              error = ERRORX_(DATABASE,
+                              0,
+                              "detected PostgreSQL protocol version %d, required %d",
+                              protocolVersion,
+                              MIN_POSTGRESQL_PROTOCOL_VERSION
+                             );
+              PQfinish(databaseHandle->postgresql.handle);
+              databaseHandle->postgresql.handle = NULL;
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
           }
         }
       #else /* HAVE_POSTGRESQL */
@@ -4960,7 +4984,7 @@ LOCAL void formatParameters(String               sqlString,
               }
             #endif /* not NDEBUG */
 
-    //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlCommand);
+    //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
             error = mysqlPrepareStatement(databaseStatementHandle->mysql.statementHandle,
                                           sqlString
                                          );
@@ -5030,8 +5054,8 @@ LOCAL void formatParameters(String               sqlString,
           // prepare SQL statement
           DATABASE_DEBUG_TIME_START(databaseStatementHandle);
           {
-            error = postgresqlPrepareStatement(databaseHandle,
-                                               &databaseStatementHandle->postgresql,
+            error = postgresqlPrepareStatement(&databaseStatementHandle->postgresql,
+                                               databaseHandle,
                                                sqlString,
                                                parameterCount
                                               );
@@ -5090,6 +5114,8 @@ LOCAL void formatParameters(String               sqlString,
           databaseStatementHandle->postgresql.result = NULL;
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(parameterCount);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -5764,6 +5790,10 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 mysqlFields   = mysql_fetch_fields(mysqlMetaData);
                 assert(mysqlFields != NULL);
               }
+              else
+              {
+                mysqlFields = NULL;
+              }
               for (i = 0; i < databaseStatementHandle->resultCount; i++)
               {
                 // get name
@@ -5975,10 +6005,8 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 * Input  : databaseHandle      - database handle
 *          changedRowCount     - number of changed rows (can be NULL)
 *          timeout             - timeout [ms]
-*          columnTypes         - result column types; use macro
-*                                DATABASE_COLUMN_TYPES()
-*          columnTypeCount     - number of result columns
-*          sqlCommand          - SQL command string
+*          flags               - database flags; see DATABASE_FLAG_...
+*          sqlString           - SQL command string
 *          parameters          - parameters
 *          parameterCount      - number of parameters
 * Output : -
@@ -5990,9 +6018,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                               ulong                   *changedRowCount,
                               long                    timeout,
                               uint                    flags,
-                              const DatabaseDataTypes columnTypes[],
-                              uint                    columnTypeCount,
-                              const char              *sqlCommand,
+                              const char              *sqlString,
                               const DatabaseParameter parameters[],
                               uint                    parameterCount
                              )
@@ -6003,10 +6029,6 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   Errors                        error;
   uint                          maxRetryCount;
   uint                          retryCount;
-// TODO: remove results
-  DatabaseValue                 *results;
-  uint                          resultCount;
-  uint                          i;
   const DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -6015,7 +6037,9 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
   assert(databaseHandle->sqlite.handle != NULL);
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
+
+  UNUSED_VARIABLE(flags);
 
 // TODO: replace by prepare+execute prepared
   done          = FALSE;
@@ -6029,7 +6053,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
       case DATABASE_TYPE_SQLITE3:
         {
           error = sqlite3Exec(databaseHandle->sqlite.handle,
-                              sqlCommand
+                              sqlString
                              );
           if (error != ERROR_NONE)
           {
@@ -6040,19 +6064,13 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            const uint MAX_TEXT_LENGTH = 4096;
-
-            MYSQL_STMT    *statementHandle;
-// TODO: remove, no results used
-            MYSQL_BIND    *bind;
-            MYSQL_TIME    *dateTime;
-            unsigned long *lengths;
+            MYSQL_STMT *statementHandle;
 
             // prepare SQL statement
             statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
             assert(statementHandle != NULL);
             error = mysqlPrepareStatement(statementHandle,
-                                          sqlCommand
+                                          sqlString
                                          );
             if (error != ERROR_NONE)
             {
@@ -6060,214 +6078,13 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
               break;
             }
 
-            // get number of result values
-            resultCount = mysql_stmt_field_count(statementHandle);
-            assertx(resultCount >= columnTypeCount,
-                    "resultCount=%d columnTypeCount=%d sqlCommand=%s",
-                    resultCount,
-                    columnTypeCount,
-                    sqlCommand
-                   );
-
-// TODO: remove, no results used
-            // allocate result data
-            bind = (MYSQL_BIND*)malloc(resultCount*sizeof(MYSQL_BIND));
-            if (bind == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            dateTime = (MYSQL_TIME*)malloc(resultCount*sizeof(MYSQL_TIME));
-            if (dateTime == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            lengths = (unsigned long*)malloc(resultCount*sizeof(unsigned long));
-            if (lengths == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            results = (DatabaseValue*)malloc(resultCount*sizeof(DatabaseValue));
-            if (results == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-
-            // bind results (use CSTRING for undefined columns)
-// TODO: use bindResults()?
-            for (i = 0; i < resultCount; i++)
-            {
-              results[i].name = NULL;
-              results[i].type = (i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING;
-              switch (results[i].type)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].id;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  bind[i].buffer_type   = MYSQL_TYPE_TINY;
-                  bind[i].buffer        = (char *)&results[i].b;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].i;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].i64;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_UINT:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].u;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_UINT64:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].u64;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  bind[i].buffer_type   = MYSQL_TYPE_DOUBLE;
-                  bind[i].buffer        = (char *)&results[i].d;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].dateTime;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                  bind[i].buffer_type   = MYSQL_TYPE_STRING;
-                  bind[i].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-                  bind[i].buffer_length = MAX_TEXT_LENGTH;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = &lengths[i];
-                  break;
-                case DATABASE_DATATYPE_CSTRING:
-                  HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break;
-              }
-            }
-            if (resultCount > 0)
-            {
-              if (mysql_stmt_bind_result(statementHandle, bind) != 0)
-              {
-                free(results);
-                free(lengths);
-                free(dateTime);
-                free(bind);
-                mysql_stmt_close(statementHandle);
-                error = ERRORX_(DATABASE_CONNECTION_LOST,
-                                mysql_stmt_errno(statementHandle),
-                                "%s: %s",
-                                mysql_stmt_error(statementHandle),
-                                sqlCommand
-                               );
-                break;
-              }
-            }
-
-// TODO: remove, no results used
-            // get column names
-            if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
-            {
-              MYSQL_RES *mysqlMetaData;
-
-              mysqlMetaData = mysql_stmt_result_metadata(statementHandle);
-              assert(mysql_num_fields(mysqlMetaData) == resultCount);
-              for (i = 0; i < resultCount; i++)
-              {
-                MYSQL_FIELD *field = mysql_fetch_field(mysqlMetaData);
-                results[i].name = (field != NULL) ? field->name : NULL;
-              }
-              mysql_free_result(mysqlMetaData);
-            }
-
             // step and process rows
             error = mysqlExecutePreparedStatement(statementHandle);
             if (error != ERROR_NONE)
             {
-              free(results);
-              free(lengths);
-              free(dateTime);
-              free(bind);
               mysql_stmt_close(statementHandle);
               break;
             }
-
-// TODO: remove, no results used
-            // free call-back data
-            for (i = 0; i < resultCount; i++)
-            {
-              switch (results[i].type)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  break;
-                case DATABASE_DATATYPE_UINT:
-                  break;
-                case DATABASE_DATATYPE_UINT64:
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                case DATABASE_DATATYPE_CSTRING:
-                  free(bind[i].buffer);
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break;
-              }
-            }
-            free(results);
-            free(lengths);
-            free(dateTime);
-            free(bind);
 
             // get number of changes
             if (changedRowCount != NULL)
@@ -6286,7 +6103,8 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
         #if defined(HAVE_POSTGRESQL)
           {
             PostgresSQLStatement statement;
-            Oid            *parameterTypes;
+            Oid                  *parameterTypes;
+            uint                 i;
 //            const char     **parameterValues;
 //            int            *parameterLengths;
 //            int            *parameterFormats;
@@ -6325,9 +6143,9 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             }
 
             // prepare SQL statement
-            error = postgresqlPrepareStatement(databaseHandle,
-                                               &statement,
-                                               sqlCommand,
+            error = postgresqlPrepareStatement(&statement,
+                                               databaseHandle,
+                                               sqlString,
                                                parameterCount
                                               );
             if (error != ERROR_NONE)
@@ -6346,51 +6164,107 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
-                  statement.bind[i].u64 = htobe64(parameters[i].id);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u64 = htobe64(parameters[i].id);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,parameters[i].id);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_BOOL:
-                  statement.parameterValues[i]  = (const char*)&parameters[i].b;
-                  statement.parameterLengths[i] = sizeof(parameters[i].b);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.parameterValues[i]  = (const char*)&parameters[i].b;
+                    statement.parameterLengths[i] = sizeof(parameters[i].b);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%s",parameters[i].b ? "YES" : "NO");
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_INT:
-                  statement.bind[i].i = htobe32(parameters[i].i);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].i;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].i);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].i = htobe32(parameters[i].i);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].i;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].i);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%d",parameters[i].i);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_INT64:
-                  statement.bind[i].i64 = htobe64(parameters[i].i64);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].i64;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].i64);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].i64 = htobe64(parameters[i].i64);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].i64;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].i64);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,parameters[i].i64);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_UINT:
-                  statement.bind[i].u = htobe32(parameters[i].u);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].u);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u = htobe32(parameters[i].u);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%u",parameters[i].u);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_UINT64:
-                  statement.bind[i].u64 = htobe64(parameters[i].u64);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u64 = htobe64(parameters[i].u64);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIu64,parameters[i].u64);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_DOUBLE:
-                  statement.bind[i].d = htobe64(parameters[i].d);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].d;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].d);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].d = htobe64(parameters[i].d);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].d;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].d);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%lf",parameters[i].d);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_DATETIME:
-                  statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].dateTime;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].dateTime;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,NULL);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_STRING:
                   statement.parameterValues[i]  = parameters[i].s;
@@ -6413,29 +6287,10 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
               }
             }
 
-            // get column names
-            if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
-            {
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-#if 0
-              MYSQL_RES *result;
-
-              mysqlMetaData = mysql_stmt_result_metadata(statementHandle);
-              assert(mysql_num_fields(mysqlMetaData) == resultCount);
-              for (i = 0; i < resultCount; i++)
-              {
-                MYSQL_FIELD *field = mysql_fetch_field(result);
-                results[i].name = (field != NULL) ? field->name : NULL;
-              }
-              mysql_free_result(mysqlMetaData);
-#endif
-            }
-
             // execute SQL statement
             error = postgresqlExecute(&postgresqlResult,
                                       databaseHandle->postgresql.handle,
-                                      sqlCommand,
+                                      sqlString,
                                       parameterTypes,
                                       statement.parameterValues,
                                       statement.parameterLengths,
@@ -6508,6 +6363,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             }
           }
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(parameters);
+          UNUSED_VARIABLE(parameterCount);
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -6549,7 +6406,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                       sqlite3_errcode(databaseHandle->sqlite.handle),
                       "%s: %s",
                       sqlite3_errmsg(databaseHandle->sqlite.handle),
-                      sqlCommand
+                      sqlString
                      );
     }
   }
@@ -7471,7 +7328,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
 LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
                           ulong          *changedRowCount,
                           long           timeout,
-                          const char     *sqlCommand
+                          const char     *sqlString
                          )
 {
   #define SLEEP_TIME 500L  // [ms]
@@ -7488,7 +7345,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
   assert(databaseHandle->sqlite.handle != NULL);
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
 
   done          = FALSE;
   error         = ERROR_NONE;
@@ -7496,28 +7353,31 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   retryCount    = 0;
   do
   {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlCommand);
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
 // TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
 #endif
 
     #ifndef NDEBUG
-      String_setCString(databaseHandle->debug.current.sqlString,sqlCommand);
+      String_setCString(databaseHandle->debug.current.sqlString,sqlString);
     #endif /* not NDEBUG */
 
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
+        error = sqlite3Exec(databaseHandle->sqlite.handle,
+                            sqlString
+                           );
+        if (error != ERROR_NONE)
         {
-//fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,String_cString(sqlCommand));
-          error = sqlite3Exec(databaseHandle->sqlite.handle,
-                              sqlCommand
-                             );
-          if (error != ERROR_NONE)
-          {
-            break;
-          }
+          break;
+        }
+
+        // get number of changes
+        if (changedRowCount != NULL)
+        {
+          (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->sqlite.handle);
         }
         break;
       case DATABASE_TYPE_MARIADB:
@@ -7525,14 +7385,11 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           {
             MYSQL_RES *result;
 
-//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
-            error = mysqlExecute(databaseHandle->mysql.handle,sqlCommand);
+            error = mysqlExecute(databaseHandle->mysql.handle,sqlString);
             if (error != ERROR_NONE)
             {
               break;
             }
-
-//fprintf(stderr,"%s:%d: mysql_stmt_num_rows(statementHandle)=%d\n",__FILE__,__LINE__,mysql_stmt_num_rows(statementHandle));
 
             // get number of changes
             if (changedRowCount != NULL)
@@ -7555,7 +7412,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
 
             error = postgresqlExecute(&result,
                                       databaseHandle->postgresql.handle,
-                                      sqlCommand,
+                                      sqlString,
                                       NULL,  // parameterTypes,
                                       NULL,  // parameterValues,
                                       NULL,  // parameterLengths,
@@ -7570,7 +7427,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
+//// TODO:              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
             }
 
             // discard results
@@ -7618,7 +7475,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
                       sqlite3_errcode(databaseHandle->sqlite.handle),
                       "%s: %s",
                       sqlite3_errmsg(databaseHandle->sqlite.handle),
-                      sqlCommand
+                      sqlString
                      );
     }
   }
@@ -7802,8 +7659,8 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
         #if defined(HAVE_POSTGRESQL)
           {
             // do query
-            error = postgresqlExecutePreparedStatement(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                       &databaseStatementHandle->postgresql,
+            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
+                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
                                                        databaseStatementHandle->parameterCount
                                                       );
             if (error != ERROR_NONE)
@@ -8036,24 +7893,12 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
           {
-            error = postgresqlExecutePreparedStatement(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                       &databaseStatementHandle->postgresql,
+            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
+                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
                                                        databaseStatementHandle->parameterCount
                                                       );
             if (error != ERROR_NONE)
             {
-// TODO: remove/replace
-#ifndef NDEBUG
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
-debugDumpStackTrace(stderr,
-                    0,
-                    DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                    databaseStatementHandle->debug.stackTrace,
-                    databaseStatementHandle->debug.stackTraceSize,
-                    0
-                   );
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-#endif
               break;
             }
 
@@ -8180,7 +8025,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
     {
       case DATABASE_TYPE_SQLITE3:
         {
-          char sqlCommand[256];
+          char sqlString[256];
 
           return Database_get(databaseHandle,
                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -8238,7 +8083,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                 return ERROR_NONE;
                               },NULL),
                               NULL,  // changedRowCount
-                              DATABASE_PLAIN(stringFormat(sqlCommand,sizeof(sqlCommand),
+                              DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
                                                           "PRAGMA table_info(%s)",
                                                           tableName
                                                          )
@@ -8263,7 +8108,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            char sqlCommand[256];
+            char sqlString[256];
 
             return Database_get(databaseHandle,
                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -8337,7 +8182,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                   return ERROR_NONE;
                                 },NULL),
                                 NULL,  // changedRowCount
-                                DATABASE_PLAIN(stringFormat(sqlCommand,sizeof(sqlCommand),
+                                DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
                                                             "SHOW COLUMNS FROM %s",
                                                             tableName
                                                            )
@@ -8770,7 +8615,7 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
       Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
       databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
     #else /* HAVE_MARIADB */
-// TODO:
+      UNUSED_VARIABLE(defaultDatabaseName);
     #endif /* HAVE_MARIADB */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
@@ -8788,16 +8633,16 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           )
   {
     // postgresql:<server>:<user>:<password>:<database>
-    #if defined(HAVE_MARIADB)
-      databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
+    databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
+    #if defined(HAVE_POSTGRESQL)
       databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->postgresql.password);
       Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
       databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
-    #else /* HAVE_MARIADB */
-// TODO:
-    #endif /* HAVE_MARIADB */
+    #else /* HAVE_POSTGRESQL */
+      UNUSED_VARIABLE(defaultDatabaseName);
+    #endif /* HAVE_POSTGRESQL */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else if (   (databaseURI != NULL)
@@ -8813,16 +8658,16 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           )
   {
     // postgresql:<server>:<user>:<password>
-    #if defined(HAVE_MARIADB)
-      databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+    databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+    #if defined(HAVE_POSTGRESQL)
       databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->postgresql.password);
       Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
       databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
-    #else /* HAVE_MARIADB */
-// TODO:
-    #endif /* HAVE_MARIADB */
+    #else /* HAVE_POSTGRESQL */
+      UNUSED_VARIABLE(defaultDatabaseName);
+    #endif /* HAVE_POSTGRESQL */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else
@@ -9021,9 +8866,9 @@ String Database_getPrintableName(String                  string,
       #if defined(HAVE_POSTGRESQL)
         String_format(string,
                       "postgresql:%S:%S:*:%S",
-                      databaseSpecifier->mysql.serverName,
-                      databaseSpecifier->mysql.userName,
-                      databaseSpecifier->mysql.databaseName
+                      databaseSpecifier->postgresql.serverName,
+                      databaseSpecifier->postgresql.userName,
+                      databaseSpecifier->postgresql.databaseName
                      );
       #else /* not HAVE_POSTGRESQL */
         String_clear(string);
@@ -9075,19 +8920,18 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           i = 0;
           do
           {
-            char sqlCommand[256];
+            char sqlString[256];
 
-            stringFormat(sqlCommand,sizeof(sqlCommand),
-                         "CREATE DATABASE %s \
-                          CHARACTER SET '%s' \
-                          COLLATE '%s_bin' \
-                         ",
-                         String_cString(newDatabaseName),
-                         MARIADB_CHARACTER_SETS[i],
-                         MARIADB_CHARACTER_SETS[i]
-                        );
             error = mysqlExecute(databaseHandle.mysql.handle,
-                                 sqlCommand
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "CREATE DATABASE %s \
+                                               CHARACTER SET '%s' \
+                                               COLLATE '%s_bin' \
+                                              ",
+                                              String_cString(newDatabaseName),
+                                              MARIADB_CHARACTER_SETS[i],
+                                              MARIADB_CHARACTER_SETS[i]
+                                             )
                                 );
             i++;
           }
@@ -9108,7 +8952,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
             error = Database_execute(&databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "RENAME TABLE ? TO ?.?",
                                      DATABASE_PARAMETERS
                                      (
@@ -9158,9 +9001,10 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           i = 0;
           do
           {
-            char sqlCommand[256];
+            char     sqlString[256];
+            PGresult *result;
 
-            stringFormat(sqlCommand,sizeof(sqlCommand),
+            stringFormat(sqlString,sizeof(sqlString),
                          "CREATE DATABASE %s \
                           CHARACTER SET '%s' \
                           COLLATE '%s_bin' \
@@ -9169,9 +9013,20 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                          MARIADB_CHARACTER_SETS[i],
                          MARIADB_CHARACTER_SETS[i]
                         );
-            error = mysqlExecute(databaseHandle.mysql.handle,
-                                 sqlCommand
-                                );
+            error = postgresqlExecute(&result,
+                                      databaseHandle.postgresql.handle,
+                                      sqlString,
+                                      NULL,  // parameterTypes,
+                                      NULL,  // parameterValues,
+                                      NULL,  // parameterLengths,
+                                      NULL,  // parameterFormats,
+                                      0  // parameterCount
+                                     );
+            if (error == ERROR_NONE)
+            {
+              PQclear(result);
+            }
+
             i++;
           }
           while (   (error != ERROR_NONE)
@@ -9191,7 +9046,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
             error = Database_execute(&databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "RENAME TABLE ? TO ?.?",
                                      DATABASE_PARAMETERS
                                      (
@@ -9214,13 +9068,14 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 
           // free resources
 
-          String_set(databaseSpecifier->mysql.databaseName,newDatabaseName);
+          String_set(databaseSpecifier->postgresql.databaseName,newDatabaseName);
         }
       #else /* HAVE_POSTGRESQL */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return ERROR_NONE;
 }
@@ -9320,7 +9175,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
                            "COMMIT"
                           );
 #endif
@@ -9744,7 +9598,7 @@ Errors Database_getViewList(StringList     *viewList,
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-        #if defined(HAVE_POSGRESQL)
+        #if defined(HAVE_POSTGRESQL)
           error = Database_get(databaseHandle,
                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                {
@@ -9770,9 +9624,9 @@ Errors Database_getViewList(StringList     *viewList,
                                0LL,
                                DATABASE_UNLIMITED
                               );
-        #else /* HAVE_POSGRESQL */
+        #else /* HAVE_POSTGRESQL */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_POSGRESQL */
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
 
@@ -9955,6 +9809,7 @@ DATABASE_PLAIN("xxx"),
                                 );
           }
         #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(tableName);
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -10738,7 +10593,6 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "PRAGMA synchronous=%d",
                                                 enabled ? 1 : 0
@@ -10753,7 +10607,6 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "PRAGMA journal_mode=%d",
                                                 enabled ? 1 : 0
@@ -10805,7 +10658,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "PRAGMA foreign_keys=%d",
                                               enabled ? 1 : 0
@@ -10824,7 +10676,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "SET FOREIGN_KEY_CHECKS=%s",
                                                 enabled ? "ON" : "OFF"
@@ -10855,7 +10706,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "ALTER TABLE %s %s ALL",
                                                 String_cString(tableName),
@@ -10897,7 +10747,6 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
       error = Database_execute(databaseHandle,
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
                                "PRAGMA temp_store_directory=?",
                                DATABASE_PARAMETERS
                                (
@@ -10931,6 +10780,7 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(tableName != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -10940,9 +10790,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP TABLE %s",
                                               tableName
@@ -10961,9 +10808,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES
-                                   (
-                                   ),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "DROP TABLE %s",
                                                 tableName
@@ -10985,9 +10829,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES
-                                   (
-                                   ),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "DROP TABLE %s CASCADE",
                                                 tableName
@@ -11002,6 +10843,7 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -11047,7 +10889,6 @@ Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
   return Database_execute(databaseHandle,
                           NULL,  // changedRowCount
                           DATABASE_FLAG_NONE,
-                          DATABASE_COLUMN_TYPES(),
                           "CREATE TABLE ?.? \
                            ( \
                              id INT PRIMARY KEY, \
@@ -11070,7 +10911,6 @@ Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
   return Database_execute(databaseHandle,
                           NULL,  // changedRowCount
                           DATABASE_FLAG_NONE,
-                          DATABASE_COLUMN_TYPES(),
                           "DROP TABLE ?.?",
                           DATABASE_PARAMETERS
                           (
@@ -11091,15 +10931,13 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(viewName != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
       error = Database_execute(databaseHandle,
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES
-                               (
-                               ),
                                stringFormat(sqlString,sizeof(sqlString),
                                             "DROP VIEW %s",
                                             viewName
@@ -11114,9 +10952,6 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP VIEW %s",
                                               viewName
@@ -11134,9 +10969,6 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP VIEW %s CASCADE",
                                               viewName
@@ -11150,6 +10982,7 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -11180,7 +11013,6 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
                          )
 {
   Errors error;
-  char   sqlCommand[256];
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -11195,7 +11027,6 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP INDEX %s",
                                               indexName
@@ -11220,7 +11051,6 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "DROP INDEXES ? FROM ?",
                                      DATABASE_PARAMETERS
                                      (
@@ -11237,20 +11067,21 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
-                                              "DROP INDEX \"%s\"",
-                                              indexName
-                                             ),
-                                 DATABASE_PARAMETERS
-                                 (
-                                 )
-                                );
+        {
+          char sqlString[256];
+
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "DROP INDEX \"%s\"",
+                                                indexName
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
+                                  );
+        }
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -11283,7 +11114,6 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    "DROP INDEX ?",
                                    DATABASE_PARAMETERS
                                    (
@@ -11312,7 +11142,6 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
               error = Database_execute(databaseHandle,
                                        NULL,  // changedRowCount
                                        DATABASE_FLAG_NONE,
-                                       DATABASE_COLUMN_TYPES(),
                                        "DROP INDEXES ? FROM ?",
                                        DATABASE_PARAMETERS
                                        (
@@ -11343,7 +11172,6 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "DROP INDEX ? CASCADE",
                                      DATABASE_PARAMETERS
                                      (
@@ -11376,7 +11204,6 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
                            stringFormat(sqlString,sizeof(sqlString),
                                         "DROP TRIGGER %s",
                                         triggerName
@@ -11739,14 +11566,6 @@ fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCoun
 fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (uint i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumns[parameterMap[i]].name,toColumns[parameterMap[i]].type); } fprintf(stderr,"\n");
 
   // init from/to values
-// TODO:`remove
-#if 0
-  for (i = 0; i < fromColumnCount; i++)
-  {
-    fromColumns[i].name = fromColumnNames[i];
-    fromColumns[i].type = fromColumnTypes[i];
-  }
-#endif
   for (i = 0; i < toColumnCount; i++)
   {
     toValues[i].type = toColumns[i].type;
@@ -11816,11 +11635,10 @@ fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sq
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-//  fromColumnInfo.names  = fromColumnNames;
   fromColumnInfo.values = fromDatabaseStatementHandle.results;
   fromColumnInfo.count  = fromColumnCount;
 
-fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount);
+//fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount);
   error = prepareStatement(&toDatabaseStatementHandle,
                            toDatabaseHandle,
                            String_cString(sqlInsertString),
@@ -11832,7 +11650,6 @@ fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-//  toColumnInfo.names  = toColumnMapNames;
   toColumnInfo.values = toValues;
   toColumnInfo.count  = toValueCount;
 
@@ -11945,13 +11762,12 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
           // fix broken UTF8 encodings
           switch (parameterValues[i].type)
           {
-            case DATABASE_DATATYPE_CSTRING:
-              stringMakeValidUTF8(parameterValues[i].s,0);
-              assert(stringIsValidUTF8(parameterValues[i].s,0));
-              break;
             case DATABASE_DATATYPE_STRING:
               String_makeValidUTF8(parameterValues[i].string,STRING_BEGIN);
               assert(String_isValidUTF8(parameterValues[i].string,STRING_BEGIN));
+              break;
+            case DATABASE_DATATYPE_CSTRING:
+              HALT_INTERNAL_ERROR_NOT_SUPPORTED();
               break;
             default:
               break;
@@ -12650,7 +12466,6 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
                            "ALTER TABLE ? ADD COLUMN ? ?",
                            DATABASE_PARAMETERS
                            (
@@ -12746,7 +12561,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       (void)Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(),
                              "DROP TABLE __new__",
                              DATABASE_PARAMETERS_NONE
                             );
@@ -12764,9 +12578,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "ALTER TABLE %s RENAME TO __old__",
                            DATABASE_PARAMETERS
                            (
@@ -12778,9 +12589,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "DROP TABLE __new__",
                            DATABASE_PARAMETERS_NONE
                           );
@@ -12789,9 +12597,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "ALTER TABLE __new__ RENAME TO ?",
                            DATABASE_PARAMETERS
                            (
@@ -12803,9 +12608,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "ALTER TABLE __old__ RENAME TO ?",
                            DATABASE_PARAMETERS
                            (
@@ -12815,9 +12617,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "DROP TABLE __new__",
                            DATABASE_PARAMETERS_NONE
                           );
@@ -12826,9 +12625,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "DROP TABLE __old__",
                            DATABASE_PARAMETERS_NONE
                           );
@@ -13454,9 +13250,7 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 Errors Database_execute(DatabaseHandle          *databaseHandle,
                         ulong                   *changedRowCount,
                         uint                    flags,
-                        const DatabaseDataTypes columnTypes[],
-                        uint                    columnTypeCount,
-                        const char              *sqlCommand,
+                        const char              *sqlString,
                         const DatabaseParameter parameters[],
                         uint                    parameterCount
                        )
@@ -13466,7 +13260,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
 
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
@@ -13478,9 +13272,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                             changedRowCount,
                             databaseHandle->timeout,
                             flags,
-                            columnTypes,
-                            columnTypeCount,
-                            sqlCommand,
+                            sqlString,
                             parameters,
                             parameterCount
                            );
@@ -13494,7 +13286,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                           DatabaseHandle          *databaseHandle,
                           const DatabaseColumn    *columns,
                           uint                    columnCount,
-                          const char              *sqlCommand,
+                          const char              *sqlString,
                           const DatabaseValue     values[],
                           uint                    valueCount,
                           const DatabaseFilter    filters[],
@@ -13507,7 +13299,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                             DatabaseHandle          *databaseHandle,
                             const DatabaseColumn    *columns,
                             uint                    columnCount,
-                            const char              *sqlCommand,
+                            const char              *sqlString,
                             const DatabaseValue     values[],
                             uint                    valueCount,
                             const DatabaseFilter    filters[],
@@ -13520,12 +13312,12 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(sqlCommand != NULL);
+  assert(sqlString != NULL);
 
   // prepare statement
   error = prepareStatement(databaseStatementHandle,
                            databaseHandle,
-                           sqlCommand,
+                           sqlString,
                            columns,
                            columnCount,
                            valueCount+filterCount
@@ -13838,6 +13630,9 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           formatParameters(sqlString,databaseHandle,filter,&parameterCount);
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(conflictColumns);
+        UNUSED_VARIABLE(conflictColumnCount);
+        UNUSED_VARIABLE(filter);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -13913,6 +13708,8 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           }
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(filters);
+        UNUSED_VARIABLE(filterCount);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -14734,6 +14531,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   }
 
   // get statement columns if not defined
+  statementColumnCount = 0;
   if (columns == NULL)
   {
     getStatementColumns(statementColumns,
@@ -15544,7 +15342,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                 StringList         tableNameList;
                 StringListIterator stringListIterator;
                 ConstString        tableName;
-                char               sqlCommand[256];
+                char               sqlString[256];
 
                 // get table names
                 StringList_init(&tableNameList);
@@ -15561,7 +15359,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                   error = executeQuery(databaseHandle,
                                        NULL,  // changedRowCount
                                        databaseHandle->timeout,
-                                       stringFormat(sqlCommand,sizeof(sqlCommand),
+                                       stringFormat(sqlString,sizeof(sqlString),
                                                     "CHECK TABLE %s",
                                                     String_cString(tableName)
                                                    )
@@ -15585,6 +15383,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
     return error;
   });
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -15603,7 +15402,6 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
       error = Database_execute(databaseHandle,
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
                                "REINDEX",
                                DATABASE_PARAMETERS_NONE
                               );
@@ -15619,6 +15417,7 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -15641,7 +15440,7 @@ void Database_debugPrintSimpleLockInfo(void)
         #if defined(HAVE_MARIADB)
           printf("Database: 'mariadb:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
         #else /* HAVE_MARIADB */
-          return ERROR_FUNCTION_NOT_SUPPORTED;
+          return;
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
@@ -16133,13 +15932,15 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
 // TODO:
       break;
   }
-  debugDumpStackTrace(stderr,
-                      0,
-                      DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                      databaseStatementHandle->debug.stackTrace,
-                      databaseStatementHandle->debug.stackTraceSize,
-                      0
-                     );
+  #ifdef HAVE_BACKTRACE
+    debugDumpStackTrace(stderr,
+                        0,
+                        DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+                        databaseStatementHandle->debug.stackTrace,
+                        databaseStatementHandle->debug.stackTraceSize,
+                        0
+                       );
+  #endif
 }
 
 /***********************************************************************\

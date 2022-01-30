@@ -62,8 +62,8 @@ DOCKER_RUN_FLAGS       = run -i -t
 TXT2MAN                = @TXT2MAN@
 UNOCONV                = @UNOCONV@
 
-SVNVERSION             = svnversion
-GIT                    = git
+SVNVERSION             = @SVNVERSION@
+GIT                    = @GIT@
 
 #---------------------------------- commands----------------------------------
 

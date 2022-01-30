@@ -460,7 +460,6 @@ LOCAL void busyHandler(void *userData)
         error = Database_execute(&indexHandle->databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
                                  indexDefinition,
                                  DATABASE_PARAMETERS_NONE
                                 );
@@ -626,7 +625,6 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
     error = Database_execute(&databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(),
                              indexDefinition,
                              DATABASE_PARAMETERS_NONE
                             );

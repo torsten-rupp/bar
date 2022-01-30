@@ -758,9 +758,6 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
     error = Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES
-                             (
-                             ),
                              indexDefinition,
                              DATABASE_PARAMETERS
                              (
@@ -1585,9 +1582,6 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  "ANALYZE ?",
                                  DATABASE_PARAMETERS
                                  (
@@ -1639,9 +1633,6 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  "ANALYZE ?",
                                  DATABASE_PARAMETERS
                                  (
@@ -1783,9 +1774,6 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
     error = Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES
-                             (
-                             ),
                              indexDefinition,
                              DATABASE_PARAMETERS
                              (
@@ -1965,9 +1953,6 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES
-                                     (
-                                     ),
                                      indexDefinition,
                                      DATABASE_PARAMETERS
                                      (
@@ -2067,9 +2052,6 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES
-                                     (
-                                     ),
                                      indexDefinition,
                                      DATABASE_PARAMETERS
                                      (
@@ -3184,9 +3166,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
-                           uint64      totalSize;
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3195,7 +3177,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].string);
+                           name      = String_duplicate(values[1].string);
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all directories
@@ -3265,9 +3247,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
-                           uint64      totalSize;
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3276,7 +3258,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].string);
+                           name      = String_duplicate(values[1].string);
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all newest directories
@@ -3358,8 +3340,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
+                           DatabaseId storageId;
+                           String     name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3368,7 +3350,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].string);
+                           name      = String_duplicate(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3432,8 +3414,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
+                           DatabaseId storageId;
+                           String     name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3442,7 +3424,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = values[1].string;
+                           name      = String_duplicate(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3471,6 +3453,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return error;
                              }
                            }
+
+                           String_delete(name);
 
                            n++;
                            printPercentage(n,totalCount);
@@ -3591,8 +3575,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
+                           DatabaseId storageId;
+                           String     name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3601,7 +3585,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = values[1].string;
+                           name      = String_duplicate(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3630,6 +3614,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return error;
                              }
                            }
+
+                           String_delete(name);
 
                            n++;
                            printPercentage(n,totalCount);
@@ -3675,9 +3661,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
-                           uint64      totalSize;
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3686,7 +3672,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = values[1].string;
+                           name      = String_duplicate(values[1].string);
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all directories
@@ -3717,6 +3703,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return error;
                              }
                            }
+
+                           String_delete(name);
 
                            n++;
                            printPercentage(n,totalCount);
@@ -3754,9 +3742,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
-                           uint64      totalSize;
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3765,7 +3753,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = values[1].string;
+                           name      = String_duplicate(values[1].string);
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all directories
@@ -3796,6 +3784,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return error;
                              }
                            }
+
+                           String_delete(name);
 
                            n++;
                            printPercentage(n,totalCount);
@@ -3845,8 +3835,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
+                           DatabaseId storageId;
+                           String     name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3855,7 +3845,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = values[1].string;
+                           name      = String_duplicate(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3884,6 +3874,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return error;
                              }
                            }
+
+                           String_delete(name);
 
                            n++;
                            printPercentage(n,totalCount);
@@ -3917,8 +3909,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId  storageId;
-                           ConstString name;
+                           DatabaseId storageId;
+                           String     name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3927,7 +3919,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = values[1].string;
+                           name      = String_duplicate(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3956,6 +3948,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return error;
                              }
                            }
+
+                           String_delete(name);
 
                            n++;
                            printPercentage(n,totalCount);
@@ -6224,7 +6218,7 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
                            n++;
                            printInfo("    %s\n",String_cString(otherName));
                          }
-                         String_setCString(name,otherName);
+                         String_set(name,otherName);
 
                          return ERROR_NONE;
                        },NULL),
@@ -6619,9 +6613,6 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  "VACUUM INTO ?",
                                  DATABASE_PARAMETERS
                                  (
@@ -6641,9 +6632,6 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  "VACUUM",
                                  DATABASE_PARAMETERS
                                  (
@@ -6671,9 +6659,6 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES
-                                   (
-                                   ),
                                    stringFormat(sqlCommand,sizeof(sqlCommand),
                                                 "OPTIMIZE TABLE %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
@@ -8743,9 +8728,6 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "UPDATE %1 \
                             SET entriesNewestId=COALESCE((SELECT entriesNewest.id \
                                                          FROM entriesNewest \

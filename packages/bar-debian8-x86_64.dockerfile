@@ -26,7 +26,7 @@ RUN apt-get -y install \
   less \
   lua5.1 \
   m4 \
-  mariadb-client \
+  mysql-server \
   patch \
   pkg-config \
   postgresql \

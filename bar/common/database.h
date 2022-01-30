@@ -584,69 +584,75 @@ typedef struct
   };
 } DatabaseFilter;
 
-// database statement handle
-typedef union
-{
-  char     *p;
-
-  uint64   id;
-  uint8    b;
-  int32    i;
-  int64    i64;
-  uint32   u;
-  uint64   u64;
-  double   d;
-  uint64   dateTime;
-  char     data[64];
-} PostgreSQLBind;
-
 typedef struct
 {
-  char           name[1+16+1];
+  sqlite3_stmt      *statementHandle;
+  DatabaseValue     **bind;
+} SQLiteStatement;
 
-  PostgreSQLBind *bind;
-  const char     **parameterValues;
-  int            *parameterLengths;
-  int            *parameterFormats;
+#if defined(HAVE_MARIADB)
+  typedef struct
+  {
+    MYSQL_STMT        *statementHandle;
+// TODO:
+DatabaseDataTypes *dataTypes;
+    struct
+    {
+      MYSQL_BIND      *bind;
+      MYSQL_TIME      *time;
+    }                 values;
+    struct
+    {
+      MYSQL_BIND      *bind;
+      MYSQL_TIME      *time;
+      unsigned long   *lengths;
+    }                 results;
+  } MySQLStatement;
+#endif /* HAVE_MARIADB */
 
-  PGresult       *result;
-  ulong          rowIndex;
-  ulong          rowCount;
-} PostgresSQLStatement;
+#if defined(HAVE_POSTGRESQL)
+  // database statement handle
+  typedef union
+  {
+    char     *p;
+
+    uint64   id;
+    uint8    b;
+    int32    i;
+    int64    i64;
+    uint32   u;
+    uint64   u64;
+    double   d;
+    uint64   dateTime;
+    char     data[64];
+  } PostgreSQLBind;
+
+  typedef struct
+  {
+    char           name[1+16+1];
+
+    PostgreSQLBind *bind;
+    const char     **parameterValues;
+    int            *parameterLengths;
+    int            *parameterFormats;
+
+    PGresult       *result;
+    ulong          rowIndex;
+    ulong          rowCount;
+  } PostgresSQLStatement;
+#endif /* HAVE_POSTGRESQL */
 
 typedef struct
 {
   DatabaseHandle *databaseHandle;
   union
   {
-    struct
-    {
-      sqlite3_stmt      *statementHandle;
-      DatabaseValue     **bind;
-    }
-    sqlite;
+    SQLiteStatement sqlite;
     #if defined(HAVE_MARIADB)
-    struct
-    {
-      MYSQL_STMT        *statementHandle;
-// TODO:
-DatabaseDataTypes *dataTypes;
-      struct
-      {
-        MYSQL_BIND      *bind;
-        MYSQL_TIME      *time;
-      }                 values;
-      struct
-      {
-        MYSQL_BIND      *bind;
-        MYSQL_TIME      *time;
-        unsigned long   *lengths;
-      }                 results;
-    }
-    mysql;
+      MySQLStatement mysql;
     #endif /* HAVE_MARIADB */
     #if defined(HAVE_POSTGRESQL)
-    PostgresSQLStatement postgresql;
+      PostgresSQLStatement postgresql;
     #endif /* HAVE_POSTGRESQL */
   };
 
@@ -695,8 +701,6 @@ typedef Errors(*DatabaseRowFunction)(const DatabaseValue values[], uint valueCou
 // table column info
 typedef struct
 {
-// TODO: type
-//  const DatabaseColumn *columns;
   DatabaseValue        *values;
   uint                 count;
 } DatabaseColumnInfo;
@@ -2100,9 +2104,7 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 * Purpose: execute SQL statement
 * Input  : databaseHandle  - database handle
 *          changedRowCount - number of changd rows (can be NULL)
-*          columnTypes     - result column types; use macro
-*                            DATABASE_COLUMN_TYPES()
-*          columnTypeCount - number of result columns
+*          flagsflags      - execute flags; see DATABASE_FLAG_...
 *          sqlCommand      - SQL command string
 *          values          - values for SQL command string
 *          valueCount      - value count
@@ -2114,8 +2116,6 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 Errors Database_execute(DatabaseHandle          *databaseHandle,
                         ulong                   *changedRowCount,
                         uint                    flags,
-                        const DatabaseDataTypes columnTypes[],
-                        uint                    columnTypeCount,
                         const char              *sqlCommand,
                         const DatabaseParameter parameters[],
                         uint                    parameterCount

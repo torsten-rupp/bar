@@ -154,6 +154,8 @@ tmpDir=`mktemp -d /tmp/deb-XXXXXX`
 
 # build deb package
 (
+  set -e
+
   cd $tmpDir
 
   # extract sources
@@ -210,13 +212,18 @@ tmpDir=`mktemp -d /tmp/deb-XXXXXX`
     md5sum $sourcePath/$debFileNameGUI
   fi
 
-  # debug
-  if test $debugFlag -eq 1; then
-    /bin/bash
-  fi
+  set +e
 )
+rc=$?
+
+# debug
+if test $debugFlag -eq 1; then
+  (cd $tmpDir;
+   /bin/bash
+  )
+fi
 
 # clean-up
 rm -rf $tmpDir
 
-exit 0
+exit $rc

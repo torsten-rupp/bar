@@ -252,12 +252,27 @@ LOCAL void findAddressInSection(bfd *abfd, asection *section, void *data)
   }
 
   // find section
-  if ((bfd_section_flags(section) & SEC_ALLOC) == 0)
-  {
-    return;
-  }
-  vma  = bfd_section_vma(section);
-  size = bfd_section_size(section);
+  #ifdef HAVE_BFD_GET_SECTION_FLAGS
+    if ((bfd_get_section_flags(abfd,section) & SEC_ALLOC) == 0)
+    {
+      return;
+    }
+  #else
+    if ((bfd_section_flags(section) & SEC_ALLOC) == 0)
+    {
+      return;
+    }
+  #endif
+  #if (BFD_SECTION_SIZE_ARGUMENTS_COUNT == 2)
+    vma  = bfd_section_vma(abfd,section);
+  #else
+    vma  = bfd_section_vma(section);
+  #endif
+  #if (BFD_SECTION_VMA_ARGUMENTS_COUNT == 2)
+    size = bfd_section_size(abfd,section);
+  #else
+    size = bfd_section_size(section);
+  #endif
   if (   (addressInfo->address < vma)
       || (addressInfo->address >= vma + size)
      )
