@@ -196,67 +196,67 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("     mariadb:<server>:<user>:<password>\n");
   printf("     postgresql:<server>:<user>:<password>\n");
   printf("\n");
-  printf("Options:  -C|--directory=<name>                   - change to directory\n");
-  printf("          --info                                  - output index database infos\n");
-  printf("          --info-jobs[=<uuid id>|UUID,...]        - output index database job infos\n");
-  printf("          --info-entities[=<entity id>,...]       - output index database entities infos\n");
-  printf("          --info-storages[=<storage id>,...]      - output index database storages infos\n");
-  printf("          --info-lost-storages[=<storage id>,...] - output index database storages infos without an entity\n");
-  printf("          --info-entries[=<entity id>,...|name]   - output index database entries infos\n");
-  printf("          --info-lost-entries[=<entity id>,...]   - output index database entries infos without an entity\n");
-  printf("          --entry-type=<type>                     - entries type:\n");
-  printf("                                                      file\n");
-  printf("                                                      image\n");
-  printf("                                                      directory\n");
-  printf("                                                      link\n");
-  printf("                                                      harlink\n");
-  printf("                                                      special\n");
-  printf("          --create                                - create new index database\n");
-  printf("          --create-triggers                       - re-create triggers\n");
-  printf("          --create-indizes                        - re-create indizes\n");
-  printf("          --create-fts-indizes                    - re-create FTS indizes (full text search)\n");
-  printf("          --create-newest[=id,...]                - re-create newest data\n");
-  printf("          --create-aggregates                     - re-create aggregated data\n");
-  printf("          --create-aggregates-directory-content   - re-create aggregated data directory content\n");
-  printf("          --create-aggregates-entities            - re-create aggregated data entities\n");
-  printf("          --create-aggregates-storages            - re-create aggregated data storages\n");
-  printf("          --import <URI>                          - import database\n");
-  printf("          --optimize                              - optimize database (analyze and collect statistics data)\n");
-  printf("          --reindex                               - re-create all existing indizes\n");
-  printf("          --check                                 - check index database\n");
-  printf("          --check-integrity                       - check index database integrity\n");
-  printf("          --check-orphaned                        - check index database for orphaned entries\n");
-  printf("          --check-duplicates                      - check index database for duplicate entries\n");
-  printf("          --clean                                 - clean index database\n");
-  printf("          --clean-orphaned                        - clean orphaned in index database\n");
-  printf("          --clean-duplicates                      - clean duplicates in index database\n");
-  printf("          --purge                                 - purge deleted storages\n");
-  printf("          --vacuum [<new file name>]              - collect and free unused file space\n");
-  printf("          -s|--storages [<uuid>]                  - print storages\n");
-  printf("          -e|--entries [<uuid>]                   - print entries\n");
-  printf("          --entries-newest [<uuid>]               - print newest entries\n");
-  printf("          -n|--names                              - print values with names\n");
-  printf("          -H|--header                             - print headers\n");
-  printf("          --transaction                           - enable transcations\n");
-  printf("          -f|--no-foreign-keys                    - disable foreign key constraints\n");
-  printf("          --force                                 - force operation\n");
-  printf("          --pipe|-                                - read data from stdin and pipe into database\n");
-  printf("          --tmp-directory                         - temporary files directory\n");
-  printf("          -v|--verbose                            - verbose output (default: ON; deprecated)\n");
-  printf("          -q|--quiet                              - no output\n");
-  printf("          -t|--time                               - print execution time\n");
-  printf("          -x|--explain-query                      - explain SQL queries\n");
+  printf("Options:  -C|--directory=<name>                        - change to directory\n");
+  printf("          --info                                       - output index database infos\n");
+  printf("          --info-jobs[=<uuid id>|UUID,...]             - output index database job infos\n");
+  printf("          --info-entities[=<entity id>,...]            - output index database entities infos\n");
+  printf("          --info-entries[=<entity id>,...|name]        - output index database entries infos\n");
+  printf("          --info-lost-entries[=<entity id>,...|name]   - output index database entries infos without an entity\n");
+  printf("          --entry-type=<type>                          - entries type:\n");
+  printf("                                                           file\n");
+  printf("                                                           image\n");
+  printf("                                                           directory\n");
+  printf("                                                           link\n");
+  printf("                                                           harlink\n");
+  printf("                                                           special\n");
+  printf("          --info-storages[=<storage id>,...|name]      - output index database storages infos\n");
+  printf("          --info-lost-storages[=<storage id>,...|name] - output index database storages infos without an entity\n");
+  printf("          --create                                     - create new index database\n");
+  printf("          --create-triggers                            - re-create triggers\n");
+  printf("          --create-indizes                             - re-create indizes\n");
+  printf("          --create-fts-indizes                         - re-create FTS indizes (full text search)\n");
+  printf("          --create-newest[=id,...]                     - re-create newest data\n");
+  printf("          --create-aggregates                          - re-create aggregated data\n");
+  printf("          --create-aggregates-directory-content        - re-create aggregated data directory content\n");
+  printf("          --create-aggregates-entities                 - re-create aggregated data entities\n");
+  printf("          --create-aggregates-storages                 - re-create aggregated data storages\n");
+  printf("          --import <URI>                               - import database\n");
+  printf("          --optimize                                   - optimize database (analyze and collect statistics data)\n");
+  printf("          --reindex                                    - re-create all existing indizes\n");
+  printf("          --check                                      - check index database\n");
+  printf("          --check-integrity                            - check index database integrity\n");
+  printf("          --check-orphaned                             - check index database for orphaned entries\n");
+  printf("          --check-duplicates                           - check index database for duplicate entries\n");
+  printf("          --clean                                      - clean index database\n");
+  printf("          --clean-orphaned                             - clean orphaned in index database\n");
+  printf("          --clean-duplicates                           - clean duplicates in index database\n");
+  printf("          --purge                                      - purge deleted storages\n");
+  printf("          --vacuum [<new file name>]                   - collect and free unused file space\n");
+  printf("          -e|--entries [<uuid>]                        - print entries\n");
+  printf("          --entries-newest [<uuid>]                    - print newest entries\n");
+  printf("          -s|--storages [<uuid>]                       - print storages\n");
+  printf("          -n|--names                                   - print values with names\n");
+  printf("          -H|--header                                  - print headers\n");
+  printf("          --transaction                                - enable transcations\n");
+  printf("          -f|--no-foreign-keys                         - disable foreign key constraints\n");
+  printf("          --force                                      - force operation\n");
+  printf("          --pipe|-                                     - read data from stdin and pipe into database\n");
+  printf("          --tmp-directory                              - temporary files directory\n");
+  printf("          -v|--verbose                                 - verbose output (default: ON; deprecated)\n");
+  printf("          -q|--quiet                                   - no output\n");
+  printf("          -t|--time                                    - print execution time\n");
+  printf("          -x|--explain-query                           - explain SQL queries\n");
   if (extendedFlag)
   {
-    printf("          --table-names                           - show table names\n");
-    printf("          --index-names                           - show index names\n");
-    printf("          --trigger-names                         - show trigger names\n");
-    printf("          --drop-tables                           - drop all tables\n");
-    printf("          --drop-triggers                         - drop all triggers\n");
-    printf("          --drop-indizes                          - drop all indixes\n");
+    printf("          --table-names                                - show table names\n");
+    printf("          --index-names                                - show index names\n");
+    printf("          --trigger-names                              - show trigger names\n");
+    printf("          --drop-tables                                - drop all tables\n");
+    printf("          --drop-triggers                              - drop all triggers\n");
+    printf("          --drop-indizes                               - drop all indixes\n");
   }
-  printf("          -h|--help                               - print this help\n");
-  printf("          --xhelp                                 - print extended help\n");
+  printf("          -h|--help                                    - print this help\n");
+  printf("          --xhelp                                      - print extended help\n");
 }
 
 /***********************************************************************\
@@ -666,19 +666,21 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
   {
     // drop indices
     error = Database_dropIndices(databaseHandle);
-
-    // drop FTS indizes
-    if (error == ERROR_NONE)
+    if (Database_getType(databaseHandle) == DATABASE_TYPE_SQLITE3)
     {
-      error = Database_dropTable(databaseHandle,
-                                 "FTS_storages"
-                                );
-    }
-    if (error == ERROR_NONE)
-    {
-      error = Database_dropTable(databaseHandle,
-                                 "FTS_entries"
-                                );
+      // drop FTS indizes
+      if (error == ERROR_NONE)
+      {
+        error = Database_dropTable(databaseHandle,
+                                   "FTS_storages"
+                                  );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_dropTable(databaseHandle,
+                                   "FTS_entries"
+                                  );
+      }
     }
 
     if (error != ERROR_NONE)
@@ -693,7 +695,7 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
   }
   else
   {
-    if (!quietFlag) printInfo("FAIL (error: %s)!",Error_getText(error));
+    if (!quietFlag) printInfo("FAIL (error: %s)!\n",Error_getText(error));
   }
   (void)Database_flush(databaseHandle);
 }
@@ -1021,7 +1023,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   Errors            error;
   DatabaseHandle    oldDatabaseHandle;
 
-  // parse URI and fill int default values
+  // parse URI and fill in default values
   Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
   switch (databaseSpecifier.type)
   {
@@ -1029,14 +1031,12 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-// TODO:
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-// TODO:
       #else /* HAVE_POSTGRESQL */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -1146,7 +1146,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "fileEntries",
                             "COUNT(id)",
-                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1167,7 +1167,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "imageEntries",
                             "COUNT(id)",
-                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1188,7 +1188,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "hardlinkEntries",
                             "COUNT(id)",
-                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1212,7 +1212,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1236,7 +1236,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1260,7 +1260,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1284,7 +1284,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1308,7 +1308,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1332,7 +1332,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1383,7 +1383,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "FTS_entries",
                                 "COUNT(entryId)",
-                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1406,7 +1406,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "FTS_storages",
                                 "COUNT(storageId)",
-                                "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1429,7 +1429,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "entriesNewest",
                                 "COUNT(id)",
-                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1447,10 +1447,52 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
       totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_MARIADB:
-// TODO:
+      // check newest entries without entry
+      printInfo("  newest entries without entry...");
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "entriesNewest",
+                                "COUNT(id)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%"PRIi64"\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      // check newest entries without entry
+      printInfo("  newest entries without entry...");
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "entriesNewest",
+                                "COUNT(id)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%"PRIi64"\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
       break;
   }
 
@@ -1748,8 +1790,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 {
   Errors     error;
   const char *triggerName;
-// TODO:
-  const char *indexDefinition;
+  const char *triggerDefinition;
 
   printInfo("Create triggers...");
 
@@ -1769,12 +1810,12 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   }
 
   // create new triggeres
-  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
+  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(databaseHandle)], triggerDefinition, error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             indexDefinition,
+                             triggerDefinition,
                              DATABASE_PARAMETERS
                              (
                              )
@@ -1902,7 +1943,6 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   printInfo("Create indizes:\n");
 
   error = ERROR_NONE;
-// TODO:
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop all existing indizes
@@ -1930,7 +1970,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         // nothing to do
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+        // nothing to do
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -1950,6 +1990,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
           {
+fprintf(stderr,"%s:%d: indexDefinition=%s\n",__FILE__,__LINE__,indexDefinition);
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
@@ -1963,15 +2004,14 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
-// TODO:
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
-// TODO:
         #else /* HAVE_POSTGRESQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
     }
@@ -2047,7 +2087,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         {
           const char *indexDefinition;
 
-          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MARIADB, indexDefinition, error == ERROR_NONE)
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_SQLITE, indexDefinition, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
@@ -2066,7 +2106,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                           DATABASE_FLAG_IGNORE,
                                           DATABASE_COLUMNS
                                           (
-                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_KEY   ("storageId"),
                                             DATABASE_COLUMN_STRING("name")
                                           ),
                                           DATABASE_TABLES
@@ -2093,7 +2133,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                           DATABASE_FLAG_IGNORE,
                                           DATABASE_COLUMNS
                                           (
-                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_KEY   ("entryId"),
                                             DATABASE_COLUMN_STRING("name")
                                           ),
                                           DATABASE_TABLES
@@ -3154,7 +3194,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3328,7 +3368,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3488,7 +3528,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3649,7 +3689,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3823,7 +3863,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -5400,7 +5440,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &n,
                           "fileEntries",
                           DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1)",
                           DATABASE_FILTERS
                           (
                           ),
@@ -5418,7 +5458,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &n,
                           "imageEntries",
                           DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1)",
                           DATABASE_FILTERS
                           (
                           ),
@@ -5436,7 +5476,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &n,
                           "hardlinkEntries",
                           DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1)",
                           DATABASE_FILTERS
                           (
                           ),
@@ -5455,7 +5495,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5497,7 +5537,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5540,7 +5580,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5583,7 +5623,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5625,7 +5665,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5667,7 +5707,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5756,7 +5796,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               &n,
                               "FTS_entries",
                               DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
                               DATABASE_FILTERS
                               (
                               ),
@@ -5776,7 +5816,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               &n,
                               "FTS_storages",
                               DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
                               DATABASE_FILTERS
                               (
                               ),
@@ -5796,7 +5836,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               &n,
                               "entriesNewest",
                               DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
                               DATABASE_FILTERS
                               (
                               ),
@@ -5811,7 +5851,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       // nothing to do (use views)
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      // nothing to do (use views)
       break;
   }
 
@@ -6548,7 +6588,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
         }
         else
         {
-          printInfo("FAIL\n");
+          printInfo("FAIL!\n");
           DATABASE_TRANSACTION_ABORT(databaseHandle);
         }
       }
@@ -7806,7 +7846,8 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          uint       totalHardlinkCount;
                          uint64     totalHardlinkSize;
                          uint       totalSpecialCount;
-                         String     idsString;
+                         const char *prefix;
+                         uint       i;
 
                          assert(values != NULL);
                          assert(valueCount == 24);
@@ -7828,7 +7869,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          totalSpecialCount   = values[12].u;
 
                          printf("  Id              : %"PRIi64"\n",uuidId);
-                         printf("    UUID          : %s\n",values[ 1].s);
+                         printf("    UUID          : %s\n",String_cString(values[ 1].string));
                          printf("\n");
                          printf("    Total entries : %u, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -7840,7 +7881,8 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          printf("    Special       : %u\n",totalSpecialCount);
                          printf("\n");
 
-                         idsString = String_new();
+                         i      = 0;
+                         prefix = "    Entity ids    : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -7850,8 +7892,17 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                         UNUSED_VARIABLE(valueCount);
                                         UNUSED_VARIABLE(userData);
 
-                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if      (i > 10)
+                                        {
+                                          putchar('\n');
+                                          i      = 0;
+                                          prefix = "                    ";
+                                        }
+
+                                        if      (i == 0) printf("%s",prefix);
+                                        else if (i >  0) printf("%s",", ");
+                                        printf("%"PRIi64,values[0].id);
+                                        i++;
 
                                         return ERROR_NONE;
                                       },NULL),
@@ -7877,9 +7928,10 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
-                         printf("    Entity ids    : %s\n",String_cString(idsString));
+                         if (i > 0) putchar('\n');
 
-                         String_clear(idsString);
+                         i      = 0;
+                         prefix = "    Storage ids   : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -7889,8 +7941,17 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                         UNUSED_VARIABLE(valueCount);
                                         UNUSED_VARIABLE(userData);
 
-                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if      (i > 10)
+                                        {
+                                          putchar('\n');
+                                          i      = 0;
+                                          prefix = "                    ";
+                                        }
+
+                                        if      (i == 0) printf("%s",prefix);
+                                        else if (i >  0) printf("%s",", ");
+                                        printf("%"PRIi64,values[0].id);
+                                        i++;
 
                                         return ERROR_NONE;
                                       },NULL),
@@ -7916,9 +7977,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
-                         printf("    Storage ids   : %s\n",String_cString(idsString));
-
-                         String_delete(idsString);
+                         if (i > 0) putchar('\n');
 
                          return ERROR_NONE;
                        },NULL),
@@ -8032,7 +8091,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          uint64     totalHardlinkSize;
                          ulong      totalSpecialCount;
                          DatabaseId uuidId;
-                         String     idsString;
+                         const char *prefix;
+                         uint       i;
 
                          assert(values != NULL);
                          assert(valueCount == 27);
@@ -8058,8 +8118,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 
                          printf("  Id              : %"PRIi64"\n",entityId);
                          printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : "xxx");//TODO values[ 1]);
-                         printf("    Job UUID      : %s\n",values[ 2].s);
-                         printf("    Schedule UUID : %s\n",values[ 3].s);
+                         printf("    Job UUID      : %s\n",String_cString(values[ 2].string));
+                         printf("    Schedule UUID : %s\n",String_cString(values[ 3].string));
                          printf("\n");
                          printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -8072,9 +8132,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          printf("\n");
                          printf("    UUID id       : %"PRIi64"\n",uuidId);
 
-                         idsString = String_new();
-// TODO: reenable
-#if 0
+                         i      = 0;
+                         prefix = "    Storage ids   : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -8084,8 +8143,17 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                         UNUSED_VARIABLE(valueCount);
                                         UNUSED_VARIABLE(userData);
 
-                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if      (i > 10)
+                                        {
+                                          putchar('\n');
+                                          i      = 0;
+                                          prefix = "                    ";
+                                        }
+
+                                        if      (i == 0) printf("%s",prefix);
+                                        else if (i >  0) printf("%s",", ");
+                                        printf("%"PRIi64,values[0].id);
+                                        i++;
 
                                         return ERROR_NONE;
                                       },NULL),
@@ -8111,9 +8179,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
-#endif
-                         printf("    Storage ids   : %s\n",String_cString(idsString));
-                         String_delete(idsString);
+                         if (i > 0) putchar('\n');
 
                          return ERROR_NONE;
                        },NULL),
@@ -8194,15 +8260,17 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIds, bool lostFlag)
+LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIds, ConstString name, bool lostFlag)
 {
   const char *STATE_TEXT[] = {"","OK","create","update requested","update","error"};
   const char *MODE_TEXT [] = {"manual","auto"};
 
+// TODO:
 #define INDEX_CONST_MODE_MANUAL 0
 #define INDEX_CONST_MODE_AUTO 1
 
   String     storageIdsString;
+  String     ftsName,ftsSubSelect;
   ulong      i;
   DatabaseId storageId;
   Errors     error;
@@ -8216,135 +8284,212 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
     String_formatAppend(storageIdsString,"%"PRIi64,storageId);
   }
 
+  ftsName = getFTSString(String_new(),name);
+
+  ftsSubSelect = String_new();
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      String_format(ftsSubSelect,"SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S'",ftsName);
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        String_format(ftsSubSelect,"SELECT id FROM storages WHERE MATCH(name) AGAINST ('%S')",ftsName);
+      #else /* HAVE_MARIADB */
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+// TODO:
+//        String_format(ftsSubSelect,"xxxx",ftsName);
+//        textsearchable_index_col @@ to_tsquery('create & table')
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+
   printf("%s:\n",lostFlag ? "Lost storages" : "Storages");
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
-                         uint   state;
-                         uint   mode;
-                         ulong  totalEntryCount;
-                         uint64 totalEntrySize;
-                         ulong  totalFileCount;
-                         uint64 totalFileSize;
-                         ulong  totalImageCount;
-                         uint64 totalImageSize;
-                         ulong  totalDirectoryCount;
-                         ulong  totalLinkCount;
-                         ulong  totalHardlinkCount;
-                         uint64 totalHardlinkSize;
-                         ulong  totalSpecialCount;
+                         DatabaseId storageId;
+                         DatabaseId uuidId;
+                         bool       storageOutputFlag;
 
                          assert(values != NULL);
-//                             assert(valueCount == 14);
+                         assert(valueCount == 2);
 
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         state               = values[10].u;
-                         mode                = values[11].u;
-                         totalEntryCount     = values[14].u;
-                         totalEntrySize      = values[15].u64;
-                         totalFileCount      = values[16].u;
-                         totalFileSize       = values[17].u64;
-                         totalImageCount     = values[18].u;
-                         totalImageSize      = values[19].u64;
-                         totalDirectoryCount = values[20].u;
-                         totalLinkCount      = values[21].u64;
-                         totalHardlinkCount  = values[22].u;
-                         totalHardlinkSize   = values[23].u64;
-                         totalSpecialCount   = values[24].u;
+                         storageId = values[0].id;
+                         uuidId    = values[1].id;
 
-                         printf("  Id              : %"PRIi64"\n",values[ 0].id);
-                         printf("    Name          : %s\n",values[ 5].s);
-                         printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
-                         printf("    Host name     : %s\n",(values[ 7].s != NULL) ? values[ 7].s : "");
-                         printf("    User name     : %s\n",(values[ 8].s != NULL) ? values[ 8].s : "");
-                         printf("    Comment       : %s\n",(values[ 9].s != NULL) ? values[ 9].s : "");
-                         printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
-                         printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
-                         printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
-                         printf("    Error message : %s\n",(values[13].s != NULL) ? values[13].s : "");
-                         printf("\n");
-                         printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
-                         printf("\n");
-                         printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                         printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
-                         printf("    Directories   : %lu\n",totalDirectoryCount);
-                         printf("    Links         : %lu\n",totalLinkCount);
-                         printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
-                         printf("    Special       : %lu\n",totalSpecialCount);
-                         printf("\n");
-                         printf("    UUID id       : %"PRIi64"\n",values[1].id);
-                         printf("    Entity id     : %"PRIi64"\n",values[2].id);
-                         printf("    Job UUID      : %s\n",values[3].s);
-                         printf("    Schedule UUID : %s\n",values[4].s);
+                         storageOutputFlag = FALSE;
+                         error = Database_get(databaseHandle,
+                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                              {
+                                                uint   state;
+                                                uint   mode;
+                                                ulong  totalEntryCount;
+                                                uint64 totalEntrySize;
+                                                ulong  totalFileCount;
+                                                uint64 totalFileSize;
+                                                ulong  totalImageCount;
+                                                uint64 totalImageSize;
+                                                ulong  totalDirectoryCount;
+                                                ulong  totalLinkCount;
+                                                ulong  totalHardlinkCount;
+                                                uint64 totalHardlinkSize;
+                                                ulong  totalSpecialCount;
+
+                                                assert(values != NULL);
+                                                assert(valueCount == 36);
+
+                                                UNUSED_VARIABLE(valueCount);
+                                                UNUSED_VARIABLE(userData);
+
+                                                state               = values[10].u;
+                                                mode                = values[11].u;
+                                                totalEntryCount     = values[14].u;
+                                                totalEntrySize      = values[15].u64;
+                                                totalFileCount      = values[16].u;
+                                                totalFileSize       = values[17].u64;
+                                                totalImageCount     = values[18].u;
+                                                totalImageSize      = values[19].u64;
+                                                totalDirectoryCount = values[20].u;
+                                                totalLinkCount      = values[21].u64;
+                                                totalHardlinkCount  = values[22].u;
+                                                totalHardlinkSize   = values[23].u64;
+                                                totalSpecialCount   = values[24].u;
+
+                                                printf("  Id              : %"PRIi64"\n",values[ 0].id);
+                                                printf("    Name          : %s\n",String_cString(values[ 5].string));
+                                                printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
+                                                printf("    Host name     : %s\n",String_cString(values[ 7].string));
+                                                printf("    User name     : %s\n",String_cString(values[ 8].string));
+                                                printf("    Comment       : %s\n",String_cString(values[ 9].string));
+                                                printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
+                                                printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
+                                                printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
+                                                printf("    Error message : %s\n",(values[13].s != NULL) ? values[13].s : "");
+                                                printf("\n");
+                                                printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                                                printf("\n");
+                                                printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                                                printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                                                printf("    Directories   : %lu\n",totalDirectoryCount);
+                                                printf("    Links         : %lu\n",totalLinkCount);
+                                                printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                                                printf("    Special       : %lu\n",totalSpecialCount);
+                                                printf("\n");
+                                                printf("    UUID id       : %"PRIi64"\n",values[1].id);
+                                                printf("    Entity id     : %"PRIi64"\n",values[2].id);
+                                                printf("    Job UUID      : %s\n",String_cString(values[3].string));
+                                                printf("    Schedule UUID : %s\n",String_cString(values[4].string));
+
+                                                return ERROR_NONE;
+                                              },NULL),
+                                              NULL,  // changedRowCount
+                                              DATABASE_TABLES
+                                              (
+                                                "storages \
+                                                   LEFT JOIN entities ON entities.id=storages.entityId \
+                                                   LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                                "
+                                              ),
+                                              DATABASE_FLAG_NONE,
+                                              DATABASE_COLUMNS
+                                              (
+                                                DATABASE_COLUMN_KEY     ("storages.id"),
+                                                DATABASE_COLUMN_KEY     ("storages.uuidId"),
+                                                DATABASE_COLUMN_KEY     ("storages.entityId"),
+                                                DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                                                DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                                                DATABASE_COLUMN_STRING  ("storages.name"),
+                                                DATABASE_COLUMN_DATETIME("storages.created"),
+                                                DATABASE_COLUMN_STRING  ("storages.hostName"),
+                                                DATABASE_COLUMN_STRING  ("storages.userName"),
+                                                DATABASE_COLUMN_STRING  ("storages.comment"),
+                                                DATABASE_COLUMN_UINT    ("storages.state"),
+                                                DATABASE_COLUMN_UINT    ("storages.mode"),
+                                                DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                                                DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+
+                                                DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalEntrySize"),
+
+                                                DATABASE_COLUMN_UINT    ("storages.totalFileCount"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalFileSize"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalImageCount"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalImageSize"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalDirectoryCount"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalLinkCount"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalHardlinkCount"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalHardlinkSize"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalSpecialCount"),
+
+                                                DATABASE_COLUMN_UINT    ("storages.totalEntryCountNewest"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalEntrySizeNewest"),
+
+                                                DATABASE_COLUMN_UINT    ("storages.totalFileCountNewest"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalFileSizeNewest"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalImageCountNewest"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalImageSizeNewest"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalDirectoryCountNewest"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalLinkCountNewest"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalHardlinkCountNewest"),
+                                                DATABASE_COLUMN_UINT64  ("storages.totalHardlinkSizeNewest"),
+                                                DATABASE_COLUMN_UINT    ("storages.totalSpecialCountNewest")
+                                              ),
+                                              stringFormat(filterString,sizeof(filterString),
+                                                           "    storages.id=? \
+                                                            AND (? OR storages.id IN (%s)) \
+                                                           ",
+                                                           !String_isEmpty(name) ? String_cString(ftsSubSelect) : "0"
+                                                          ),
+                                              DATABASE_FILTERS
+                                              (
+                                                DATABASE_FILTER_KEY  (!lostFlag ? storageId : DATABASE_ID_NONE),
+                                                DATABASE_FILTER_BOOL (String_isEmpty(name))
+                                              ),
+                                              NULL,  // groupBy
+                                              NULL,  // orderBy
+                                              0LL,
+                                              DATABASE_UNLIMITED
+                                             );
+                         if (error != ERROR_NONE)
+                         {
+                           return error;
+                         }
 
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
                        DATABASE_TABLES
                        (
-                         "storages \
-                            LEFT JOIN entities ON entities.id=storages.entityId \
-                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                         "
+                         "storages"
                        ),
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_KEY     ("storages.id"),
-                         DATABASE_COLUMN_KEY     ("storages.uuidId"),
-                         DATABASE_COLUMN_KEY     ("storages.entityId"),
-                         DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                         DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
-                         DATABASE_COLUMN_STRING  ("storages.name"),
-                         DATABASE_COLUMN_DATETIME("storages.created"),
-                         DATABASE_COLUMN_STRING  ("storages.hostName"),
-                         DATABASE_COLUMN_STRING  ("storages.userName"),
-                         DATABASE_COLUMN_STRING  ("storages.comment"),
-                         DATABASE_COLUMN_UINT    ("storages.state"),
-                         DATABASE_COLUMN_UINT    ("storages.mode"),
-                         DATABASE_COLUMN_DATETIME("storages.lastChecked"),
-                         DATABASE_COLUMN_STRING  ("storages.errorMessage"),
-
-                         DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalEntrySize"),
-
-                         DATABASE_COLUMN_UINT    ("storages.totalFileCount"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalFileSize"),
-                         DATABASE_COLUMN_UINT    ("storages.totalImageCount"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalImageSize"),
-                         DATABASE_COLUMN_UINT    ("storages.totalDirectoryCount"),
-                         DATABASE_COLUMN_UINT    ("storages.totalLinkCount"),
-                         DATABASE_COLUMN_UINT    ("storages.totalHardlinkCount"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalHardlinkSize"),
-                         DATABASE_COLUMN_UINT    ("storages.totalSpecialCount"),
-
-                         DATABASE_COLUMN_UINT    ("storages.totalEntryCountNewest"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalEntrySizeNewest"),
-
-                         DATABASE_COLUMN_UINT    ("storages.totalFileCountNewest"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalFileSizeNewest"),
-                         DATABASE_COLUMN_UINT    ("storages.totalImageCountNewest"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalImageSizeNewest"),
-                         DATABASE_COLUMN_UINT    ("storages.totalDirectoryCountNewest"),
-                         DATABASE_COLUMN_UINT    ("storages.totalLinkCountNewest"),
-                         DATABASE_COLUMN_UINT    ("storages.totalHardlinkCountNewest"),
-                         DATABASE_COLUMN_UINT64  ("storages.totalHardlinkSizeNewest"),
-                         DATABASE_COLUMN_UINT    ("storages.totalSpecialCountNewest")
+                         DATABASE_COLUMN_KEY("id"),
+                         DATABASE_COLUMN_KEY("uuidId")
                        ),
                        stringFormat(filterString,sizeof(filterString),
-                                    "    (? OR storages.id IN (%s)) \
-                                     AND (? OR entities.id IS NULL) \
-                                     AND storages.deletedFlag!=TRUE \
+                                    "    (   (NOT ? AND (? OR id IN (%s))) \
+                                          OR (    ? AND (id=?)) \
+                                         ) \
+                                     AND deletedFlag!=TRUE \
                                     ",
                                     !Array_isEmpty(&storageIds) ? String_cString(storageIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
-
+                         DATABASE_FILTER_BOOL  (lostFlag),
                          DATABASE_FILTER_BOOL  (Array_isEmpty(&storageIds)),
-                         DATABASE_FILTER_BOOL  (!lostFlag)
+                         DATABASE_FILTER_BOOL  (lostFlag),
+                         DATABASE_FILTER_KEY   (DATABASE_ID_NONE)
                        ),
                        NULL,  // groupBy
                        NULL,  // orderBy
@@ -8358,6 +8503,8 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   }
 
   // free resources
+  String_delete(ftsSubSelect);
+  String_delete(ftsName);
   String_delete(storageIdsString);
 }
 
@@ -8392,8 +8539,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
     String_formatAppend(entityIdsString,"%"PRIi64,entityId);
   }
 
-  ftsName = String_new();
-  getFTSString(ftsName,name);
+  ftsName = getFTSString(String_new(),name);
 
   ftsSubSelect = String_new();
   switch (Database_getType(databaseHandle))
@@ -8410,14 +8556,14 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
 // TODO:
-//        String_format(ftsSubSelect,"xxxx",ftsName);
+String_format(ftsSubSelect,"SELECT id FROM entries");
 //        textsearchable_index_col @@ to_tsquery('create & table')
       #else /* HAVE_POSTGRESQL */
       #endif /* HAVE_POSTGRESQL */
       break;
   }
 
-  printf("Entries:\n");
+  printf("%s:\n",lostFlag ? "Lost entries" : "Entries");
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -8454,7 +8600,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                   entityOutputFlag = TRUE;
                                                 }
                                                 printf("    Id               : %"PRIi64"\n",values[0].id);
-                                                printf("      Name           : %s\n",values[1].s);
+                                                printf("      Name           : %s\n",String_cString(values[1].string));
                                                 printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : "xxx");//TODO values[2].i);
                                                 switch (type)
                                                 {
@@ -8531,14 +8677,14 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                             AND (? OR (type=?)) \
                                                             AND (? OR entries.id IN (%s)) \
                                                            ",
-                                                           !String_isEmpty(ftsSubSelect) ? String_cString(ftsSubSelect) : "0"
+                                                           !String_isEmpty(name) ? String_cString(ftsSubSelect) : "0"
                                                           ),
                                               DATABASE_FILTERS
                                               (
                                                 DATABASE_FILTER_KEY  (!lostFlag ? entityId : DATABASE_ID_NONE),
                                                 DATABASE_FILTER_BOOL (entryType == INDEX_CONST_TYPE_ANY),
                                                 DATABASE_FILTER_UINT (entryType),
-                                                DATABASE_FILTER_BOOL (String_isEmpty(ftsSubSelect))
+                                                DATABASE_FILTER_BOOL (String_isEmpty(name))
                                               ),
                                               NULL,  // groupBy
                                               NULL,  // orderBy
@@ -8725,22 +8871,24 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
     printInfo("FAIL!\n");
     return;
   }
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "UPDATE %1 \
-                            SET entriesNewestId=COALESCE((SELECT entriesNewest.id \
-                                                         FROM entriesNewest \
-                                                         WHERE entriesNewest.entryId=%1.entryId \
-                                                          LIMIT 0,1 \
-                                                         ), \
-                                                         0 \
-                                                        ) \
-                           ",
-                           DATABASE_PARAMETERS
-                           (
-                           )
-                          );
+  error = Database_update(databaseHandle,
+                          NULL,  // changedRowCount
+                          "%1",
+                          DATABASE_FLAG_NONE,
+                          DATABASE_VALUES
+                          (
+                            DATABASE_VALUE("id", "COALESCE((SELECT entriesNewest.id \
+                                                            FROM entriesNewest \
+                                                            WHERE entriesNewest.entryId=%1.entryId \
+                                                              LIMIT 1 \
+                                                           ), \
+                                                           0 \
+                                                          ) \
+                                                 "
+                                          )
+                          ),
+                          DATABASE_FILTERS_NONE
+                         );
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -8757,7 +8905,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,values[1].s);
+fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,String_cString(values[1].string));
 n++;
 
                            return ERROR_NONE;
@@ -8798,7 +8946,7 @@ fprintf(stdout,"%lu storages\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,String_cString(values[2].string),values[3].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -8945,7 +9093,7 @@ fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].s,values[2].dateTime);
+fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,String_cString(values[1].string),values[2].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -8990,7 +9138,7 @@ fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].s,values[2].dateTime);
+fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,String_cString(values[1].string),values[2].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -9003,7 +9151,7 @@ n++;
                                                                FROM entries \
                                                                WHERE name=%1.name \
                                                                ORDER BY timeLastChanged DESC \
-                                                               LIMIT 0,1 \
+                                                               LIMIT 1 \
                                                               ) \
                            "
                          ),
@@ -9072,7 +9220,7 @@ int main(int argc, const char *argv[])
 
   Array            uuidIds,uuIds,entityIds,storageIds;
   StaticString     (uuid,MISC_UUID_STRING_LENGTH);
-  String           entryName;
+  String           entryName,storageName;
   uint             i,n;
   CStringTokenizer stringTokenizer;
   const char       *token;
@@ -9098,6 +9246,7 @@ uint xxxShow=0;
   Array_init(&entityIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   entryName   = String_new();
+  storageName = String_new();
   databaseURI = NULL;
   command     = String_new();
 
@@ -9115,6 +9264,7 @@ uint xxxShow=0;
     Array_done(&uuIds);
     Array_done(&uuidIds);
     String_delete(command);
+    String_delete(storageName);
     String_delete(entryName);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
@@ -9144,6 +9294,7 @@ uint xxxShow=0;
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
@@ -9170,6 +9321,7 @@ uint xxxShow=0;
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
@@ -9224,30 +9376,6 @@ uint xxxShow=0;
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringEquals(argv[i],"--info-storages"))
-    {
-      infoStoragesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--info-storages="))
-    {
-      infoStoragesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId))
-        {
-          Array_append(&storageIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-lost-storages"))
-    {
-      infoLostStoragesFlag = TRUE;
-      i++;
-    }
     else if (stringEquals(argv[i],"--info-entries"))
     {
       infoEntriesFlag = TRUE;
@@ -9284,6 +9412,7 @@ uint xxxShow=0;
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
@@ -9292,6 +9421,46 @@ uint xxxShow=0;
     else if (stringEquals(argv[i],"--info-lost-entries"))
     {
       infoLostEntriesFlag = TRUE;
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-lost-entries="))
+    {
+      infoLostEntriesFlag = TRUE;
+      stringTokenizerInit(&stringTokenizer,&argv[i][20],",");
+      while (stringGetNextToken(&stringTokenizer,&token))
+      {
+        if (stringToInt64(token,&databaseId))
+        {
+          Array_append(&entityIds,&databaseId);
+        }
+        String_setCString(entryName,token);
+      }
+      stringTokenizerDone(&stringTokenizer);
+      i++;
+    }
+    else if (stringEquals(argv[i],"--info-storages"))
+    {
+      infoStoragesFlag = TRUE;
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-storages="))
+    {
+      infoStoragesFlag = TRUE;
+      stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
+      while (stringGetNextToken(&stringTokenizer,&token))
+      {
+        if (stringToInt64(token,&databaseId))
+        {
+          Array_append(&storageIds,&databaseId);
+        }
+        String_setCString(storageName,token);
+      }
+      stringTokenizerDone(&stringTokenizer);
+      i++;
+    }
+    else if (stringEquals(argv[i],"--info-lost-storages"))
+    {
+      infoLostStoragesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--check-integrity"))
@@ -9554,6 +9723,7 @@ uint xxxShow=0;
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
@@ -9588,6 +9758,7 @@ uint xxxShow=0;
       Array_done(&uuIds);
       Array_done(&uuidIds);
       String_delete(command);
+      String_delete(storageName);
       String_delete(entryName);
       exit(EXITCODE_OK);
     }
@@ -9599,6 +9770,7 @@ uint xxxShow=0;
       Array_done(&uuIds);
       Array_done(&uuidIds);
       String_delete(command);
+      String_delete(storageName);
       String_delete(entryName);
       exit(EXITCODE_OK);
     }
@@ -9630,6 +9802,7 @@ else if (stringEquals(argv[i],"--xxx"))
       Array_done(&uuIds);
       Array_done(&uuidIds);
       String_delete(command);
+      String_delete(storageName);
       String_delete(entryName);
       exit(EXITCODE_INVALID_ARGUMENT);
     }
@@ -9692,6 +9865,7 @@ else if (stringEquals(argv[i],"--xxx"))
     Array_done(&uuIds);
     Array_done(&uuidIds);
     String_delete(command);
+    String_delete(storageName);
     String_delete(entryName);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
@@ -9717,6 +9891,7 @@ else if (stringEquals(argv[i],"--xxx"))
     Array_done(&uuIds);
     Array_done(&uuidIds);
     String_delete(command);
+    String_delete(storageName);
     String_delete(entryName);
     exit(EXITCODE_FAIL);
   }
@@ -9730,6 +9905,7 @@ else if (stringEquals(argv[i],"--xxx"))
     Array_done(&uuIds);
     Array_done(&uuidIds);
     String_delete(command);
+    String_delete(storageName);
     String_delete(entryName);
     exit(EXITCODE_FAIL);
   }
@@ -9748,6 +9924,7 @@ else if (stringEquals(argv[i],"--xxx"))
     Array_done(&uuIds);
     Array_done(&uuidIds);
     String_delete(command);
+    String_delete(storageName);
     String_delete(entryName);
     exit(EXITCODE_FAIL);
   }
@@ -9807,15 +9984,6 @@ else if (stringEquals(argv[i],"--xxx"))
     printEntitiesInfo(&databaseHandle,entityIds);
   }
 
-  if      (infoLostStoragesFlag)
-  {
-    printStoragesInfo(&databaseHandle,storageIds,TRUE);
-  }
-  else if (infoStoragesFlag)
-  {
-    printStoragesInfo(&databaseHandle,storageIds,FALSE);
-  }
-
   if      (infoLostEntriesFlag)
   {
     printEntriesInfo(&databaseHandle,entityIds,entryType,entryName,TRUE);
@@ -9823,6 +9991,15 @@ else if (stringEquals(argv[i],"--xxx"))
   else if (infoEntriesFlag)
   {
     printEntriesInfo(&databaseHandle,entityIds,entryType,entryName,FALSE);
+  }
+
+  if      (infoLostStoragesFlag)
+  {
+    printStoragesInfo(&databaseHandle,storageIds,storageName,TRUE);
+  }
+  else if (infoStoragesFlag)
+  {
+    printStoragesInfo(&databaseHandle,storageIds,storageName,FALSE);
   }
 
   if (showTableNames)
@@ -9998,8 +10175,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  NULL,  // orderBy
@@ -10007,7 +10184,8 @@ if (xxxId != DATABASE_ID_NONE)
                  1LL
                 );
 
-    stringFormat(format,sizeof(format),"%%-%dlld %%-%ds %%64s %%-10s\n",maxIdLength,maxStorageNameLength);
+    stringFormat(format,sizeof(format),"%%-%dlld %%-%ds %%-%ds %%-10s\n",maxIdLength,maxStorageNameLength,MISC_UUID_STRING_LENGTH);
+
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -10028,7 +10206,7 @@ if (xxxId != DATABASE_ID_NONE)
                      if (i == archiveType) s = ARCHIVE_TYPES[i];
                    }
 
-                   printf(format,values[0].id,values[1].s,values[2].s,s);
+                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string),s);
 
                    return ERROR_NONE;
                  },NULL),
@@ -10050,8 +10228,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  "storages.name ASC",
@@ -10117,8 +10295,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  NULL,  // orderBy
@@ -10137,7 +10315,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,values[1].s,values[2].s);
+                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string));
 
                    return ERROR_NONE;
                  },NULL),
@@ -10175,14 +10353,13 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  "entryName ASC",
                  0LL,
                  DATABASE_UNLIMITED
-
                 );
   }
 
@@ -10243,8 +10420,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  NULL,  // orderBy
@@ -10263,7 +10440,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,values[1].s,values[2].s);
+                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string));
 
                    return ERROR_NONE;
                  },NULL),
@@ -10301,8 +10478,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  "entriesNewestName ASC",
@@ -10405,6 +10582,7 @@ if (xxxId != DATABASE_ID_NONE)
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
@@ -10427,6 +10605,7 @@ if (xxxId != DATABASE_ID_NONE)
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
@@ -10462,6 +10641,7 @@ if (xxxId != DATABASE_ID_NONE)
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
@@ -10482,6 +10662,7 @@ if (xxxId != DATABASE_ID_NONE)
         Array_done(&uuIds);
         Array_done(&uuidIds);
         String_delete(command);
+        String_delete(storageName);
         String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
@@ -10496,6 +10677,7 @@ if (xxxId != DATABASE_ID_NONE)
   Array_done(&entityIds);
   Array_done(&uuIds);
   Array_done(&uuidIds);
+  String_delete(storageName);
   String_delete(entryName);
   String_delete(command);
 

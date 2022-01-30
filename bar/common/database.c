@@ -1672,16 +1672,6 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
                                     statementHandle,
                                     NULL
                                    );
-  #ifndef NDEBUG
-    if ((*statementHandle) == NULL)
-    {
-      HALT_INTERNAL_ERROR("SQLite prepare fail %d: %s: %s",
-                          sqlite3_errcode(handle),
-                          sqlite3_errmsg(handle),
-                          sqlString
-                         );
-    }
-  #endif /* not NDEBUG */
   if      (sqliteResult == SQLITE_MISUSE)
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
@@ -2161,15 +2151,17 @@ LOCAL void postgresqlReceiveMessageHandler(void *arg, const PGresult *result)
 * Purpose: execute SQL string
 * Input  : handle           - database handle
 *          sqlString        - SQL string
+*          parameterTypes   - parameter types
+*          parameterValues  - parameter values
+*          parameterLengths - parameter lengths
+*          parameterFormats - parameter formats
 *          parameterCount   - number of parameters
-* Output : postgresqlResult - PostgreSQL result
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-// TODO: remove postgresqlResult, not needed
-LOCAL Errors postgresqlExecute(PGresult   **postgresqlResult,
-                               PGconn     *handle,
+LOCAL Errors postgresqlExecute(PGconn     *handle,
                                const char *sqlString,
                                const Oid  parameterTypes[],
                                const char *parameterValues[],
@@ -2178,24 +2170,25 @@ LOCAL Errors postgresqlExecute(PGresult   **postgresqlResult,
                                uint       parameterCount
                               )
 {
+  PGresult       *postgresqlResult;
   ExecStatusType postgreSQLStatus;
   Errors         error;
 
-  assert(postgresqlResult != NULL);
   assert(handle != NULL);
+  assert(sqlString != NULL);
 
-  (*postgresqlResult) = PQexecParams(handle,
-                                     sqlString,
-                                     parameterCount,
-                                     parameterTypes,
-                                     parameterValues,
-                                     parameterLengths,
-                                     parameterFormats,
-                                     0  // resultFormat
-                                    );
-  if ((*postgresqlResult) != NULL)
+  postgresqlResult = PQexecParams(handle,
+                                  sqlString,
+                                  parameterCount,
+                                  parameterTypes,
+                                  parameterValues,
+                                  parameterLengths,
+                                  parameterFormats,
+                                  0  // resultFormat
+                                 );
+  if (postgresqlResult != NULL)
   {
-    postgreSQLStatus = PQresultStatus(*postgresqlResult);
+    postgreSQLStatus = PQresultStatus(postgresqlResult);
     if (    (postgreSQLStatus == PGRES_COMMAND_OK)
          || (postgreSQLStatus == PGRES_TUPLES_OK)
        )
@@ -2207,14 +2200,14 @@ LOCAL Errors postgresqlExecute(PGresult   **postgresqlResult,
       error = ERRORX_(DATABASE,
                       postgreSQLStatus,
                       "%s",
-                      PQresultErrorField(*postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
+                      PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
                      );
 // TODO: remove/replace
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-      PQclear(*postgresqlResult);
-(*postgresqlResult)=NULL;
     }
+
+    PQclear(postgresqlResult);
   }
   else
   {
@@ -6105,10 +6098,10 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             PostgresSQLStatement statement;
             Oid                  *parameterTypes;
             uint                 i;
+// TODO:
 //            const char     **parameterValues;
 //            int            *parameterLengths;
 //            int            *parameterFormats;
-            PGresult       *postgresqlResult;
 
             // allocate parameter data
             statement.bind = (PostgreSQLBind*)malloc(parameterCount*sizeof(PostgreSQLBind));
@@ -6288,8 +6281,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             }
 
             // execute SQL statement
-            error = postgresqlExecute(&postgresqlResult,
-                                      databaseHandle->postgresql.handle,
+            error = postgresqlExecute(databaseHandle->postgresql.handle,
                                       sqlString,
                                       parameterTypes,
                                       statement.parameterValues,
@@ -6307,60 +6299,18 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
               break;
             }
 
-            // done SQL statement
-            PQclear(postgresqlResult);
-
-#if 0
-            // free call-back data
-            for (i = 0; i < resultCount; i++)
-            {
-              switch (results[i].type)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  break;
-                case DATABASE_DATATYPE_UINT:
-                  break;
-                case DATABASE_DATATYPE_UINT64:
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                case DATABASE_DATATYPE_CSTRING:
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break;
-              }
-            }
-#endif
-            free(statement.parameterFormats);
-            free(statement.parameterLengths);
-            free(statement.parameterValues);
-            free(parameterTypes);
-            free(statement.bind);
-
             // get number of changes
             if (changedRowCount != NULL)
             {
 // TODO:              (*changedRowCount) += (ulong)databaseHandle->postgresql.rowCount;
             }
+
+            // free resources
+            free(statement.parameterFormats);
+            free(statement.parameterLengths);
+            free(statement.parameterValues);
+            free(parameterTypes);
+            free(statement.bind);
           }
         #else /* HAVE_POSTGRESQL */
           UNUSED_VARIABLE(parameters);
@@ -7408,10 +7358,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
           {
-            PGresult *result;
-
-            error = postgresqlExecute(&result,
-                                      databaseHandle->postgresql.handle,
+            error = postgresqlExecute(databaseHandle->postgresql.handle,
                                       sqlString,
                                       NULL,  // parameterTypes,
                                       NULL,  // parameterValues,
@@ -7429,9 +7376,6 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             {
 //// TODO:              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
             }
-
-            // discard results
-            PQclear(result);
           }
         #else /* HAVE_POSTGRESQL */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -9001,8 +8945,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           i = 0;
           do
           {
-            char     sqlString[256];
-            PGresult *result;
+            char sqlString[256];
 
             stringFormat(sqlString,sizeof(sqlString),
                          "CREATE DATABASE %s \
@@ -9013,8 +8956,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                          MARIADB_CHARACTER_SETS[i],
                          MARIADB_CHARACTER_SETS[i]
                         );
-            error = postgresqlExecute(&result,
-                                      databaseHandle.postgresql.handle,
+            error = postgresqlExecute(databaseHandle.postgresql.handle,
                                       sqlString,
                                       NULL,  // parameterTypes,
                                       NULL,  // parameterValues,
@@ -9022,10 +8964,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                                       NULL,  // parameterFormats,
                                       0  // parameterCount
                                      );
-            if (error == ERROR_NONE)
-            {
-              PQclear(result);
-            }
 
             i++;
           }
@@ -9603,17 +9541,17 @@ Errors Database_getViewList(StringList     *viewList,
                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                {
                                  assert(values != NULL);
-                                 assert(valueCount == 2);
+                                 assert(valueCount == 1);
 
                                  UNUSED_VARIABLE(valueCount);
                                  UNUSED_VARIABLE(userData);
 
-                                 StringList_append(viewList,values[2].string);
+                                 StringList_append(viewList,values[0].string);
 
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               DATABASE_PLAIN("SELECT * FROM INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(FALSE))"),
+                               DATABASE_PLAIN("SELECT table_name FROM INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(FALSE))"),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_STRING("table_name")
@@ -9824,7 +9762,7 @@ DATABASE_PLAIN("xxx"),
                                  UNUSED_VARIABLE(valueCount);
                                  UNUSED_VARIABLE(userData);
 
-                                 StringList_append(indexList,values[1].string);
+                                 StringList_append(indexList,values[2].string);
 
                                  return ERROR_NONE;
                                },NULL),
@@ -10791,7 +10729,7 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP TABLE %s",
+                                              "DROP TABLE IF EXISTS %s",
                                               tableName
                                              ),
                                  DATABASE_PARAMETERS
@@ -11028,7 +10966,7 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP INDEX %s",
+                                              "DROP INDEX IF EXISTS %s",
                                               indexName
                                              ),
                                  DATABASE_PARAMETERS
@@ -11051,7 +10989,7 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     "DROP INDEXES ? FROM ?",
+                                     "DROP INDEXES IF EXISTS ? FROM ?",
                                      DATABASE_PARAMETERS
                                      (
                                        DATABASE_PARAMETER_STRING(indexName),
@@ -11093,7 +11031,10 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
 
 Errors Database_dropIndices(DatabaseHandle *databaseHandle)
 {
-  Errors error;
+  StringList         indexNameList;
+  Errors             error;
+  StringListIterator iteratorIndexName;
+  String             indexName;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -11102,85 +11043,24 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
+      StringList_init(&indexNameList);
+      error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
+      STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
       {
-        StringList         indexNameList;
-        StringListIterator iteratorIndexName;
-        String             indexName;
-
-        StringList_init(&indexNameList);
-        error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-        STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
-        {
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   "DROP INDEX ?",
-                                   DATABASE_PARAMETERS
-                                   (
-                                     DATABASE_PARAMETER_STRING(String_cString(indexName))
-                                   )
-                                  );
-        }
-        StringList_done(&indexNameList);
+        error = Database_dropIndex(databaseHandle,String_cString(indexName));
       }
+      StringList_done(&indexNameList);
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        {
-          StringList         tableNameList,indexNameList;
-          StringListIterator iteratorTableName,iteratorIndexName;
-          String             tableName,indexName;
-
-          StringList_init(&tableNameList);
-          StringList_init(&indexNameList);
-          error = Database_getTableList(&tableNameList,databaseHandle);
-          STRINGLIST_ITERATEX(&indexNameList,iteratorTableName,tableName,error == ERROR_NONE)
-          {
-            error = Database_getIndexList(&indexNameList,databaseHandle,String_cString(tableName));
-            STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
-            {
-              error = Database_execute(databaseHandle,
-                                       NULL,  // changedRowCount
-                                       DATABASE_FLAG_NONE,
-                                       "DROP INDEXES ? FROM ?",
-                                       DATABASE_PARAMETERS
-                                       (
-                                         DATABASE_PARAMETER_STRING(String_cString(indexName)),
-                                         DATABASE_PARAMETER_STRING(String_cString(tableName))
-                                       )
-                                      );
-            }
-          }
-          StringList_done(&indexNameList);
-          StringList_done(&tableNameList);
-        }
+        // nothing to do: indices are part of the tables
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        {
-          StringList         indexNameList;
-          StringListIterator iteratorIndexName;
-          String             indexName;
-
-          StringList_init(&indexNameList);
-          error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-          STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
-          {
-            error = Database_execute(databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     "DROP INDEX ? CASCADE",
-                                     DATABASE_PARAMETERS
-                                     (
-                                       DATABASE_PARAMETER_STRING(String_cString(indexName))
-                                     )
-                                    );
-          }
-          StringList_done(&indexNameList);
-        }
+        // nothing to do: indices are part of the tables
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -11205,7 +11085,7 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
                            stringFormat(sqlString,sizeof(sqlString),
-                                        "DROP TRIGGER %s",
+                                        "DROP TRIGGER IF EXISTS %s",
                                         triggerName
                                        ),
                            DATABASE_PARAMETERS
@@ -11232,14 +11112,9 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
   {
     error = Database_dropTrigger(databaseHandle,String_cString(triggerName));
   }
-  if (error != ERROR_NONE)
-  {
-    StringList_done(&triggerNameList);
-    return error;
-  }
   StringList_done(&triggerNameList);
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Database_compare(DatabaseHandle     *referenceDatabaseHandle,
@@ -13882,15 +13757,18 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   }
 
   // bind filters
-  error = bindFilters(&databaseStatementHandle,
-                      filters,
-                      filterCount
-                     );
-  if (error != ERROR_NONE)
+  if (filters != NULL)
   {
-    finalizeStatement(&databaseStatementHandle);
-    String_delete(sqlString);
-    return error;
+    error = bindFilters(&databaseStatementHandle,
+                        filters,
+                        filterCount
+                       );
+    if (error != ERROR_NONE)
+    {
+      finalizeStatement(&databaseStatementHandle);
+      String_delete(sqlString);
+      return error;
+    }
   }
 
   // execute statement
@@ -15376,8 +15254,8 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+        // Note: no checks available
+        error = ERROR_NONE;
         break;
     }
 

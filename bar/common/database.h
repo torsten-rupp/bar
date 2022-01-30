@@ -858,16 +858,6 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
       0, DATABASE_DATATYPE_STRING \
     ) \
   }
-#define DATABASE_COLUMN_CSTRING(name,...) \
-  { name, \
-    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-    ( \
-      __VA_ARGS__, DATABASE_DATATYPE_CSTRING \
-    ) \
-    ( \
-      0, DATABASE_DATATYPE_CSTRING \
-    ) \
-  }
 
 #define DATABASE_COLUMNS_NONE (DatabaseColumn*)NULL,0
 #define DATABASE_COLUMNS_AUTO (DatabaseColumn*)NULL,0
