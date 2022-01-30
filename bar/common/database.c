@@ -1672,16 +1672,6 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
                                     statementHandle,
                                     NULL
                                    );
-  #ifndef NDEBUG
-    if ((*statementHandle) == NULL)
-    {
-      HALT_INTERNAL_ERROR("SQLite prepare fail %d: %s: %s",
-                          sqlite3_errcode(handle),
-                          sqlite3_errmsg(handle),
-                          sqlString
-                         );
-    }
-  #endif /* not NDEBUG */
   if      (sqliteResult == SQLITE_MISUSE)
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
@@ -9603,17 +9593,17 @@ Errors Database_getViewList(StringList     *viewList,
                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                {
                                  assert(values != NULL);
-                                 assert(valueCount == 2);
+                                 assert(valueCount == 1);
 
                                  UNUSED_VARIABLE(valueCount);
                                  UNUSED_VARIABLE(userData);
 
-                                 StringList_append(viewList,values[2].string);
+                                 StringList_append(viewList,values[0].string);
 
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               DATABASE_PLAIN("SELECT * FROM INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(FALSE))"),
+                               DATABASE_PLAIN("SELECT table_name FROM INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(FALSE))"),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_STRING("table_name")
@@ -15376,8 +15366,8 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+        // Note: no checks available
+        error = ERROR_NONE;
         break;
     }
 
