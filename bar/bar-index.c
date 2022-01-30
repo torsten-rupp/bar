@@ -1021,7 +1021,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   Errors            error;
   DatabaseHandle    oldDatabaseHandle;
 
-  // parse URI and fill int default values
+  // parse URI and fill in default values
   Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
   switch (databaseSpecifier.type)
   {
@@ -1029,14 +1029,12 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-// TODO:
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-// TODO:
       #else /* HAVE_POSTGRESQL */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -1146,7 +1144,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "fileEntries",
                             "COUNT(id)",
-                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1167,7 +1165,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "imageEntries",
                             "COUNT(id)",
-                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1188,7 +1186,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "hardlinkEntries",
                             "COUNT(id)",
-                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1212,7 +1210,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1236,7 +1234,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1260,7 +1258,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1284,7 +1282,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1308,7 +1306,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1332,7 +1330,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             "entries",
                             "COUNT(id)",
                             "    entries.type=? \
-                             AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                             AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 1) \
                             ",
                             DATABASE_FILTERS
                             (
@@ -1383,7 +1381,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "FTS_entries",
                                 "COUNT(entryId)",
-                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1406,7 +1404,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "FTS_storages",
                                 "COUNT(storageId)",
-                                "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1429,7 +1427,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "entriesNewest",
                                 "COUNT(id)",
-                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1447,10 +1445,52 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
       totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_MARIADB:
-// TODO:
+      // check newest entries without entry
+      printInfo("  newest entries without entry...");
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "entriesNewest",
+                                "COUNT(id)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%"PRIi64"\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      // check newest entries without entry
+      printInfo("  newest entries without entry...");
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "entriesNewest",
+                                "COUNT(id)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%"PRIi64"\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
       break;
   }
 
@@ -1748,8 +1788,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 {
   Errors     error;
   const char *triggerName;
-// TODO:
-  const char *indexDefinition;
+  const char *triggerDefinition;
 
   printInfo("Create triggers...");
 
@@ -1769,12 +1808,12 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   }
 
   // create new triggeres
-  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
+  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(databaseHandle)], triggerDefinition, error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             indexDefinition,
+                             triggerDefinition,
                              DATABASE_PARAMETERS
                              (
                              )
@@ -1902,7 +1941,6 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   printInfo("Create indizes:\n");
 
   error = ERROR_NONE;
-// TODO:
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop all existing indizes
@@ -1930,7 +1968,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         // nothing to do
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+        // nothing to do
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -1963,15 +2001,14 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
-// TODO:
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
-// TODO:
         #else /* HAVE_POSTGRESQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
     }
@@ -5400,7 +5437,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &n,
                           "fileEntries",
                           DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1)",
                           DATABASE_FILTERS
                           (
                           ),
@@ -5418,7 +5455,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &n,
                           "imageEntries",
                           DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1)",
                           DATABASE_FILTERS
                           (
                           ),
@@ -5436,7 +5473,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &n,
                           "hardlinkEntries",
                           DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1)",
                           DATABASE_FILTERS
                           (
                           ),
@@ -5455,7 +5492,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5497,7 +5534,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5540,7 +5577,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5583,7 +5620,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5625,7 +5662,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5667,7 +5704,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                           AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -5756,7 +5793,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               &n,
                               "FTS_entries",
                               DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
                               DATABASE_FILTERS
                               (
                               ),
@@ -5776,7 +5813,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               &n,
                               "FTS_storages",
                               DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
                               DATABASE_FILTERS
                               (
                               ),
@@ -5796,7 +5833,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               &n,
                               "entriesNewest",
                               DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
                               DATABASE_FILTERS
                               (
                               ),
@@ -5811,7 +5848,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       // nothing to do (use views)
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      // nothing to do (use views)
       break;
   }
 
@@ -8032,7 +8069,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          uint64     totalHardlinkSize;
                          ulong      totalSpecialCount;
                          DatabaseId uuidId;
-                         String     idsString;
+                         const char *prefix;
+                         uint       i;
 
                          assert(values != NULL);
                          assert(valueCount == 27);
@@ -8072,9 +8110,9 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          printf("\n");
                          printf("    UUID id       : %"PRIi64"\n",uuidId);
 
-                         idsString = String_new();
-// TODO: reenable
-#if 0
+
+                         i      = 0;
+                         prefix = "    Storage ids   : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -8084,8 +8122,17 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                         UNUSED_VARIABLE(valueCount);
                                         UNUSED_VARIABLE(userData);
 
-                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if      (i > 10)
+                                        {
+                                          putchar('\n');
+                                          i      = 0;
+                                          prefix = "                    ";
+                                        }
+
+                                        if      (i == 0) printf("%s",prefix);
+                                        else if (i >  0) printf("%s",", ");
+                                        printf("%"PRIi64,values[0].id);
+                                        i++;
 
                                         return ERROR_NONE;
                                       },NULL),
@@ -8111,9 +8158,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
-#endif
-                         printf("    Storage ids   : %s\n",String_cString(idsString));
-                         String_delete(idsString);
+                         if (i > 0) putchar('\n');
 
                          return ERROR_NONE;
                        },NULL),
@@ -8725,22 +8770,24 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
     printInfo("FAIL!\n");
     return;
   }
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "UPDATE %1 \
-                            SET entriesNewestId=COALESCE((SELECT entriesNewest.id \
-                                                         FROM entriesNewest \
-                                                         WHERE entriesNewest.entryId=%1.entryId \
-                                                          LIMIT 0,1 \
-                                                         ), \
-                                                         0 \
-                                                        ) \
-                           ",
-                           DATABASE_PARAMETERS
-                           (
-                           )
-                          );
+  error = Database_update(databaseHandle,
+                          NULL,  // changedRowCount
+                          "%1",
+                          DATABASE_FLAG_NONE,
+                          DATABASE_VALUES
+                          (
+                            DATABASE_VALUE("id", "COALESCE((SELECT entriesNewest.id \
+                                                            FROM entriesNewest \
+                                                            WHERE entriesNewest.entryId=%1.entryId \
+                                                              LIMIT 1 \
+                                                           ), \
+                                                           0 \
+                                                          ) \
+                                                 "
+                                          )
+                          ),
+                          DATABASE_FILTERS_NONE
+                         );
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -9003,7 +9050,7 @@ n++;
                                                                FROM entries \
                                                                WHERE name=%1.name \
                                                                ORDER BY timeLastChanged DESC \
-                                                               LIMIT 0,1 \
+                                                               LIMIT 1 \
                                                               ) \
                            "
                          ),
@@ -9998,8 +10045,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  NULL,  // orderBy
@@ -10007,7 +10054,8 @@ if (xxxId != DATABASE_ID_NONE)
                  1LL
                 );
 
-    stringFormat(format,sizeof(format),"%%-%dlld %%-%ds %%64s %%-10s\n",maxIdLength,maxStorageNameLength);
+    stringFormat(format,sizeof(format),"%%-%dlld %%-%ds %%-%ds %%-10s\n",maxIdLength,maxStorageNameLength,MISC_UUID_STRING_LENGTH);
+
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -10028,7 +10076,7 @@ if (xxxId != DATABASE_ID_NONE)
                      if (i == archiveType) s = ARCHIVE_TYPES[i];
                    }
 
-                   printf(format,values[0].id,values[1].s,values[2].s,s);
+                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string),s);
 
                    return ERROR_NONE;
                  },NULL),
@@ -10050,8 +10098,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  "storages.name ASC",
@@ -10117,8 +10165,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  NULL,  // orderBy
@@ -10175,14 +10223,13 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  "entryName ASC",
                  0LL,
                  DATABASE_UNLIMITED
-
                 );
   }
 
@@ -10243,8 +10290,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  NULL,  // orderBy
@@ -10301,8 +10348,8 @@ if (xxxId != DATABASE_ID_NONE)
                  "? OR entities.jobUUID=?",
                  DATABASE_FILTERS
                  (
-                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
-                   DATABASE_FILTER_STRING(jobUUID)
+                   DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                   DATABASE_FILTER_CSTRING(jobUUID)
                  ),
                  NULL,  // groupBy
                  "entriesNewestName ASC",
