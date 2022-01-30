@@ -10781,7 +10781,7 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP TABLE %s",
+                                              "DROP TABLE IF EXISTS %s",
                                               tableName
                                              ),
                                  DATABASE_PARAMETERS
@@ -11018,7 +11018,7 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP INDEX %s",
+                                              "DROP INDEX IF EXISTS %s",
                                               indexName
                                              ),
                                  DATABASE_PARAMETERS
@@ -11117,7 +11117,7 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
                            stringFormat(sqlString,sizeof(sqlString),
-                                        "DROP TRIGGER %s",
+                                        "DROP TRIGGER IF EXISTS %s",
                                         triggerName
                                        ),
                            DATABASE_PARAMETERS
@@ -13789,15 +13789,18 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   }
 
   // bind filters
-  error = bindFilters(&databaseStatementHandle,
-                      filters,
-                      filterCount
-                     );
-  if (error != ERROR_NONE)
+  if (filters != NULL)
   {
-    finalizeStatement(&databaseStatementHandle);
-    String_delete(sqlString);
-    return error;
+    error = bindFilters(&databaseStatementHandle,
+                        filters,
+                        filterCount
+                       );
+    if (error != ERROR_NONE)
+    {
+      finalizeStatement(&databaseStatementHandle);
+      String_delete(sqlString);
+      return error;
+    }
   }
 
   // execute statement
