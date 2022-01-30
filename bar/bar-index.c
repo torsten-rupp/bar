@@ -1988,6 +1988,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
           {
+fprintf(stderr,"%s:%d: indexDefinition=%s\n",__FILE__,__LINE__,indexDefinition);
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
@@ -2084,7 +2085,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         {
           const char *indexDefinition;
 
-          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MARIADB, indexDefinition, error == ERROR_NONE)
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_SQLITE, indexDefinition, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
@@ -2103,7 +2104,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                           DATABASE_FLAG_IGNORE,
                                           DATABASE_COLUMNS
                                           (
-                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_KEY   ("storageId"),
                                             DATABASE_COLUMN_STRING("name")
                                           ),
                                           DATABASE_TABLES
@@ -2130,7 +2131,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                           DATABASE_FLAG_IGNORE,
                                           DATABASE_COLUMNS
                                           (
-                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_KEY   ("entryId"),
                                             DATABASE_COLUMN_STRING("name")
                                           ),
                                           DATABASE_TABLES
