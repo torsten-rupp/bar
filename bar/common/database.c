@@ -11083,99 +11083,21 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
 
 Errors Database_dropIndices(DatabaseHandle *databaseHandle)
 {
-  Errors error;
+  StringList         indexNameList;
+  Errors             error;
+  StringListIterator iteratorIndexName;
+  String             indexName;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  error = ERROR_NONE;
-  switch (Database_getType(databaseHandle))
+  StringList_init(&indexNameList);
+  error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
+  STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
   {
-    case DATABASE_TYPE_SQLITE3:
-      {
-        StringList         indexNameList;
-        StringListIterator iteratorIndexName;
-        String             indexName;
-
-        StringList_init(&indexNameList);
-        error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-        STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
-        {
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   "DROP INDEX ?",
-                                   DATABASE_PARAMETERS
-                                   (
-                                     DATABASE_PARAMETER_STRING(String_cString(indexName))
-                                   )
-                                  );
-        }
-        StringList_done(&indexNameList);
-      }
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
-        {
-          StringList         tableNameList,indexNameList;
-          StringListIterator iteratorTableName,iteratorIndexName;
-          String             tableName,indexName;
-
-          StringList_init(&tableNameList);
-          StringList_init(&indexNameList);
-          error = Database_getTableList(&tableNameList,databaseHandle);
-          STRINGLIST_ITERATEX(&indexNameList,iteratorTableName,tableName,error == ERROR_NONE)
-          {
-            error = Database_getIndexList(&indexNameList,databaseHandle,String_cString(tableName));
-            STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
-            {
-              error = Database_execute(databaseHandle,
-                                       NULL,  // changedRowCount
-                                       DATABASE_FLAG_NONE,
-                                       "DROP INDEXES ? FROM ?",
-                                       DATABASE_PARAMETERS
-                                       (
-                                         DATABASE_PARAMETER_STRING(String_cString(indexName)),
-                                         DATABASE_PARAMETER_STRING(String_cString(tableName))
-                                       )
-                                      );
-            }
-          }
-          StringList_done(&indexNameList);
-          StringList_done(&tableNameList);
-        }
-      #else /* HAVE_MARIADB */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-        {
-          StringList         indexNameList;
-          StringListIterator iteratorIndexName;
-          String             indexName;
-
-          StringList_init(&indexNameList);
-          error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-          STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
-          {
-            error = Database_execute(databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     "DROP INDEX ? CASCADE",
-                                     DATABASE_PARAMETERS
-                                     (
-                                       DATABASE_PARAMETER_STRING(String_cString(indexName))
-                                     )
-                                    );
-          }
-          StringList_done(&indexNameList);
-        }
-      #else /* HAVE_POSTGRESQL */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_POSTGRESQL */
-      break;
+    error = Database_dropIndex(databaseHandle,String_cString(indexName));
   }
+  StringList_done(&indexNameList);
 
   return error;
 }
@@ -11222,14 +11144,9 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
   {
     error = Database_dropTrigger(databaseHandle,String_cString(triggerName));
   }
-  if (error != ERROR_NONE)
-  {
-    StringList_done(&triggerNameList);
-    return error;
-  }
   StringList_done(&triggerNameList);
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Database_compare(DatabaseHandle     *referenceDatabaseHandle,

@@ -693,7 +693,7 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
   }
   else
   {
-    if (!quietFlag) printInfo("FAIL (error: %s)!",Error_getText(error));
+    if (!quietFlag) printInfo("FAIL (error: %s)!\n",Error_getText(error));
   }
   (void)Database_flush(databaseHandle);
 }
@@ -3191,7 +3191,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3365,7 +3365,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3525,7 +3525,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3686,7 +3686,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -3860,7 +3860,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   clearPercentage();
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
+    printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -6585,7 +6585,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
         }
         else
         {
-          printInfo("FAIL\n");
+          printInfo("FAIL!\n");
           DATABASE_TRANSACTION_ABORT(databaseHandle);
         }
       }
@@ -7843,7 +7843,8 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          uint       totalHardlinkCount;
                          uint64     totalHardlinkSize;
                          uint       totalSpecialCount;
-                         String     idsString;
+                         const char *prefix;
+                         uint       i;
 
                          assert(values != NULL);
                          assert(valueCount == 24);
@@ -7877,7 +7878,8 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          printf("    Special       : %u\n",totalSpecialCount);
                          printf("\n");
 
-                         idsString = String_new();
+                         i      = 0;
+                         prefix = "    Entity ids    : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -7887,8 +7889,17 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                         UNUSED_VARIABLE(valueCount);
                                         UNUSED_VARIABLE(userData);
 
-                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if      (i > 10)
+                                        {
+                                          putchar('\n');
+                                          i      = 0;
+                                          prefix = "                    ";
+                                        }
+
+                                        if      (i == 0) printf("%s",prefix);
+                                        else if (i >  0) printf("%s",", ");
+                                        printf("%"PRIi64,values[0].id);
+                                        i++;
 
                                         return ERROR_NONE;
                                       },NULL),
@@ -7914,9 +7925,10 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
-                         printf("    Entity ids    : %s\n",String_cString(idsString));
+                         if (i > 0) putchar('\n');
 
-                         String_clear(idsString);
+                         i      = 0;
+                         prefix = "    Storage ids   : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -7926,8 +7938,17 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                         UNUSED_VARIABLE(valueCount);
                                         UNUSED_VARIABLE(userData);
 
-                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if      (i > 10)
+                                        {
+                                          putchar('\n');
+                                          i      = 0;
+                                          prefix = "                    ";
+                                        }
+
+                                        if      (i == 0) printf("%s",prefix);
+                                        else if (i >  0) printf("%s",", ");
+                                        printf("%"PRIi64,values[0].id);
+                                        i++;
 
                                         return ERROR_NONE;
                                       },NULL),
@@ -7953,9 +7974,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
-                         printf("    Storage ids   : %s\n",String_cString(idsString));
-
-                         String_delete(idsString);
+                         if (i > 0) putchar('\n');
 
                          return ERROR_NONE;
                        },NULL),
@@ -8109,7 +8128,6 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          printf("    Special       : %lu\n",totalSpecialCount);
                          printf("\n");
                          printf("    UUID id       : %"PRIi64"\n",uuidId);
-
 
                          i      = 0;
                          prefix = "    Storage ids   : ";
@@ -8437,8 +8455,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
     String_formatAppend(entityIdsString,"%"PRIi64,entityId);
   }
 
-  ftsName = String_new();
-  getFTSString(ftsName,name);
+  ftsName = getFTSString(String_new(),name);
 
   ftsSubSelect = String_new();
   switch (Database_getType(databaseHandle))
@@ -8499,7 +8516,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                   entityOutputFlag = TRUE;
                                                 }
                                                 printf("    Id               : %"PRIi64"\n",values[0].id);
-                                                printf("      Name           : %s\n",values[1].s);
+                                                printf("      Name           : %s\n",String_cString(values[1].string));
                                                 printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : "xxx");//TODO values[2].i);
                                                 switch (type)
                                                 {
@@ -8576,14 +8593,14 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                             AND (? OR (type=?)) \
                                                             AND (? OR entries.id IN (%s)) \
                                                            ",
-                                                           !String_isEmpty(ftsSubSelect) ? String_cString(ftsSubSelect) : "0"
+                                                           !String_isEmpty(name) ? String_cString(ftsSubSelect) : "0"
                                                           ),
                                               DATABASE_FILTERS
                                               (
                                                 DATABASE_FILTER_KEY  (!lostFlag ? entityId : DATABASE_ID_NONE),
                                                 DATABASE_FILTER_BOOL (entryType == INDEX_CONST_TYPE_ANY),
                                                 DATABASE_FILTER_UINT (entryType),
-                                                DATABASE_FILTER_BOOL (String_isEmpty(ftsSubSelect))
+                                                DATABASE_FILTER_BOOL (String_isEmpty(name))
                                               ),
                                               NULL,  // groupBy
                                               NULL,  // orderBy
@@ -8804,7 +8821,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,values[1].s);
+fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,String_cString(values[1].string));
 n++;
 
                            return ERROR_NONE;
@@ -8845,7 +8862,7 @@ fprintf(stdout,"%lu storages\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,String_cString(values[2].string),values[3].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -8992,7 +9009,7 @@ fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].s,values[2].dateTime);
+fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,String_cString(values[1].string),values[2].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -9037,7 +9054,7 @@ fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].s,values[2].dateTime);
+fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,String_cString(values[1].string),values[2].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -10185,7 +10202,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,values[1].s,values[2].s);
+                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string));
 
                    return ERROR_NONE;
                  },NULL),
@@ -10310,7 +10327,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,values[1].s,values[2].s);
+                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string));
 
                    return ERROR_NONE;
                  },NULL),
