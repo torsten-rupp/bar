@@ -8313,8 +8313,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
                          DatabaseId storageId;
-                         DatabaseId uuidId;
-                         bool       storageOutputFlag;
 
                          assert(values != NULL);
                          assert(valueCount == 2);
@@ -8323,9 +8321,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          UNUSED_VARIABLE(userData);
 
                          storageId = values[0].id;
-                         uuidId    = values[1].id;
 
-                         storageOutputFlag = FALSE;
                          error = Database_get(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                               {
@@ -8473,8 +8469,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_KEY("id"),
-                         DATABASE_COLUMN_KEY("uuidId")
+                         DATABASE_COLUMN_KEY("id")
                        ),
                        stringFormat(filterString,sizeof(filterString),
                                     "    (   (NOT ? AND (? OR id IN (%s))) \
