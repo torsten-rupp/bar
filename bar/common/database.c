@@ -7974,9 +7974,9 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
           return Database_get(databaseHandle,
                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                               {
-                                const char *name;
-                                const char *type;
-                                bool       isPrimaryKey;
+                                ConstString name;
+                                ConstString type;
+                                bool        isPrimaryKey;
 
                                 assert(values != NULL);
                                 assert(valueCount == 6);
@@ -7984,16 +7984,16 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                 UNUSED_VARIABLE(userData);
                                 UNUSED_VARIABLE(valueCount);
 
-                                name         = values[1].s;
-                                type         = values[2].s;
+                                name         = values[1].string;
+                                type         = values[2].string;
                                 isPrimaryKey = values[5].b;
 
                                 if (i < maxColumnCount)
                                 {
-                                  columns[i].name  = stringDuplicate(name);
+                                  columns[i].name  = String_toCString(name);
                                   columns[i].alias = NULL;
-                                  if (   stringEqualsIgnoreCase(type,"INTEGER")
-                                      || stringEqualsIgnoreCase(type,"NUMERIC")
+                                  if (   String_equalsIgnoreCaseCString(type,"INTEGER")
+                                      || String_equalsIgnoreCaseCString(type,"NUMERIC")
                                      )
                                   {
                                     if (isPrimaryKey)
@@ -8005,15 +8005,15 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
                                   }
-                                  else if (stringEqualsIgnoreCase(type,"REAL"))
+                                  else if (String_equalsIgnoreCaseCString(type,"REAL"))
                                   {
                                     columns[i].type = DATABASE_DATATYPE_DOUBLE;
                                   }
-                                  else if (stringEqualsIgnoreCase(type,"TEXT"))
+                                  else if (String_equalsIgnoreCaseCString(type,"TEXT"))
                                   {
-                                    columns[i].type = DATABASE_DATATYPE_CSTRING;
+                                    columns[i].type = DATABASE_DATATYPE_STRING;
                                   }
-                                  else if (stringEqualsIgnoreCase(type,"BLOB"))
+                                  else if (String_equalsIgnoreCaseCString(type,"BLOB"))
                                   {
                                     columns[i].type = DATABASE_DATATYPE_BLOB;
                                   }
@@ -8057,9 +8057,9 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
             return Database_get(databaseHandle,
                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                 {
-                                  const char *name;
-                                  const char *type;
-                                  bool       isPrimaryKey;
+                                  ConstString name;
+                                  ConstString type;
+                                  bool        isPrimaryKey;
 
                                   assert(values != NULL);
                                   assert(valueCount == 6);
@@ -8067,15 +8067,15 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                   UNUSED_VARIABLE(valueCount);
                                   UNUSED_VARIABLE(userData);
 
-                                  name         = values[0].s;
-                                  type         = values[1].s;
-                                  isPrimaryKey = stringEqualsIgnoreCase(values[3].s,"PRI");
+                                  name         = values[0].string;
+                                  type         = values[1].string;
+                                  isPrimaryKey = String_equalsIgnoreCaseCString(values[3].string,"PRI");
 
                                   if (i < maxColumnCount)
                                   {
-                                    columns[i].name  = stringDuplicate(name);
+                                    columns[i].name  = String_toCString(name);
                                     columns[i].alias = NULL;
-                                    if (stringStartsWith(type,"int"))
+                                    if (String_startsWithCString(type,"int"))
                                     {
                                       if (isPrimaryKey)
                                       {
@@ -8086,33 +8086,33 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                         columns[i].type = DATABASE_DATATYPE_INT;
                                       }
                                     }
-                                    else if (stringEquals(type,"tinyint(1)"))
+                                    else if (String_equalsCString(type,"tinyint(1)"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BOOL;
                                     }
-                                    else if (stringStartsWith(type,"tinyint"))
+                                    else if (String_startsWithCString(type,"tinyint"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
-                                    else if (stringStartsWith(type,"bigint"))
+                                    else if (String_startsWithCString(type,"bigint"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT64;
                                     }
-                                    else if (stringStartsWith(type,"double"))
+                                    else if (String_startsWithCString(type,"double"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DOUBLE;
                                     }
-                                    else if (stringStartsWith(type,"datetime"))
+                                    else if (String_startsWithCString(type,"datetime"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DATETIME;
                                     }
-                                    else if (   stringStartsWith(type,"varchar")
-                                             || stringStartsWith(type,"text")
+                                    else if (   String_startsWithCString(type,"varchar")
+                                             || String_startsWithCString(type,"text")
                                             )
                                     {
-                                      columns[i].type = DATABASE_DATATYPE_CSTRING;
+                                      columns[i].type = DATABASE_DATATYPE_STRING;
                                     }
-                                    else if (stringStartsWith(type,"blob"))
+                                    else if (String_startsWithCString(type,"blob"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BLOB;
                                     }
@@ -8157,10 +8157,10 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
             return Database_get(databaseHandle,
                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                 {
-                                  const char *name;
-                                  const char *type;
-                                  bool       isPrimaryKey;
-                                  bool       isForeignKey;
+                                  ConstString name;
+                                  ConstString type;
+                                  bool        isPrimaryKey;
+                                  bool        isForeignKey;
 
                                   assert(values != NULL);
                                   assert(valueCount == 7);
@@ -8168,28 +8168,27 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                   UNUSED_VARIABLE(valueCount);
                                   UNUSED_VARIABLE(userData);
 
-                                  name         = values[2].s;
-                                  type         = values[3].s;
-                                  isPrimaryKey = stringEqualsIgnoreCase(values[5].s,"PRIMARY KEY");
-                                  isForeignKey = stringEqualsIgnoreCase(values[5].s,"FOREIGN KEY");
+                                  name         = values[2].string;
+                                  type         = values[3].string;
+                                  isPrimaryKey = String_equalsIgnoreCaseCString(values[5].string,"PRIMARY KEY");
 
                                   if ((i < maxColumnCount) && !isForeignKey)
                                   {
-                                    columns[i].name  = stringDuplicate(name);
+                                    columns[i].name  = String_toCString(name);
                                     columns[i].alias = NULL;
-                                    if      (stringStartsWith(type,"boolean"))
+                                    if      (String_startsWithCString(type,"boolean"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BOOL;
                                     }
-                                    else if (stringStartsWith(type,"smallint"))
+                                    else if (String_startsWithCString(type,"smallint"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
-                                    else if (stringStartsWith(type,"int"))
+                                    else if (String_startsWithCString(type,"int"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
-                                    else if (stringStartsWith(type,"bigint"))
+                                    else if (String_startsWithCString(type,"bigint"))
                                     {
                                       if (isPrimaryKey)
                                       {
@@ -8200,21 +8199,21 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                         columns[i].type = DATABASE_DATATYPE_INT64;
                                       }
                                     }
-                                    else if (stringStartsWith(type,"double"))
+                                    else if (String_startsWithCString(type,"double"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DOUBLE;
                                     }
-                                    else if (stringStartsWith(type,"timestamp"))
+                                    else if (String_startsWithCString(type,"timestamp"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DATETIME;
                                     }
-                                    else if (   stringStartsWith(type,"character varying")
-                                             || stringStartsWith(type,"text")
+                                    else if (   String_startsWithCString(type,"character varying")
+                                             || String_startsWithCString(type,"text")
                                             )
                                     {
-                                      columns[i].type = DATABASE_DATATYPE_CSTRING;
+                                      columns[i].type = DATABASE_DATATYPE_STRING;
                                     }
-                                    else if (stringStartsWith(type,"blob"))
+                                    else if (String_startsWithCString(type,"blob"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BLOB;
                                     }
