@@ -2575,62 +2575,62 @@ static inline bool stringIsEmpty(const char *s)
 /***********************************************************************\
 * Name   : stringSet
 * Purpose: set string
-* Input  : destination - destination string
-*          n           - size of string (including terminating NUL)
-*          source      - source string
+* Input  : string     - destination string
+*          stringSize - size of string (including terminating NUL)
+*          source     - source string
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSet(char *destination, ulong n, const char *source)
+static inline char* stringSet(char *string, ulong stringSize, const char *source)
 {
-  assert(n > 0);
+  assert(stringSize > 0);
 
-  if (destination != NULL)
+  if (string != NULL)
   {
     if (source != NULL)
     {
-      strncpy(destination,source,n-1); destination[n-1] = NUL;
+      strncpy(string,source,stringSize-1); string[stringSize-1] = NUL;
     }
     else
     {
-      destination[0] = NUL;
+      string[0] = NUL;
     }
   }
 
-  return destination;
+  return string;
 }
 
 /***********************************************************************\
 * Name   : stringSetBuffer
 * Purpose: set string
-* Input  : destination - destination string
-*          n           - size of string (including terminating NUL)
-*          buffer      - buffer
-*          bufferSize  - buffer size
+* Input  : string     - destination string
+*          stringSize - size of string (including terminating NUL)
+*          buffer     - buffer
+*          bufferSize - buffer size
 * Output : -
-* Return : destination string
+* Return : string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSetBuffer(char *destination, ulong n, const char *buffer, ulong bufferSize)
+static inline char* stringSetBuffer(char *string, ulong stringSize, const char *buffer, ulong bufferSize)
 {
-  assert(n > 0);
+  assert(stringSize > 0);
 
-  if (destination != NULL)
+  if (string != NULL)
   {
     if (buffer != NULL)
     {
-      strncpy(destination,buffer,MIN(n-1,bufferSize)); destination[MIN(n-1,bufferSize)] = NUL;
+      strncpy(string,buffer,MIN(stringSize-1,bufferSize)); string[MIN(stringSize-1,bufferSize)] = NUL;
     }
     else
     {
-      destination[0] = NUL;
+      string[0] = NUL;
     }
   }
 
-  return destination;
+  return string;
 }
 
 
@@ -2701,37 +2701,38 @@ static inline uint stringInt64Length(int64 n)
 /***********************************************************************\
 * Name   : stringVFormat, stringFormat
 * Purpose: format string
-* Input  : string    - string
-*          n         - size of string (including terminating NUL)
-*          format    - format string
-*          ...       - optional arguments
-*          arguments - arguments
+* Input  : string     - string
+*          stringSize - size of string (including terminating NUL)
+*          format     - format string
+*          ...        - optional arguments
+*          arguments  - arguments
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
 
-static inline char* stringVFormat(char *string, ulong n, const char *format, va_list arguments)
+static inline char* stringVFormat(char *string, ulong stringSize, const char *format, va_list arguments)
 {
   assert(string != NULL);
-  assert(n > 0);
+  assert(stringSize > 0);
   assert(format != NULL);
 
-  vsnprintf(string,n,format,arguments);
+  vsnprintf(string,stringSize,format,arguments);
 
   return string;
 }
-static inline char* stringFormat(char *string, ulong n, const char *format, ...)
+
+static inline char* stringFormat(char *string, ulong stringSize, const char *format, ...)
 {
   va_list arguments;
 
   assert(string != NULL);
-  assert(n > 0);
+  assert(stringSize > 0);
   assert(format != NULL);
 
   va_start(arguments,format);
-  string = stringVFormat(string,n,format,arguments);
+  string = stringVFormat(string,stringSize,format,arguments);
   va_end(arguments);
 
   return string;
@@ -2740,44 +2741,44 @@ static inline char* stringFormat(char *string, ulong n, const char *format, ...)
 /***********************************************************************\
 * Name   : stringVFormatAppend, stringFormatAppend
 * Purpose: format string and append
-* Input  : string    - string
-*          n         - size of destination string (including terminating
-*                      NUL)
-*          format    - format string
-*          ...       - optional arguments
-*          arguments - arguments
+* Input  : string     - string
+*          stringSize - size of destination string (including terminating
+*                       NUL)
+*          format     - format string
+*          ...        - optional arguments
+*          arguments  - arguments
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringVFormatAppend(char *string, ulong n, const char *format, va_list arguments)
+static inline char* stringVFormatAppend(char *string, ulong stringSize, const char *format, va_list arguments)
 {
-  ulong length;
+  ulong n;
 
   assert(string != NULL);
-  assert(n > 0);
+  assert(stringSize > 0);
   assert(format != NULL);
 
-  length = strlen(string);
-  if (length < n)
+  n = strlen(string);
+  if (n < stringSize)
   {
-    vsnprintf(string+length,n-length,format,arguments);
+    vsnprintf(&string[n],stringSize-n,format,arguments);
   }
 
   return string;
 }
 
-static inline char* stringFormatAppend(char *string, ulong n, const char *format, ...)
+static inline char* stringFormatAppend(char *string, ulong stringSize, const char *format, ...)
 {
   va_list arguments;
 
   assert(string != NULL);
-  assert(n > 0);
+  assert(stringSize > 0);
   assert(format != NULL);
 
   va_start(arguments,format);
-  stringVFormatAppend(string,n,format,arguments);
+  stringVFormatAppend(string,stringSize,format,arguments);
   va_end(arguments);
 
   return string;
@@ -2830,97 +2831,126 @@ static inline size_t stringFormatLength(const char *format, ...)
 /***********************************************************************\
 * Name   : stringAppend
 * Purpose: append string
-* Input  : destination - destination string
-*          n           - size of destination string (including
-*                        terminating NUL)
-*          source      - source string
+* Input  : string     - destination string
+*          stringSize - size of destination string (including
+*                       terminating NUL)
+*          source     - source string
 * Output : -
-* Return : destination string
+* Return : string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppend(char *destination, ulong n, const char *source)
+static inline char* stringAppend(char *string, ulong stringSize, const char *source)
 {
-  ulong m;
+  ulong n;
 
-  assert(n > 0);
+  assert(stringSize > 0);
 
-  if (destination != NULL)
+  if (string != NULL)
   {
-    m = strlen(destination);
-    if ((source != NULL) && (n > (m+1)))
+    n = strlen(string);
+    if ((source != NULL) && (stringSize > (n+1)))
     {
-      strncat(destination,source,n-(m+1));
+      strncat(string,source,stringSize-(n+1));
     }
   }
 
-  return destination;
+  return string;
 }
 
 /***********************************************************************\
 * Name   : stringAppendChar
 * Purpose: append chararacter
-* Input  : destination - destination string
-*          n           - size of destination string (including
-*                        terminating NUL)
-*          ch          - character
+* Input  : string     - destination string
+*          stringSize - size of destination string (including
+*                       terminating NUL)
+*          ch         - character
 * Output : -
-* Return : destination string
+* Return : string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppendChar(char *destination, ulong n, char ch)
+static inline char* stringAppendChar(char *string, ulong stringSize, char ch)
 {
-  ulong m;
+  ulong n;
 
-  assert(n > 0);
+  assert(stringSize > 0);
 
-  if (destination != NULL)
+  if (string != NULL)
   {
-    m = strlen(destination);
-    if (n > (m+1))
+    n = strlen(string);
+    if (stringSize > (n+1))
     {
-      destination[m]   = ch;
-      destination[m+1] = NUL;
+      string[n]   = ch;
+      string[n+1] = NUL;
     }
   }
 
-  return destination;
+  return string;
 }
 
 /***********************************************************************\
 * Name   : stringFill
 * Purpose: fill string
-* Input  : destination - destination string
-*          n           - size of destination string (including
-*                        terminating NUL)
-*          length      - length
-*          ch          - character
+* Input  : string     - destination string
+*          stringSize - size of destination string (including
+*                       terminating NUL)
+*          length     - length
+*          ch         - character
 * Output : -
-* Return : destination string
+* Return : string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringFill(char *destination, ulong n, ulong length, char ch)
+static inline char* stringFill(char *string, ulong stringSize, ulong length, char ch)
 {
-  ulong m;
+  ulong n;
 
-  assert(n > 0);
+  assert(stringSize > 0);
 
-  if (destination != NULL)
+  if (string != NULL)
   {
-    m = strlen(destination);
-    while ((length > 0) && ((m+1) < n))
-    {
-      destination[m] = ch;
-      length--;
-      m++;
-    }
-    destination[m] = NUL;
+    n = MIN(stringSize-1,length);
+    memset(string,ch,n);
+    string[n] = NUL;
   }
 
-  return destination;
+  return string;
 }
+
+/***********************************************************************\
+* Name   : stringFill
+* Purpose: fill string
+* Input  : string     - destination string
+*          stringSize - size of destination string (including
+*                       terminating NUL)
+*          length     - length
+*          ch         - character
+* Output : -
+* Return : string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringFillAppend(char *string, ulong stringSize, ulong length, char ch)
+{
+  ulong n,m;
+
+  assert(stringSize > 0);
+
+  if (string != NULL)
+  {
+    n = strlen(string);
+    if (n < length)
+    {
+      m = MIN(stringSize-n-1,length);
+      memset(&string[n],ch,m);
+      string[n+m] = NUL;
+    }
+  }
+
+  return string;
+}
+
 
 /***********************************************************************\
 * Name   : stringTrimBegin
@@ -3529,33 +3559,33 @@ static inline long stringFindReverseChar(const char *s, char findChar)
 /***********************************************************************\
 * Name   : stringSub
 * Purpose: get sub-string
-* Input  : destination - destination string
-*          n           - size of destination string
-*          source      - source string
-*          index       - sub-string start index
-*          length      - sub-string length or -1
+* Input  : string     - destination string
+*          stringSize - size of destination string
+*          source     - source string
+*          index      - sub-string start index
+*          length     - sub-string length or -1
 * Output : -
-* Return : destination string
+* Return : string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSub(char *destination, ulong n, const char *source, ulong index, long length)
+static inline char* stringSub(char *string, ulong stringSize, const char *source, ulong index, long length)
 {
-  long m;
+  long n;
 
-  assert(n > 0);
+  assert(stringSize > 0);
 
-  if (destination != NULL)
+  if (string != NULL)
   {
     if (source != NULL)
     {
-      m = (length >= 0) ? MIN((long)n-1,length) : MIN((long)n-1,(long)strlen(source)-(long)index);
-      if (m < 0) m = 0;
-      strncpy(destination,source+index,m); destination[m] = NUL;
+      n = (length >= 0) ? MIN((long)stringSize-1,length) : MIN((long)stringSize-1,(long)strlen(source)-(long)index);
+      if (n < 0) n = 0;
+      strncpy(string,source+index,n); string[n] = NUL;
     }
   }
 
-  return destination;
+  return string;
 }
 
 /***********************************************************************\
