@@ -163,8 +163,8 @@ typedef enum
 #define DATABASE_FLAG_DEBUG        (1 << 31)  // print SQL statement to console
 
 // special database ids
-#define DATABASE_ID_NONE  0x0000000000000000LL
-#define DATABASE_ID_ANY   0xFFFFFFFFFFFFFFFFLL
+#define DATABASE_ID_NONE 0LL
+#define DATABASE_ID_ANY  -1LL
 
 // ordering mode
 typedef enum

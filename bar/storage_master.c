@@ -173,6 +173,40 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
   return error;
 }
 
+LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString archiveName)
+{
+  Errors error;
+  bool   existsFlag;
+
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  existsFlag = FALSE;
+
+  error = ServerIO_executeCommand(storageInfo->masterIO,
+                                  MASTER_DEBUG_LEVEL,
+                                  MASTER_COMMAND_TIMEOUT,
+                                  CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                  {
+                                    assert(resultMap != NULL);
+
+                                    UNUSED_VARIABLE(userData);
+
+                                    StringMap_getBool(resultMap,"existsFlag",&existsFlag,FALSE);
+
+                                    return ERROR_NONE;
+                                  },NULL),
+                                  "STORAGE_EXISTS archiveName=%'S",
+                                  archiveName
+                                 );
+  if (error != ERROR_NONE)
+  {
+    existsFlag = FALSE;
+  }
+
+  return existsFlag;
+}
+
 LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);

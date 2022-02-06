@@ -175,17 +175,6 @@ typedef struct
   #endif /* INDEX_DEBUG_LOCK */
 } ThreadInfo;
 
-// progress info data
-typedef struct
-{
-  const char *text;
-  uint64     startTimestamp;
-  uint64     steps,maxSteps;
-  ulong      lastProgressSum;  // last progress sum [1/1000]
-  uint       lastProgressCount;
-  uint64     lastProgressTimestamp;
-} ProgressInfo;
-
 /***************************** Variables *******************************/
 
 extern bool                       indexInitializedFlag;
@@ -615,51 +604,6 @@ Errors IndexCommon_purge(IndexHandle          *indexHandle,
                          const DatabaseFilter filters[],
                          uint                 filterCount
                         );
-
-/***********************************************************************\
-* Name   : IndexCommon_initProgress
-* Purpose: init progress
-* Input  : text - text
-* Output : progressInfo - progress info
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void IndexCommon_initProgress(ProgressInfo *progressInfo, const char *text);
-
-/***********************************************************************\
-* Name   : IndexCommon_resetProgress
-* Purpose: RESET progress
-* Input  : progressInfo - progress info
-*          maxSteps     - max. number of steps
-* Output :
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void IndexCommon_resetProgress(ProgressInfo *progressInfo, uint64 maxSteps);
-
-/***********************************************************************\
-* Name   : IndexCommon_doneProgress
-* Purpose: done progress
-* Input  : progressInfo - progress info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void IndexCommon_doneProgress(ProgressInfo *progressInfo);
-
-/***********************************************************************\
-* Name   : IndexCommon_progressStep
-* Purpose: step progress and log
-* Input  : userData - user data (progress info)
-* Output : -
-* Return : -
-* Notes  : increment step counter for each call!
-\***********************************************************************/
-
-void IndexCommon_progressStep(void *userData);
 
 // TODO: comment
 void IndexCommon_verify(IndexHandle *indexHandle,

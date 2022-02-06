@@ -2896,7 +2896,7 @@ static inline char* stringAppendChar(char *string, ulong stringSize, char ch)
 *          stringSize - size of destination string (including
 *                       terminating NUL)
 *          length     - length
-*          ch         - character
+*          ch         - character to fill string with
 * Output : -
 * Return : string
 * Notes  : string is always NULL or NUL-terminated
@@ -2924,8 +2924,8 @@ static inline char* stringFill(char *string, ulong stringSize, ulong length, cha
 * Input  : string     - destination string
 *          stringSize - size of destination string (including
 *                       terminating NUL)
-*          length     - length
-*          ch         - character
+*          length     - total length
+*          ch         - character to append to string
 * Output : -
 * Return : string
 * Notes  : string is always NULL or NUL-terminated

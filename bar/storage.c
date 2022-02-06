@@ -2417,7 +2417,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
       && (storageInfo->masterIO != NULL)
      )
   {
-//TODO
+    existsFlag = StorageMaster_exists(storageInfo,archiveName);
   }
   else
   {

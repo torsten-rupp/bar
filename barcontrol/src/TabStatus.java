@@ -1778,51 +1778,7 @@ public class TabStatus
             text.setBackground(COLOR_BACKGROUND);
             Widgets.layout(text,0,0,TableLayoutData.NSWE,0,0,0,0,300,100);
 
-            Point size = widgetMessageToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-            Rectangle bounds = label.getBounds();
-            Point point = label.getParent().toDisplay(bounds.x,bounds.y);
-            widgetMessageToolTip.setBounds(point.x+2,point.y+2,size.x,size.y);
-            widgetMessageToolTip.setVisible(true);
-
-            shell.addMouseTrackListener(new MouseTrackListener()
-            {
-              @Override
-              public void mouseEnter(MouseEvent mouseEvent)
-              {
-              }
-
-              @Override
-              public void mouseExit(MouseEvent mouseEvent)
-              {
-                if ((widgetMessageToolTip != null) && !widgetMessageToolTip.isDisposed())
-                {
-                  // check if inside widget
-                  Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-                  if (widgetMessageToolTip.getBounds().contains(point))
-                  {
-                    return;
-                  }
-
-                  // check if inside sub-widget
-                  for (Control control : widgetMessageToolTip.getChildren())
-                  {
-                    if (control.getBounds().contains(point))
-                    {
-                      return;
-                    }
-                  }
-
-                  // close tooltip
-                  widgetMessageToolTip.dispose();
-                  widgetMessageToolTip = null;
-                }
-              }
-
-              @Override
-              public void mouseHover(MouseEvent mouseEvent)
-              {
-              }
-            });
+            Widgets.showToolTip(widgetMessageToolTip,(Control)mouseEvent.widget);
           }
         }
       });
@@ -3237,45 +3193,7 @@ public class TabStatus
       Widgets.addTableItem(table,null,BARControl.tr("continuous"  ),executionCountContinuous,  String.format("%02d:%02d:%02d",averageDurationContinuous  /(60*60),averageDurationContinuous  %(60*60)/60,averageDurationContinuous  %60));
       row++;
 
-      Point size = widgetJobTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-      widgetJobTableToolTip.setBounds(x,y,size.x,size.y);
-      widgetJobTableToolTip.setVisible(true);
-
-      shell.addMouseTrackListener(new MouseTrackListener()
-      {
-        @Override
-        public void mouseEnter(MouseEvent mouseEvent)
-        {
-        }
-        @Override
-        public void mouseExit(MouseEvent mouseEvent)
-        {
-          if ((widgetJobTableToolTip != null) && !widgetJobTableToolTip.isDisposed())
-          {
-            // check if inside sub-widget
-            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-            if (widgetJobTableToolTip.getBounds().contains(point))
-            {
-              return;
-            }
-            for (Control control : widgetJobTableToolTip.getChildren())
-            {
-              if (control.getBounds().contains(point))
-              {
-                return;
-              }
-            }
-
-            // close tooltip
-            widgetJobTableToolTip.dispose();
-            widgetJobTableToolTip = null;
-          }
-        }
-        @Override
-        public void mouseHover(MouseEvent mouseEvent)
-        {
-        }
-      });
+      Widgets.showToolTip(widgetJobTableToolTip,x,y);
     }
     catch (Exception exception)
     {

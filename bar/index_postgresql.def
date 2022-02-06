@@ -176,7 +176,6 @@ CREATE INDEX ON storages(userName);
 CREATE INDEX ON storages(state,name,totalEntryCount,created);
 CREATE INDEX ON storages(deletedFlag);
 
-
 //TODO:  FULLTEXT(name) FULLTEXT feature on postgres?
 
 // full-text-search (using a view)

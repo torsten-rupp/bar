@@ -35,6 +35,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 // graphics
 import org.eclipse.swt.custom.CTabFolder;
@@ -1538,6 +1540,9 @@ class Widgets
 
   // images
   private static ImageData IMAGE_CLOSE_DATA;
+
+  // tool tip timer
+  private static Timer toolTipTimer = new Timer();
 
   static
   {
@@ -13660,6 +13665,124 @@ Dprintf.dprintf("");
     display.beep();
     try { Thread.sleep(350); } catch (InterruptedException exception) { /* ignored */ };
     control.setBackground(null); display.update();
+  }
+
+  /** show tooltip
+   * @param shell tooltip shell
+   * @param control control where tooltip is attached to
+   * @param x,y absolute position
+   */
+  public static void showToolTip(final Shell toolTip, final Control control, int x, int y)
+  {
+    toolTipTimer.purge();
+
+    Point size = toolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    toolTip.setBounds(x,y,size.x,size.y);
+    toolTip.setVisible(true);
+
+    toolTipTimer.schedule(new TimerTask()
+                          {
+                            public void run()
+                            {
+                              // check and hide tool tip
+                              if (!toolTip.isDisposed())
+                              {
+                                toolTip.getDisplay().syncExec(new Runnable()
+                                {
+                                  public void run()
+                                  {
+                                    if (!toolTip.isDisposed())
+                                    {
+                                      // get mouse pointer position
+                                      Point point = toolTip.getDisplay().getCursorLocation();
+
+                                      Rectangle toolTipBounds = toolTip.getBounds();
+                                      Point     toolTipPoint  = new Point(toolTipBounds.x,toolTipBounds.y);
+                                      Point     toolTipSize   = toolTip.getSize();
+
+                                      Rectangle toolTipBoundsAbsolute = new Rectangle(toolTipPoint.x,
+                                                                                      toolTipPoint.y,
+                                                                                      toolTipSize.x,
+                                                                                      toolTipSize.y
+                                                                                     );
+
+                                      boolean outsideFlag = false;
+                                      if (control != null)
+                                      {
+                                        Rectangle controlBounds = control.getBounds();
+                                        Point     controlPoint  = control.getParent().toDisplay(controlBounds.x,controlBounds.y);
+                                        Point     controlSize   = control.getSize();
+
+                                        Rectangle controlBoundsAbsolute = new Rectangle(controlPoint.x,
+                                                                                        controlPoint.y,
+                                                                                        controlSize.x,
+                                                                                        controlSize.y
+                                                                                       );
+
+                                        outsideFlag =   !toolTipBoundsAbsolute.contains(point)
+                                                     && !controlBoundsAbsolute.contains(point);
+                                      }
+                                      else
+                                      {
+                                        outsideFlag = !toolTipBoundsAbsolute.contains(point);
+                                      }
+
+                                      if (outsideFlag)
+                                      {
+                                        toolTip.dispose();
+                                      }
+                                    }
+                                  }
+                                });
+                              }
+
+                              // stop timer if disposed
+                              if (toolTip.isDisposed())
+                              {
+                                cancel();
+                              }
+                            }
+                          },
+                          0,
+                          500
+                         );
+  }
+
+  /** show tooltip
+   * @param shell tooltip shell
+   * @param x,y absolute position
+   */
+  public static void showToolTip(final Shell toolTip, int x, int y)
+  {
+    showToolTip(toolTip,(Control)null,x,y);
+  }
+
+  /** show tooltip
+   * @param shell tooltip shell
+   * @param control control where tooltip is attached to
+   * @param point absolute position
+   */
+  public static void showToolTip(final Shell toolTip, Control control, Point point)
+  {
+    showToolTip(toolTip,control,point.x,point.y);
+  }
+
+  /** show tooltip
+   * @param shell tooltip shell
+   * @param point absolute position
+   */
+  public static void showToolTip(final Shell toolTip, Point point)
+  {
+    showToolTip(toolTip,point.x,point.y);
+  }
+
+  /** show tooltip
+   * @param shell tooltip shell
+   * @param control control where tooltip is attached to
+   */
+  public static void showToolTip(final Shell toolTip, Control control)
+  {
+    showToolTip(toolTip,control,control.getParent().toDisplay(control.getLocation()));
   }
 }
 

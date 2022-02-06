@@ -8,10 +8,8 @@
 *
 \***********************************************************************/
 
-#ifndef __BAR_GLOBAL__
-#define __BAR_GLOBAL__
-
-/****************************** Includes *******************************/
+#ifndef __BAR_COMMON__
+#define __BAR_COMMON__/****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
@@ -284,6 +282,9 @@ typedef enum
 
 // forever age
 #define AGE_FOREVER                              -1
+
+#define PROGRESS_FLAG_WHEEL      (1 << 0)
+#define PROGRESS_FLAG_PERCENTAGE (1 << 1)
 
 /***************************** Datatypes *******************************/
 
@@ -1211,6 +1212,6 @@ ulong getBandWidth(BandWidthList *bandWidthList);
   }
 #endif
 
-#endif /* __BAR_GLOBAL__ */
+#endif /* __BAR_COMMON__ */
 
 /* end of file */

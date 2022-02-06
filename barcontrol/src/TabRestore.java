@@ -4429,49 +4429,7 @@ Dprintf.dprintf("");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
-      Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-      widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
-      widgetStorageTreeToolTip.setVisible(true);
-
-      shell.addMouseTrackListener(new MouseTrackListener()
-      {
-        @Override
-        public void mouseEnter(MouseEvent mouseEvent)
-        {
-        }
-
-        @Override
-        public void mouseExit(MouseEvent mouseEvent)
-        {
-          if (widgetStorageTreeToolTip != null)
-          {
-            // check if inside widget
-            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-            if (widgetStorageTreeToolTip.getBounds().contains(point))
-            {
-              return;
-            }
-
-            // check if inside sub-widget
-            for (Control control : widgetStorageTreeToolTip.getChildren())
-            {
-              if (control.getBounds().contains(point))
-              {
-                return;
-              }
-            }
-
-            // close tooltip
-            widgetStorageTreeToolTip.dispose();
-            widgetStorageTreeToolTip = null;
-          }
-        }
-
-        @Override
-        public void mouseHover(MouseEvent mouseEvent)
-        {
-        }
-      });
+      Widgets.showToolTip(widgetStorageTreeToolTip,x,y);
     }
   }
 
@@ -4617,49 +4575,7 @@ Dprintf.dprintf("");
         }
       }
 
-      Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-      widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
-      widgetStorageTreeToolTip.setVisible(true);
-
-      shell.addMouseTrackListener(new MouseTrackListener()
-      {
-        @Override
-        public void mouseEnter(MouseEvent mouseEvent)
-        {
-        }
-
-        @Override
-        public void mouseExit(MouseEvent mouseEvent)
-        {
-          if (widgetStorageTreeToolTip != null)
-          {
-            // check if inside widget
-            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-            if (widgetStorageTreeToolTip.getBounds().contains(point))
-            {
-              return;
-            }
-
-            // check if inside sub-widget
-            for (Control control : widgetStorageTreeToolTip.getChildren())
-            {
-              if (control.getBounds().contains(point))
-              {
-                return;
-              }
-            }
-
-            // close tooltip
-            widgetStorageTreeToolTip.dispose();
-            widgetStorageTreeToolTip = null;
-          }
-        }
-
-        @Override
-        public void mouseHover(MouseEvent mouseEvent)
-        {
-        }
-      });
+      Widgets.showToolTip(widgetStorageTreeToolTip,x,y);
     }
   }
 
@@ -4836,49 +4752,7 @@ Dprintf.dprintf("");
         }
       }
 
-      Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-      widgetStorageTableToolTip.setBounds(x,y,size.x,size.y);
-      widgetStorageTableToolTip.setVisible(true);
-
-      shell.addMouseTrackListener(new MouseTrackListener()
-      {
-        @Override
-        public void mouseEnter(MouseEvent mouseEvent)
-        {
-        }
-
-        @Override
-        public void mouseExit(MouseEvent mouseEvent)
-        {
-          if (widgetStorageTableToolTip != null)
-          {
-            // check if inside widget
-            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-            if (widgetStorageTableToolTip.getBounds().contains(point))
-            {
-              return;
-            }
-
-            // check if inside sub-widget
-            for (Control control : widgetStorageTableToolTip.getChildren())
-            {
-              if (control.getBounds().contains(point))
-              {
-                return;
-              }
-            }
-
-            // close tooltip
-            widgetStorageTableToolTip.dispose();
-            widgetStorageTableToolTip = null;
-          }
-        }
-
-        @Override
-        public void mouseHover(MouseEvent mouseEvent)
-        {
-        }
-      });
+      Widgets.showToolTip(widgetStorageTableToolTip,x,y);
     }
   }
 
@@ -5110,49 +4984,7 @@ Dprintf.dprintf("");
       }
       row++;
 
-      Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-      widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);
-      widgetEntryTableToolTip.setVisible(true);
-
-      shell.addMouseTrackListener(new MouseTrackListener()
-      {
-        @Override
-        public void mouseEnter(MouseEvent mouseEvent)
-        {
-        }
-
-        @Override
-        public void mouseExit(MouseEvent mouseEvent)
-        {
-          if (widgetEntryTableToolTip != null)
-          {
-            // check if inside widget
-            Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
-            if (widgetEntryTableToolTip.getBounds().contains(point))
-            {
-              return;
-            }
-
-            // check if inside sub-widget
-            for (Control control : widgetEntryTableToolTip.getChildren())
-            {
-              if (control.getBounds().contains(point))
-              {
-                return;
-              }
-            }
-
-            // close tooltip
-            widgetEntryTableToolTip.dispose();
-            widgetEntryTableToolTip = null;
-          }
-        }
-
-        @Override
-        public void mouseHover(MouseEvent mouseEvent)
-        {
-        }
-      });
+      Widgets.showToolTip(widgetEntryTableToolTip,x,y);
     }
   }
 

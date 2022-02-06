@@ -547,13 +547,14 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 }
 #endif
 
-void IndexCommon_initProgress(ProgressInfo *progressInfo, const char *text)
+// TODO: use ProgressInfo_init
+void IndexCommon_ProgressInfo_init(ProgressInfo *progressInfo, const char *text)
 {
   if (progressInfo != NULL)
   {
     progressInfo->text                  = text;
     progressInfo->startTimestamp        = 0ll;
-    progressInfo->steps                 = 0;
+    progressInfo->step                  = 0;
     progressInfo->maxSteps              = 0;
     progressInfo->lastProgressSum       = 0L;
     progressInfo->lastProgressCount     = 0;
@@ -561,12 +562,12 @@ void IndexCommon_initProgress(ProgressInfo *progressInfo, const char *text)
   }
 }
 
-void IndexCommon_resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
+void IndexCommon_ProgressInfo_reset(ProgressInfo *progressInfo, uint64 maxSteps)
 {
   if (progressInfo != NULL)
   {
     progressInfo->startTimestamp        = Misc_getTimestamp();
-    progressInfo->steps                 = 0;
+    progressInfo->step                  = 0;
     progressInfo->maxSteps              = maxSteps;
     progressInfo->lastProgressSum       = 0L;
     progressInfo->lastProgressCount     = 0;
@@ -574,7 +575,7 @@ void IndexCommon_resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
   }
 }
 
-void IndexCommon_doneProgress(ProgressInfo *progressInfo)
+void IndexCommon_ProgressInfo_done(ProgressInfo *progressInfo)
 {
   if (progressInfo != NULL)
   {
@@ -582,7 +583,7 @@ void IndexCommon_doneProgress(ProgressInfo *progressInfo)
   }
 }
 
-void IndexCommon_progressStep(void *userData)
+void IndexCommon_ProgressInfo_step(void *userData)
 {
   ProgressInfo *progressInfo = (ProgressInfo*)userData;
   uint         progress;
@@ -593,11 +594,11 @@ void IndexCommon_progressStep(void *userData)
 
   if (progressInfo != NULL)
   {
-    progressInfo->steps++;
+    progressInfo->step++;
 
     if (progressInfo->maxSteps > 0)
     {
-      progress           = (progressInfo->steps*1000)/progressInfo->maxSteps;
+      progress           = (progressInfo->step*1000)/progressInfo->maxSteps;
       importLastProgress = (progressInfo->lastProgressCount > 0) ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount) : 0;
       now                = Misc_getTimestamp();
       if (   (progress >= (importLastProgress+1))
@@ -605,7 +606,7 @@ void IndexCommon_progressStep(void *userData)
          )
       {
         elapsedTime       = now-progressInfo->startTimestamp;
-        totalTime         = (elapsedTime*progressInfo->maxSteps)/progressInfo->steps;
+        totalTime         = (elapsedTime*progressInfo->maxSteps)/progressInfo->step;
         estimatedRestTime = totalTime-elapsedTime;
 
         plogMessage(NULL,  // logHandle

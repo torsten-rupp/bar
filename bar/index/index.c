@@ -834,13 +834,13 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong getImportStepsCurrentVersion(IndexHandle *oldIndexHandle,
+LOCAL ulong getImportStepsCurrentVersion(DatabaseHandle *databaseHandle,
                                          uint        uuidCountFactor,
                                          uint        entityCountFactor,
                                          uint        storageCountFactor
                                         )
 {
-(void)oldIndexHandle;
+(void)databaseHandle;
 (void)uuidCountFactor;
 (void)entityCountFactor;
 (void)storageCountFactor;
@@ -928,7 +928,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   DIMPORT("import index %"PRIi64"",indexVersion);
 // TODO:
 #if 0
-  maxSteps = 0L;
+  maxSteps = 0LL;
   switch (indexVersion)
   {
     case 1:
@@ -957,8 +957,25 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-  IndexCommon_initProgress(&importProgressInfo,"Import");
-  IndexCommon_resetProgress(&importProgressInfo,maxSteps);
+  ProgressInfo_init(&importProgressInfo,
+// TODO:
+               CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
+               {
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_INDEX,
+                              "INDEX",
+                              "%s %0.1f%%, estimated rest time %uh:%02umin:%02us",
+"xxx",//                              progressInfo->text,
+                              (float)progress/10.0,
+                              (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
+                              (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
+                              (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
+                             );
+               },NULL),
+               "Import",
+0,
+maxSteps
+              );
   switch (indexVersion)
   {
     case 1:
@@ -988,6 +1005,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
       break;
   }
 #endif
+  ProgressInfo_done(&importProgressInfo);
   DIMPORT("import index done (error: %s)",Error_getText(error));
 
   DIMPORT("create aggregates");
@@ -1046,7 +1064,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      IndexCommon_progressStep(&importProgressInfo);
+      IndexCommon_ProgressInfo_step(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1092,7 +1110,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      IndexCommon_progressStep(&importProgressInfo);
+      IndexCommon_ProgressInfo_step(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1128,13 +1146,13 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      IndexCommon_progressStep(&importProgressInfo);
+      IndexCommon_ProgressInfo_step(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
 
-  IndexCommon_doneProgress(&importProgressInfo);
+  IndexCommon_ProgressInfo_done(&importProgressInfo);
 
   if (error == ERROR_NONE)
   {
@@ -3506,7 +3524,7 @@ fprintf(stderr,"%s:%d: +++++++++++++++++++\n",__FILE__,__LINE__);
              );
 
   #ifdef INDEX_INTIIAL_CLEANUP
-    IndexCommon_initProgress(&progressInfo,"Clean");
+    IndexCommon_ProgressInfo_init(&progressInfo,"Clean");
     (void)cleanUpDuplicateMeta(&indexHandle);
     (void)cleanUpIncompleteUpdate(&indexHandle);
     (void)cleanUpIncompleteCreate(&indexHandle);
@@ -3517,7 +3535,7 @@ fprintf(stderr,"%s:%d: +++++++++++++++++++\n",__FILE__,__LINE__);
     (void)IndexStorage_pruneEmpty(&indexHandle,&progressInfo);
     (void)IndexEntity_pruneEmpty(&indexHandle,NULL,NULL);
     (void)IndexUUID_pruneEmpty(&indexHandle,NULL,NULL);
-    IndexCommon_doneProgress(&progressInfo);
+    IndexCommon_ProgressInfo_done(&progressInfo);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
 

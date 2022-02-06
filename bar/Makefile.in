@@ -542,6 +542,7 @@ COMMON_SOURCES              = common/arrays.c \
                               common/patternlists.c \
                               common/patterns.c \
                               common/passwords.c \
+                              common/progressinfo.c \
                               common/ringbuffers.c \
                               common/semaphores.c \
                               common/stacktraces.c \
@@ -632,6 +633,7 @@ BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/devices.c \
                               common/database.c \
                               common/passwords.c \
+                              common/progressinfo.c \
                               common/threads.c \
                               common/misc.c \
                               common/arrays.c \

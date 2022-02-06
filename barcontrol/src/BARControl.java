@@ -5066,7 +5066,7 @@ if (false) {
           // add index for storage
           try
           {
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB progressSteps=1000",
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB ProgressInfo_steps=1000",
                                                          Settings.indexDatabaseAddStorageName
                                                         ),
                                      1,  // debug level
