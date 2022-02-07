@@ -35,6 +35,7 @@
 #include "common/cmdoptions.h"
 #include "common/database.h"
 #include "common/misc.h"
+#include "common/progressinfo.h"
 
 #include "sqlite3.h"
 
@@ -44,6 +45,7 @@
 #include "archive_format_const.h"
 
 /****************** Conditional compilation switches *******************/
+#define _INDEX_DEBUG_IMPORT_DATABASE
 
 /***************************** Constants *******************************/
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
@@ -138,8 +140,6 @@ LOCAL const char *toFileName                          = NULL;
 //LOCAL bool       helpFlag                             = FALSE;
 //LOCAL bool       xhelpFlag                            = FALSE;
 
-LOCAL ProgressInfo importProgressInfo;
-
 /****************************** Macros *********************************/
 
 /***********************************************************************\
@@ -152,7 +152,7 @@ LOCAL ProgressInfo importProgressInfo;
 * Notes  : -
 \***********************************************************************/
 
-#ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+#ifdef INDEX_DEBUG_IMPORT_DATABASE
   #define DIMPORT(format,...) \
     do \
     { \
@@ -163,13 +163,13 @@ LOCAL ProgressInfo importProgressInfo;
       fprintf(stderr,"\n"); \
     } \
     while (0)
-#else /* not INDEX_DEBUG_IMPORT_OLD_DATABASE */
+#else /* not INDEX_DEBUG_IMPORT_DATABASE */
   #define DIMPORT(format,...) \
     do \
     { \
     } \
     while (0)
-#endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
+#endif /* INDEX_DEBUG_IMPORT_DATABASE */
 
 /***************************** Forwards ********************************/
 
@@ -778,84 +778,6 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : initProgress
-* Purpose: init progress
-* Input  : text - text
-* Output : progressInfo - progress info
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-// TODO: unused
-#ifndef WERROR
-LOCAL void initProgress(ProgressInfo *progressInfo, const char *text)
-{
-  UNUSED_VARIABLE(progressInfo);
-  UNUSED_VARIABLE(text);
-}
-#endif
-
-/***********************************************************************\
-* Name   : resetProgress
-* Purpose: RESET progress
-* Input  : progressInfo - progress info
-*          maxSteps     - max. number of steps
-* Output :
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-// TODO: unused
-#ifndef WERROR
-LOCAL void resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
-{
-  UNUSED_VARIABLE(progressInfo);
-  UNUSED_VARIABLE(maxSteps);
-}
-#endif
-
-/***********************************************************************\
-* Name   : doneProgress
-* Purpose: done progress
-* Input  : progressInfo - progress info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-// TODO: unused
-#ifndef WERROR
-LOCAL void doneProgress(ProgressInfo *progressInfo)
-{
-  UNUSED_VARIABLE(progressInfo);
-}
-#endif
-
-/***********************************************************************\
-* Name   : progressStep
-* Purpose: step progress and log
-* Input  : userData - user data (progress info)
-* Output : -
-* Return : -
-* Notes  : increment step counter for each call!
-\***********************************************************************/
-
-// TODO: use IndexCommon_progressStep with percentage and time estimation
-LOCAL void progressStep(void *userData)
-{
-  const char *WHEEL = "|/-\\";
-  static uint i = 0;
-
-  UNUSED_VARIABLE(userData);
-
-  if ((i % 10) == 0)
-  {
-    fwrite(&WHEEL[i/10],1,1,stdout); fwrite("\b",1,1,stdout); fflush(stdout);
-  }
-  i = (i+1) % 40;
-}
-
-/***********************************************************************\
 * Name   : logImportProgress
 * Purpose: log import progress
 * Input  : format - log format string (can be NULL)
@@ -870,7 +792,7 @@ LOCAL void logImportProgress(const char *format, ...)
   va_list arguments;
 
   va_start(arguments,format);
-  vprintf(format,arguments);
+  vfprintf(stdout,format,arguments); fflush(stdout);
   va_end(arguments);
 }
 
@@ -1004,6 +926,149 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
                         );
 }
 
+LOCAL char outputProgressBuffer[64];
+LOCAL uint outputProgressBufferLength;
+
+LOCAL void formatSubProgressInfo(uint  progress,
+                                 ulong estimatedTotalTime,
+                                 ulong estimatedRestTime,
+                                 void  *userData
+                                )
+{
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (estimatedRestTime < 99*60*60)
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%5.1f%% %2dh:%02dmin:%02ds",
+                 (float)progress/10.0,
+                 estimatedRestTime/(60*60),
+                 estimatedRestTime%(60*60)/60,
+                 estimatedRestTime%60
+                );
+  }
+  else
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%5.1f%% --h:--min:--s",
+                 (float)progress/10.0
+                );
+  }
+}
+
+/***********************************************************************\
+* Name   : outputProgressInit
+* Purpose: output progress text
+* Input  : text     - text
+*          maxSteps - nax. number of steps (not used)
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInit(const char *text,
+                              uint64     maxSteps,
+                              void       *userData
+                             )
+{
+  UNUSED_VARIABLE(maxSteps);
+  UNUSED_VARIABLE(userData);
+
+  fwrite(text,1,stringLength(text),stdout);
+  fflush(stdout);
+}
+
+/***********************************************************************\
+* Name   : outputProgressInfo
+* Purpose: output progress info on console
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  const char *WHEEL = "|/-\\";
+  static uint wheelIndex = 0;
+
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (estimatedRestTime < 999*60*60)
+  {
+    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+                       " / %5.1f%% %3dh:%02dmin:%02ds %c",
+                       (float)progress/10.0,
+                       estimatedRestTime/(60*60),
+                       estimatedRestTime%(60*60)/60,
+                       estimatedRestTime%60,
+                       WHEEL[wheelIndex]
+                      );
+  }
+  else
+  {
+    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+                       " / %5.1f%% ---h:--min:--s %c",
+                       (float)progress/10.0,
+                       WHEEL[wheelIndex]
+                      );
+  }
+  outputProgressBufferLength = stringLength(outputProgressBuffer);
+
+  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+
+  fflush(stdout);
+
+  wheelIndex = (wheelIndex+1) % 4;
+}
+
+/***********************************************************************\
+* Name   : outputProgressDone
+* Purpose: done progress output
+* Input  : totalTime - total time [s]
+*          userData  - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressDone(ulong totalTime,
+                              void  *userData
+                             )
+{
+  UNUSED_VARIABLE(userData);
+
+  stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+               "%2dh:%02dmin:%02ds",
+               totalTime/(60*60),
+               totalTime%(60*60)/60,
+               totalTime%60
+              );
+  stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
+
+  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+
+  fwrite("\n",1,1,stdout);
+
+  fflush(stdout);
+}
+
 #include "index/index_current.c"
 
 /***********************************************************************\
@@ -1016,10 +1081,14 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
+ProgressInfo *ppp;
+
 LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *databaseURI)
 {
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;
+  ulong             maxSteps;
+  ProgressInfo      progressInfo;
   Errors            error;
   DatabaseHandle    oldDatabaseHandle;
 
@@ -1051,18 +1120,68 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                         DATABASE_OPEN_MODE_READ,
                         WAIT_FOREVER
                        );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    error = importIndexVersion7XXX(&oldDatabaseHandle, databaseHandle);
-    Database_close(&oldDatabaseHandle);
+    String_delete(printableDatabaseURI);
+    Database_doneSpecifier(&databaseSpecifier);
+    return error;
   }
 
+  maxSteps = 0LL;
+// TODO:
+#if 0
+  switch (indexVersion)
+  {
+    case 1:
+      maxSteps = getImportStepsVersion1(&oldIndexHandle,2,2,2);
+      break;
+    case 2:
+      maxSteps = getImportStepsVersion2(&oldIndexHandle,2,2,2);
+      break;
+    case 3:
+      maxSteps = getImportStepsVersion3(&oldIndexHandle,2,2,2);
+      break;
+    case 4:
+      maxSteps = getImportStepsVersion4(&oldIndexHandle,2,2,2);
+      break;
+    case 5:
+      maxSteps = getImportStepsVersion5(&oldIndexHandle,2,2,2);
+      break;
+    case 6:
+      maxSteps = getImportStepsVersion6(&oldIndexHandle,2,2,2);
+      break;
+    case INDEX_CONST_VERSION:
+      maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
+      break;
+    default:
+      // unknown version if index
+      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      break;
+  }
+#else
+maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
+#endif
+ppp=&progressInfo;
+  ProgressInfo_init(&progressInfo,
+                    NULL,  // parentProgressInfo
+                    0,  // filterWindowSize
+                    500,
+                    maxSteps,
+                    CALLBACK_(NULL,NULL),  // progresInitFunction
+                    CALLBACK_(outputProgressDone,NULL),
+                    CALLBACK_(outputProgressInfo,NULL),
+                    NULL
+                   );
+
+  error = importIndexVersion7XXX(&oldDatabaseHandle,databaseHandle,&progressInfo);
   if (error != ERROR_NONE)
   {
     printError("Import database fail: %s!\n",Error_getText(error));
   }
 
   // free resources
+  ProgressInfo_done(&progressInfo);
+  Database_close(&oldDatabaseHandle);
   String_delete(printableDatabaseURI);
   Database_doneSpecifier(&databaseSpecifier);
 
@@ -1981,7 +2100,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
     }
 
     // create new indizes (if not exists)
-    printInfo("  Collect indizes...");
+    printInfo("  Create indizes...");
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -1990,7 +2109,6 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
           {
-fprintf(stderr,"%s:%d: indexDefinition=%s\n",__FILE__,__LINE__,indexDefinition);
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
@@ -2024,7 +2142,7 @@ fprintf(stderr,"%s:%d: indexDefinition=%s\n",__FILE__,__LINE__,indexDefinition);
   }
   if (error != ERROR_NONE)
   {
-    printError("recreate indizes fail (error: %s)!",Error_getText(error));
+    printError("create indizes fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
@@ -2170,7 +2288,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
   }
   if (error != ERROR_NONE)
   {
-    printError("recreate FTS indizes fail (error: %s)!",Error_getText(error));
+    printError("create FTS indizes fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
@@ -6454,7 +6572,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             // nothing to do (use views)
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+            // nothing to do (use views)
             break;
         }
 
@@ -6525,7 +6643,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             // nothing to do (use views)
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+            // nothing to do (use views)
             break;
         }
 
@@ -6719,7 +6837,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
       }
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      // nothing to do
       break;
   }
 }
@@ -8313,8 +8431,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
                          DatabaseId storageId;
-                         DatabaseId uuidId;
-                         bool       storageOutputFlag;
 
                          assert(values != NULL);
                          assert(valueCount == 2);
@@ -8323,9 +8439,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          UNUSED_VARIABLE(userData);
 
                          storageId = values[0].id;
-                         uuidId    = values[1].id;
 
-                         storageOutputFlag = FALSE;
                          error = Database_get(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                               {
@@ -8473,8 +8587,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_KEY("id"),
-                         DATABASE_COLUMN_KEY("uuidId")
+                         DATABASE_COLUMN_KEY("id")
                        ),
                        stringFormat(filterString,sizeof(filterString),
                                     "    (   (NOT ? AND (? OR id IN (%s))) \
@@ -10514,15 +10627,13 @@ if (xxxId != DATABASE_ID_NONE)
             #endif /* HAVE_MARIADB */
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+              String_insertCString(s,STRING_BEGIN,"EXPLAIN ");
             #if defined(HAVE_POSTGRESQL)
             #else /* HAVE_POSTGRESQL */
             #endif /* HAVE_POSTGRESQL */
             break;
         }
       }
-
-// TODO: get columns
 
       printRowData.showHeaderFlag    = showHeaderFlag;
       printRowData.printedHeaderFlag = FALSE;

@@ -6329,7 +6329,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
       stringAppend(s1,sizeof(s1),", fragment #");
-      stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
+      stringFillAppend(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
       stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
 
@@ -6781,7 +6781,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
       stringAppend(s1,sizeof(s1),", fragment #");
-      stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
+      stringFillAppend(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
       stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
 
@@ -7600,7 +7600,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
       stringAppend(s1,sizeof(s1),", fragment #");
-      stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
+      stringFillAppend(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
       stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
 

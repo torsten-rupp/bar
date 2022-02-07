@@ -2589,7 +2589,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
   }
 
   // find newest entries for entries to add
-  IndexCommon_resetProgress(progressInfo,List_count(&entryList));
+  ProgressInfo_reset(progressInfo,List_count(&entryList));
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
     INDEX_DOX(error,
@@ -2649,7 +2649,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                           1LL
                          );
     });
-    IndexCommon_progressStep(progressInfo);
+    ProgressInfo_step(progressInfo);
   }
 
   // update/add entries to newest entries
@@ -3009,7 +3009,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
   }
 
   // find new newest entries for entries to remove
-  IndexCommon_resetProgress(progressInfo,List_count(&entryList));
+  ProgressInfo_reset(progressInfo,List_count(&entryList));
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
     // wait until index is unused
@@ -3086,7 +3086,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                            );
       });
     }
-    IndexCommon_progressStep(progressInfo);
+    ProgressInfo_step(progressInfo);
   }
 
   // remove/update entries from newest entries

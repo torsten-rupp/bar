@@ -2891,33 +2891,12 @@ public class TabJobs
               widgetFileTreeToolTip.setBackground(COLOR_BACKGROUND);
               widgetFileTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
               Widgets.layout(widgetFileTreeToolTip,0,0,TableLayoutData.NSWE);
-              widgetFileTreeToolTip.addMouseTrackListener(new MouseTrackListener()
-              {
-                @Override
-                public void mouseEnter(MouseEvent mouseEvent)
-                {
-                }
-                @Override
-                public void mouseExit(MouseEvent mouseEvent)
-                {
-                  widgetFileTreeToolTip.dispose();
-                  widgetFileTreeToolTip = null;
-                }
-                @Override
-                public void mouseHover(MouseEvent mouseEvent)
-                {
-                }
-              });
-
               label = Widgets.newLabel(widgetFileTreeToolTip,BARControl.tr("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress."));
               label.setForeground(COLOR_FOREGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
-              Point size = widgetFileTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
-              widgetFileTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
-              widgetFileTreeToolTip.setVisible(true);
+              Widgets.showToolTip(widgetFileTreeToolTip,tree.toDisplay(mouseEvent.x-16,mouseEvent.y-16));
             }
           }
         });

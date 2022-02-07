@@ -1761,88 +1761,6 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
   return SQLITE_OK;
 }
 
-/***********************************************************************\
-* Name   : sqlite3Step
-* Purpose: do SQLite3 step
-* Input  : statementHandle - statement handle
-*          handle          - SQLite3 handle
-*          timeout         - timeout [ms]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-// TODO: use
-LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
-                         sqlite3      *handle,
-                         long         timeout
-                        )
-{
-  const uint SLEEP_TIME = 250;  // [ms]
-
-  uint   n;
-  int    sqliteResult;
-  Errors error;
-
-  assert(statementHandle != NULL);
-  assert(handle != NULL);
-
-  n = 0;
-  do
-  {
-    sqliteResult = sqlite3_step(statementHandle);
-    if (sqliteResult == SQLITE_LOCKED)
-    {
-      sqlite3WaitUnlockNotify(handle);
-      sqlite3_reset(statementHandle);
-    }
-//TODO: correct? abort here?
-    else if (sqliteResult == SQLITE_BUSY)
-    {
-      Misc_udelay(SLEEP_TIME*US_PER_MS);
-      sqlite3_reset(statementHandle);
-      n++;
-    }
-  }
-  while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-         && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
-        );
-
-  if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
-  {
-    error = ERROR_NONE;
-  }
-  else if (sqliteResult == SQLITE_LOCKED)
-  {
-// TODO:
-  }
-  else if (sqliteResult == SQLITE_MISUSE)
-  {
-    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                        sqliteResult,
-                        sqlite3_extended_errcode(handle)
-                       );
-  }
-  else if (sqliteResult == SQLITE_INTERRUPT)
-  {
-    error = ERRORX_(INTERRUPTED,
-                    sqlite3_errcode(handle),
-                    "%s",
-                    sqlite3_errmsg(handle)
-                   );
-  }
-  else
-  {
-    error = ERRORX_(DATABASE,
-                    sqlite3_errcode(handle),
-                    "%s",
-                    sqlite3_errmsg(handle)
-                   );
-  }
-
-  return error;
-}
-
 #ifdef HAVE_MARIADB
 /***********************************************************************\
 * Name   : mysqlExecute
@@ -2439,23 +2357,19 @@ fprintf(stderr,"%s:%d: single mode %s\n",__FILE__,__LINE__,statementName);
 /***********************************************************************\
 * Name   : postgresqlGetLastInsertId
 * Purpose: get last insert statement id
-* Input  : handle        - database handle
-*          statementName - unique statement name
+* Input  : handle - database handle
 * Output : -
 * Return : database id or DATABASE_ID_NONE
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
-                                           const char *statementName
-                                          )
+LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 {
   PGresult   *postgresqlResult;
   uint64     n;
   DatabaseId databaseId;
 
   assert(handle != NULL);
-  assert(statementName != NULL);
 
   postgresqlResult = PQexecParams(handle,
                                   "SELECT LASTVAL()",
@@ -5657,7 +5571,14 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
         do
         {
           sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
-          if (sqliteResult == SQLITE_LOCKED)
+          if      (sqliteResult == SQLITE_MISUSE)
+          {
+            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                                sqliteResult,
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
+          else if (sqliteResult == SQLITE_LOCKED)
           {
             sqlite3WaitUnlockNotify(databaseStatementHandle->databaseHandle->sqlite.handle);
             sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
@@ -5785,7 +5706,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
               }
               else
               {
-                mysqlFields = NULL;
+                mysqlMetaData = NULL;
+                mysqlFields   = NULL;
               }
               for (i = 0; i < databaseStatementHandle->resultCount; i++)
               {
@@ -5892,7 +5814,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
-                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].id);
+                  stringToInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].id);
                   break;
                 case DATABASE_DATATYPE_BOOL:
                   stringToBool(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].b);
@@ -5980,9 +5902,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        id = postgresqlGetLastInsertId(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                       databaseStatementHandle->postgresql.name
-                                      );
+        id = postgresqlGetLastInsertId(databaseStatementHandle->databaseHandle->postgresql.handle);
       #else /* HAVE_POSTGRESQL */
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -7508,16 +7428,16 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
           {
             error = ERROR_NONE;
           }
-          else if (sqliteResult == SQLITE_LOCKED)
-          {
-// TODO:
-          }
           else if (sqliteResult == SQLITE_MISUSE)
           {
             HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
                                 sqliteResult,
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
+          }
+          else if (sqliteResult == SQLITE_LOCKED)
+          {
+// TODO:
           }
           else if (sqliteResult == SQLITE_INTERRUPT)
           {
@@ -7718,10 +7638,12 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   assert ((databaseStatementHandle->databaseHandle->databaseNode->readCount > 0) || (databaseStatementHandle->databaseHandle->databaseNode->readWriteCount > 0));
 
   // bind prepared values+results
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
       // nothing to do
+      error = ERROR_NONE;
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -7763,7 +7685,18 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       break;
     case DATABASE_TYPE_POSTGRESQL:
       // nothing to do
+      #if defined(HAVE_POSTGRESQL)
+        error = ERROR_NONE;
+      #else /* HAVE_POSTGRESQL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
       break;
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+    return error;
   }
 
   done          = FALSE;
@@ -7918,10 +7851,6 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   {
     return ERRORX_(DATABASE_TIMEOUT,0,"");
   }
-  else
-  {
-    return ERROR_NONE;
-  }
 
   #undef SLEEP_TIME
 
@@ -7974,9 +7903,9 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
           return Database_get(databaseHandle,
                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                               {
-                                const char *name;
-                                const char *type;
-                                bool       isPrimaryKey;
+                                ConstString name;
+                                ConstString type;
+                                bool        isPrimaryKey;
 
                                 assert(values != NULL);
                                 assert(valueCount == 6);
@@ -7984,16 +7913,16 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                 UNUSED_VARIABLE(userData);
                                 UNUSED_VARIABLE(valueCount);
 
-                                name         = values[1].s;
-                                type         = values[2].s;
+                                name         = values[1].string;
+                                type         = values[2].string;
                                 isPrimaryKey = values[5].b;
 
                                 if (i < maxColumnCount)
                                 {
-                                  columns[i].name  = stringDuplicate(name);
+                                  columns[i].name  = String_toCString(name);
                                   columns[i].alias = NULL;
-                                  if (   stringEqualsIgnoreCase(type,"INTEGER")
-                                      || stringEqualsIgnoreCase(type,"NUMERIC")
+                                  if (   String_equalsIgnoreCaseCString(type,"INTEGER")
+                                      || String_equalsIgnoreCaseCString(type,"NUMERIC")
                                      )
                                   {
                                     if (isPrimaryKey)
@@ -8005,15 +7934,15 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
                                   }
-                                  else if (stringEqualsIgnoreCase(type,"REAL"))
+                                  else if (String_equalsIgnoreCaseCString(type,"REAL"))
                                   {
                                     columns[i].type = DATABASE_DATATYPE_DOUBLE;
                                   }
-                                  else if (stringEqualsIgnoreCase(type,"TEXT"))
+                                  else if (String_equalsIgnoreCaseCString(type,"TEXT"))
                                   {
-                                    columns[i].type = DATABASE_DATATYPE_CSTRING;
+                                    columns[i].type = DATABASE_DATATYPE_STRING;
                                   }
-                                  else if (stringEqualsIgnoreCase(type,"BLOB"))
+                                  else if (String_equalsIgnoreCaseCString(type,"BLOB"))
                                   {
                                     columns[i].type = DATABASE_DATATYPE_BLOB;
                                   }
@@ -8057,9 +7986,9 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
             return Database_get(databaseHandle,
                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                 {
-                                  const char *name;
-                                  const char *type;
-                                  bool       isPrimaryKey;
+                                  ConstString name;
+                                  ConstString type;
+                                  bool        isPrimaryKey;
 
                                   assert(values != NULL);
                                   assert(valueCount == 6);
@@ -8067,15 +7996,15 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                   UNUSED_VARIABLE(valueCount);
                                   UNUSED_VARIABLE(userData);
 
-                                  name         = values[0].s;
-                                  type         = values[1].s;
-                                  isPrimaryKey = stringEqualsIgnoreCase(values[3].s,"PRI");
+                                  name         = values[0].string;
+                                  type         = values[1].string;
+                                  isPrimaryKey = String_equalsIgnoreCaseCString(values[3].string,"PRI");
 
                                   if (i < maxColumnCount)
                                   {
-                                    columns[i].name  = stringDuplicate(name);
+                                    columns[i].name  = String_toCString(name);
                                     columns[i].alias = NULL;
-                                    if (stringStartsWith(type,"int"))
+                                    if (String_startsWithCString(type,"int"))
                                     {
                                       if (isPrimaryKey)
                                       {
@@ -8086,39 +8015,39 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                         columns[i].type = DATABASE_DATATYPE_INT;
                                       }
                                     }
-                                    else if (stringEquals(type,"tinyint(1)"))
+                                    else if (String_equalsCString(type,"tinyint(1)"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BOOL;
                                     }
-                                    else if (stringStartsWith(type,"tinyint"))
+                                    else if (String_startsWithCString(type,"tinyint"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
-                                    else if (stringStartsWith(type,"bigint"))
+                                    else if (String_startsWithCString(type,"bigint"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT64;
                                     }
-                                    else if (stringStartsWith(type,"double"))
+                                    else if (String_startsWithCString(type,"double"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DOUBLE;
                                     }
-                                    else if (stringStartsWith(type,"datetime"))
+                                    else if (String_startsWithCString(type,"datetime"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DATETIME;
                                     }
-                                    else if (   stringStartsWith(type,"varchar")
-                                             || stringStartsWith(type,"text")
+                                    else if (   String_startsWithCString(type,"varchar")
+                                             || String_startsWithCString(type,"text")
                                             )
                                     {
-                                      columns[i].type = DATABASE_DATATYPE_CSTRING;
+                                      columns[i].type = DATABASE_DATATYPE_STRING;
                                     }
-                                    else if (stringStartsWith(type,"blob"))
+                                    else if (String_startsWithCString(type,"blob"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BLOB;
                                     }
                                     else
                                     {
-                                      HALT_INTERNAL_ERROR("unknown database type '%s'",type);
+                                      HALT_INTERNAL_ERROR("unknown database type '%s'",String_cString(type));
                                     }
                                     i++;
                                   }
@@ -8157,10 +8086,10 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
             return Database_get(databaseHandle,
                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                 {
-                                  const char *name;
-                                  const char *type;
-                                  bool       isPrimaryKey;
-                                  bool       isForeignKey;
+                                  ConstString name;
+                                  ConstString type;
+                                  bool        isPrimaryKey;
+                                  bool        isForeignKey;
 
                                   assert(values != NULL);
                                   assert(valueCount == 7);
@@ -8168,28 +8097,28 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                   UNUSED_VARIABLE(valueCount);
                                   UNUSED_VARIABLE(userData);
 
-                                  name         = values[2].s;
-                                  type         = values[3].s;
-                                  isPrimaryKey = stringEqualsIgnoreCase(values[5].s,"PRIMARY KEY");
-                                  isForeignKey = stringEqualsIgnoreCase(values[5].s,"FOREIGN KEY");
+                                  name         = values[2].string;
+                                  type         = values[3].string;
+                                  isPrimaryKey = String_equalsIgnoreCaseCString(values[5].string,"PRIMARY KEY");
+                                  isForeignKey = String_equalsIgnoreCaseCString(values[5].string,"FOREIGN KEY");
 
                                   if ((i < maxColumnCount) && !isForeignKey)
                                   {
-                                    columns[i].name  = stringDuplicate(name);
+                                    columns[i].name  = String_toCString(name);
                                     columns[i].alias = NULL;
-                                    if      (stringStartsWith(type,"boolean"))
+                                    if      (String_startsWithCString(type,"boolean"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BOOL;
                                     }
-                                    else if (stringStartsWith(type,"smallint"))
+                                    else if (String_startsWithCString(type,"smallint"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
-                                    else if (stringStartsWith(type,"int"))
+                                    else if (String_startsWithCString(type,"int"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_INT;
                                     }
-                                    else if (stringStartsWith(type,"bigint"))
+                                    else if (String_startsWithCString(type,"bigint"))
                                     {
                                       if (isPrimaryKey)
                                       {
@@ -8200,27 +8129,27 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                         columns[i].type = DATABASE_DATATYPE_INT64;
                                       }
                                     }
-                                    else if (stringStartsWith(type,"double"))
+                                    else if (String_startsWithCString(type,"double"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DOUBLE;
                                     }
-                                    else if (stringStartsWith(type,"timestamp"))
+                                    else if (String_startsWithCString(type,"timestamp"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_DATETIME;
                                     }
-                                    else if (   stringStartsWith(type,"character varying")
-                                             || stringStartsWith(type,"text")
+                                    else if (   String_startsWithCString(type,"character varying")
+                                             || String_startsWithCString(type,"text")
                                             )
                                     {
-                                      columns[i].type = DATABASE_DATATYPE_CSTRING;
+                                      columns[i].type = DATABASE_DATATYPE_STRING;
                                     }
-                                    else if (stringStartsWith(type,"blob"))
+                                    else if (String_startsWithCString(type,"blob"))
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BLOB;
                                     }
                                     else
                                     {
-                                      HALT_INTERNAL_ERROR("unknown database type '%s'",type);
+                                      HALT_INTERNAL_ERROR("unknown database type '%s'",String_cString(type));
                                     }
                                     i++;
                                   }
@@ -9679,9 +9608,7 @@ DATABASE_PLAIN("xxx"),
             error = Database_get(databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
-// TODO:
-//                                   const char *tableName;
-//                                   char       sqlString[256];
+                                   char       sqlString[256];
 
                                    assert(values != NULL);
                                    assert(valueCount >= 1);
@@ -9714,16 +9641,11 @@ DATABASE_PLAIN("xxx"),
                                                          return ERROR_NONE;
                                                        },NULL),
                                                        NULL,  // changedRowCount
-// TODO:
-#if 0
                                                        DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
                                                                                    "SHOW INDEXES FROM %s",
-                                                                                   tableName
+                                                                                   String_cString(values[0].string)
                                                                                   )
                                                                      ),
-#else
-                                                       DATABASE_PLAIN(""),
-#endif
                                                        DATABASE_COLUMNS
                                                        (
                                                        ),
@@ -11339,6 +11261,7 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
   uint                    fromColumnCount,toColumnCount;
 
   uint                    toColumnMap[DATABASE_MAX_TABLE_COLUMNS];
+// TODO:
 //  DatabaseColumnName      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS];
 char      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS][200];
   uint                    toColumnMapCount;
@@ -11394,7 +11317,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   {
     return error;
   }
-fprintf(stderr,"%s:%d: fromTableName=%s fromColumns=",__FILE__,__LINE__,fromTableName); for (uint i = 0; i < fromColumnCount;i++) fprintf(stderr,"%s %s, ",fromColumns[i].name,DATABASE_DATATYPE_NAMES[fromColumns[i].type]); fprintf(stderr,"\n");
+//fprintf(stderr,"%s:%d: fromTableName=%s fromColumns=",__FILE__,__LINE__,fromTableName); for (uint i = 0; i < fromColumnCount;i++) fprintf(stderr,"%s %s, ",fromColumns[i].name,DATABASE_DATATYPE_NAMES[fromColumns[i].type]); fprintf(stderr,"\n");
 
   error = getTableColumns(toColumns,
                           &toColumnCount,
@@ -11406,7 +11329,7 @@ fprintf(stderr,"%s:%d: fromTableName=%s fromColumns=",__FILE__,__LINE__,fromTabl
   {
     return error;
   }
-fprintf(stderr,"%s:%d: toTableName=%s toColumns=",__FILE__,__LINE__,toTableName); for (uint i = 0; i < toColumnCount;i++) fprintf(stderr,"%s %s, ",toColumns[i].name,DATABASE_DATATYPE_NAMES[toColumns[i].type]); fprintf(stderr,"\n");
+//fprintf(stderr,"%s:%d: toTableName=%s toColumns=",__FILE__,__LINE__,toTableName); for (uint i = 0; i < toColumnCount;i++) fprintf(stderr,"%s %s, ",toColumns[i].name,DATABASE_DATATYPE_NAMES[toColumns[i].type]); fprintf(stderr,"\n");
   END_TIMER();
 
   // get column mapping: toColumn[toColumnMap[i]] -> fromColumn[i]
@@ -11421,9 +11344,9 @@ fprintf(stderr,"%s:%d: toTableName=%s toColumns=",__FILE__,__LINE__,toTableName)
       toColumnMapCount++;
     }
   }
-fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (uint i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
+//fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (uint i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
 
-  // get parameter mapping/to-table primary key column index
+  // get parameter mapping+to-table primary key column index
   toColumnPrimaryKeyIndex = UNUSED;
   parameterMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
@@ -11438,12 +11361,13 @@ fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCoun
       toColumnPrimaryKeyIndex = i;
     }
   }
-fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (uint i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumns[parameterMap[i]].name,toColumns[parameterMap[i]].type); } fprintf(stderr,"\n");
+//fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (uint i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumns[parameterMap[i]].name,toColumns[parameterMap[i]].type); } fprintf(stderr,"\n");
 
-  // init from/to values
+  // init to-values, parameters
   for (i = 0; i < toColumnCount; i++)
   {
     toValues[i].type = toColumns[i].type;
+    toValues[i].name = toColumns[i].name;
   }
   toValueCount = toColumnCount;
 
@@ -11489,7 +11413,7 @@ fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCo
   }
   String_formatAppend(sqlInsertString,")");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlInsertString);
-fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
+//fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
 
   // create select+insert statements
   error = prepareStatement(&fromDatabaseStatementHandle,
@@ -11563,6 +11487,254 @@ UNUSED_VARIABLE(nn);
 
     // copy rows
     n = 0;
+#if 1
+    error = executePreparedStatement(&fromDatabaseStatementHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(valueCount >= parameterMapCount);
+
+                                       UNUSED_VARIABLE(values);
+                                       UNUSED_VARIABLE(valueCount);
+                                       UNUSED_VARIABLE(userData);
+
+//fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);
+                                       #ifdef DATABASE_DEBUG_COPY_TABLE
+                                         rowCount++;
+                                       #endif /* DATABASE_DEBUG_COPY_TABLE */
+
+                                       // set to-values
+                                       for (i = 0; i < parameterMapCount; i++)
+                                       {
+                                         memCopyFast(&parameterValues[i].data,
+                                                     sizeof(parameterValues[i].data),
+                                                     &values[parameterMap[toColumnMap[i]]].data,
+                                                     sizeof(values[parameterMap[toColumnMap[i]]].data)
+                                                    );
+#if 0
+fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
+(i < parameterMapCount) ? toColumnMap[parameterMap[i]] : -1,
+(i < parameterMapCount) ? parameterMap[i] : -1,
+i,
+fromColumnNames[toColumnMap[parameterMap[i]]],
+toColumnNames[parameterMap[i]],
+DATABASE_DATATYPE_NAMES[fromColumnTypes[toColumnMap[parameterMap[i]]]],
+DATABASE_DATATYPE_NAMES[toColumnTypes[parameterMap[i]]],
+debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromValues[toColumnMap[parameterMap[i]]]),
+debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
+);
+#endif
+                                       }
+
+                                       for (i = 0; i < toColumnMapCount; i++)
+                                       {
+                                         memCopyFast(&toValues[i].data,
+                                                     sizeof(toValues[i].data),
+                                                     &fromDatabaseStatementHandle.results[toColumnMap[i]].data,
+                                                     sizeof(fromDatabaseStatementHandle.results[toColumnMap[i]].data)
+                                                    );
+                                       }
+
+                                       // call pre-copy callback (if defined)
+                                       if (preCopyTableFunction != NULL)
+                                       {
+                                         // mark to index-id with 'any'
+                                         if (toColumnPrimaryKeyIndex != UNUSED)
+                                         {
+                                           toColumnInfo.values[toColumnPrimaryKeyIndex].id = DATABASE_ID_ANY;
+                                         }
+
+                                         BLOCK_DOX(error,
+                                                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
+                                                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+                                         {
+                                           return preCopyTableFunction(&fromColumnInfo,
+                                                                       &toColumnInfo,
+                                                                       preCopyTableUserData
+                                                                      );
+                                         });
+                                         if (error != ERROR_NONE)
+                                         {
+                                           return error;
+                                         }
+
+                                         // copy parameter data
+                                         for (i = 0; i < parameterMapCount; i++)
+                                         {
+                                           memCopyFast(&parameterValues[i].data,
+                                                       sizeof(parameterValues[i].data),
+                                                       &toColumnInfo.values[parameterMap[i]].data,
+                                                       sizeof(toColumnInfo.values[parameterMap[i]].data)
+                                                    );
+
+                                           // fix broken UTF8 encodings
+                                           switch (parameterValues[i].type)
+                                           {
+                                             case DATABASE_DATATYPE_STRING:
+                                               String_makeValidUTF8(parameterValues[i].string,STRING_BEGIN);
+                                               assert(String_isValidUTF8(parameterValues[i].string,STRING_BEGIN));
+                                               break;
+                                             case DATABASE_DATATYPE_CSTRING:
+                                               HALT_INTERNAL_ERROR_NOT_SUPPORTED();
+                                               break;
+                                             default:
+                                               break;
+                                           }
+                                         }
+                                       }
+
+                                       // insert row
+                                       if (   (toColumnPrimaryKeyIndex != UNUSED)
+                                           && (toColumnInfo.values[toColumnPrimaryKeyIndex].id == DATABASE_ID_ANY)
+                                          )
+                                       {
+                                 //fprintf(stderr,"%s:%d: bind insert parameter values %d\n",__FILE__,__LINE__,parameterValueCount);
+// TODO: implement resetBindValues()
+toDatabaseStatementHandle.parameterIndex=0;
+                                         error = bindValues(&toDatabaseStatementHandle,parameterValues,parameterValueCount);
+                                         if (error != ERROR_NONE)
+                                         {
+                                           return error;
+                                         }
+                                         error = executePreparedQuery(&toDatabaseStatementHandle,
+                                                                      NULL,  // changeRowCount
+                                                                      toDatabaseHandle->timeout
+                                                                     );
+                                         if (error != ERROR_NONE)
+                                         {
+                                           return error;
+                                         }
+
+                                         // get insert id
+                                         lastRowId = getLastInsertRowId(&toDatabaseStatementHandle);
+                                         if (toColumnPrimaryKeyIndex != UNUSED)
+                                         {
+                                           toValues[toColumnPrimaryKeyIndex].id = lastRowId;
+                                         }
+                                       }
+
+                                       // call post-copy callback (if defined)
+                                       if (postCopyTableFunction != NULL)
+                                       {
+                                         BLOCK_DOX(error,
+                                                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
+                                                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+                                         {
+                                           return postCopyTableFunction(&fromColumnInfo,
+                                                                        &toColumnInfo,
+                                                                        postCopyTableUserData
+                                                                       );
+                                         });
+                                         if (error != ERROR_NONE)
+                                         {
+                                           return error;
+                                         }
+                                       }
+
+                                       n++;
+
+                                       // progress
+                                       if (copyProgressCallbackFunction != NULL)
+                                       {
+                                         copyProgressCallbackFunction(copyProgressCallbackUserData);
+                                       }
+
+                                       // pause
+                                       if ((copyPauseCallbackFunction != NULL) && copyPauseCallbackFunction(copyPauseCallbackUserData))
+                                       {
+                                         // end transaction
+                                         if (transactionFlag)
+                                         {
+                                           error = Database_endTransaction(toDatabaseHandle);
+                                           if (error != ERROR_NONE)
+                                           {
+                                             return error;
+                                           }
+                                         }
+
+                                         END_TIMER();
+
+                                         // wait
+                                         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
+                                                    end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
+                                                  },
+                                                  { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ,WAIT_FOREVER);
+                                                    begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+                                                  },
+                                         {
+                                           do
+                                           {
+                                             Misc_udelay(10LL*US_PER_SECOND);
+                                           }
+                                           while (copyPauseCallbackFunction(copyPauseCallbackUserData));
+                                         });
+
+                                         START_TIMER();
+
+                                         // begin transaction
+                                         if (transactionFlag)
+                                         {
+                                           error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
+                                           if (error != ERROR_NONE)
+                                           {
+                                             return error;
+                                           }
+                                         }
+                                       }
+
+                                       // interrupt copy
+                                       if (n > MAX_INTERRUPT_COPY_TABLE_COUNT)
+                                       {
+                                         if (   Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ)
+                                             || Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE)
+                                            )
+                                         {
+                                           // end transaction
+                                           if (transactionFlag)
+                                           {
+                                             error = Database_endTransaction(toDatabaseHandle);
+                                             if (error != ERROR_NONE)
+                                             {
+                                               return error;
+                                             }
+                                           }
+
+                                           END_TIMER();
+
+                                           Thread_yield();
+
+                                           START_TIMER();
+
+                                           // begin transaction
+                                           if (transactionFlag)
+                                           {
+                                             error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
+                                             if (error != ERROR_NONE)
+                                             {
+                                               return error;
+                                             }
+                                           }
+                                         }
+
+                                         n = 0;
+                                       }
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount,
+                                     DATABASE_FLAG_COLUMN_NAMES,
+                                     fromDatabaseHandle->timeout
+                                    );
+    if (error != ERROR_NONE)
+    {
+      finalizeStatement(&toDatabaseStatementHandle);
+      finalizeStatement(&fromDatabaseStatementHandle);
+      if (transactionFlag)
+      {
+       (void)Database_rollbackTransaction(toDatabaseHandle);
+      }
+      return error;
+    }
+#else
     while (getNextRow(&fromDatabaseStatementHandle,DATABASE_FLAG_NONE,fromDatabaseHandle->timeout))
     {
 //fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);
@@ -11570,7 +11742,7 @@ UNUSED_VARIABLE(nn);
         rowCount++;
       #endif /* DATABASE_DEBUG_COPY_TABLE */
 
-      // set to values
+      // set parameter-values
       for (i = 0; i < parameterMapCount; i++)
       {
         memCopyFast(&parameterValues[i].data,
@@ -11807,6 +11979,7 @@ toDatabaseStatementHandle.parameterIndex=0;
         n = 0;
       }
     }  // while
+#endif
 
     // end transaction
     if (transactionFlag)
@@ -11816,6 +11989,7 @@ toDatabaseStatementHandle.parameterIndex=0;
       {
         finalizeStatement(&toDatabaseStatementHandle);
         finalizeStatement(&fromDatabaseStatementHandle);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
     }
@@ -11828,6 +12002,7 @@ toDatabaseStatementHandle.parameterIndex=0;
 
     return ERROR_NONE;
   });
+  assert(error != ERROR_UNKNOWN);
 //fprintf(stderr,"%s, %d: -------------------------- do check\n",__FILE__,__LINE__);
 //sqlite3_wal_checkpoint_v2(toDatabaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
 //fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(toDatabaseHandle->handle));
@@ -12076,8 +12251,8 @@ const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const
   databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
-    assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
-    return databaseValue->s;
+    assert(databaseValue->type == DATABASE_DATATYPE_STRING);
+    return String_cString(databaseValue->string);
   }
   else
   {
@@ -15170,7 +15345,6 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   error = ERROR_UNKNOWN;
-
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,

@@ -48,6 +48,8 @@ extern const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LE
 // empty string
 extern const struct __String* STRING_EMPTY;
 
+#define __STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
+
 /***************************** Datatypes *******************************/
 
 // string
@@ -158,55 +160,6 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
     String const name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
 #endif /* not NDEBUG */
 
-// debugging
-#ifndef NDEBUG
-  #define String_new()           __String_new(__FILE__,__LINE__)
-  #define String_newCString(...) __String_newCString(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define String_newChar(...)    __String_newChar(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define String_newBuffer(...)  __String_newBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define String_duplicate(...)  __String_duplicate(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define String_copy(...)       __String_copy(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define String_delete(...)     __String_delete(__FILE__,__LINE__, ## __VA_ARGS__)
-#endif /* not NDEBUG */
-
-#ifndef NDEBUG
-  #define STRING_CHECKSUM(length,maxLength,data) \
-    ((ulong)((length)^(ulong)(maxLength)^(ulong)(intptr_t)(data)))
-
-  /***********************************************************************\
-  * Name   : String_debugCheckValid
-  * Purpose: check if string is valod
-  * Input  : __fileName__ - file name
-  *          __lineNb__   - line number
-  *          string       - string
-  * Output : -
-  * Return : -
-  * Notes  : HALT if string is invalid
-  \***********************************************************************/
-
-  void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string);
-
-  #define STRING_CHECK_VALID(string) \
-    do \
-    { \
-      String_debugCheckValid(__FILE__,__LINE__,string); \
-    } \
-    while (0)
-
-  #define STRING_CHECK_VALID_AT(fileName,lineNb,string) \
-    do \
-    { \
-      String_debugCheckValid(fileName,lineNb,string); \
-    } \
-    while (0)
-#else /* NDEBUG */
-  #define STRING_CHECK_VALID(string) \
-    do \
-    { \
-    } \
-    while (0)
-#endif /* not NDEBUG */
-
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATE
 * Purpose: iterated over characters of string and execute block
@@ -280,7 +233,138 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
        (iteratorVariable) = stringNextUTF8(string->data,iteratorVariable), variable = stringAtUTF8(string->data,iteratorVariable,NULL) \
       )
 
+// debugging
+#ifndef NDEBUG
+  #define STRING_CHECKSUM(length,maxLength,data) \
+    ((ulong)((length)^(ulong)(maxLength)^(ulong)(intptr_t)(data)))
+
+  /***********************************************************************\
+  * Name   : String_debugCheckValid, STRING_CHECK_VALID,
+  *          STRING_CHECK_VALID_AT
+  * Purpose: check if string is valod
+  * Input  : __fileName__ - file name
+  *          __lineNb__   - line number
+  *          string       - string
+  * Output : -
+  * Return : -
+  * Notes  : HALT if string is invalid
+  \***********************************************************************/
+
+  void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string);
+
+  #define STRING_CHECK_VALID(string) \
+    do \
+    { \
+      String_debugCheckValid(__FILE__,__LINE__,string); \
+    } \
+    while (0)
+
+  #define STRING_CHECK_VALID_AT(fileName,lineNb,string) \
+    do \
+    { \
+      String_debugCheckValid(fileName,lineNb,string); \
+    } \
+    while (0)
+
+  /***********************************************************************\
+  * Name   : STRING_IS_ASSIGNABLE
+  * Purpose: check if is assignable
+  * Input  : string - string
+  * Output : -
+  * Return : TRUE iff assignable
+  * Notes  : -
+  \***********************************************************************/
+
+  #define STRING_IS_ASSIGNABLE(string) \
+    (((string)->type == STRING_TYPE_DYNAMIC) || ((string)->type == STRING_TYPE_STATIC))
+
+  /***********************************************************************\
+  * Name   : STRING_CHECK_ASSIGNABLE
+  * Purpose: check if string is assignable
+  * Input  : string - string
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  #define STRING_CHECK_ASSIGNABLE(string) \
+    do \
+    { \
+      if (string != NULL) \
+      { \
+        assert(STRING_IS_ASSIGNABLE(string)); \
+      } \
+    } \
+    while (0)
+
+  /***********************************************************************\
+  * Name   : STRING_UPDATE_VALID
+  * Purpose: update string checksum
+  * Input  : string - string
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  #ifdef MAX_STRINGS_CHECK
+    #define STRING_UPDATE_VALID(string) \
+      do \
+      { \
+        if (string != NULL) \
+        { \
+          (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
+          if ((string)->length > WARN_MAX_STRING_LENGTH) \
+          { \
+            fprintf(stderr,"DEBUG WARNING: extremly long string %p: %lu!\n",string,(string)->length); \
+            usleep((((string)->length-WARN_MAX_STRING_LENGTH)/100L)*10*1000); \
+          } \
+        } \
+      } \
+      while (0)
+  #else /* not MAX_STRINGS_CHECK */
+    #define STRING_UPDATE_VALID(string) \
+      do \
+      { \
+        if (string != NULL) \
+        { \
+          (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
+        } \
+      } \
+      while (0)
+  #endif /* MAX_STRINGS_CHECK */
+#else /* NDEBUG */
+  #define STRING_CHECK_VALID(string) \
+    do \
+    { \
+    } \
+    while (0)
+
+  #define STRING_CHECK_ASSIGNABLE(string) \
+    do \
+    { \
+    } \
+    while (0)
+
+  #define STRING_UPDATE_VALID(string) \
+    do \
+    { \
+    } \
+    while (0)
+#endif /* not NDEBUG */
+
+#ifndef NDEBUG
+  #define String_new()           __String_new(__FILE__,__LINE__)
+  #define String_newCString(...) __String_newCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_newChar(...)    __String_newChar(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_newBuffer(...)  __String_newBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_duplicate(...)  __String_duplicate(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_copy(...)       __String_copy(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_delete(...)     __String_delete(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
+void __printErrorConstString(const struct __String *string);
+INLINE void __ensureStringLength(struct __String *string, ulong newLength);
 
 /***************************** Functions *******************************/
 
@@ -445,7 +529,30 @@ String String_vformatAppend(String string, const char *format, va_list arguments
 String String_append(String string, ConstString appendString);
 String String_appendSub(String string, ConstString fromString, ulong fromIndex, long fromLength);
 String String_appendCString(String string, const char *s);
-String String_appendChar(String string, char ch);
+INLINE String String_appendChar(String string, char ch);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE String String_appendChar(String string, char ch)
+{
+  ulong n;
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+    n = string->length+1;
+    __ensureStringLength(string,n);
+    string->data[string->length] = ch;
+    string->data[n] = NUL;
+    string->length  = n;
+
+    STRING_UPDATE_VALID(string);
+  }
+
+  return string;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 String String_appendCharUTF8(String string, Codepoint codepoint);
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
 
@@ -1407,6 +1514,83 @@ StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint
 \***********************************************************************/
 
 char* String_toCString(ConstString string);
+
+/***********************************************************************\
+* Name   : __ensureStringLength
+* Purpose: ensure min. length of string
+* Input  : string    - string
+*          newLength - new min. length of string
+* Output : -
+* Return : TRUE if string length is ok, FALSE on insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+INLINE void __ensureStringLength(struct __String *string, ulong newLength);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE void __ensureStringLength(struct __String *string, ulong newLength)
+{
+  char  *newData;
+  ulong newMaxLength;
+
+  switch (string->type)
+  {
+    case STRING_TYPE_DYNAMIC:
+      if ((newLength + 1) > string->maxLength)
+      {
+        newMaxLength = ((newLength + 1) + __STRING_DELTA_LENGTH - 1) & ~(__STRING_DELTA_LENGTH - 1);
+        assert(newMaxLength >= (newLength + 1));
+        newData = realloc(string->data,newMaxLength*sizeof(char));
+        if (newData == NULL)
+        {
+          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength*sizeof(char),strerror(errno));
+          abort();
+        }
+        #ifndef NDEBUG
+          #ifdef TRACE_STRING_ALLOCATIONS
+            pthread_once(&debugStringInitFlag,debugStringInit);
+
+            pthread_mutex_lock(&debugStringLock);
+            {
+              debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
+            }
+            pthread_mutex_unlock(&debugStringLock);
+          #endif /* TRACE_STRING_ALLOCATIONS */
+          #ifdef FILL_MEMORY
+            memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
+          #endif /* FILL_MEMORY */
+        #endif /* not NDEBUG */
+
+        string->data      = newData;
+        string->maxLength = newMaxLength;
+      }
+      break;
+    case STRING_TYPE_STATIC:
+      if ((newLength + 1) > string->maxLength)
+      {
+        HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength);
+      }
+      break;
+    case STRING_TYPE_CONST:
+      __printErrorConstString(string);
+      HALT_INTERNAL_ERROR("modify const string");
+      break; // not reached
+    default:
+      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      break; // not reached
+  }
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : __printErrorConstString
+* Purpose: print error for modified constant string
+* Input  : string - string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void __printErrorConstString(const struct __String *string);
 
 #ifndef NDEBUG
 

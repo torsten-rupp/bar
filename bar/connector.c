@@ -964,6 +964,13 @@ LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHand
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
+  // check if storage initialized
+  if (!connectorInfo->storageInitFlag)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"");
+    return;
+  }
+
   // get archive size
   archiveSize = Storage_getSize(&connectorInfo->storageHandle);
 UNUSED_VARIABLE(archiveSize);
@@ -981,6 +988,53 @@ UNUSED_VARIABLE(argumentMap);
 
   // send result
   sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_storageExists
+* Purpose: check if storage exists
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments: archiveName=<name>
+*          Result: existsFlag=yes|no
+\***********************************************************************/
+
+LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  String archiveName;
+  bool existsFlags;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get archive name, archive size
+  archiveName = String_new();
+  if (!StringMap_getString(argumentMap,"archiveName",archiveName,NULL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveName=<name>");
+    String_delete(archiveName);
+    return;
+  }
+
+  // check if storage initialized
+  if (!connectorInfo->storageInitFlag)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"");
+    return;
+  }
+
+  // check if exists
+  existsFlags = Storage_exists(&connectorInfo->storageInfo,archiveName);
+
+  // send result
+  sendResult(connectorInfo,id,TRUE,ERROR_NONE,"existsFlag=%y",existsFlags);
 }
 
 /***********************************************************************\
@@ -3094,6 +3148,7 @@ CONNECTOR_COMMANDS[] =
   { "STORAGE_CREATE",            connectorCommand_storageCreate           },
   { "STORAGE_WRITE",             connectorCommand_storageWrite            },
   { "STORAGE_CLOSE",             connectorCommand_storageClose            },
+  { "STORAGE_EXISTS",            connectorCommand_storageExists           },
 
   { "INDEX_FIND_UUID",           connectorCommand_indexFindUUID           },
   { "INDEX_NEW_UUID",            connectorCommand_indexNewUUID            },
