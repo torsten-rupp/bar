@@ -105,8 +105,6 @@ void ProgressInfo_done(ProgressInfo *progressInfo)
 
 void ProgressInfo_reset(ProgressInfo *progressInfo, uint64 stepCount)
 {
-  String text;
-
   assert(progressInfo != NULL);
 
   progressInfo->stepCount              = stepCount;

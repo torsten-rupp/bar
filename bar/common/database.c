@@ -1761,88 +1761,6 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
   return SQLITE_OK;
 }
 
-/***********************************************************************\
-* Name   : sqlite3Step
-* Purpose: do SQLite3 step
-* Input  : statementHandle - statement handle
-*          handle          - SQLite3 handle
-*          timeout         - timeout [ms]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-// TODO: use
-LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
-                         sqlite3      *handle,
-                         long         timeout
-                        )
-{
-  const uint SLEEP_TIME = 250;  // [ms]
-
-  uint   n;
-  int    sqliteResult;
-  Errors error;
-
-  assert(statementHandle != NULL);
-  assert(handle != NULL);
-
-  n = 0;
-  do
-  {
-    sqliteResult = sqlite3_step(statementHandle);
-    if (sqliteResult == SQLITE_LOCKED)
-    {
-      sqlite3WaitUnlockNotify(handle);
-      sqlite3_reset(statementHandle);
-    }
-//TODO: correct? abort here?
-    else if (sqliteResult == SQLITE_BUSY)
-    {
-      Misc_udelay(SLEEP_TIME*US_PER_MS);
-      sqlite3_reset(statementHandle);
-      n++;
-    }
-  }
-  while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-         && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
-        );
-
-  if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
-  {
-    error = ERROR_NONE;
-  }
-  else if (sqliteResult == SQLITE_LOCKED)
-  {
-// TODO:
-  }
-  else if (sqliteResult == SQLITE_MISUSE)
-  {
-    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                        sqliteResult,
-                        sqlite3_extended_errcode(handle)
-                       );
-  }
-  else if (sqliteResult == SQLITE_INTERRUPT)
-  {
-    error = ERRORX_(INTERRUPTED,
-                    sqlite3_errcode(handle),
-                    "%s",
-                    sqlite3_errmsg(handle)
-                   );
-  }
-  else
-  {
-    error = ERRORX_(DATABASE,
-                    sqlite3_errcode(handle),
-                    "%s",
-                    sqlite3_errmsg(handle)
-                   );
-  }
-
-  return error;
-}
-
 #ifdef HAVE_MARIADB
 /***********************************************************************\
 * Name   : mysqlExecute
@@ -2439,23 +2357,19 @@ fprintf(stderr,"%s:%d: single mode %s\n",__FILE__,__LINE__,statementName);
 /***********************************************************************\
 * Name   : postgresqlGetLastInsertId
 * Purpose: get last insert statement id
-* Input  : handle        - database handle
-*          statementName - unique statement name
+* Input  : handle - database handle
 * Output : -
 * Return : database id or DATABASE_ID_NONE
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
-                                           const char *statementName
-                                          )
+LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 {
   PGresult   *postgresqlResult;
   uint64     n;
   DatabaseId databaseId;
 
   assert(handle != NULL);
-  assert(statementName != NULL);
 
   postgresqlResult = PQexecParams(handle,
                                   "SELECT LASTVAL()",
@@ -5657,7 +5571,14 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
         do
         {
           sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
-          if (sqliteResult == SQLITE_LOCKED)
+          if      (sqliteResult == SQLITE_MISUSE)
+          {
+            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                                sqliteResult,
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
+          else if (sqliteResult == SQLITE_LOCKED)
           {
             sqlite3WaitUnlockNotify(databaseStatementHandle->databaseHandle->sqlite.handle);
             sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
@@ -5785,7 +5706,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
               }
               else
               {
-                mysqlFields = NULL;
+                mysqlMetaData = NULL;
+                mysqlFields   = NULL;
               }
               for (i = 0; i < databaseStatementHandle->resultCount; i++)
               {
@@ -5892,7 +5814,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
-                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].id);
+                  stringToInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].id);
                   break;
                 case DATABASE_DATATYPE_BOOL:
                   stringToBool(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].b);
@@ -5980,9 +5902,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        id = postgresqlGetLastInsertId(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                       databaseStatementHandle->postgresql.name
-                                      );
+        id = postgresqlGetLastInsertId(databaseStatementHandle->databaseHandle->postgresql.handle);
       #else /* HAVE_POSTGRESQL */
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -7508,16 +7428,16 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
           {
             error = ERROR_NONE;
           }
-          else if (sqliteResult == SQLITE_LOCKED)
-          {
-// TODO:
-          }
           else if (sqliteResult == SQLITE_MISUSE)
           {
             HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
                                 sqliteResult,
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
+          }
+          else if (sqliteResult == SQLITE_LOCKED)
+          {
+// TODO:
           }
           else if (sqliteResult == SQLITE_INTERRUPT)
           {
@@ -9688,9 +9608,7 @@ DATABASE_PLAIN("xxx"),
             error = Database_get(databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
-// TODO:
-//                                   const char *tableName;
-//                                   char       sqlString[256];
+                                   char       sqlString[256];
 
                                    assert(values != NULL);
                                    assert(valueCount >= 1);
@@ -9723,16 +9641,11 @@ DATABASE_PLAIN("xxx"),
                                                          return ERROR_NONE;
                                                        },NULL),
                                                        NULL,  // changedRowCount
-// TODO:
-#if 0
                                                        DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
                                                                                    "SHOW INDEXES FROM %s",
-                                                                                   tableName
+                                                                                   String_cString(values[0].string)
                                                                                   )
                                                                      ),
-#else
-                                                       DATABASE_PLAIN(""),
-#endif
                                                        DATABASE_COLUMNS
                                                        (
                                                        ),
@@ -11348,6 +11261,7 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
   uint                    fromColumnCount,toColumnCount;
 
   uint                    toColumnMap[DATABASE_MAX_TABLE_COLUMNS];
+// TODO:
 //  DatabaseColumnName      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS];
 char      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS][200];
   uint                    toColumnMapCount;
@@ -11579,6 +11493,8 @@ UNUSED_VARIABLE(nn);
                                      {
                                        assert(valueCount >= parameterMapCount);
 
+                                       UNUSED_VARIABLE(values);
+                                       UNUSED_VARIABLE(valueCount);
                                        UNUSED_VARIABLE(userData);
 
 //fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);

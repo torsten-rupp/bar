@@ -163,8 +163,8 @@ typedef enum
 #define DATABASE_FLAG_DEBUG        (1 << 31)  // print SQL statement to console
 
 // special database ids
-#define DATABASE_ID_NONE 0LL
-#define DATABASE_ID_ANY  -1LL
+#define DATABASE_ID_NONE ((DatabaseId)0LL)
+#define DATABASE_ID_ANY  ((DatabaseId)0xFFFFFFFFFFFFFFFFLL)
 
 // ordering mode
 typedef enum
@@ -522,7 +522,7 @@ typedef struct
   {
     intptr_t   p;
 
-    uint64     id;
+    DatabaseId id;
     bool       b;
     int        i;
     int64      i64;
@@ -552,35 +552,23 @@ typedef struct
   DatabaseDataTypes type;
   union
   {
-    intptr_t p;
+    intptr_t   p;
 
-    uint64   id;
-    bool     b;
-    int      i;
-    int64    i64;
-    uint32   u;
-    uint64   u64;
-    double   d;
-    uint64   dateTime;
-    String   string;
-    char     *s;
-// TODO: use String?
-    struct
-    {
-      char  *data;
-      ulong length;
-    } text;
+    DatabaseId id;
+    bool       b;
+    int        i;
+    int64      i64;
+    uint32     u;
+    uint64     u64;
+    double     d;
+    uint64     dateTime;
+    String     string;
+    char       *s;
     struct
     {
       void  *data;
       ulong length;
     } blob;
-// TODO: remove
-    struct
-    {
-      void  *p;
-      ulong length;
-    } data;
   };
 } DatabaseFilter;
 
@@ -614,17 +602,17 @@ DatabaseDataTypes *dataTypes;
   // database statement handle
   typedef union
   {
-    char     *p;
+    char       *p;
 
-    uint64   id;
-    uint8    b;
-    int32    i;
-    int64    i64;
-    uint32   u;
-    uint64   u64;
-    double   d;
-    uint64   dateTime;
-    char     data[64];
+    DatabaseId id;
+    uint8      b;
+    int32      i;
+    int64      i64;
+    uint32     u;
+    uint64     u64;
+    double     d;
+    uint64     dateTime;
+    char       data[64];
   } PostgreSQLBind;
 
   typedef struct
