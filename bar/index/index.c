@@ -29,6 +29,7 @@
 #include "common/files.h"
 #include "common/filesystems.h"
 #include "common/misc.h"
+#include "common/progressinfo.h"
 #include "errors.h"
 
 // TODO: remove bar.h
@@ -1064,7 +1065,7 @@ maxSteps
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      IndexCommon_ProgressInfo_step(&importProgressInfo);
+      ProgressInfo_step(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1110,7 +1111,7 @@ maxSteps
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      IndexCommon_ProgressInfo_step(&importProgressInfo);
+      ProgressInfo_step(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1146,13 +1147,13 @@ maxSteps
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      IndexCommon_ProgressInfo_step(&importProgressInfo);
+      ProgressInfo_step(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
 
-  IndexCommon_ProgressInfo_done(&importProgressInfo);
+  ProgressInfo_done(&importProgressInfo);
 
   if (error == ERROR_NONE)
   {
@@ -3248,12 +3249,11 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                   void                    *IndexCommon_isMaintenanceTimeUserData
                  )
 {
-  String       printableDatabaseURI;
-  bool         createFlag;
-  Errors       error;
-  uint         indexVersion;
-  IndexHandle  indexHandle;
-  ProgressInfo progressInfo;
+  String      printableDatabaseURI;
+  bool        createFlag;
+  Errors      error;
+  uint        indexVersion;
+  IndexHandle indexHandle;
 
   assert(databaseSpecifier != NULL);
 
@@ -3524,7 +3524,6 @@ fprintf(stderr,"%s:%d: +++++++++++++++++++\n",__FILE__,__LINE__);
              );
 
   #ifdef INDEX_INTIIAL_CLEANUP
-    IndexCommon_ProgressInfo_init(&progressInfo,"Clean");
     (void)cleanUpDuplicateMeta(&indexHandle);
     (void)cleanUpIncompleteUpdate(&indexHandle);
     (void)cleanUpIncompleteCreate(&indexHandle);
@@ -3532,10 +3531,9 @@ fprintf(stderr,"%s:%d: +++++++++++++++++++\n",__FILE__,__LINE__);
     (void)cleanUpStorageNoEntity(&indexHandle);
     (void)cleanUpStorageInvalidState(&indexHandle);
     (void)cleanUpNoUUID(&indexHandle);
-    (void)IndexStorage_pruneEmpty(&indexHandle,&progressInfo);
+    (void)IndexStorage_pruneEmpty(&indexHandle,NULL);
     (void)IndexEntity_pruneEmpty(&indexHandle,NULL,NULL);
     (void)IndexUUID_pruneEmpty(&indexHandle,NULL,NULL);
-    IndexCommon_ProgressInfo_done(&progressInfo);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
 

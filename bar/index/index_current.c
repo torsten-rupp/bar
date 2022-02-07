@@ -83,7 +83,6 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
   Errors     error;
   int64      size;
   DatabaseId fromStorageId;
-  ValueData  valueData;
   DatabaseId toStorageId;
   int64      fragmentOffset;
   int64      fragmentSize;
@@ -566,11 +565,14 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
 }
 
 /***********************************************************************\
-* Name   : _
-* Purpose:
-* Input  : -
+* Name   : upgradeFromVersion7_importEntry
+* Purpose: import entry
+* Input  : oldDatabaseHandle,newDatabaseHandle - database handles
+*          storageIdDictionary                 - storage id dictionary
+*          type                                - entry type
+*          fromEntryId,toEntryId               - fromt/to entry id
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -920,6 +922,7 @@ LOCAL uint64 getImportStepsVersion7(DatabaseHandle *databaseHandle)
 * Name   : importIndexVersion7
 * Purpose: import index version 7
 * Input  : oldDatabaseHandle,newDatabaseHandle - database handles
+*          progressInfo                        - progress info
 * Output : -
 * Return : -
 * Notes  : -
@@ -927,15 +930,11 @@ LOCAL uint64 getImportStepsVersion7(DatabaseHandle *databaseHandle)
 
 LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                  DatabaseHandle *newDatabaseHandle,
-                                 ProgressInfo *progressInfo
+                                 ProgressInfo   *progressInfo
                                 )
 {
-  Errors             error;
-  Dictionary         storageIdDictionary;
-  DictionaryIterator dictionaryIterator;
-  KeyData            keyData;
-  ValueData          valueData;
-  DatabaseId         toEntityId;
+  Errors     error;
+  Dictionary storageIdDictionary;
 
   // init variables
   error = ERROR_NONE;
@@ -1029,6 +1028,8 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                 Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
                                                );
 
+CALLGRIND_START_INSTRUMENTATION;
+CALLGRIND_TOGGLE_COLLECT;
                                // transfer storages of entity
                                error = Database_copyTable(oldDatabaseHandle,
                                                           newDatabaseHandle,
@@ -1153,7 +1154,9 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                {
                                  return error;
                                }
-
+CALLGRIND_TOGGLE_COLLECT;
+CALLGRIND_STOP_INSTRUMENTATION;
+exit(0);
                                ProgressInfo_done(&subProgressInfo);
 
                                return ERROR_NONE;

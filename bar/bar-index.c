@@ -1151,7 +1151,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       maxSteps = getImportStepsVersion6(&oldIndexHandle,2,2,2);
       break;
     case INDEX_CONST_VERSION:
-      maxSteps = getImportStepsCurrentVersion(&oldIndexHandle,2,2,2);
+      maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
       break;
     default:
       // unknown version if index
@@ -6572,7 +6572,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             // nothing to do (use views)
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+            // nothing to do (use views)
             break;
         }
 
@@ -6643,7 +6643,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             // nothing to do (use views)
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+            // nothing to do (use views)
             break;
         }
 
@@ -6837,7 +6837,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
       }
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      // nothing to do
       break;
   }
 }
@@ -10627,15 +10627,13 @@ if (xxxId != DATABASE_ID_NONE)
             #endif /* HAVE_MARIADB */
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+              String_insertCString(s,STRING_BEGIN,"EXPLAIN ");
             #if defined(HAVE_POSTGRESQL)
             #else /* HAVE_POSTGRESQL */
             #endif /* HAVE_POSTGRESQL */
             break;
         }
       }
-
-// TODO: get columns
 
       printRowData.showHeaderFlag    = showHeaderFlag;
       printRowData.printedHeaderFlag = FALSE;

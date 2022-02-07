@@ -7718,7 +7718,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   assert ((databaseStatementHandle->databaseHandle->databaseNode->readCount > 0) || (databaseStatementHandle->databaseHandle->databaseNode->readWriteCount > 0));
 
   // bind prepared values+results
-  error == ERROR_UNKNOWN;
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -8127,7 +8127,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                     }
                                     else
                                     {
-                                      HALT_INTERNAL_ERROR("unknown database type '%s'",type);
+                                      HALT_INTERNAL_ERROR("unknown database type '%s'",String_cString(type));
                                     }
                                     i++;
                                   }
@@ -8229,7 +8229,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                     }
                                     else
                                     {
-                                      HALT_INTERNAL_ERROR("unknown database type '%s'",type);
+                                      HALT_INTERNAL_ERROR("unknown database type '%s'",String_cString(type));
                                     }
                                     i++;
                                   }
@@ -11578,6 +11578,9 @@ UNUSED_VARIABLE(nn);
                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                      {
                                        assert(valueCount >= parameterMapCount);
+
+                                       UNUSED_VARIABLE(userData);
+
 //fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);
                                        #ifdef DATABASE_DEBUG_COPY_TABLE
                                          rowCount++;

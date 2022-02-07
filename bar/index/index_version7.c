@@ -655,12 +655,12 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   error = ERROR_NONE;
 
   // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");     IndexCommon_ProgressInfo_step(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"files");       IndexCommon_ProgressInfo_step(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"images");      IndexCommon_ProgressInfo_step(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"directories"); IndexCommon_ProgressInfo_step(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"links");       IndexCommon_ProgressInfo_step(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"special");     IndexCommon_ProgressInfo_step(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"storage");     ProgressInfo_step(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"files");       ProgressInfo_step(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"images");      ProgressInfo_step(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"directories"); ProgressInfo_step(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"links");       ProgressInfo_step(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"special");     ProgressInfo_step(&importProgressInfo);
   DIMPORT("fixed broken ids");
 
   // transfer uuids (if not exists, ignore errors)
@@ -673,7 +673,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(IndexCommon_ProgressInfo_step,&importProgressInfo),  // progress
+                           CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
@@ -758,7 +758,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(IndexCommon_ProgressInfo_step,NULL),
+                                                          CALLBACK_(ProgressInfo_step,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -989,7 +989,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(IndexCommon_ProgressInfo_step,NULL),
+                                                          CALLBACK_(ProgressInfo_step,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1008,7 +1008,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(IndexCommon_ProgressInfo_step,NULL),
+                             CALLBACK_(ProgressInfo_step,NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
@@ -1326,7 +1326,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(NULL,NULL),  // pause
-                             CALLBACK_(IndexCommon_ProgressInfo_step,NULL),
+                             CALLBACK_(ProgressInfo_step,NULL),
                              "WHERE entityId IS NULL"
                             );
   String_delete(storageIdsString);

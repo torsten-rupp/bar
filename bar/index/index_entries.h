@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/progressinfo.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
