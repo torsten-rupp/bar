@@ -77,7 +77,6 @@ const struct __String __STRING_EMPTY =
 const struct __String* STRING_EMPTY = &__STRING_EMPTY;
 
 #define STRING_START_LENGTH 64   // string start length
-#define STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
 
 LOCAL const char *DEFAULT_TRUE_STRINGS[] =
 {
@@ -177,20 +176,9 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define STRING_IS_ASSIGNABLE(string) \
-    (((string)->type == STRING_TYPE_DYNAMIC) || ((string)->type == STRING_TYPE_STATIC))
   #define STRING_IS_DYNAMIC(string) \
     ((string)->type == STRING_TYPE_DYNAMIC)
 
-  #define STRING_CHECK_ASSIGNABLE(string) \
-    do \
-    { \
-      if (string != NULL) \
-      { \
-        assert(STRING_IS_ASSIGNABLE(string)); \
-      } \
-    } \
-    while (0)
   #define STRING_CHECK_DYNAMIC(string) \
     do \
     { \
@@ -200,47 +188,8 @@ typedef struct
       } \
     } \
     while (0)
-
-  #ifdef MAX_STRINGS_CHECK
-    #define STRING_UPDATE_VALID(string) \
-      do \
-      { \
-        if (string != NULL) \
-        { \
-          (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
-          if ((string)->length > WARN_MAX_STRING_LENGTH) \
-          { \
-            fprintf(stderr,"DEBUG WARNING: extremly long string %p: %lu!\n",string,(string)->length); \
-            usleep((((string)->length-WARN_MAX_STRING_LENGTH)/100L)*10*1000); \
-          } \
-        } \
-      } \
-      while (0)
-  #else /* not MAX_STRINGS_CHECK */
-    #define STRING_UPDATE_VALID(string) \
-      do \
-      { \
-        if (string != NULL) \
-        { \
-          (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
-        } \
-      } \
-      while (0)
-  #endif /* MAX_STRINGS_CHECK */
 #else /* NDEBUG */
-  #define STRING_CHECK_ASSIGNABLE(string) \
-    do \
-    { \
-    } \
-    while (0)
-
   #define STRING_CHECK_DYNAMIC(string) \
-    do \
-    { \
-    } \
-    while (0)
-
-  #define STRING_UPDATE_VALID(string) \
     do \
     { \
     } \
@@ -402,7 +351,7 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
 #endif /* not NDEBUG */
 
 /***********************************************************************\
-* Name   : printErrorConstString
+* Name   : __printErrorConstString
 * Purpose: print error for modified constant string
 * Input  : string - string
 * Output : -
@@ -410,7 +359,7 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printErrorConstString(const struct __String *string)
+void __printErrorConstString(const struct __String *string)
 {
   #ifndef NDEBUG
     #ifdef TRACE_STRING_ALLOCATIONS
@@ -625,70 +574,6 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
   free(tmpString);
 
   STRING_UPDATE_VALID(string);
-}
-
-/***********************************************************************\
-* Name   : ensureStringLength
-* Purpose: ensure min. length of string
-* Input  : string    - string
-*          newLength - new min. length of string
-* Output : -
-* Return : TRUE if string length is ok, FALSE on insufficient memory
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
-{
-  char  *newData;
-  ulong newMaxLength;
-
-  switch (string->type)
-  {
-    case STRING_TYPE_DYNAMIC:
-      if ((newLength + 1) > string->maxLength)
-      {
-        newMaxLength = ((newLength + 1) + STRING_DELTA_LENGTH - 1) & ~(STRING_DELTA_LENGTH - 1);
-        assert(newMaxLength >= (newLength + 1));
-        newData = realloc(string->data,newMaxLength*sizeof(char));
-//??? error message?
-        if (newData == NULL)
-        {
-          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength*sizeof(char),strerror(errno));
-          abort();
-        }
-        #ifndef NDEBUG
-          #ifdef TRACE_STRING_ALLOCATIONS
-            pthread_once(&debugStringInitFlag,debugStringInit);
-
-            pthread_mutex_lock(&debugStringLock);
-            {
-              debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
-            }
-            pthread_mutex_unlock(&debugStringLock);
-          #endif /* TRACE_STRING_ALLOCATIONS */
-          #ifdef FILL_MEMORY
-            memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
-          #endif /* FILL_MEMORY */
-        #endif /* not NDEBUG */
-
-        string->data      = newData;
-        string->maxLength = newMaxLength;
-      }
-      break;
-    case STRING_TYPE_STATIC:
-      if ((newLength + 1) > string->maxLength)
-      {
-        HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength);
-      }
-      break;
-    case STRING_TYPE_CONST:
-      printErrorConstString(string);
-      HALT_INTERNAL_ERROR("modify const string");
-      break; // not reached
-    default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      break; // not reached
-  }
 }
 
 /***********************************************************************\
@@ -1011,7 +896,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length);
+            __ensureStringLength(string,string->length+length);
             length = (formatToken.widthArgument)
                        ? snprintf(&string->data[string->length],length+1,formatToken.token,i,data.ch)
                        : snprintf(&string->data[string->length],length+1,formatToken.token,data.ch);
@@ -1037,7 +922,7 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length+length);
+              __ensureStringLength(string,string->length+length);
               length = snprintf(&string->data[string->length],length+1,"%c",data.ch);
               string->length += length;
               STRING_UPDATE_VALID(string);
@@ -1060,7 +945,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
+                  __ensureStringLength(string,string->length+length);
                   length = snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
@@ -1078,7 +963,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
+                  __ensureStringLength(string,string->length+length);
                   length = snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
@@ -1097,7 +982,7 @@ LOCAL void formatString(struct __String *string,
                   }
                   else
                   {
-                    ensureStringLength(string,string->length+length);
+                    __ensureStringLength(string,string->length+length);
                     length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
                     string->length += length;
                     STRING_UPDATE_VALID(string);
@@ -1131,7 +1016,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
+                  __ensureStringLength(string,string->length+length);
                   length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
@@ -1149,7 +1034,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
+                  __ensureStringLength(string,string->length+length);
                   length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
@@ -1168,7 +1053,7 @@ LOCAL void formatString(struct __String *string,
                   }
                   else
                   {
-                    ensureStringLength(string,string->length+length);
+                    __ensureStringLength(string,string->length+length);
                     length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
                     string->length += length;
                     STRING_UPDATE_VALID(string);
@@ -1207,7 +1092,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
+                  __ensureStringLength(string,string->length+length);
                   length = snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
@@ -1299,7 +1184,7 @@ LOCAL void formatString(struct __String *string,
               }
               else
               {
-                ensureStringLength(string,string->length+length);
+                __ensureStringLength(string,string->length+length);
                 length = (formatToken.widthArgument)
                            ? snprintf(&string->data[string->length],length+1,formatToken.token,i,data.s)
                            : snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
@@ -1323,7 +1208,7 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length+length);
+              __ensureStringLength(string,string->length+length);
               length = snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
               string->length += length;
               STRING_UPDATE_VALID(string);
@@ -1393,7 +1278,7 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length+length);
+              __ensureStringLength(string,string->length+length);
               length = snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
               string->length += length;
               STRING_UPDATE_VALID(string);
@@ -1477,7 +1362,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length);
+            __ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token);
             string->length += length;
             STRING_UPDATE_VALID(string);
@@ -2844,7 +2729,7 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstStrin
       return NULL;
     }
 
-    ensureStringLength(string,fromString->length);
+    __ensureStringLength(string,fromString->length);
     memcpy(&string->data[0],&fromString->data[0],fromString->length);
     string->data[fromString->length] =NUL;
     string->length = fromString->length;
@@ -2894,7 +2779,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
       }
     }
 
-    ensureStringLength((*string),fromString->length);
+    __ensureStringLength((*string),fromString->length);
     memcpy(&(*string)->data[0],&fromString->data[0],fromString->length);
     (*string)->data[fromString->length] = NUL;
     (*string)->length                   = fromString->length;
@@ -3064,7 +2949,7 @@ String String_set(String string, ConstString sourceString)
     {
       assert(sourceString->data != NULL);
 
-      ensureStringLength(string,sourceString->length);
+      __ensureStringLength(string,sourceString->length);
       memmove(&string->data[0],&sourceString->data[0],sourceString->length);
       string->data[sourceString->length] = NUL;
       string->length                     = sourceString->length;
@@ -3129,7 +3014,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
 
     if (buffer != NULL)
     {
-      ensureStringLength(string,bufferLength);
+      __ensureStringLength(string,bufferLength);
       memmove(&string->data[0],buffer,bufferLength);
       string->data[bufferLength] = NUL;
       string->length             = bufferLength;
@@ -3239,7 +3124,7 @@ String String_append(String string, ConstString appendString)
     if (appendString != NULL)
     {
       n = string->length+appendString->length;
-      ensureStringLength(string,n);
+      __ensureStringLength(string,n);
       memmove(&string->data[string->length],&appendString->data[0],appendString->length);
       string->data[n] = NUL;
       string->length  = n;
@@ -3276,7 +3161,7 @@ String String_appendSub(String string, ConstString fromString, ulong fromIndex, 
         {
           n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
-        ensureStringLength(string,string->length+n);
+        __ensureStringLength(string,string->length+n);
         memmove(&string->data[string->length],&fromString->data[fromIndex],n);
         string->data[string->length+n] = NUL;
         string->length += n;
@@ -3307,28 +3192,6 @@ String String_appendCString(String string, const char *s)
   return string;
 }
 
-String String_appendChar(String string, char ch)
-{
-  ulong n;
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-    n = string->length+1;
-    ensureStringLength(string,n);
-    string->data[string->length] = ch;
-    string->data[n] = NUL;
-    string->length  = n;
-
-    STRING_UPDATE_VALID(string);
-  }
-
-  return string;
-}
-
 String String_appendCharUTF8(String string, Codepoint codepoint)
 {
   size_t l;
@@ -3342,7 +3205,7 @@ String String_appendCharUTF8(String string, Codepoint codepoint)
     assert(string->data != NULL);
     l = charUTF8Length(codepoint);
     n = string->length+l;
-    ensureStringLength(string,n);
+    __ensureStringLength(string,n);
     memcpy(&string->data[string->length],charUTF8(codepoint),l);
     string->data[n] = NUL;
     string->length  = n;
@@ -3366,7 +3229,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
     if (buffer != NULL)
     {
       n = string->length+bufferLength;
-      ensureStringLength(string,n);
+      __ensureStringLength(string,n);
       memmove(&string->data[string->length],buffer,bufferLength);
       string->data[n] = NUL;
       string->length  = n;
@@ -3431,7 +3294,7 @@ String String_insert(String string, ulong index, ConstString insertString)
       if      (index == STRING_END)
       {
         n = string->length+insertString->length;
-        ensureStringLength(string,n);
+        __ensureStringLength(string,n);
         memmove(&string->data[string->length],&insertString->data[0],insertString->length);
         string->data[n] = NUL;
         string->length  = n;
@@ -3439,7 +3302,7 @@ String String_insert(String string, ulong index, ConstString insertString)
       else if (index <= string->length)
       {
         n = string->length+insertString->length;
-        ensureStringLength(string,n);
+        __ensureStringLength(string,n);
         memmove(&string->data[index+insertString->length],&string->data[index],string->length-index);
         memmove(&string->data[index],&insertString->data[0],insertString->length);
         string->data[n] = NUL;
@@ -3480,14 +3343,14 @@ String String_insertSub(String string, ulong index, ConstString fromString, ulon
 
         if      (index == STRING_END)
         {
-          ensureStringLength(string,string->length+n);
+          __ensureStringLength(string,string->length+n);
           memmove(&string->data[string->length],&fromString->data[fromIndex],n);
           string->data[string->length+n] = NUL;
           string->length += n;
         }
         else if (index <= string->length)
         {
-          ensureStringLength(string,string->length+n);
+          __ensureStringLength(string,string->length+n);
           memmove(&string->data[index+n],&string->data[index],string->length-index);
           memmove(&string->data[index],&fromString->data[fromIndex],n);
           string->data[string->length+n] = NUL;
@@ -3551,7 +3414,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
       if      (index == STRING_END)
       {
         n = string->length+bufferLength;
-        ensureStringLength(string,n);
+        __ensureStringLength(string,n);
         memmove(&string->data[string->length],buffer,bufferLength);
         string->data[n] = NUL;
         string->length  = n;
@@ -3559,7 +3422,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
       else if (index <= string->length)
       {
         n = string->length+bufferLength;
-        ensureStringLength(string,n);
+        __ensureStringLength(string,n);
         memmove(&string->data[index+bufferLength],&string->data[index],string->length-index);
         memmove(&string->data[index],buffer,bufferLength);
         string->data[n] = NUL;
@@ -3918,7 +3781,7 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
         {
           n = MIN((ulong)fromLength,fromString->length);
         }
-        ensureStringLength(string,n);
+        __ensureStringLength(string,n);
         memmove(&string->data[0],&fromString->data[fromString->length-n],n);
         string->data[n] = NUL;
         string->length  = n;
@@ -3933,7 +3796,7 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
         {
           n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
-        ensureStringLength(string,n);
+        __ensureStringLength(string,n);
         memmove(&string->data[0],&fromString->data[fromIndex],n);
         string->data[n] = NUL;
         string->length  = n;
@@ -4955,7 +4818,7 @@ String String_iterate(                      String string,
       if (s != NULL)
       {
         n = strlen(s);
-        ensureStringLength(string,string->length+n-1);
+        __ensureStringLength(string,string->length+n-1);
         memmove(&string->data[j+n],&string->data[j+1],string->length-(j+1));
         memmove(&string->data[j],s,n);
         string->data[string->length+n-1] = NUL;
@@ -5342,7 +5205,7 @@ String String_padRight(String string, ulong length, char ch)
     if (string->length < length)
     {
       n = length-string->length;
-      ensureStringLength(string,length);
+      __ensureStringLength(string,length);
       memset(&string->data[string->length],ch,n);
       string->data[length] = NUL;
       string->length       = length;
@@ -5368,7 +5231,7 @@ String String_padLeft(String string, ulong length, char ch)
     if (string->length < length)
     {
       n = length-string->length;
-      ensureStringLength(string,length);
+      __ensureStringLength(string,length);
       memmove(&string->data[n],&string->data[0],string->length);
       memset(&string->data[0],ch,n);
       string->data[length] = NUL;
@@ -5388,7 +5251,7 @@ String String_fillChar(String string, ulong length, char ch)
 
   if (string != NULL)
   {
-    ensureStringLength(string,length);
+    __ensureStringLength(string,length);
     memset(&string->data[0],ch,length);
     string->data[length] = NUL;
     string->length       = length;
