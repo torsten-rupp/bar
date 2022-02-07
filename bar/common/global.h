@@ -4428,6 +4428,21 @@ void debugPrintStackTrace(void);
 void debugDumpMemory(const void *address, uint length, bool printAddress);
 #endif /* NDEBUG */
 
+/* profiling with valgrind:
+
+#include <valgrind/callgrind.h>
+
+...
+CALLGRIND_START_INSTRUMENTATION;
+CALLGRIND_TOGGLE_COLLECT;
+<code to analyze>
+CALLGRIND_TOGGLE_COLLECT;
+CALLGRIND_STOP_INSTRUMENTATION;
+
+valgrind --tool=callgrind --tool=callgrind --dump-instr=yes --simulate-cache=yes --collect-jumps=yes --collect-atstart=no --instr-atstart=no <executable> ...
+
+*/
+
 #ifdef __cplusplus
 }
 #endif
