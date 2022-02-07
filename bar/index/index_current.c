@@ -26,8 +26,6 @@
 
 #include "index.h"
 
-#include <valgrind/callgrind.h>
-
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -1028,8 +1026,6 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                 Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
                                                );
 
-CALLGRIND_START_INSTRUMENTATION;
-CALLGRIND_TOGGLE_COLLECT;
                                // transfer storages of entity
                                error = Database_copyTable(oldDatabaseHandle,
                                                           newDatabaseHandle,
@@ -1154,9 +1150,7 @@ CALLGRIND_TOGGLE_COLLECT;
                                {
                                  return error;
                                }
-CALLGRIND_TOGGLE_COLLECT;
-CALLGRIND_STOP_INSTRUMENTATION;
-exit(0);
+
                                ProgressInfo_done(&subProgressInfo);
 
                                return ERROR_NONE;
