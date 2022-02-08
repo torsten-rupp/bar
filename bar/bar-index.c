@@ -47,9 +47,17 @@
 /****************** Conditional compilation switches *******************/
 #define _INDEX_DEBUG_IMPORT_DATABASE
 
-/***************************** Constants *******************************/
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
+
+/***************************** Constants *******************************/
+
+#define __VERSION_TO_STRING(z) __VERSION_TO_STRING_TMP(z)
+#define __VERSION_TO_STRING_TMP(z) #z
+#define VERSION_MAJOR_STRING __VERSION_TO_STRING(VERSION_MAJOR)
+#define VERSION_MINOR_STRING __VERSION_TO_STRING(VERSION_MINOR)
+#define VERSION_REPOSITORY_STRING __VERSION_TO_STRING(VERSION_REPOSITORY)
+#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING VERSION_PATCH " (rev. " VERSION_REPOSITORY_STRING ")"
 
 // archive types
 const char *ARCHIVE_TYPES[] =
@@ -255,6 +263,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
     printf("          --drop-triggers                              - drop all triggers\n");
     printf("          --drop-indizes                               - drop all indixes\n");
   }
+  printf("          --version                                    - print version\n");
   printf("          -h|--help                                    - print this help\n");
   printf("          --xhelp                                      - print extended help\n");
 }
@@ -9862,6 +9871,18 @@ uint xxxShow=0;
     {
       explainQueryPlanFlag = TRUE;
       i++;
+    }
+    else if (stringEquals(argv[i],"--version"))
+    {
+      printf("BAR index version %s\n",VERSION_STRING);
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuIds);
+      Array_done(&uuidIds);
+      String_delete(command);
+      String_delete(storageName);
+      String_delete(entryName);
+      exit(EXITCODE_OK);
     }
     else if (stringEquals(argv[i],"-h") || stringEquals(argv[i],"--help"))
     {
