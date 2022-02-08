@@ -4392,6 +4392,7 @@ test_device_operations: \
 test_index_operations: \
   test_index_operations_tool \
 
+#TODO
 yyy: \
   test_index_operations_base \
   test_index_operations_server
@@ -4412,6 +4413,7 @@ test_index_operations_tool: \
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@# options
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --version $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-triggers $(LOG)
