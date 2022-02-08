@@ -1763,6 +1763,73 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 
 #ifdef HAVE_MARIADB
 /***********************************************************************\
+* Name   : mysqlCreateDatabase
+* Purpose: create MariaDB database
+* Input  : handle       - MySQL handle
+*          databaseName - database name
+*          characterSet - character set name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlCreateDatabase(MYSQL      *handle,
+                                 const char *databaseName,
+                                 const char *characterSet
+                                )
+{
+  char   sqlString[256];
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(databaseName != NULL);
+
+  stringFormat(sqlString,sizeof(sqlString),
+               "CREATE DATABASE IF NOT EXISTS %s \
+                CHARACTER SET '%s' \
+                COLLATE '%s_bin' \
+               ",
+               databaseName,
+               characterSet,
+               characterSet
+              );
+
+  mysqlResult = mysql_query(handle,sqlString);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : mysqlExecute
 * Purpose: do MariaDB query
 * Input  : handle    - MySQL handle
@@ -1806,110 +1873,6 @@ LOCAL Errors mysqlExecute(MYSQL      *handle,
                     "%s: %s",
                     mysql_error(handle),
                     sqlString
-                   );
-  }
-  else
-  {
-    error = ERROR_NONE;
-  }
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : mysqlSelectDatabase_
-* Purpose: select MariaDB database
-* Input  : handle       - MySQL handle
-*          databaseName - database name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
-                                 const char *databaseName
-                                )
-{
-  int    mysqlResult;
-  Errors error;
-
-  assert(handle != NULL);
-  assert(databaseName != NULL);
-
-  mysqlResult = mysql_select_db(handle,databaseName);
-  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-  {
-    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
-                        mysqlResult,
-                        mysql_error(handle)
-                       );
-  }
-  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-  {
-    error = ERRORX_(DATABASE_CONNECTION_LOST,
-                    mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
-                   );
-  }
-  else if (mysqlResult != 0)
-  {
-    error = ERRORX_(DATABASE,
-                    mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
-                   );
-  }
-  else
-  {
-    error = ERROR_NONE;
-  }
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : mysqlSetCharacterSet
-* Purpose: set MariaDB character set
-* Input  : handle       - MySQL handle
-*          characterSet - character set name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors mysqlSetCharacterSet(MYSQL      *handle,
-                                  const char *characterSet
-                                 )
-{
-  int    mysqlResult;
-  Errors error;
-
-  assert(handle != NULL);
-  assert(characterSet != NULL);
-
-  mysqlResult = mysql_set_character_set(handle,characterSet);
-  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-  {
-    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
-                        mysqlResult,
-                        mysql_error(handle)
-                       );
-  }
-  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-  {
-    error = ERRORX_(DATABASE_CONNECTION_LOST,
-                    mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
-                   );
-  }
-  else if (mysqlResult != 0)
-  {
-    error = ERRORX_(DATABASE,
-                    mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
                    );
   }
   else
@@ -2045,12 +2008,116 @@ LOCAL DatabaseId mysqlGetLastInsertId(MYSQL_STMT *statementHandle)
 
   return (DatabaseId)mysql_stmt_insert_id(statementHandle);
 }
+
+/***********************************************************************\
+* Name   : mysqlSelectDatabase_
+* Purpose: select MariaDB database
+* Input  : handle       - MySQL handle
+*          databaseName - database name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
+                                 const char *databaseName
+                                )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(databaseName != NULL);
+
+  mysqlResult = mysql_select_db(handle,databaseName);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlSetCharacterSet
+* Purpose: set MariaDB character set
+* Input  : handle       - MySQL handle
+*          characterSet - character set name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlSetCharacterSet(MYSQL      *handle,
+                                  const char *characterSet
+                                 )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(characterSet != NULL);
+
+  mysqlResult = mysql_set_character_set(handle,characterSet);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
 #endif /* HAVE_MARIADB */
 
 #ifdef HAVE_POSTGRESQL
 /***********************************************************************\
 * Name   : postgresqlReceiveMessageHandler
-* Purpose: handle received server messages
+* Purpose: handle PostgreSQL received server messages
 * Input  : arg    - argument
 *          result - PostgreSQL result
 * Output : -
@@ -2065,8 +2132,181 @@ LOCAL void postgresqlReceiveMessageHandler(void *arg, const PGresult *result)
 }
 
 /***********************************************************************\
+* Name   : postgresqlCreateDatabase
+* Purpose: create PostgreSQL database (if it does not exists)
+* Input  : serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
+                                      const char     *userName,
+                                      const Password *password,
+                                      const char     *databaseName
+                                     )
+{
+  #define POSTGRESQL_CONNECT_PARAMETER(i,name,value) \
+    keywords[i] = name; \
+    values[i]   = value
+
+  const char     *keywords[6+1],*values[6+1];
+  const char     *deployPassword;
+  PGconn         *handle;
+  ConnStatusType postgreSQLConnectionStatus;
+  char           sqlString[256];
+  PGresult       *postgresqlResult;
+  Errors         error;
+
+  // connect (with database template1)
+  deployPassword = Password_deploy(password);
+  POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
+  POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
+  POSTGRESQL_CONNECT_PARAMETER(2,"password",       deployPassword);
+  POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
+  POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
+  POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
+// TODO:
+//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
+  POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
+
+  handle = PQconnectdbParams(keywords,values,0);
+  if (handle == NULL)
+  {
+    error = ERRORX_(DATABASE,
+                    0,
+                    "connect"
+                   );
+    Password_undeploy(password,deployPassword);
+    return error;
+  }
+  Password_undeploy(password,deployPassword);
+
+  postgreSQLConnectionStatus = PQstatus(handle);
+  if (postgreSQLConnectionStatus != CONNECTION_OK)
+  {
+    error = ERRORX_(DATABASE,
+                    postgreSQLConnectionStatus,
+                    "%s",
+                    PQerrorMessage(handle)
+                   );
+    PQfinish(handle);
+    return error;
+  }
+  PQsetNoticeReceiver(handle,
+                      postgresqlReceiveMessageHandler,NULL
+                     );
+
+  // create database
+  stringFormat(sqlString,sizeof(sqlString),
+               "CREATE DATABASE %s WITH OWNER=%s",
+               databaseName,
+               userName
+              );
+  postgresqlResult = PQexec(handle,sqlString);
+  if (postgresqlResult != NULL)
+  {
+    // Note: ignore status
+    error = ERROR_NONE;
+    PQclear(postgresqlResult);
+  }
+  else
+  {
+    error = ERRORX_(DATABASE,
+                    0,
+                    "%s",
+                    PQerrorMessage(handle)
+                   );
+  }
+
+  // disconnect
+  PQfinish(handle);
+
+  return error;
+
+  #undef POSTGRESQL_CONNECT_PARAMETER
+}
+
+/***********************************************************************\
+* Name   : postgresqlConnect
+* Purpose: connect to PostgreSQL database
+* Input  : handle       - connection handle variable
+*          serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
+* Output : handle - connection handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors postgresqlConnect(PGconn         **handle,
+                               const char     *serverName,
+                               const char     *userName,
+                               const Password *password,
+                               const char     *databaseName
+                              )
+{
+  #define POSTGRESQL_CONNECT_PARAMETER(i,name,value) \
+    keywords[i] = name; \
+    values[i]   = value
+
+  String         string;
+  const char     *keywords[6+1],*values[6+1];
+  const char     *deployPassword;
+  ConnStatusType postgreConnectionSQLStatus;
+  Errors         error;
+
+  assert(handle != NULL);
+
+  // connect
+  string = String_toLower(String_newCString(databaseName));
+  deployPassword = Password_deploy(password);
+  POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
+  POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
+  POSTGRESQL_CONNECT_PARAMETER(2,"password",       deployPassword);
+  POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         String_cString(string));
+  POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
+  POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
+
+// TODO:
+//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
+  POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
+  (*handle) = PQconnectdbParams(keywords,values,0);
+  if ((*handle) == NULL)
+  {
+    error = ERRORX_(DATABASE,
+                    0,
+                    "connect"
+                   );
+    Password_undeploy(password,deployPassword);
+    String_delete(string);
+    return error;
+  }
+  Password_undeploy(password,deployPassword);
+  String_delete(string);
+
+  postgreConnectionSQLStatus = PQstatus(*handle);
+  if (postgreConnectionSQLStatus != CONNECTION_OK)
+  {
+    error = ERRORX_(DATABASE,
+                    postgreConnectionSQLStatus,
+                    "%s",
+                    PQerrorMessage(*handle)
+                   );
+    PQfinish(*handle);
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : postgresqlExecute
-* Purpose: execute SQL string
+* Purpose: execute PostgreSQL SQL string
 * Input  : handle           - database handle
 *          sqlString        - SQL string
 *          parameterTypes   - parameter types
@@ -2089,7 +2329,7 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
                               )
 {
   PGresult       *postgresqlResult;
-  ExecStatusType postgreSQLStatus;
+  ExecStatusType postgreSQLExecStatus;
   Errors         error;
 
   assert(handle != NULL);
@@ -2106,9 +2346,9 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
                                  );
   if (postgresqlResult != NULL)
   {
-    postgreSQLStatus = PQresultStatus(postgresqlResult);
-    if (    (postgreSQLStatus == PGRES_COMMAND_OK)
-         || (postgreSQLStatus == PGRES_TUPLES_OK)
+    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
        )
     {
       error = ERROR_NONE;
@@ -2116,13 +2356,10 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
     else
     {
       error = ERRORX_(DATABASE,
-                      postgreSQLStatus,
+                      postgreSQLExecStatus,
                       "%s",
                       PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
                      );
-// TODO: remove/replace
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
     }
 
     PQclear(postgresqlResult);
@@ -2134,7 +2371,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
                     "%s",
                     PQerrorMessage(handle)
                    );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
   }
 
   return error;
@@ -2163,7 +2399,7 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
   bool                 prepared;
   PGresult             *postgresqlResult;
   Errors               error;
-  ExecStatusType       postgreSQLStatus;
+  ExecStatusType       postgreSQLExecStatus;
 
   assert(databaseHandle != NULL);
   assert(statement != NULL);
@@ -2219,9 +2455,9 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                      );
     }
 
-    postgreSQLStatus = PQresultStatus(postgresqlResult);
-    if (    (postgreSQLStatus == PGRES_COMMAND_OK)
-         || (postgreSQLStatus == PGRES_TUPLES_OK)
+    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
        )
     {
       error = ERROR_NONE;
@@ -2229,7 +2465,7 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
     else
     {
       error = ERRORX_(DATABASE,
-                      postgreSQLStatus,
+                      postgreSQLExecStatus,
                       "%s: %s",
                       PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
                       sqlString
@@ -2262,7 +2498,7 @@ LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
                                                )
 {
   PGresult       *postgresqlResult;
-  ExecStatusType postgreSQLStatus;
+  ExecStatusType postgreSQLExecStatus;
   Errors         error;
 
   assert(handle != NULL);
@@ -2285,9 +2521,9 @@ LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
                                    );
   if (postgresqlResult != NULL)
   {
-    postgreSQLStatus = PQresultStatus(postgresqlResult);
-    if (    (postgreSQLStatus == PGRES_COMMAND_OK)
-         || (postgreSQLStatus == PGRES_TUPLES_OK)
+    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
        )
     {
       statement->result   = postgresqlResult;
@@ -2297,7 +2533,7 @@ LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
     else
     {
       error = ERRORX_(DATABASE,
-                      postgreSQLStatus,
+                      postgreSQLExecStatus,
                       "%s",
                       PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
                      );
@@ -2356,7 +2592,7 @@ fprintf(stderr,"%s:%d: single mode %s\n",__FILE__,__LINE__,statementName);
 
 /***********************************************************************\
 * Name   : postgresqlGetLastInsertId
-* Purpose: get last insert statement id
+* Purpose: get PostgreSQL last insert statement id
 * Input  : handle - database handle
 * Output : -
 * Return : database id or DATABASE_ID_NONE
@@ -2716,7 +2952,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
             bool b;
             uint u;
           }     optionValue;
-          const char *password;
+          const char *deployPassword;
           ulong      serverVersion;
           char       sqlString[256];
 
@@ -2738,11 +2974,11 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
             mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
             // connect
-            password = Password_deploy(&databaseSpecifier->mysql.password);
+            deployPassword = Password_deploy(&databaseSpecifier->mysql.password);
             if (mysql_real_connect(databaseHandle->mysql.handle,
                                    String_cString(databaseSpecifier->mysql.serverName),
                                    String_cString(databaseSpecifier->mysql.userName),
-                                   password,
+                                   deployPassword,
                                    NULL,  // databaseName
                                    0,  // port
                                    NULL, // unix socket
@@ -2755,13 +2991,13 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                               "%s",
                               mysql_error(databaseHandle->mysql.handle)
                              );
-              Password_undeploy(&databaseSpecifier->mysql.password,password);
+              Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
               mysql_close(databaseHandle->mysql.handle);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
-            Password_undeploy(&databaseSpecifier->mysql.password,password);
+            Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
 
             // check min. version
             serverVersion = mysql_get_server_version(databaseHandle->mysql.handle);
@@ -2865,14 +3101,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
         {
-          #define POSTGRESQL_CONNECT_PARAMETER(i,name,value) \
-            keywords[i] = name; \
-            values[i]   = value
-
-          const char     *keywords[6+1],*values[6+1];
-          const char     *password;
-          ConnStatusType postgreSQLStatus;
-          int            protocolVersion;
+          int protocolVersion;
 
           HashTable_init(&databaseHandle->postgresql.sqlStringHashTable,
                          512,  // minSize
@@ -2883,41 +3112,28 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 
           SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // connect
-            password = Password_deploy(&databaseSpecifier->postgresql.password);
-            POSTGRESQL_CONNECT_PARAMETER(0,"host",           String_cString(databaseSpecifier->postgresql.serverName));
-            POSTGRESQL_CONNECT_PARAMETER(1,"user",           String_cString(databaseSpecifier->postgresql.userName));
-            POSTGRESQL_CONNECT_PARAMETER(2,"password",       password);
-            POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         String_cString(databaseSpecifier->postgresql.databaseName));
-            POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
-            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
-// TODO:
-//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
-            POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
-            databaseHandle->postgresql.handle = PQconnectdbParams(keywords,values,0);
-            if (databaseHandle->postgresql.handle == NULL)
+            // create database (if it does not exists)
+            error = postgresqlCreateDatabase(String_cString(databaseSpecifier->postgresql.serverName),
+                                             String_cString(databaseSpecifier->postgresql.userName),
+                                             &databaseSpecifier->postgresql.password,
+                                             String_cString(databaseSpecifier->postgresql.databaseName)
+                                            );
+            if (error != ERROR_NONE)
             {
-              error = ERRORX_(DATABASE,
-                              0,
-                              "connect"
-                             );
-              Password_undeploy(&databaseSpecifier->postgresql.password,password);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
-            Password_undeploy(&databaseSpecifier->postgresql.password,password);
 
-            postgreSQLStatus = PQstatus(databaseHandle->postgresql.handle);
-            if (postgreSQLStatus != CONNECTION_OK)
+            // connect
+            error = postgresqlConnect(&databaseHandle->postgresql.handle,
+                                      String_cString(databaseSpecifier->postgresql.serverName),
+                                      String_cString(databaseSpecifier->postgresql.userName),
+                                      &databaseSpecifier->postgresql.password,
+                                      String_cString(databaseSpecifier->postgresql.databaseName)
+                                     );
+            if (error != ERROR_NONE)
             {
-              error = ERRORX_(DATABASE,
-                              postgreSQLStatus,
-                              "%s",
-                              PQerrorMessage(databaseHandle->postgresql.handle)
-                             );
-              PQfinish(databaseHandle->postgresql.handle);
-              databaseHandle->postgresql.handle = NULL;
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
@@ -2939,7 +3155,6 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                               MIN_POSTGRESQL_PROTOCOL_VERSION
                              );
               PQfinish(databaseHandle->postgresql.handle);
-              databaseHandle->postgresql.handle = NULL;
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
