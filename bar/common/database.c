@@ -7910,7 +7910,6 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -8409,6 +8408,28 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
   (*columnCount) = i;
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : freeTableColumns
+* Purpose: free table column names
+* Input  : columns        - columns variable (can be NULL)
+*          columnCount    - column count variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeTableColumns(DatabaseColumn columns[],
+                            uint           columnCount
+                           )
+{
+  uint i;
+
+  for (i = 0; i < columnCount; i++)
+  {
+    free(columns[i].name);
+  }
 }
 
 /***********************************************************************\
@@ -11393,6 +11414,8 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         }
 
         // free resources
+        freeTableColumns(compareColumns,compareColumnCount);
+        freeTableColumns(referenceColumns,referenceColumnCount);
       }
       else
       {
@@ -11542,6 +11565,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                          );
   if (error != ERROR_NONE)
   {
+    freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
 //fprintf(stderr,"%s:%d: toTableName=%s toColumns=",__FILE__,__LINE__,toTableName); for (uint i = 0; i < toColumnCount;i++) fprintf(stderr,"%s %s, ",toColumns[i].name,DATABASE_DATATYPE_NAMES[toColumns[i].type]); fprintf(stderr,"\n");
@@ -11640,6 +11664,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                           );
   if (error != ERROR_NONE)
   {
+    freeTableColumns(toColumns,toColumnCount);
+    freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
 //fprintf(stderr,"%s:%d: bind from results %d\n",__FILE__,__LINE__,fromColumnCount);
@@ -11647,6 +11673,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   if (error != ERROR_NONE)
   {
     finalizeStatement(&fromDatabaseStatementHandle);
+    freeTableColumns(toColumns,toColumnCount);
+    freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
   fromColumnInfo.values = fromDatabaseStatementHandle.results;
@@ -11662,6 +11690,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   if (error != ERROR_NONE)
   {
     finalizeStatement(&fromDatabaseStatementHandle);
+    freeTableColumns(toColumns,toColumnCount);
+    freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
   toColumnInfo.values = toValues;
@@ -11696,6 +11726,8 @@ UNUSED_VARIABLE(nn);
       {
         finalizeStatement(&toDatabaseStatementHandle);
         finalizeStatement(&fromDatabaseStatementHandle);
+        freeTableColumns(toColumns,toColumnCount);
+        freeTableColumns(fromColumns,fromColumnCount);
         return error;
       }
     }
@@ -12204,16 +12236,11 @@ toDatabaseStatementHandle.parameterIndex=0;
       {
         finalizeStatement(&toDatabaseStatementHandle);
         finalizeStatement(&fromDatabaseStatementHandle);
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
     }
 
     END_TIMER();
-
-    // free resources
-    finalizeStatement(&toDatabaseStatementHandle);
-    finalizeStatement(&fromDatabaseStatementHandle);
 
     return ERROR_NONE;
   });
@@ -12223,8 +12250,12 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 //fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(toDatabaseHandle->handle));
 
   // free resources
+  finalizeStatement(&toDatabaseStatementHandle);
+  finalizeStatement(&fromDatabaseStatementHandle);
   String_delete(sqlInsertString);
   String_delete(sqlSelectString);
+  freeTableColumns(toColumns,toColumnCount);
+  freeTableColumns(fromColumns,fromColumnCount);
 
   #ifdef DATABASE_DEBUG_COPY_TABLE
     t1 = Misc_getTimestamp();
