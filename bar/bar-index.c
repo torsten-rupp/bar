@@ -6991,6 +6991,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
 
     printRowData->printedHeaderFlag = TRUE;
   }
+
   for (i = 0; i < valueCount; i++)
   {
     char       buffer[64];

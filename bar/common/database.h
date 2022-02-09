@@ -469,7 +469,7 @@ typedef struct DatabaseHandle
 // database column
 typedef struct
 {
-  const char        *name;
+  char              *name;
   const char        *alias;
   DatabaseDataTypes type;
 } DatabaseColumn;
