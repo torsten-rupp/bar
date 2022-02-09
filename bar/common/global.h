@@ -568,7 +568,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Input  : result - value
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : http://git.savannah.gnu.org/cgit/gnulib.git/tree/lib/ignore-value.h
 \***********************************************************************/
 
 #if 3 < __GNUC__ + (4 <= __GNUC_MINOR__)
