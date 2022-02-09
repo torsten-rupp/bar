@@ -4985,8 +4985,6 @@ LOCAL void formatParameters(String               sqlString,
 * Input  : databaseStatementHandle - database query handle variable
 *          databaseHandle          - database handle
 *          sqlString               - SQL string
-*          columns                 - result columns
-*          columnCount             - result columns count
 *          parameterCount          - number of parameters (values+
 *                                    filters)
 * Output : -
@@ -4998,8 +4996,6 @@ LOCAL void formatParameters(String               sqlString,
   LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
                                 DatabaseHandle          *databaseHandle,
                                 const char              *sqlString,
-                                const DatabaseColumn    columns[],
-                                uint                    columnCount,
                                 uint                    parameterCount
                                )
 #else /* not NDEBUG */
@@ -5008,8 +5004,6 @@ LOCAL void formatParameters(String               sqlString,
                                   DatabaseStatementHandle *databaseStatementHandle,
                                   DatabaseHandle          *databaseHandle,
                                   const char              *sqlString,
-                                  const DatabaseColumn    columns[],
-                                  uint                    columnCount,
                                   uint                    parameterCount
                                  )
 #endif /* NDEBUG */
@@ -5254,46 +5248,6 @@ LOCAL void formatParameters(String               sqlString,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  for (i = 0; i < columnCount; i++)
-  {
-    switch (columns[i].type)
-    {
-      case DATABASE_DATATYPE:
-        break;
-      case DATABASE_DATATYPE_PRIMARY_KEY:
-      case DATABASE_DATATYPE_KEY:
-        break;
-      case DATABASE_DATATYPE_BOOL:
-        break;
-      case DATABASE_DATATYPE_INT:
-        break;
-      case DATABASE_DATATYPE_INT64:
-        break;
-      case DATABASE_DATATYPE_UINT:
-        break;
-      case DATABASE_DATATYPE_UINT64:
-        break;
-      case DATABASE_DATATYPE_DOUBLE:
-        break;
-      case DATABASE_DATATYPE_DATETIME:
-        break;
-      case DATABASE_DATATYPE_STRING:
-        databaseStatementHandle->results[i].string = String_new();
-        break;
-      case DATABASE_DATATYPE_CSTRING:
-        HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-        break;
-      case DATABASE_DATATYPE_BLOB:
-        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-  databaseStatementHandle->resultIndex = 0;
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(databaseStatementHandle,DatabaseStatementHandle);
@@ -5345,12 +5299,13 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((columnsCount == 0) || (columns != NULL));
-  assertx((databaseStatementHandle->resultIndex+columnsCount) <= databaseStatementHandle->resultCount,
+  assertx((columnsCount) <= databaseStatementHandle->resultCount,
           "invalid result count: given %u, expected %u",
-          databaseStatementHandle->resultIndex+columnsCount,
+          columnsCount,
           databaseStatementHandle->resultCount
          );
 
+  databaseStatementHandle->resultIndex = 0;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -5361,7 +5316,6 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
         for (i = 0; i < columnsCount; i++)
         {
           databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
-//fprintf(stderr,"%s:%d: bidn result %i: %s %s\n",__FILE__,__LINE__,i,columns[i].name,DATABASE_DATATYPE_NAMES[columns[i].type]);
           switch (columns[i].type)
           {
             case DATABASE_DATATYPE:
@@ -5384,6 +5338,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_DATETIME:
               break;
             case DATABASE_DATATYPE_STRING:
+              databaseStatementHandle->results[databaseStatementHandle->resultIndex].string = String_new();
               break;
             case DATABASE_DATATYPE_CSTRING:
               HALT_INTERNAL_ERROR_NOT_SUPPORTED();
@@ -8458,7 +8413,6 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
   assert(columnCount != NULL);
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
 
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
@@ -11658,8 +11612,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   error = prepareStatement(&fromDatabaseStatementHandle,
                            fromDatabaseHandle,
                            String_cString(sqlSelectString),
-                           fromColumns,
-                           fromColumnCount,
                            0
                           );
   if (error != ERROR_NONE)
@@ -11684,7 +11636,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   error = prepareStatement(&toDatabaseStatementHandle,
                            toDatabaseHandle,
                            String_cString(sqlInsertString),
-                           DATABASE_COLUMNS_NONE,
                            parameterMapCount
                           );
   if (error != ERROR_NONE)
@@ -13614,8 +13565,6 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   error = prepareStatement(databaseStatementHandle,
                            databaseHandle,
                            sqlString,
-                           columns,
-                           columnCount,
                            valueCount+filterCount
                           );
 
@@ -13810,6 +13759,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   Errors                  error;
 
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(tableName != NULL);
   assert(values != NULL);
   assert(valueCount > 0);
@@ -13944,7 +13894,6 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           DATABASE_COLUMNS_NONE,
                            parameterCount
                           );
   if (error != ERROR_NONE)
@@ -14062,6 +14011,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   Errors                  error;
 
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(toColumns != NULL);
   assert(toColumnCount > 0);
   assert(tableName != NULL);
@@ -14168,7 +14118,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           DATABASE_COLUMNS_NONE,
                            parameterCount
                           );
   if (error != ERROR_NONE)
@@ -14230,6 +14179,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   Errors                  error;
 
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(tableName != NULL);
   assert(values != NULL);
   assert(valueCount > 0);
@@ -14287,7 +14237,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           DATABASE_COLUMNS_NONE,
                            parameterCount
                           );
   if (error != ERROR_NONE)
@@ -14401,7 +14350,6 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           DATABASE_COLUMNS_NONE,
                            parameterCount
                           );
   if (error != ERROR_NONE)
@@ -14494,6 +14442,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(tableName != NULL);
   assert((columnCount == 0) || (columns != NULL));
 
@@ -14583,8 +14532,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   error = prepareStatement(databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           columns,
-                           columnCount,
                            parameterCount
                           );
   if (error != ERROR_NONE)
@@ -14648,6 +14595,9 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
 {
   bool   existsFlag;
   Errors error;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   existsFlag = FALSE;
 
@@ -14713,6 +14663,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   uint                    statementColumnCount;
 
   assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   // create SQL string
   sqlString      = String_new();
@@ -14819,8 +14770,6 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           columns,
-                           columnCount,
                            parameterCount
                           );
   if (error != ERROR_NONE)
