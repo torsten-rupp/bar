@@ -282,6 +282,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
 LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
 {
   String line;
+  size_t n;
 
   assert(format != NULL);
 
@@ -292,7 +293,8 @@ LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
   String_appendVFormat(line,format,arguments);
 
   // output
-  fwrite(String_cString(line),1,String_length(line),stdout); fflush(stdout);
+  n = fwrite(String_cString(line),1,String_length(line),stdout); fflush(stdout);
+  UNUSED_VARIABLE(n);
 
   String_delete(line);
 }
@@ -346,7 +348,7 @@ LOCAL void printWarning(const char *text, ...)
     String_appendVFormat(line,text,arguments);
     String_appendChar(line,'\n');
     va_end(arguments);
-    (void)fwrite(String_cString(line),1,String_length(line),stderr);
+    UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stderr));
 
     String_delete(line);
   }
@@ -375,7 +377,7 @@ LOCAL void printError(const char *text, ...)
   String_appendVFormat(line,text,arguments);
   String_appendChar(line,'\n');
   va_end(arguments);
-  (void)fwrite(String_cString(line),1,String_length(line),stderr);
+  UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stderr));
 
   String_delete(line);
 }
@@ -985,7 +987,7 @@ LOCAL void outputProgressInit(const char *text,
   UNUSED_VARIABLE(maxSteps);
   UNUSED_VARIABLE(userData);
 
-  fwrite(text,1,stringLength(text),stdout);
+  UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
   fflush(stdout);
 }
 
@@ -1034,10 +1036,10 @@ LOCAL void outputProgressInfo(uint  progress,
   }
   outputProgressBufferLength = stringLength(outputProgressBuffer);
 
-  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
 
   stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
 
   fflush(stdout);
 
@@ -1068,12 +1070,12 @@ LOCAL void outputProgressDone(ulong totalTime,
               );
   stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
 
-  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
 
   stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-  fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout);
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
 
-  fwrite("\n",1,1,stdout);
+  UNUSED_RESULT(fwrite("\n",1,1,stdout));
 
   fflush(stdout);
 }
@@ -6881,7 +6883,7 @@ LOCAL void printChars(char ch, uint n)
 
   for (i = 0; i < n; i++)
   {
-    fwrite(&ch,sizeof(char),1,stdout);
+    UNUSED_RESULT(fwrite(&ch,sizeof(char),1,stdout));
   }
 }
 
@@ -7023,7 +7025,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
     if (s != NULL)
     {
       n = stringLength(s);
-      (void)fwrite(s,n,1,stdout);
+      UNUSED_RESULT(fwrite(s,n,1,stdout));
       if (printRowData->showHeaderFlag)
       {
         assert(printRowData->widths[i] >= n);

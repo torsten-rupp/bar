@@ -550,8 +550,32 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 #define UNUSED_VARIABLE(variable) (void)variable
 
+/***********************************************************************\
+* Name   : UNUSED_VARIABLE
+* Purpose: avoid compiler warning for unused variables/parameters
+* Input  : variable - variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 //#define UNUSED_FUNCTION(function) (void)&function;
 #define UNUSED_FUNCTION(function)
+
+/***********************************************************************\
+* Name   : UNUSED_RESULT
+* Purpose: avoid compiler warning for unused result
+* Input  : result - value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#if 3 < __GNUC__ + (4 <= __GNUC_MINOR__)
+  #define UNUSED_RESULT(result) (__extension__({ __typeof__(result) __result = (result); (void)__result; }))
+#else
+  #define UNUSED_RESULT(result) ((void)(result))
+#endif
 
 /***********************************************************************\
 * Name   : SIZE_OF_MEMBER
