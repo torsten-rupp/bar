@@ -1092,7 +1092,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         // get total entry count, total fragment count, total entry size
         if (newestOnly)
         {
-fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
           // all newest entries
           if (String_isEmpty(entryIdsString))
           {
@@ -2123,7 +2122,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                                 "    entities.deletedFlag!=TRUE \
-                                                 AND entriesNewest.id IS IS NOT NULL \
+                                                 AND entriesNewest.id IS NOT NULL \
                                                  AND %s \
                                                 ",
                                                 String_cString(filterString)
@@ -2170,7 +2169,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                                 "    entities.deletedFlag!=TRUE \
-                                                 AND entries.id IS IS NOT NULL \
+                                                 AND entries.id IS NOT NULL \
                                                  AND %s \
                                                 ",
                                                 String_cString(filterString)
@@ -2422,11 +2421,19 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   // get sort mode, ordering
   if (newestOnly)
   {
-    IndexCommon_appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[sortMode],ordering);
+    IndexCommon_appendOrdering(orderString,
+                               sortMode != INDEX_ENTRY_SORT_MODE_NONE,
+                               INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[sortMode],
+                               ordering
+                              );
   }
   else
   {
-    IndexCommon_appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_SORT_MODE_COLUMNS[sortMode],ordering);
+    IndexCommon_appendOrdering(orderString,
+                               sortMode != INDEX_ENTRY_SORT_MODE_NONE,
+                               INDEX_ENTRY_SORT_MODE_COLUMNS[sortMode],
+                               ordering
+                              );
   }
 
   #ifdef INDEX_DEBUG_LIST_INFO
@@ -2521,7 +2528,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                             "     entities.deletedFlag!=TRUE \
-                                             AND entriesNewest.id IS IS NOT NULL \
+                                             AND entriesNewest.id IS NOT NULL \
                                              AND %s \
                                              %s \
                                             ",
@@ -2728,7 +2735,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                             "     entities.deletedFlag!=TRUE \
-                                              AND entriesNewest.id IS IS NOT NULL \
+                                              AND entriesNewest.id IS NOT NULL \
                                               AND %s \
                                               %s \
                                             ",
@@ -3027,7 +3034,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId))
                            ),
                            NULL,  // groupBy
-                           "offset ASC",
+                           "'entryFragments.offset' ASC",
                            offset,
                            limit
                           );
@@ -4303,6 +4310,26 @@ Errors Index_addFile(IndexHandle *indexHandle,
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
+                error = Database_insert(&indexHandle->databaseHandle,
+                                        NULL,  // insertRowId
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        DATABASE_VALUES
+                                        (
+                                          DATABASE_VALUE_KEY   ("entryId", entryId),
+                                          DATABASE_VALUE_STRING("name",    name)
+                                        ),
+                                        DATABASE_COLUMNS_NONE,
+                                        DATABASE_FILTERS_NONE
+                                       );
+                break;
+              case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
+                {
+                  String tokens;
+
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -4310,15 +4337,13 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                           DATABASE_VALUES
                                           (
                                             DATABASE_VALUE_KEY   ("entryId", entryId),
-                                            DATABASE_VALUE_STRING("name",    name)
+                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                           ),
                                           DATABASE_COLUMNS_NONE,
                                           DATABASE_FILTERS_NONE
                                          );
-                break;
-              case DATABASE_TYPE_MARIADB:
-                break;
-              case DATABASE_TYPE_POSTGRESQL:
+                  String_delete(tokens);
+                }
                 break;
             }
           }
@@ -4516,6 +4541,24 @@ Errors Index_addImage(IndexHandle     *indexHandle,
               case DATABASE_TYPE_MARIADB:
                 break;
               case DATABASE_TYPE_POSTGRESQL:
+                {
+                  String tokens;
+
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+                  error = Database_insert(&indexHandle->databaseHandle,
+                                          NULL,  // insertRowId
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          DATABASE_VALUES
+                                          (
+                                            DATABASE_VALUE_KEY   ("entryId", entryId),
+                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          ),
+                                          DATABASE_COLUMNS_NONE,
+                                          DATABASE_FILTERS_NONE
+                                         );
+                  String_delete(tokens);
+                }
                 break;
             }
           }
@@ -4656,7 +4699,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       }
 
       // add FTS entry
-// TODO: do this again with a trigger?
       switch (Database_getType(&indexHandle->databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
@@ -4672,15 +4714,33 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
           break;
         case DATABASE_TYPE_MARIADB:
           break;
         case DATABASE_TYPE_POSTGRESQL:
+          {
+            String tokens;
+
+            tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // insertRowId
+                                    "FTS_entries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
+                                   );
+            String_delete(tokens);
+          }
           break;
+      }
+      if (error == ERROR_NONE)
+      {
+        return error;
       }
 
       // add directory entry
@@ -4829,15 +4889,33 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
           break;
         case DATABASE_TYPE_MARIADB:
           break;
         case DATABASE_TYPE_POSTGRESQL:
+          {
+            String tokens;
+
+            tokens = IndexCommon_getPostgreSQLFTSTokens(linkName);
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // insertRowId
+                                    "FTS_entries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
+                                   );
+            String_delete(tokens);
+          }
           break;
+      }
+      if (error == ERROR_NONE)
+      {
+        return error;
       }
 
       // add link entry
@@ -4986,6 +5064,26 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
+                error = Database_insert(&indexHandle->databaseHandle,
+                                        NULL,  // insertRowId
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        DATABASE_VALUES
+                                        (
+                                          DATABASE_VALUE_KEY   ("entryId", entryId),
+                                          DATABASE_VALUE_STRING("name",    name)
+                                        ),
+                                        DATABASE_COLUMNS_NONE,
+                                        DATABASE_FILTERS_NONE
+                                       );
+                break;
+              case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
+                {
+                  String tokens;
+
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -4993,15 +5091,13 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                           DATABASE_VALUES
                                           (
                                             DATABASE_VALUE_KEY   ("entryId", entryId),
-                                            DATABASE_VALUE_STRING("name",    name)
+                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                           ),
                                           DATABASE_COLUMNS_NONE,
                                           DATABASE_FILTERS_NONE
                                          );
-                break;
-              case DATABASE_TYPE_MARIADB:
-                break;
-              case DATABASE_TYPE_POSTGRESQL:
+                  String_delete(tokens);
+                }
                 break;
             }
           }
@@ -5179,15 +5275,33 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
           break;
         case DATABASE_TYPE_MARIADB:
           break;
         case DATABASE_TYPE_POSTGRESQL:
+          {
+            String tokens;
+
+            tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // insertRowId
+                                    "FTS_entries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
+                                   );
+            String_delete(tokens);
+          }
           break;
+      }
+      if (error != ERROR_NONE)
+      {
+        return error;
       }
 
       // add special entry

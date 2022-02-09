@@ -1,3 +1,7 @@
+/* BAR index SQLite database definitions
+
+*/
+
 // Sqlite pragmas
 PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;

@@ -1,49 +1,9 @@
-/* BAR index database definitions
+/* BAR index MariaDB database definitions
 
  Notes:
    - encoding: use 'utf8mb4' for 4-byte-UTF8 and collate 'utf8mb4_bin'
      for case-sensitive compare!
 
- database structure:
-
-   job uuid
-     ^
-     |<- entity
-     |     ^
-     |<====|<----------------------------- storages
-     |     |                                 ^
-     |<====|<- entry                         |
-     |     |     ^                           |
-     |     |     |<- entryNewest             |
-     |     |     |                           |
-     |     |     |<- fileEntry               |
-     |     |     |     ^                     |
-     |     |     |     |<- entryFragment --->|
-     |     |     |     |...                  |
-     |     |     |                           |
-     |     |     |<- imageEntry              |
-     |     |     |     ^                     |
-     |     |     |     |<- entryFragment --->|
-     |     |     |     |...                  |
-     |     |     |                           |
-     |     |     |<- directoryEntry -------->|
-     |     |     |                           |
-     |     |     |<- linkEntry ------------->|
-     |     |     |                           |
-     |     |     |<- hardlinkEntry           |
-     |     |     |     ^                     |
-     |     |     |     |<- entryFragment --->|
-     |     |     |     |...                  |
-     |     |     |                           |
-     |     |     |<- specialEntry -----------|
-     |     |...
-     |     |
-     |     |<- skippedEntry
-     |     |...
-     |...
-
-  Legend:  <--  mandadory information
-           <==  redundant information for faster access
 */
 
 const UUID_LENGTH     = 36

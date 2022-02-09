@@ -126,6 +126,8 @@ String IndexCommon_getIndexStateSetString(String string, IndexStateSet indexStat
 {
   IndexStates indexState;
 
+  assert(string != NULL);
+
   String_clear(string);
   for (indexState = INDEX_STATE_MIN; indexState <= INDEX_STATE_MAX; indexState++)
   {
@@ -143,6 +145,8 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
 {
   IndexModes indexMode;
 
+  assert(string != NULL);
+
   String_clear(string);
   for (indexMode = INDEX_MODE_MIN; indexMode <= INDEX_MODE_MAX; indexMode++)
   {
@@ -156,6 +160,42 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
   return string;
 }
 
+String IndexCommon_getPostgreSQLFTSTokens(ConstString text)
+{
+  String         tokens;
+  bool           spaceFlag;
+  StringIterator stringIterator;
+  Codepoint      codepoint;
+
+  assert(text != NULL);
+
+  tokens    = String_new();
+  spaceFlag = FALSE;
+  STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
+  {
+    if (codepoint < 128)
+    {
+      if      (isalpha((int)codepoint))
+      {
+        String_appendCharUTF8(tokens,codepoint);
+        spaceFlag = FALSE;
+      }
+      else if (!spaceFlag)
+      {
+        String_appendChar(tokens,' ');
+        spaceFlag = TRUE;
+      }
+    }
+    else
+    {
+      String_appendCharUTF8(tokens,codepoint);
+      spaceFlag = FALSE;
+    }
+  }
+
+  return tokens;
+}
+
 String IndexCommon_getFTSMatchString(String         string,
                                      DatabaseHandle *databaseHandle,
                                      const char     *columnName,
@@ -165,8 +205,13 @@ String IndexCommon_getFTSMatchString(String         string,
   StringTokenizer stringTokenizer;
   ConstString     token;
   bool            addedTextFlag,addedPatternFlag;
-  size_t          iteratorVariable;
+  uint            n;
+  StringIterator  stringIterator;
   Codepoint       codepoint;
+
+  assert(string != NULL);
+  assert(databaseHandle != NULL);
+  assert(columnName != NULL);
 
   String_clear(string);
 
@@ -188,7 +233,7 @@ String IndexCommon_getFTSMatchString(String         string,
         {
           addedTextFlag    = FALSE;
           addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
+          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
             if (isalnum(codepoint) || (codepoint >= 128))
             {
@@ -233,7 +278,7 @@ String IndexCommon_getFTSMatchString(String         string,
         {
           addedTextFlag    = FALSE;
           addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
+          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
             if (isalnum(codepoint) || (codepoint >= 128))
             {
@@ -265,6 +310,57 @@ String IndexCommon_getFTSMatchString(String         string,
         String_formatAppend(string,"' IN BOOLEAN MODE)");
         break;
       case DATABASE_TYPE_POSTGRESQL:
+        String_formatAppend(string,"%s @@ to_tsquery('",columnName);
+
+        String_initTokenizer(&stringTokenizer,
+                             patternText,
+                             STRING_BEGIN,
+                             STRING_WHITE_SPACES,
+                             STRING_QUOTES,
+                             TRUE
+                            );
+        n = 0;
+        while (String_getNextToken(&stringTokenizer,&token,NULL))
+        {
+          if (n > 0)
+          {
+            String_appendCString(string," & ");
+          }
+
+          addedTextFlag    = FALSE;
+          addedPatternFlag = FALSE;
+          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
+          {
+            if (isalnum(codepoint) || (codepoint >= 128))
+            {
+              if (addedPatternFlag)
+              {
+                String_appendChar(string,' ');
+                addedPatternFlag = FALSE;
+              }
+              String_appendCharUTF8(string,codepoint);
+              addedTextFlag = TRUE;
+            }
+            else
+            {
+              if (addedTextFlag && !addedPatternFlag)
+              {
+                String_appendCString(string,":*");
+                addedTextFlag    = FALSE;
+                addedPatternFlag = TRUE;
+              }
+            }
+          }
+          if (addedTextFlag && !addedPatternFlag)
+          {
+            String_appendCString(string,":*");
+          }
+
+          n++;
+        }
+        String_doneTokenizer(&stringTokenizer);
+
+        String_formatAppend(string,"')");
         break;
     }
   }
@@ -274,8 +370,12 @@ String IndexCommon_getFTSMatchString(String         string,
 
 void IndexCommon_appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering)
 {
+  assert(orderString != NULL);
+
   if (condition && (ordering != DATABASE_ORDERING_NONE))
   {
+    assert(columnName != NULL);
+
     if (!String_isEmpty(orderString))
     {
       String_appendChar(orderString,',');

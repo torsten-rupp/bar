@@ -5030,6 +5030,9 @@ LOCAL void formatParameters(String               sqlString,
     databaseStatementHandle->debug.dt        = 0LL;
     BACKTRACE(databaseStatementHandle->debug.stackTrace,databaseStatementHandle->debug.stackTraceSize);
   #endif /* not NDEBUG */
+  databaseStatementHandle->parameterIndex = 0;
+  databaseStatementHandle->results        = NULL;
+  databaseStatementHandle->resultIndex    = 0;
 
   // lock
   #ifndef NDEBUG
@@ -5243,58 +5246,6 @@ LOCAL void formatParameters(String               sqlString,
       break;
   }
 
-  // init parameters
-  databaseStatementHandle->parameterIndex = 0;
-
-  // allocate results
-  databaseStatementHandle->results = (DatabaseValue*)calloc(databaseStatementHandle->resultCount,
-                                                            sizeof(DatabaseValue)
-                                                           );
-  if (databaseStatementHandle->results == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  for (i = 0; i < columnCount; i++)
-  {
-    switch (columns[i].type)
-    {
-      case DATABASE_DATATYPE:
-        break;
-      case DATABASE_DATATYPE_PRIMARY_KEY:
-      case DATABASE_DATATYPE_KEY:
-        break;
-      case DATABASE_DATATYPE_BOOL:
-        break;
-      case DATABASE_DATATYPE_INT:
-        break;
-      case DATABASE_DATATYPE_INT64:
-        break;
-      case DATABASE_DATATYPE_UINT:
-        break;
-      case DATABASE_DATATYPE_UINT64:
-        break;
-      case DATABASE_DATATYPE_DOUBLE:
-        break;
-      case DATABASE_DATATYPE_DATETIME:
-        break;
-      case DATABASE_DATATYPE_STRING:
-        databaseStatementHandle->results[i].string = String_new();
-        break;
-      case DATABASE_DATATYPE_CSTRING:
-        HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-        break;
-      case DATABASE_DATATYPE_BLOB:
-        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-  databaseStatementHandle->resultIndex = 0;
-
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(databaseStatementHandle,DatabaseStatementHandle);
   #else /* not NDEBUG */
@@ -5345,19 +5296,29 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((columnsCount == 0) || (columns != NULL));
-  assertx((databaseStatementHandle->resultIndex+columnsCount) <= databaseStatementHandle->resultCount,
+  assertx(columnsCount <= databaseStatementHandle->resultCount,
           "invalid result count: given %u, expected %u",
           databaseStatementHandle->resultIndex+columnsCount,
           databaseStatementHandle->resultCount
          );
 
+  // allocate results
+  databaseStatementHandle->results = (DatabaseValue*)calloc(databaseStatementHandle->resultCount,
+                                                            sizeof(DatabaseValue)
+                                                           );
+  if (databaseStatementHandle->results == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  databaseStatementHandle->resultIndex = 0;
+
+  // bind results
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
       {
         uint i;
 
-        // bind results
         for (i = 0; i < columnsCount; i++)
         {
           databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
@@ -5409,7 +5370,6 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
           uint i;
 
-          // bind results
           for (i = 0; i < columnsCount; i++)
           {
             databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
@@ -5483,6 +5443,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                 {
                   HALT_INSUFFICIENT_MEMORY();
                 }
+
+                databaseStatementHandle->results[databaseStatementHandle->resultIndex].string = String_new();
                 break;
               case DATABASE_DATATYPE_CSTRING:
                 HALT_INTERNAL_ERROR_NOT_SUPPORTED();
@@ -5509,7 +5471,6 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
         {
           uint i;
 
-          // bind results
           for (i = 0; i < columnsCount; i++)
           {
             databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
@@ -5537,6 +5498,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_DATETIME:
                 break;
               case DATABASE_DATATYPE_STRING:
+                databaseStatementHandle->results[databaseStatementHandle->resultIndex].string = String_new();
                 break;
               case DATABASE_DATATYPE_CSTRING:
                 HALT_INTERNAL_ERROR_NOT_SUPPORTED();
@@ -8428,7 +8390,8 @@ LOCAL void freeTableColumns(DatabaseColumn columns[],
 
   for (i = 0; i < columnCount; i++)
   {
-    free(columns[i].name);
+    // Note: suppress warning
+    free((char*)columns[i].name);
   }
 }
 
@@ -13880,7 +13843,14 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   for (uint i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    formatParameters(sqlString,databaseHandle,"?",&parameterCount);
+    if (values[i].value != NULL)
+    {
+      formatParameters(sqlString,databaseHandle,values[i].value,&parameterCount);
+    }
+    else
+    {
+      formatParameters(sqlString,databaseHandle,"?",&parameterCount);
+    }
   }
   String_appendChar(sqlString,')');
   switch (Database_getType(databaseHandle))
@@ -14577,7 +14547,12 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   {
     String_formatAppend(sqlString," OFFSET %"PRIu64,offset);
   }
-//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+  #ifndef NDEBUG
+    if (IS_SET(flags,DATABASE_FLAG_DEBUG))
+    {
+      printf("DEBUG: %s\n",String_cString(sqlString));
+    }
+  #endif
 
   // prepare statement
   error = prepareStatement(databaseStatementHandle,
@@ -14813,7 +14788,6 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
       printf("DEBUG: %s\n",String_cString(sqlString));
     }
   #endif
-//fprintf(stderr,"%s:%d: sqlString=%s parameterCount=%d\n",__FILE__,__LINE__,String_cString(sqlString),parameterCount);
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,

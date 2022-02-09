@@ -2411,7 +2411,11 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   String_delete(string);
 
   // get sort mode, ordering
-  IndexCommon_appendOrdering(orderString,sortMode != INDEX_ENTITY_SORT_MODE_NONE,INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],ordering);
+  IndexCommon_appendOrdering(orderString,
+                             sortMode != INDEX_ENTITY_SORT_MODE_NONE,
+                             INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],
+                             ordering
+                            );
 
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_initListEntities ------------------------------------------------------\n",__FILE__,__LINE__);

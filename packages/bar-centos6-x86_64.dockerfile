@@ -58,6 +58,8 @@ RUN yum -y install \
   bison \
   flex \
   rpm-build \
+  valgrind \
+  devtoolset-7-valgrind-devel \
   ;
 
 # required for gcc 7

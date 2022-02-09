@@ -1014,17 +1014,17 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                        fromEntityId
                                                                       );
                                ProgressInfo_init(&subProgressInfo,
-                                                progressInfo,
-                                                0,  // filterWindowSize
-                                                500,
-                                                maxSteps,
-                                                CALLBACK_(outputProgressInit,NULL),
-                                                CALLBACK_(outputProgressDone,NULL),
-                                                CALLBACK_(formatSubProgressInfo,NULL),
-                                                "Import entity #%"PRIi64" '%s': ",
-                                                fromEntityId,
-                                                Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
-                                               );
+                                                 progressInfo,
+                                                 0,  // filterWindowSize
+                                                 500,
+                                                 maxSteps,
+                                                 CALLBACK_(outputProgressInit,NULL),
+                                                 CALLBACK_(outputProgressDone,NULL),
+                                                 CALLBACK_(formatSubProgressInfo,NULL),
+                                                 "Import entity #%"PRIi64" '%s': ",
+                                                 fromEntityId,
+                                                 Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
+                                                );
 
                                // transfer storages of entity
                                error = Database_copyTable(oldDatabaseHandle,
