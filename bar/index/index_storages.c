@@ -4776,7 +4776,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexModeSet          indexModeSet,
                               ConstString           hostName,
                               ConstString           userName,
-//TODO: name+pattern
                               ConstString           name,
                               IndexStorageSortModes sortMode,
                               DatabaseOrdering      ordering,
@@ -4852,7 +4851,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   Database_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%s'",scheduleUUID);
   Database_filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
   Database_filterAppend(filterString,!String_isEmpty(userName),"AND","storages.userName LIKE %S",userName);
-// TODO:  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
   Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
   Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
