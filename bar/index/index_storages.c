@@ -4859,7 +4859,11 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   String_delete(filterIdsString);
 
   // get sort mode, ordering
-  IndexCommon_appendOrdering(orderString,sortMode != INDEX_STORAGE_SORT_MODE_NONE,INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],ordering);
+  IndexCommon_appendOrdering(orderString,
+                             sortMode != INDEX_STORAGE_SORT_MODE_NONE,
+                             INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],
+                             ordering
+                            );
 
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_initListStorages ------------------------------------------------------\n",__FILE__,__LINE__);
@@ -5105,26 +5109,45 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                    DATABASE_COLUMNS_NONE,
                                    DATABASE_FILTERS_NONE
                                   );
-          if (error != ERROR_NONE)
-          {
-            (void)Database_delete(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
-                                  "storages",
-                                  DATABASE_FLAG_NONE,
-                                  "id=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(databaseId)
-                                  ),
-                                  0
-                                 );
-            return error;
-          }
           break;
         case DATABASE_TYPE_MARIADB:
+          error = ERROR_NONE;
           break;
         case DATABASE_TYPE_POSTGRESQL:
+          {
+            String tokens;
+
+            tokens = IndexCommon_getPostgreSQLFTSTokens(storageName);
+            error = Database_insert(&indexHandle->databaseHandle,
+                                     NULL,  // insertRowId
+                                     "FTS_storages",
+                                     DATABASE_FLAG_NONE,
+                                     DATABASE_VALUES
+                                     (
+                                       DATABASE_VALUE_KEY   ("storageId", databaseId),
+                                       DATABASE_VALUE_STRING("name",      "to_tsvector(?)",tokens)
+                                     ),
+                                     DATABASE_COLUMNS_NONE,
+                                     DATABASE_FILTERS_NONE
+                                    );
+            String_delete(tokens);
+          }
           break;
+      }
+      if (error != ERROR_NONE)
+      {
+        (void)Database_delete(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "storages",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              0
+                             );
+        return error;
       }
 
       return ERROR_NONE;

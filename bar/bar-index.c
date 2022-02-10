@@ -293,8 +293,7 @@ LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
   String_appendVFormat(line,format,arguments);
 
   // output
-  n = fwrite(String_cString(line),1,String_length(line),stdout); fflush(stdout);
-  UNUSED_VARIABLE(n);
+  UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stdout)); fflush(stdout);
 
   String_delete(line);
 }

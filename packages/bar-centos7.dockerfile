@@ -55,6 +55,7 @@ RUN yum -y install \
   flex \
   rpm-build \
   valgrind \
+  devtoolset-7-valgrind-devel \
   ;
 
 # fix systemd

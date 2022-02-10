@@ -959,24 +959,22 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
       break;
   }
   ProgressInfo_init(&importProgressInfo,
-// TODO:
-               CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
-               {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_INDEX,
-                              "INDEX",
-                              "%s %0.1f%%, estimated rest time %uh:%02umin:%02us",
-"xxx",//                              progressInfo->text,
-                              (float)progress/10.0,
-                              (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
-                              (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
-                              (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
-                             );
-               },NULL),
-               "Import",
-0,
-maxSteps
-              );
+                    0,
+                    maxSteps,
+                    CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
+                    {
+                       plogMessage(NULL,  // logHandle
+                                   LOG_TYPE_INDEX,
+                                   "INDEX",
+                                   "%s %0.1f%%, estimated rest time %uh:%02umin:%02us",
+                                   (float)progress/10.0,
+                                   (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
+                                   (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
+                                   (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
+                                  );
+                    },NULL),
+                    "Import"
+                   );
   switch (indexVersion)
   {
     case 1:
@@ -3505,8 +3503,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                 indexVersion
                );
   }
-
-fprintf(stderr,"%s:%d: +++++++++++++++++++\n",__FILE__,__LINE__);
 
   // initial clean-up
   error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);

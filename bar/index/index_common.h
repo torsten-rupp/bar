@@ -489,6 +489,8 @@ String IndexCommon_getIndexStateSetString(String string, IndexStateSet indexStat
 
 String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSet);
 
+String IndexCommon_getPostgreSQLFTSTokens(ConstString text);
+
 /***********************************************************************\
 * Name   : IndexCommon_getFTSMatchString
 * Purpose: get full-text-search filter match string

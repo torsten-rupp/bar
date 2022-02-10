@@ -163,74 +163,74 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATE
 * Purpose: iterated over characters of string and execute block
-* Input  : string           - string
-*          iteratorVariable - iterator variable (type long)
-*          variable         - iteration variable
+* Input  : string         - string
+*          stringIterator - string iterator
+*          variable       - iteration variable
 * Output : -
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            StringIterator iteratorVariable;
+*            StringIterator stringIterator;
 *            char           variable;
-*            STRING_CHAR_ITERATE(string,iteratorVariable,variable)
+*            STRING_CHAR_ITERATE(string,stringIterator,variable)
 *            {
 *              ... = variable
 *            }
 \***********************************************************************/
 
-#define STRING_CHAR_ITERATE(string,iteratorVariable,variable) \
-  for (iteratorVariable = 0, variable = String_index(string,0L); \
-       (iteratorVariable) < String_length(string); \
-       iteratorVariable++, variable = String_index(string,iteratorVariable) \
+#define STRING_CHAR_ITERATE(string,stringIterator,variable) \
+  for (stringIterator = 0, variable = String_index(string,0L); \
+       (stringIterator) < String_length(string); \
+       stringIterator++, variable = String_index(string,stringIterator) \
       )
 
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATEX
 * Purpose: iterated over characters of string and execute block
-* Input  : string           - string
-*          iteratorVariable - iterator variable (type long)
-*          variable         - iteration variable
-*          condition        - additional condition
+* Input  : string         - string
+*          stringIterator - string iterator
+*          variable       - iteration variable
+*          condition      - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            ulong iteratorVariable;
-*            char  variable;
-*            STRING_CHAR_ITERATEX(string,iteratorVariable,variable,TRUE)
+*            StringIterator stringIterator;
+*            char           variable;
+*            STRING_CHAR_ITERATEX(string,stringIterator,variable,TRUE)
 *            {
 *              ... = variable->...
 *            }
 \***********************************************************************/
 
-#define STRING_CHAR_ITERATEX(string,iteratorVariable,variable,condition) \
-  for (iteratorVariable = 0, variable = String_index(string,0L); \
-       ((iteratorVariable) < String_length(string)) && (condition); \
-       iteratorVariable++, variable = String_index(string,iteratorVariable) \
+#define STRING_CHAR_ITERATEX(string,stringIterator,variable,condition) \
+  for (stringIterator = 0, variable = String_index(string,0L); \
+       ((stringIterator) < String_length(string)) && (condition); \
+       stringIterator++, variable = String_index(string,stringIterator) \
       )
 
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATE_UTF8
 * Purpose: iterated over characters of string and execute block
-* Input  : string           - string
-*          iteratorVariable - iterator variable (type long)
-*          variable         - iteration variable
+* Input  : string         - string
+*          stringIterator - string iterator
+*          variable       - iteration variable
 * Output : -
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            ulong     iteratorVariable;
-*            Codepoint variable;
-*            STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable)
+*            StringIterator stringIterator;
+*            Codepoint      variable;
+*            STRING_CHAR_ITERATE_UTF8(string,stringIterator,variable)
 *            {
 *              ... = variable->...
 *            }
 \***********************************************************************/
 
-#define STRING_CHAR_ITERATE_UTF8(string,iteratorVariable,variable) \
-  for (iteratorVariable = 0, variable = stringAtUTF8(string->data,0,NULL); \
-       (iteratorVariable) < String_length(string); \
-       (iteratorVariable) = stringNextUTF8(string->data,iteratorVariable), variable = stringAtUTF8(string->data,iteratorVariable,NULL) \
+#define STRING_CHAR_ITERATE_UTF8(string,stringIterator,variable) \
+  for (stringIterator = 0, variable = stringAtUTF8(string->data,0,NULL); \
+       (stringIterator) < String_length(string); \
+       (stringIterator) = stringNextUTF8(string->data,stringIterator), variable = stringAtUTF8(string->data,stringIterator,NULL) \
       )
 
 // debugging
