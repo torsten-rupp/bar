@@ -175,7 +175,7 @@ String IndexCommon_getPostgreSQLFTSTokens(ConstString text)
   {
     if (codepoint < 128)
     {
-      if      (isalpha((int)codepoint))
+      if      (isalnum((int)codepoint))
       {
         String_appendCharUTF8(tokens,codepoint);
         spaceFlag = FALSE;
