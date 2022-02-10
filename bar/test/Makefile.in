@@ -613,7 +613,7 @@ functionDoneTestFiles = \
 functionTestCheckExitcode = \
   $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
     $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
-    exit $$rc; \
+    exit 1; \
   fi
 
 # helper functions for slave tests
