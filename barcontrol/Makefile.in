@@ -142,6 +142,43 @@ VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 # languages
 LANGUAGES = de jp
 
+# ----------------------------------------------------------------------------
+
+TEST_SERVER_PORT                 = 39909
+TEST_SERVER_SSL_PORT             = 39910
+
+# ----------------------------------------------------------------------------
+
+COLUMNS = $(shell tput cols)
+COLUMNS ?= 80
+
+# log redirection
+LOG = $(if $(QUIET),</dev/null 1>/dev/null)
+
+# helper function to output info lines
+functionInfoBegin = $(ECHO_NO_LF) >&2 "$1..."; $(ECHO) "$1" $(if $(QUIET),1>/dev/null)
+functionInfoEnd = $(ECHO) >&2 "$1"
+functionInfoHeader = $(ECHO) `$(ECHO) "--- $1 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
+functionInfoFooter = $(ECHO) `$(ECHO) "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
+
+# helper function for test names
+functionTestNames = $(foreach name,$1,$(name) $(addprefix $(name),-debug -gcov -gprof -valgrind))
+
+# helper function to quote and join strings
+functionJoin = $(subst $() $(),$3,$(foreach i,$1,$2$(i)$2))
+
+# helper function to execute binary
+functionExec = \
+  $(EXE_PREFIX)$1
+
+# helper function to check valid exitcode
+# call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
+functionTestCheckExitcode = \
+  $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
+    $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
+    exit 1; \
+  fi
+
 #---------------------------------- rules ------------------------------------
 
 # source search paths
@@ -357,25 +394,39 @@ poeditjp:
 # tests
 .PHONY: test
 .PHONY: test
-test:
+test: compile
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
-          BARCONTROL_OPTIONS="$(TEST_OPTIONS) localhost --port=39909 --tls-port=0" \
+          BARCONTROL_OPTIONS="$(TEST_OPTIONS) localhost --port=$(TEST_SERVER_PORT) --tls-port=0" \
 	  test_basic \
           ;
 
 test_basic:
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --help 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --version
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --ping
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --pause 60
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --suspend
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --continue
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --list 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --index-database-entities-list home 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --index-database-storages-list home 1>/dev/null
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=39909 --tls-port=0 --index-database-entries-list home 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --help $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --version $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --list $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-info $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-entities-list home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -n home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-storages-list home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -a home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-entries-list home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --suspend $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --continue $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -s $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -c $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --pause=60h $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --pause=60m $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --pause=60s $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -t=60h $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -t=60m $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -t=60s $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --maintenance=60h $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --maintenance=60m $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --maintenance=60s $(LOG)
+	$(call functionTestCheckExitcode,1,1,$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --not-existing-option) $(LOG)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -628,7 +679,7 @@ else
 endif
 rundevde: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=39909 --tls-port=0 $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -640,7 +691,7 @@ else
 endif
 rundevjp: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=39909 --tls-port=0 $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -669,7 +720,7 @@ endif
 .PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert rundev_slave-expert rundevdebug_slave-expert rundevxdebug_slave-expert rundevxxdebug_slave-expert
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=39909 --tls-port=0 $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -682,20 +733,20 @@ rundev-expert:
 
 rundevdebug rundevd: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) --port=39909 --tls-port=0 $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevdebug-basic rundevd-basic:
-	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=basic"
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --role=basic"
 rundevdebug-normal rundevd-normal:
-	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=normal"
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --role=normal"
 rundevdebug-expert rundevd-expert:
-	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=expert"
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --role=expert"
 
 rundevxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=2 $(OPTIONS) --port=39909 --tls-port=0 $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=2 $(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -708,16 +759,16 @@ rundevxdebug-expert:
 
 rundevxxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=3 $(OPTIONS) --port=39909 --tls-port=0 $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=3 $(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevxxdebug-basic:
-	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=basic"
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --role=basic"
 rundevxxdebug-normal:
-	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=normal"
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --role=normal"
 rundevxxdebug-expert:
-	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=expert"
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --role=expert"
 
 rundev_slave: $(OBJECTS)
 ifneq ($(JAVA),)

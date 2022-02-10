@@ -5933,6 +5933,7 @@ Dprintf.dprintf("still not supported");
     catch (org.eclipse.swt.SWTException exception)
     {
       printInternalError(exception.getCause());
+      System.exit(ExitCodes.INTERNAL_ERROR);
     }
     catch (CommunicationError error)
     {
@@ -5941,14 +5942,17 @@ Dprintf.dprintf("still not supported");
       {
         printStackTrace(error);
       }
+      System.exit(ExitCodes.FAIL);
     }
     catch (AssertionError error)
     {
-      printInternalError(error);
+      internalError(error);
+      System.exit(ExitCodes.INTERNAL_ERROR);
     }
     catch (InternalError error)
     {
       printInternalError(error);
+      System.exit(ExitCodes.INTERNAL_ERROR);
     }
     catch (Error error)
     {
@@ -5957,7 +5961,10 @@ Dprintf.dprintf("still not supported");
       {
         printStackTrace(error);
       }
+      System.exit(ExitCodes.FAIL);
     }
+
+    System.exit(ExitCodes.OK);
   }
 
   /** main
