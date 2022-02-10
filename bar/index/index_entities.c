@@ -2224,7 +2224,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_get(&indexHandle->databaseHandle,
                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -2269,7 +2269,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                           DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)"),
                           DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize)  FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)")
                         ),
-                        stringFormat(sqlCommand,sizeof(sqlCommand),
+                        stringFormat(sqlString,sizeof(sqlString),
                                      "    entities.deletedFlag!=TRUE \
                                       AND %s",
                                       String_cString(filterString)
@@ -2427,47 +2427,95 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
-  INDEX_DOX(error,
-            indexHandle,
+  if (String_isEmpty(ftsMatchString))
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      char sqlString[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select(&indexQueryHandle->databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           "entities \
-                              LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                              LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
-                           ",
-                           DATABASE_FLAG_NONE,
-                           DATABASE_COLUMNS
-                           (
-                             DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
-                             DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                             DATABASE_COLUMN_KEY     ("entities.id"),
-                             DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
-                             DATABASE_COLUMN_DATETIME("entities.created"),
-                             DATABASE_COLUMN_UINT    ("entities.type"),
-                             DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
-                             DATABASE_COLUMN_UINT64  ("SUM(storages.size)"),
-                             DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
-                             DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
-                             DATABASE_COLUMN_UINT    ("entities.lockedCount")
-                           ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=TRUE \
-                                         AND %s \
-                                        ",
-                                        String_cString(filterString)
-                                       ),
-                           DATABASE_FILTERS
-                           (
-                           ),
-                           "uuids.id,entities.id",
-                           String_cString(orderString),
-                           offset,
-                           limit
-                          );
-  });
+      return Database_select(&indexQueryHandle->databaseStatementHandle,
+                             &indexHandle->databaseHandle,
+                             "entities \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
+                             ",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                               DATABASE_COLUMN_KEY     ("entities.id"),
+                               DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                               DATABASE_COLUMN_DATETIME("entities.created"),
+                               DATABASE_COLUMN_UINT    ("entities.type"),
+                               DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("entities.lockedCount")
+                             ),
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "    entities.deletedFlag!=TRUE \
+                                           AND %s \
+                                          ",
+                                          String_cString(filterString)
+                                         ),
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             "uuids.id,entities.id",
+                             String_cString(orderString),
+                             offset,
+                             limit
+                            );
+    });
+  }
+  else
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      char sqlString[MAX_SQL_COMMAND_LENGTH];
+
+      return Database_select(&indexQueryHandle->databaseStatementHandle,
+                             &indexHandle->databaseHandle,
+                             "FTS_storages \
+                                LEFT JOIN storages ON storages.id=FTS_storages.storageId AND storages.deletedFlag!=TRUE \
+                                LEFT JOIN entities ON entities.id=storages.entityId AND entities.deletedFlag!=TRUE \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                             ",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                               DATABASE_COLUMN_KEY     ("entities.id"),
+                               DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                               DATABASE_COLUMN_DATETIME("entities.created"),
+                               DATABASE_COLUMN_UINT    ("entities.type"),
+                               DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("entities.lockedCount")
+                             ),
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "    entities.deletedFlag!=TRUE \
+                                           AND %s \
+                                          ",
+                                          String_cString(filterString)
+                                         ),
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             "uuids.id,entities.id",
+                             String_cString(orderString),
+                             offset,
+                             limit
+                            );
+    });
+  }
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);

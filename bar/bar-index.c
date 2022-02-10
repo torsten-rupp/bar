@@ -282,7 +282,6 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
 LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
 {
   String line;
-  size_t n;
 
   assert(format != NULL);
 

@@ -526,7 +526,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     // get last executed, total entities count, total entry count, total entry size
     return Database_get(&indexHandle->databaseHandle,
@@ -562,7 +562,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
                          DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
                          DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
                        ),
-                       stringFormat(sqlCommand,sizeof(sqlCommand),
+                       stringFormat(sqlString,sizeof(sqlString),
                                     "%s",
                                     String_cString(filterString)
                                    ),
@@ -1306,7 +1306,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -1326,7 +1326,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
                              DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "     %s \
                                           AND uuids.jobUUID!='' \
                                         ",

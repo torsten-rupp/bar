@@ -1458,7 +1458,7 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 *          scheduleUUID     - unique schedule UUID (can be NULL)
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          IndexModeSet     - index mode set
-*          name             - storage name pattern (glob, can be NULL)
+*          name             - storage name (can be NULL)
 *          sortMode         - sort mode; see IndexEntitySortModes
 *          ordering         - ordering mode
 *          offset           - offset or 0
