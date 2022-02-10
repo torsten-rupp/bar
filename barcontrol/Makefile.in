@@ -348,8 +348,8 @@ src/BARException.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Ma
 	$(INSTALL) -d $(@D)
 	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@ --java-class-name BARException --tr BARControl.tr
 
-.PHONY: compile
-compile: $(OBJECTS)
+.PHONY: compile c
+compile c: $(OBJECTS)
 
 # ----------------------------------------------------------------------------
 

@@ -220,7 +220,7 @@ String IndexCommon_getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_formatAppend(string,"FTS_entries MATCH '");
+        String_formatAppend(string,"%s MATCH '",columnName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,

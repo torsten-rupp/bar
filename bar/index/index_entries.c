@@ -1087,7 +1087,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+        char sqlString[MAX_SQL_COMMAND_LENGTH];
 
         // get total entry count, total fragment count, total entry size
         if (newestOnly)
@@ -1130,7 +1130,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalEntryCountNewest)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySizeNewest)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1177,7 +1177,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalFileCountNewest)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalFileSizeNewest)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1224,7 +1224,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalImageCountNewest)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalImageSizeNewest)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1271,7 +1271,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalDirectoryCountNewest)"),
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1318,7 +1318,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalLinkCountNewest)"),
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1365,7 +1365,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalHardlinkCountNewest)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalHardlinkSizeNewest)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1412,7 +1412,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalSpecialCountNewest)"),
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1466,7 +1466,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                    DATABASE_COLUMN_UINT  ("COUNT(entriesNewest.id)"),
                                    DATABASE_COLUMN_UINT64("SUM(entriesNewest.size)")
                                  ),
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                 stringFormat(sqlString,sizeof(sqlString),
                                               "    entities.deletedFlag!=TRUE \
                                                AND %s \
                                               ",
@@ -1522,7 +1522,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalEntryCount)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1569,7 +1569,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalFileCount)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalFileSize)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1616,7 +1616,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalImageCount)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalImageSize)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1663,7 +1663,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalDirectoryCount)"),
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1710,7 +1710,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalLinkCount)"),
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1757,7 +1757,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalHardlinkCount)"),
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalHardlinkSize)")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1804,7 +1804,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                        DATABASE_COLUMN_UINT  ("SUM(entities.totalSpecialCount)"),
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                     stringFormat(sqlString,sizeof(sqlString),
                                                   "    entities.deletedFlag!=TRUE \
                                                    AND %s \
                                                   ",
@@ -1858,7 +1858,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                    DATABASE_COLUMN_UINT  ("COUNT(entries.id)"),
                                    DATABASE_COLUMN_UINT64("SUM(entries.size)")
                                  ),
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                 stringFormat(sqlString,sizeof(sqlString),
                                               "    entities.deletedFlag!=TRUE \
                                                AND %s \
                                               ",
@@ -1899,7 +1899,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+        char sqlString[MAX_SQL_COMMAND_LENGTH];
 
         // get entry content size
         if (newestOnly)
@@ -1935,7 +1935,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 // TODO: directory correct?
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "    entities.deletedFlag!=TRUE \
                                              AND %s \
                                             ",
@@ -1980,7 +1980,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  (
                                    DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
                                  ),
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                 stringFormat(sqlString,sizeof(sqlString),
                                               "    entities.deletedFlag!=TRUE \
                                                AND %s \
                                               ",
@@ -2028,7 +2028,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  (
                                    DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                  ),
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                 stringFormat(sqlString,sizeof(sqlString),
                                               "    entities.deletedFlag!=TRUE \
                                                AND %s \
                                               ",
@@ -2086,7 +2086,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+        char sqlString[MAX_SQL_COMMAND_LENGTH];
 
         // get entry count, entry size
         if (newestOnly)
@@ -2120,13 +2120,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  DATABASE_COLUMN_UINT  ("COUNT(entriesNewest.id)"),
                                  DATABASE_COLUMN_UINT64("SUM(entriesNewest.size)"),
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "    entities.deletedFlag!=TRUE \
-                                                 AND entriesNewest.id IS NOT NULL \
-                                                 AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                              ),
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "    entities.deletedFlag!=TRUE \
+                                             AND entriesNewest.id IS NOT NULL \
+                                             AND %s \
+                                            ",
+                                            String_cString(filterString)
+                                           ),
                                DATABASE_FILTERS
                                (
                                ),
@@ -2167,13 +2167,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  DATABASE_COLUMN_UINT  ("COUNT(entries.id)"),
                                  DATABASE_COLUMN_UINT64("SUM(entries.size)")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "    entities.deletedFlag!=TRUE \
-                                                 AND entries.id IS NOT NULL \
-                                                 AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                              ),
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "    entities.deletedFlag!=TRUE \
+                                             AND entries.id IS NOT NULL \
+                                             AND %s \
+                                            ",
+                                            String_cString(filterString)
+                                           ),
                                DATABASE_FILTERS
                                (
                                ),
@@ -2208,7 +2208,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+        char sqlString[MAX_SQL_COMMAND_LENGTH];
 
         // get entry content size
         if (newestOnly)
@@ -2243,7 +2243,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                (
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "    storages.deletedFlag!=TRUE \
                                              AND %s \
                                             ",
@@ -2289,7 +2289,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                (
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "    storages.deletedFlag!=TRUE \
                                              AND %s \
                                             ",
@@ -2462,7 +2462,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+      char sqlString[MAX_SQL_COMMAND_LENGTH];
 
       if (newestOnly)
       {
@@ -2526,7 +2526,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_STRING("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64("hardlinkEntries.size")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
                                              AND entriesNewest.id IS NOT NULL \
                                              AND %s \
@@ -2618,7 +2618,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_STRING("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64("hardlinkEntries.size")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
                                              AND %s \
                                              %s \
@@ -2670,7 +2670,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+        char sqlString[MAX_SQL_COMMAND_LENGTH];
 
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
@@ -2733,7 +2733,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_STRING("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64("hardlinkEntries.size")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
                                               AND entriesNewest.id IS NOT NULL \
                                               AND %s \
@@ -2770,7 +2770,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+        char sqlString[MAX_SQL_COMMAND_LENGTH];
 
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
@@ -2833,7 +2833,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                               stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
                                                AND %s \
                                                %s \
@@ -3333,7 +3333,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -3352,7 +3352,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.groupId"),
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
@@ -3492,7 +3492,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -3509,7 +3509,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
                              DATABASE_COLUMN_UINT64  ("entries.size")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
@@ -3652,7 +3652,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -3670,7 +3670,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.groupId"),
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
@@ -3810,7 +3810,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -3830,7 +3830,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.groupId"),
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
@@ -3970,7 +3970,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -3989,7 +3989,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.groupId"),
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
@@ -4129,7 +4129,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -4147,7 +4147,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.groupId"),
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",

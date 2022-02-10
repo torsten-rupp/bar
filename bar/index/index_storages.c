@@ -4575,7 +4575,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     // get storage count, storage size, entry count, entry size
     error = Database_get(&indexHandle->databaseHandle,
@@ -4610,7 +4610,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                            DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
                            DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
                          ),
-                         stringFormat(sqlCommand,sizeof(sqlCommand),
+                         stringFormat(sqlString,sizeof(sqlString),
                                       "    storages.deletedFlag!=TRUE \
                                        AND %s \
                                       ",
@@ -4642,7 +4642,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                       LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                    ",
                                    "SUM(directoryEntries.totalEntrySize)",
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
+                                   stringFormat(sqlString,sizeof(sqlString),
                                                 "%s",
                                                 String_cString(filterString)
                                                ),
@@ -4666,7 +4666,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                       LEFT JOIN entities         ON entities.id=storages.entityId \
                                    ",
                                    "SUM(directoryEntries.totalEntrySize)",
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
+                                   stringFormat(sqlString,sizeof(sqlString),
                                                 "%s",
                                                 String_cString(filterString)
                                                ),
@@ -4684,7 +4684,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                       LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
                                    ",
                                    "SUM(directoryEntries.totalEntrySize)",
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
+                                   stringFormat(sqlString,sizeof(sqlString),
                                                 "%s",
                                                 String_cString(filterString)
                                                ),
@@ -4886,7 +4886,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -4918,7 +4918,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
                              DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         "    storages.deletedFlag!=TRUE \
                                          AND %s \
                                         ",

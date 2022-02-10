@@ -2647,7 +2647,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
   StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes          archiveType;
   uint64                createdDateTime;
-  uint64                size;
+  uint64                totalSize;
   uint                  totalEntryCount;
   uint64                totalEntrySize;
   uint                  lockedCount;
@@ -2688,7 +2688,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
                                &archiveType,
                                &createdDateTime,
                                NULL,  // lastErrorMessage
-                               &size,
+                               &totalSize,
                                &totalEntryCount,
                                &totalEntrySize,
                                &lockedCount
@@ -2703,7 +2703,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
                                                  jobUUID,
                                                  archiveType,
                                                  createdDateTime,
-                                                 size,
+                                                 totalSize,
                                                  totalEntryCount,
                                                  totalEntrySize
                                                 );

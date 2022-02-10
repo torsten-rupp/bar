@@ -5145,9 +5145,10 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-12s %-14s %-14s %-19s %s",
+            System.out.println(String.format("%-8s %-12s %-14s %-14s %-14s %-19s %s",
                                              "Id",
                                              "Type",
+                                             "Size",
                                              "Entry count",
                                              "Entry size",
                                              "Date/Time",
@@ -5165,20 +5166,23 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long         entityId        = valueMap.getLong  ("entityId"           );
-                                         String       jobName         = valueMap.getString("jobName"            );
+                                         long         entityId        = valueMap.getLong  ("entityId"                      );
+                                         String       jobUUID         = valueMap.getString("jobUUID"                       );
+                                         String       jobName         = valueMap.getString("jobName"                       );
                                          ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                         long         createdDateTime = valueMap.getLong  ("createdDateTime"    );
-                                         long         totalEntryCount = valueMap.getLong  ("totalEntryCount"    );
-                                         long         totalEntrySize  = valueMap.getLong  ("totalEntrySize"     );
+                                         long         createdDateTime = valueMap.getLong  ("createdDateTime"               );
+                                         long         totalSize       = valueMap.getLong  ("totalSize"                     );
+                                         long         totalEntryCount = valueMap.getLong  ("totalEntryCount"               );
+                                         long         totalEntrySize  = valueMap.getLong  ("totalEntrySize"                );
 
-                                         System.out.println(String.format("%8d %-12s %14d %14d %-19s %s",
+                                         System.out.println(String.format("%8d %-12s %-14s %14d %14d %-19s %s",
                                                                           getDatabaseId(entityId),
                                                                           archiveType.toString(),
+                                                                          totalSize,
                                                                           totalEntryCount,
                                                                           totalEntrySize,
                                                                           (createdDateTime > 0L) ? DATE_FORMAT.format(new Date(createdDateTime*1000)) : "-",
-                                                                          jobName
+                                                                          !jobName.isEmpty() ? jobName : jobUUID
                                                                          )
                                                            );
                                          n[0]++;
@@ -5190,7 +5194,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError("cannot list storages index (error: %s)",exception.getMessage());
+            printError("cannot list entities index (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
