@@ -7685,7 +7685,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
@@ -7825,7 +7825,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
@@ -7969,7 +7969,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
@@ -8174,7 +8174,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
@@ -8410,7 +8410,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
           Connector_executeCommand(connectorInfo,
                                    1,
                                    10*MS_PER_SECOND,
-                                   CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                   CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                    {
                                      assert(resultMap != NULL);
 
@@ -8535,7 +8535,7 @@ UNUSED_VARIABLE(value);
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
@@ -8694,7 +8694,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
@@ -8859,7 +8859,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
           Connector_executeCommand(connectorInfo,
                                    1,
                                    10*MS_PER_SECOND,
-                                   CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                   CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                    {
                                      assert(resultMap != NULL);
 
@@ -8994,7 +8994,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 

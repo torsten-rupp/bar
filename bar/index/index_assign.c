@@ -29,8 +29,6 @@
 #include "common/misc.h"
 #include "errors.h"
 
-// TODO: remove bar.h
-#include "bar.h"
 #include "bar_common.h"
 #include "storage.h"
 #include "server_io.h"

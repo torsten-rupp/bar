@@ -43,6 +43,17 @@
 #endif
 
 /***********************************************************************\
+* Name   : IndexStorage_cleanUp
+* Purpose: clean-up
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_cleanUp(IndexHandle *indexHandle);
+
+/***********************************************************************\
 * Name   : IndexStorage_isEmpty
 * Purpose: check if storage if empty
 * Input  : indexHandle - index handle

@@ -40,6 +40,17 @@
 #endif
 
 /***********************************************************************\
+* Name   : IndexUUID_cleanUp
+* Purpose: clean-up
+* Input  : indexHandle    - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexUUID_cleanUp(IndexHandle *indexHandle);
+
+/***********************************************************************\
 * Name   : IndexUUID_prune
 * Purpose: prune empty UUID
 * Input  : indexHandle    - index handle
