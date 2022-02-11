@@ -186,17 +186,18 @@ LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
 
 // ----------------------------------------------------------------------
 
-/***********************************************************************\
-* Name   : IndexUUID_prune
-* Purpose: prune empty UUID
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-*          uuidId         - UUID database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
+Errors IndexUUID_cleanUp(IndexHandle *indexHandle)
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  error = ERROR_NONE;
+
+  if (error == ERROR_NONE) error = cleanUpNoUUID(indexHandle);
+
+  return error;
+}
 
 Errors IndexUUID_prune(IndexHandle *indexHandle,
                        bool        *doneFlag,
@@ -442,7 +443,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 
@@ -1447,7 +1448,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 

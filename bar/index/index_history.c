@@ -287,7 +287,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       Errors error;
 

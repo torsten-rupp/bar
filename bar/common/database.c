@@ -11650,14 +11650,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   toColumnInfo.values = toValues;
   toColumnInfo.count  = toValueCount;
 
-// TODO: for progress
-{
-  uint64 nn;
-  Database_getUInt64(fromDatabaseHandle,&nn,fromTableName,"COUNT(*)",DATABASE_FILTERS_NONE,NULL);
-UNUSED_VARIABLE(nn);
-//fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,nn);
-}
-
   // select rows in from-table and copy to to-table
   BLOCK_DOX(error,
             { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ,WAIT_FOREVER);

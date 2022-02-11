@@ -6662,7 +6662,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
         if (ConfigValue_parse(&CONFIG_VALUES[i],
                               sectionName,
                               String_cString(value),
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
@@ -6670,7 +6670,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                 printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),*lineNb);
                                 error = ERROR_CONFIG;
                               },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
@@ -7158,7 +7158,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
         if (ConfigValue_parse(&CONFIG_VALUES[i],
                               NULL, // section name
                               String_cString(value),
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
@@ -7166,7 +7166,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                 printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
                                 error = ERROR_CONFIG;
                               },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 

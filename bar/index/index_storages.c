@@ -2238,6 +2238,22 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
 
 // ----------------------------------------------------------------------
 
+Errors IndexStorage_cleanUp(IndexHandle *indexHandle)
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  error = ERROR_NONE;
+
+  if (error == ERROR_NONE) error = cleanUpStorageNoName(indexHandle);
+  if (error == ERROR_NONE) error = cleanUpStorageNoName(indexHandle);
+  if (error == ERROR_NONE) error = cleanUpStorageNoEntity(indexHandle);
+  if (error == ERROR_NONE) error = cleanUpStorageInvalidState(indexHandle);
+
+  return error;
+}
+
 bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                  DatabaseId  storageId
                                 )
@@ -5159,7 +5175,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 

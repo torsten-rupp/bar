@@ -394,8 +394,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 // only for better reading
 #define CALLBACK_(code,argument) code,argument
-#define CALLBACK_LAMBDA_(functionReturnType,functionSignature,functionBody,argument) \
-  LAMBDA(functionReturnType,functionSignature,functionBody),argument
+#define CALLBACK_LAMBDA_(functionReturnType,functionSignature,functionBody,functionUserData) \
+  LAMBDA(functionReturnType,functionSignature,functionBody),functionUserData
 
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
@@ -487,12 +487,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 \***********************************************************************/
 
 #define CALLBACK_INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \
-  ({ \
-    auto functionReturnType __closure__ functionSignature; \
-    functionReturnType __closure__ functionSignature functionBody \
-    __closure__; \
-  }), \
-  functionUserData
+  LAMBDA(functionReturnType,functionSignature,functionBody),functionUserData
 
 /***********************************************************************\
 * Name   : printf/fprintf
