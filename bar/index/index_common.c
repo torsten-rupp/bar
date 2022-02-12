@@ -167,29 +167,31 @@ String IndexCommon_getPostgreSQLFTSTokens(ConstString text)
   StringIterator stringIterator;
   Codepoint      codepoint;
 
-  assert(text != NULL);
+  tokens = String_new();
 
-  tokens    = String_new();
-  spaceFlag = FALSE;
-  STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
+  if (text != NULL)
   {
-    if (codepoint < 128)
+    spaceFlag = FALSE;
+    STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
     {
-      if      (isalnum((int)codepoint))
+      if (codepoint < 128)
+      {
+        if      (isalnum((int)codepoint))
+        {
+          String_appendCharUTF8(tokens,codepoint);
+          spaceFlag = FALSE;
+        }
+        else if (!spaceFlag)
+        {
+          String_appendChar(tokens,' ');
+          spaceFlag = TRUE;
+        }
+      }
+      else
       {
         String_appendCharUTF8(tokens,codepoint);
         spaceFlag = FALSE;
       }
-      else if (!spaceFlag)
-      {
-        String_appendChar(tokens,' ');
-        spaceFlag = TRUE;
-      }
-    }
-    else
-    {
-      String_appendCharUTF8(tokens,codepoint);
-      spaceFlag = FALSE;
     }
   }
 

@@ -44,10 +44,7 @@
 #define _DATABASE_LOCK_PER_INSTANCE   // if defined use lock per database instance, otherwise a global lock for all database is used
 
 // switch on for debugging only!
-#ifndef WERROR
-#warning remove/revert
-#endif
-#define DATABASE_DEBUG_LOCK
+#define _DATABASE_DEBUG_LOCK
 #define _DATABASE_DEBUG_LOCK_PRINT
 #define _DATABASE_DEBUG_TIMEOUT
 #define _DATABASE_DEBUG_COPY_TABLE

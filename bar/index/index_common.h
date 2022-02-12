@@ -489,6 +489,15 @@ String IndexCommon_getIndexStateSetString(String string, IndexStateSet indexStat
 
 String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSet);
 
+/***********************************************************************\
+* Name   : IndexCommon_getPostgreSQLFTSTokens
+* Purpose: get PostgreSQL full-text-seach tokens from text
+* Input  : text - text (can be NULL)
+* Output : -
+* Return : token string
+* Notes  : -
+\***********************************************************************/
+
 String IndexCommon_getPostgreSQLFTSTokens(ConstString text);
 
 /***********************************************************************\

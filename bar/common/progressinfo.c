@@ -105,31 +105,32 @@ void ProgressInfo_done(ProgressInfo *progressInfo)
 
 void ProgressInfo_reset(ProgressInfo *progressInfo, uint64 stepCount)
 {
-  assert(progressInfo != NULL);
-
-  progressInfo->stepCount              = stepCount;
-
-  progressInfo->startTimestamp         = Misc_getTimestamp();
-  progressInfo->step                   = 0LL;
-
-  progressInfo->filterTimeIndex        = 0;
-  progressInfo->filterTimeCount        = 0;
-  progressInfo->filterTimeSum          = 0;
-
-  progressInfo->lastTimestamp          = Misc_getTimestamp();
-
-  progressInfo->lastProgressSum        = 0L;
-  progressInfo->lastProgressCount      = 0;
-  progressInfo->lastProgressTimestamp  = 0LL;
-
-  if (   (progressInfo->text != NULL)
-      && (progressInfo->initFunction != NULL)
-     )
+  if (progressInfo != NULL)
   {
-    progressInfo->initFunction(String_cString(progressInfo->text),
-                               stepCount,
-                               progressInfo->initUserData
-                              );
+    progressInfo->stepCount              = stepCount;
+
+    progressInfo->startTimestamp         = Misc_getTimestamp();
+    progressInfo->step                   = 0LL;
+
+    progressInfo->filterTimeIndex        = 0;
+    progressInfo->filterTimeCount        = 0;
+    progressInfo->filterTimeSum          = 0;
+
+    progressInfo->lastTimestamp          = Misc_getTimestamp();
+
+    progressInfo->lastProgressSum        = 0L;
+    progressInfo->lastProgressCount      = 0;
+    progressInfo->lastProgressTimestamp  = 0LL;
+
+    if (   (progressInfo->text != NULL)
+        && (progressInfo->initFunction != NULL)
+       )
+    {
+      progressInfo->initFunction(String_cString(progressInfo->text),
+                                 stepCount,
+                                 progressInfo->initUserData
+                                );
+    }
   }
 }
 
@@ -144,80 +145,81 @@ void ProgressInfo_step(void *userData)
   uint64       estimatedTotalTime;  // [us]
   uint64       estimatedRestTime;  // [us]
 
-  assert(progressInfo != NULL);
-
-  progressInfo->step++;
-
-  if (progressInfo->stepCount > 0)
+  if (progressInfo != NULL)
   {
-    now         = Misc_getTimestamp();
-    elapsedTime = now-progressInfo->startTimestamp;
+    progressInfo->step++;
 
-    stepTime = elapsedTime/progressInfo->step;
-    progressInfo->lastTimestamp = now;
-
-    estimatedTotalTime = stepTime*progressInfo->stepCount;
-
-    if (progressInfo->filterWindowSize > 0)
+    if (progressInfo->stepCount > 0)
     {
-      // average filter of last N values
-      progressInfo->filterTimeSum =  progressInfo->filterTimeSum
-                                    +estimatedTotalTime
-                                    -((progressInfo->filterTimeCount >= progressInfo->filterWindowSize)
-                                       ? progressInfo->filterTimes[(progressInfo->filterTimeIndex+progressInfo->filterWindowSize-1)%progressInfo->filterTimeCount]
-                                       : 0
-                                     );
+      now         = Misc_getTimestamp();
+      elapsedTime = now-progressInfo->startTimestamp;
 
-      progressInfo->filterTimes[progressInfo->filterTimeIndex] = estimatedTotalTime;
-      progressInfo->filterTimeIndex = (progressInfo->filterTimeIndex+1) % progressInfo->filterWindowSize;
-      if (progressInfo->filterTimeCount < progressInfo->filterWindowSize) progressInfo->filterTimeCount++;
-    }
-    else
-    {
-      // average filter all values
-      progressInfo->filterTimeSum += estimatedTotalTime;
-    }
+      stepTime = elapsedTime/progressInfo->step;
+      progressInfo->lastTimestamp = now;
 
-    progress     = (progressInfo->step*1000)/progressInfo->stepCount;
-    lastProgress = (progressInfo->lastProgressCount > 0)
-                     ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount)
-                     : 0;
-    if (progress >= (lastProgress+1))
-    {
-      progressInfo->lastProgressSum   += progress;
-      progressInfo->lastProgressCount += 1;
-    }
+      estimatedTotalTime = stepTime*progressInfo->stepCount;
 
-    if (   (progressInfo->infoFunction != NULL)
-        && (progressInfo->step > 0LL)
-        && (   ((progressInfo->reportTime == 0) && (progress >= (lastProgress+1)))
-            || (now > (progressInfo->lastProgressTimestamp+progressInfo->reportTime*US_PER_MS))
-           )
-       )
-    {
       if (progressInfo->filterWindowSize > 0)
       {
-        estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->filterWindowSize;
+        // average filter of last N values
+        progressInfo->filterTimeSum =  progressInfo->filterTimeSum
+                                      +estimatedTotalTime
+                                      -((progressInfo->filterTimeCount >= progressInfo->filterWindowSize)
+                                         ? progressInfo->filterTimes[(progressInfo->filterTimeIndex+progressInfo->filterWindowSize-1)%progressInfo->filterTimeCount]
+                                         : 0
+                                       );
+
+        progressInfo->filterTimes[progressInfo->filterTimeIndex] = estimatedTotalTime;
+        progressInfo->filterTimeIndex = (progressInfo->filterTimeIndex+1) % progressInfo->filterWindowSize;
+        if (progressInfo->filterTimeCount < progressInfo->filterWindowSize) progressInfo->filterTimeCount++;
       }
       else
       {
-        estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->step;
+        // average filter all values
+        progressInfo->filterTimeSum += estimatedTotalTime;
       }
-      estimatedRestTime  = (elapsedTime < estimatedTotalTime) ? (ulong)(estimatedTotalTime-elapsedTime) : 0LL;
 
-      progressInfo->infoFunction(progress,
-                                 (ulong)(estimatedTotalTime/US_PER_SECOND),
-                                 (ulong)(estimatedRestTime/US_PER_SECOND),
-                                 progressInfo->infoUserData
-                                );
+      progress     = (progressInfo->step*1000)/progressInfo->stepCount;
+      lastProgress = (progressInfo->lastProgressCount > 0)
+                       ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount)
+                       : 0;
+      if (progress >= (lastProgress+1))
+      {
+        progressInfo->lastProgressSum   += progress;
+        progressInfo->lastProgressCount += 1;
+      }
 
-      progressInfo->lastProgressTimestamp = now;
+      if (   (progressInfo->infoFunction != NULL)
+          && (progressInfo->step > 0LL)
+          && (   ((progressInfo->reportTime == 0) && (progress >= (lastProgress+1)))
+              || (now > (progressInfo->lastProgressTimestamp+progressInfo->reportTime*US_PER_MS))
+             )
+         )
+      {
+        if (progressInfo->filterWindowSize > 0)
+        {
+          estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->filterWindowSize;
+        }
+        else
+        {
+          estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->step;
+        }
+        estimatedRestTime  = (elapsedTime < estimatedTotalTime) ? (ulong)(estimatedTotalTime-elapsedTime) : 0LL;
+
+        progressInfo->infoFunction(progress,
+                                   (ulong)(estimatedTotalTime/US_PER_SECOND),
+                                   (ulong)(estimatedRestTime/US_PER_SECOND),
+                                   progressInfo->infoUserData
+                                  );
+
+        progressInfo->lastProgressTimestamp = now;
+      }
     }
-  }
 
-  if (progressInfo->parent != NULL)
-  {
-    ProgressInfo_step(progressInfo->parent);
+    if (progressInfo->parent != NULL)
+    {
+      ProgressInfo_step(progressInfo->parent);
+    }
   }
 }
 
