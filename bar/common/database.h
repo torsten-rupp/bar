@@ -265,7 +265,6 @@ typedef struct DatabaseProgressHandlerNode
 
   DatabaseProgressHandlerFunction function;               // progress handler function
   void                            *userData;
-
 } DatabaseProgressHandlerNode;
 
 typedef struct
@@ -469,7 +468,7 @@ typedef struct DatabaseHandle
 // database column
 typedef struct
 {
-  char              *name;
+  const char        *name;
   const char        *alias;
   DatabaseDataTypes type;
 } DatabaseColumn;

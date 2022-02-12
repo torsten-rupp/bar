@@ -1013,10 +1013,11 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                maxSteps = getEntityImportStepsVersion7(oldDatabaseHandle,
                                                                        fromEntityId
                                                                       );
+
                                ProgressInfo_init(&subProgressInfo,
                                                  progressInfo,
-                                                 0,  // filterWindowSize
-                                                 500,
+                                                 32,  // filterWindowSize
+                                                 500,  // reportTime
                                                  maxSteps,
                                                  CALLBACK_(outputProgressInit,NULL),
                                                  CALLBACK_(outputProgressDone,NULL),
