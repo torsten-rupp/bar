@@ -680,7 +680,13 @@ void List_done(void                 *list,
   List_clear(list,listNodeFreeFunction,listNodeFreeUserData);
 }
 
+#ifdef NDEBUG
 List *List_new(void)
+#else /* not NDEBUG */
+List *__List_new(const char *fileName,
+                 ulong      lineNb
+                )
+#endif /* NDEBUG */
 {
   List *list;
 
