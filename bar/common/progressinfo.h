@@ -61,7 +61,7 @@ typedef void(*ProgressDoneFunction)(ulong totalTime,
 /***********************************************************************\
 * Name   : ProgressInfoFunction
 * Purpose: progress info function call back
-* Input  : progress           - progress [1/1000]
+* Input  : progress           - progress [%%]
 *          estimatedTotalTime - estimated total time [s]
 *          estimatedRestTime  - estimated rest time [s]
 *          userData           - user data
@@ -124,10 +124,10 @@ typedef struct ProgressInfo
 *          stepCount            - step count
 *          progressInitFunction - init function
 *          progressInitUserData - init function user data
-*          progressInitFunction - init function
-*          progressInitUserData - init function user data
-*          progressInitFunction - init function
-*          progressInitUserData - init function user data
+*          progressDoneFunction - done function
+*          progressDoneUserData - done function user data
+*          progressInfoFunction - info function
+*          progressInfoUserData - info function user data
 *          format               - text format string
 *          ...                  - optional arguments for text
 * Output : progressInfo - progress info

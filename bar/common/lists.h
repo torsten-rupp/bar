@@ -369,11 +369,12 @@ typedef enum
   while (0)
 
 #ifndef NDEBUG
-  #define List_init(...)          __List_init         (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_initDuplicate(...) __List_initDuplicate(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_duplicate(...)     __List_duplicate    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define List_newNode(...)       __List_newNode      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define List_deleteNode(...)    __List_deleteNode   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_init(...)          __List_init         (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_initDuplicate(...) __List_initDuplicate(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_new(...)           __List_new          (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_duplicate(...)     __List_duplicate    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define List_insert(...)        __List_insert       (__FILE__,__LINE__, ## __VA_ARGS__)
   #define List_append(...)        __List_append       (__FILE__,__LINE__, ## __VA_ARGS__)
   #define List_appendUniq(...)    __List_appendUniq   (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -491,22 +492,13 @@ void List_done(void                 *list,
 * Notes  : -
 \***********************************************************************/
 
-List *List_new(void);
-#if 0
 #ifdef NDEBUG
-void List_new(void *list,
-              void *node,
-              void *nextNode
-             );
+List *List_new(void);
 #else /* not NDEBUG */
-void __List_new(const char *fileName,
-                ulong      lineNb,
-                void       *list,
-                void       *node,
-                void       *nextNode
-               );
+List *__List_new(const char *fileName,
+                 ulong      lineNb
+                );
 #endif /* NDEBUG */
-#endif /* 0 */
 
 /***********************************************************************\
 * Name   : List_duplicate

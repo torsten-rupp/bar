@@ -5009,7 +5009,6 @@ LOCAL void formatParameters(String               sqlString,
 #endif /* NDEBUG */
 {
   Errors error;
-  uint   i;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);

@@ -148,6 +148,9 @@ LOCAL const char *toFileName                          = NULL;
 //LOCAL bool       helpFlag                             = FALSE;
 //LOCAL bool       xhelpFlag                            = FALSE;
 
+LOCAL char outputProgressBuffer[128];
+LOCAL uint outputProgressBufferLength;
+
 /****************************** Macros *********************************/
 
 /***********************************************************************\
@@ -935,8 +938,17 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
                         );
 }
 
-LOCAL char outputProgressBuffer[64];
-LOCAL uint outputProgressBufferLength;
+/***********************************************************************\
+* Name   : formatSubProgressInfo
+* Purpose: format sub-progress info call back
+* Input  : progress           - progress [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL void formatSubProgressInfo(uint  progress,
                                  ulong estimatedTotalTime,
@@ -947,10 +959,10 @@ LOCAL void formatSubProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-  if (estimatedRestTime < 99*60*60)
+  if (estimatedRestTime < (999*60*60))
   {
     stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%5.1f%% %2dh:%02dmin:%02ds",
+                 "%6.1f%% %2dh:%02dmin:%02ds",
                  (float)progress/10.0,
                  estimatedRestTime/(60*60),
                  estimatedRestTime%(60*60)/60,
@@ -960,7 +972,7 @@ LOCAL void formatSubProgressInfo(uint  progress,
   else
   {
     stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%5.1f%% --h:--min:--s",
+                 "%6.1f%% ---h:--min:--s",
                  (float)progress/10.0
                 );
   }
@@ -1013,10 +1025,11 @@ LOCAL void outputProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-  if (estimatedRestTime < 999*60*60)
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+  if (estimatedRestTime < (99999*60*60))
   {
     stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
-                       " / %5.1f%% %3dh:%02dmin:%02ds %c",
+                       " / %7.1f%% %5uh:%02umin:%02us %c",
                        (float)progress/10.0,
                        estimatedRestTime/(60*60),
                        estimatedRestTime%(60*60)/60,
@@ -1027,7 +1040,7 @@ LOCAL void outputProgressInfo(uint  progress,
   else
   {
     stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
-                       " / %5.1f%% ---h:--min:--s %c",
+                       " / %7.1f%% -----h:--min:--s %c",
                        (float)progress/10.0,
                        WHEEL[wheelIndex]
                       );
@@ -1089,8 +1102,6 @@ LOCAL void outputProgressDone(ulong totalTime,
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
-
-ProgressInfo *ppp;
 
 LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *databaseURI)
 {
@@ -1170,16 +1181,15 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
 #else
 maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
 #endif
-ppp=&progressInfo;
   ProgressInfo_init(&progressInfo,
                     NULL,  // parentProgressInfo
-                    0,  // filterWindowSize
-                    500,
+                    128,  // filterWindowSize
+                    500,  // reportTime
                     maxSteps,
                     CALLBACK_(NULL,NULL),  // progresInitFunction
                     CALLBACK_(outputProgressDone,NULL),
                     CALLBACK_(outputProgressInfo,NULL),
-                    NULL
+                    NULL  // text
                    );
 
   error = importIndexVersion7XXX(&oldDatabaseHandle,databaseHandle,&progressInfo);
@@ -8219,6 +8229,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          uint64     totalHardlinkSize;
                          ulong      totalSpecialCount;
                          DatabaseId uuidId;
+                         char       buffer[64];
                          const char *prefix;
                          uint       i;
 
@@ -8245,7 +8256,11 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          uuidId              = values[26].id;
 
                          printf("  Id              : %"PRIi64"\n",entityId);
-                         printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : "xxx");//TODO values[ 1]);
+                         printf("    Type          : %s\n",
+                                (type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS)
+                                  ? TYPE_NAMES[type]
+                                  : stringFormat(buffer,sizeof(buffer),"unknown (%d)",type)
+                               );
                          printf("    Job UUID      : %s\n",String_cString(values[ 2].string));
                          printf("    Schedule UUID : %s\n",String_cString(values[ 3].string));
                          printf("\n");
@@ -8493,8 +8508,16 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 printf("    Host name     : %s\n",String_cString(values[ 7].string));
                                                 printf("    User name     : %s\n",String_cString(values[ 8].string));
                                                 printf("    Comment       : %s\n",String_cString(values[ 9].string));
-                                                printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
-                                                printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
+                                                printf("    State         : %s\n",
+                                                       (state <= INDEX_CONST_STATE_ERROR)
+                                                         ? STATE_TEXT[state]
+                                                         : stringFormat(buffer,sizeof(buffer),"unknown (%d)",state)
+                                                      );
+                                                printf("    Mode          : %s\n",
+                                                       (mode <= INDEX_CONST_MODE_AUTO)
+                                                         ? MODE_TEXT[mode]
+                                                         : stringFormat(buffer,sizeof(buffer),"unknown (%d)",mode)
+                                                      );
                                                 printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
                                                 printf("    Error message : %s\n",(values[13].s != NULL) ? values[13].s : "");
                                                 printf("\n");
@@ -8693,6 +8716,7 @@ String_format(ftsSubSelect,"SELECT id FROM entries");
                          DatabaseId entityId;
                          DatabaseId uuidId;
                          bool       entityOutputFlag;
+                         char       buffer[64];
 
                          assert(values != NULL);
                          assert(valueCount == 2);
@@ -8724,7 +8748,11 @@ String_format(ftsSubSelect,"SELECT id FROM entries");
                                                 }
                                                 printf("    Id               : %"PRIi64"\n",values[0].id);
                                                 printf("      Name           : %s\n",String_cString(values[1].string));
-                                                printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : "xxx");//TODO values[2].i);
+                                                printf("      Type           : %s\n",
+                                                       (type <= INDEX_CONST_TYPE_HISTORY)
+                                                         ? TYPE_TEXT[type]
+                                                         : stringFormat(buffer,sizeof(buffer),"unknown (%d)",type)
+                                                      );
                                                 switch (type)
                                                 {
                                                   case INDEX_CONST_TYPE_FILE:
