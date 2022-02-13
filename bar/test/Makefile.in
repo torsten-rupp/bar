@@ -4446,7 +4446,9 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --storages $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --storages $(TEST_JOB_UUID) $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --header "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -H "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --names "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -n "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
 	@# newest entries in index
