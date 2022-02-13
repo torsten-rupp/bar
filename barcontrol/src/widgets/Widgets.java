@@ -9741,8 +9741,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   {
     if (!treeItem.isDisposed())
     {
-      if (data.compareTo(treeItem.getData()) == 0)
+      if (   (treeItem.getData() != null)
+          && (data.compareTo(treeItem.getData()) == 0)
+         )
       {
+        // remove tree item
         HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
 
         TreeEditor treeEditor = widgetCheckedMap.remove(treeItem);
@@ -9758,6 +9761,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       }
       else
       {
+        // check sub-tree items
         for (TreeItem subTreeItem : treeItem.getItems())
         {
           if (removeSubTreeItem(subTreeItem,data))

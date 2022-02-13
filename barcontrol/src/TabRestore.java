@@ -8650,6 +8650,7 @@ Dprintf.dprintf("");
                                              0  // debugLevel
                                             );
                   }
+Dprintf.dprintf("indexData=%s",indexData);
 
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
                   Widgets.removeTableItem(widgetStorageTable,indexData);

@@ -13479,9 +13479,12 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 
   if (condition)
   {
-    String_appendChar(filterString,' ');
-    String_appendCString(filterString,concatenator);
-    String_appendChar(filterString,' ');
+    if (!String_isEmpty(filterString))
+    {
+      String_appendChar(filterString,' ');
+      String_appendCString(filterString,concatenator);
+      String_appendChar(filterString,' ');
+    }
 
     va_start(arguments,format);
     String_appendVFormat(filterString,format,arguments);
