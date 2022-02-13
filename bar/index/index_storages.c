@@ -5340,8 +5340,30 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
             }
             break;
           case DATABASE_TYPE_MARIADB:
+            // nothing to do (use a view)
             break;
           case DATABASE_TYPE_POSTGRESQL:
+            {
+              String tokens;
+
+              tokens = IndexCommon_getPostgreSQLFTSTokens(storageName);
+              error = Database_update(&indexHandle->databaseHandle,
+                                      NULL,  // changedRowCount
+                                      "FTS_storages",
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_VALUES
+                                      (
+                                        DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                        DATABASE_VALUE_STRING("name",      "to_tsvector(?)",tokens)
+                                      ),
+                                      "storageId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(Index_getDatabaseId(storageId)),
+                                      )
+                                     );
+              String_delete(tokens);
+            }
             break;
         }
       }

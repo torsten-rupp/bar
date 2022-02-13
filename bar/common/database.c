@@ -13804,6 +13804,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
+// TODO: flags?
       #if defined(HAVE_POSTGRESQL)
         String_setCString(sqlString,"INSERT");
       #else /* HAVE_POSTGRESQL */

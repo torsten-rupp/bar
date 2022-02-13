@@ -167,29 +167,31 @@ String IndexCommon_getPostgreSQLFTSTokens(ConstString text)
   StringIterator stringIterator;
   Codepoint      codepoint;
 
-  assert(text != NULL);
+  tokens = String_new();
 
-  tokens    = String_new();
-  spaceFlag = FALSE;
-  STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
+  if (text != NULL)
   {
-    if (codepoint < 128)
+    spaceFlag = FALSE;
+    STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
     {
-      if      (isalnum((int)codepoint))
+      if (codepoint < 128)
+      {
+        if      (isalnum((int)codepoint))
+        {
+          String_appendCharUTF8(tokens,codepoint);
+          spaceFlag = FALSE;
+        }
+        else if (!spaceFlag)
+        {
+          String_appendChar(tokens,' ');
+          spaceFlag = TRUE;
+        }
+      }
+      else
       {
         String_appendCharUTF8(tokens,codepoint);
         spaceFlag = FALSE;
       }
-      else if (!spaceFlag)
-      {
-        String_appendChar(tokens,' ');
-        spaceFlag = TRUE;
-      }
-    }
-    else
-    {
-      String_appendCharUTF8(tokens,codepoint);
-      spaceFlag = FALSE;
     }
   }
 
@@ -205,7 +207,6 @@ String IndexCommon_getFTSMatchString(String         string,
   StringTokenizer stringTokenizer;
   ConstString     token;
   bool            addedTextFlag,addedPatternFlag;
-  uint            n;
   StringIterator  stringIterator;
   Codepoint       codepoint;
 
@@ -310,57 +311,61 @@ String IndexCommon_getFTSMatchString(String         string,
         String_formatAppend(string,"' IN BOOLEAN MODE)");
         break;
       case DATABASE_TYPE_POSTGRESQL:
-        String_formatAppend(string,"%s @@ to_tsquery('",columnName);
-
-        String_initTokenizer(&stringTokenizer,
-                             patternText,
-                             STRING_BEGIN,
-                             STRING_WHITE_SPACES,
-                             STRING_QUOTES,
-                             TRUE
-                            );
-        n = 0;
-        while (String_getNextToken(&stringTokenizer,&token,NULL))
         {
-          if (n > 0)
-          {
-            String_appendCString(string," & ");
-          }
+          bool firstTokenFlag;
 
-          addedTextFlag    = FALSE;
-          addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
-          {
-            if (isalnum(codepoint) || (codepoint >= 128))
-            {
-              if (addedPatternFlag)
-              {
-                String_appendChar(string,' ');
-                addedPatternFlag = FALSE;
-              }
-              String_appendCharUTF8(string,codepoint);
-              addedTextFlag = TRUE;
-            }
-            else
-            {
-              if (addedTextFlag && !addedPatternFlag)
-              {
-                String_appendCString(string,":*");
-                addedTextFlag    = FALSE;
-                addedPatternFlag = TRUE;
-              }
-            }
-          }
-          if (addedTextFlag && !addedPatternFlag)
-          {
-            String_appendCString(string,":*");
-          }
+          String_formatAppend(string,"%s @@ to_tsquery('",columnName);
 
-          n++;
+          String_initTokenizer(&stringTokenizer,
+                               patternText,
+                               STRING_BEGIN,
+                               STRING_WHITE_SPACES,
+                               STRING_QUOTES,
+                               TRUE
+                              );
+          firstTokenFlag = TRUE;
+          while (String_getNextToken(&stringTokenizer,&token,NULL))
+          {
+            if (!firstTokenFlag)
+            {
+              String_appendCString(string," & ");
+            }
+
+            addedTextFlag    = FALSE;
+            addedPatternFlag = FALSE;
+            STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
+            {
+              if (isalnum(codepoint) || (codepoint >= 128))
+              {
+                if (addedPatternFlag)
+                {
+                  String_appendCString(string," & ");
+                  addedPatternFlag = FALSE;
+                }
+                String_appendCharUTF8(string,codepoint);
+                addedTextFlag = TRUE;
+              }
+              else
+              {
+                if (addedTextFlag && !addedPatternFlag)
+                {
+                  String_appendCString(string,":*");
+                  addedTextFlag    = FALSE;
+                  addedPatternFlag = TRUE;
+                }
+              }
+            }
+            if (addedTextFlag && !addedPatternFlag)
+            {
+              String_appendCString(string,":*");
+            }
+
+            firstTokenFlag = FALSE;
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          String_formatAppend(string,"')");
         }
-        String_doneTokenizer(&stringTokenizer);
-
-        String_formatAppend(string,"')");
         break;
     }
   }
