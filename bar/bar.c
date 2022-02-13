@@ -541,8 +541,6 @@ LOCAL Errors initAll(void)
   Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-  instanceUUID                           = String_new();
-
   #ifdef HAVE_NEWLOCALE
     POSIXLocale                          = newlocale(LC_ALL,"POSIX",0);
   #endif /* HAVE_NEWLOCALE */
@@ -560,7 +558,6 @@ LOCAL Errors initAll(void)
 
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
-  AUTOFREE_ADD(&autoFreeList,instanceUUID,{ String_delete(instanceUUID); });
   AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
   AUTOFREE_ADD(&autoFreeList,jobUUID,{ String_delete(jobUUID); });
@@ -798,8 +795,6 @@ LOCAL void doneAll(void)
 
   List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
   Semaphore_done(&mountedList.lock);
-
-  String_delete(instanceUUID);
 
   Semaphore_done(&consoleLock);
   String_delete(tmpDirectory);

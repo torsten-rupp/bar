@@ -8210,11 +8210,15 @@ Errors Configuration_initAll(void)
 {
   initGlobalOptions();
 
+  instanceUUID = String_new();
+
   return ERROR_NONE;
 }
 
 void Configuration_doneAll(void)
 {
+  String_delete(instanceUUID);
+
   doneGlobalOptions();
 }
 

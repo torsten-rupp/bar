@@ -2127,12 +2127,6 @@ NULL // commentLineList
     return FALSE;
   }
 
-  // set UUID if not exists
-  if (String_isEmpty(jobNode->job.uuid))
-  {
-    Misc_getUUID(jobNode->job.uuid);
-  }
-
   // read schedule info (ignore errors)
   (void)Job_readScheduleInfo(jobNode);
 
@@ -2258,6 +2252,19 @@ Errors Job_rereadAll(ConstString jobsDirectory)
     }
   }
 
+  // create UUIDs if empty
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    JOB_LIST_ITERATE(jobNode)
+    {
+      if (String_isEmpty(jobNode->job.uuid))
+      {
+        Misc_getUUID(jobNode->job.uuid);
+        jobNode->modifiedFlag = TRUE;
+      }
+    }
+  }
+
   // check for duplicate UUIDs
   SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -2276,6 +2283,9 @@ Errors Job_rereadAll(ConstString jobsDirectory)
       jobNode1 = jobNode1->next;
     }
   }
+
+  // update jobs
+  Job_writeAllModified();
 
   // free resources
   String_delete(fileName);
@@ -2443,6 +2453,7 @@ Errors Job_write(JobNode *jobNode)
     }
 
     // write config
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(jobNode->fileName));
     error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
     if (error != ERROR_NONE)
     {
