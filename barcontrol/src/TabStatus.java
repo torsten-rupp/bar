@@ -3083,6 +3083,7 @@ public class TabStatus
 
     try
     {
+Dprintf.dprintf("jobData.uuid=%s",jobData.uuid);
       final ValueMap valueMap = new ValueMap();
       BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",jobData.uuid),
                                0,  // debugLevel
@@ -3104,6 +3105,8 @@ public class TabStatus
       long totalStorageSize            = valueMap.getLong("totalStorageSize");
       long totalEntryCount             = valueMap.getLong("totalEntryCount");
       long totalEntrySize              = valueMap.getLong("totalEntrySize");
+Dprintf.dprintf("executionCountFull=%d",executionCountFull);
+Dprintf.dprintf("averageDurationFull=%d",averageDurationFull);
 
       widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);

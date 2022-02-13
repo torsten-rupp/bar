@@ -2961,9 +2961,9 @@ LOCAL Errors runDaemon(void)
   openLog();
 
   // init UUID if needed (ignore errors)
-  if (String_isEmpty(uuid))
+  if (String_isEmpty(instanceUUID))
   {
-    Misc_getUUID(uuid);
+    Misc_getUUID(instanceUUID);
     error = Configuration_update();
     if (error != ERROR_NONE)
     {

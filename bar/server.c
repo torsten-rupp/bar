@@ -9902,7 +9902,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     newJobNode = Job_copy(jobNode,fileName);
     assert(newJobNode != NULL);
 
-    // get new UUID, set timestamp
+    // get new UUID
     Misc_getUUID(newJobNode->job.uuid);
 
     // free resources
