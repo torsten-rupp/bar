@@ -9495,7 +9495,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][12],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&uuidIds,&databaseId);
         }
@@ -9519,7 +9519,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&entityIds,&databaseId);
         }
@@ -9538,7 +9538,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][15],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&entityIds,&databaseId);
         }
@@ -9580,7 +9580,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][20],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&entityIds,&databaseId);
         }
@@ -9600,7 +9600,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&storageIds,&databaseId);
         }
@@ -9702,7 +9702,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-newest=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&storageIds,&databaseId);
         }
@@ -9721,7 +9721,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-directory-content=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&storageIds,&databaseId);
         }
@@ -9740,7 +9740,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-entities=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&entityIds,&databaseId);
         }
@@ -9759,7 +9759,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-storages=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&storageIds,&databaseId);
         }
@@ -9780,7 +9780,7 @@ uint xxxShow=0;
       stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
-        if (stringToInt64(token,&databaseId))
+        if (stringToInt64(token,&databaseId,NULL))
         {
           Array_append(&storageIds,&databaseId);
         }
