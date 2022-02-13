@@ -4291,7 +4291,7 @@ LOCAL bool configValueDeprecatedRemotePortParse(void *userData, void *variable, 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
 
-  if (!stringToUInt(value,&n))
+  if (!stringToUInt(value,&n,NULL))
   {
     stringFormat(errorMessage,errorMessageSize,"expected port number: 0..65535");
     return FALSE;

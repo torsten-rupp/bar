@@ -3877,12 +3877,14 @@ static inline bool stringToBool(const char *string, bool *b)
 * Purpose: convert string to int-value
 * Input  : string - string
 *          i      - value variable
-* Output : i - value
+*          tail   - tail variable (can be NULL)
+* Output : i    - value
+*          tail - not parsed tail part of string
 * Return : TRUE iff no error
-* Notes  :
+* Notes  : -
 \***********************************************************************/
 
-static inline bool stringToInt(const char *string, int *i)
+static inline bool stringToInt(const char *string, int *i, const char **tail)
 {
   long long int n;
   char          *s;
@@ -3891,7 +3893,8 @@ static inline bool stringToInt(const char *string, int *i)
   assert(i != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == NUL)
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
   {
     (*i) = (int)n;
     return TRUE;
@@ -3908,12 +3911,14 @@ static inline bool stringToInt(const char *string, int *i)
 * Purpose: convert string to uint-value
 * Input  : string - string
 *          i      - value variable
-* Output : i - value
+*          tail   - tail variable (can be NULL)
+* Output : i    - value
+*          tail - not parsed tail part of string
 * Return : TRUE iff no error
-* Notes  :
+* Notes  : -
 \***********************************************************************/
 
-static inline bool stringToUInt(const char *string, uint *i)
+static inline bool stringToUInt(const char *string, uint *i, const char **tail)
 {
   long long int n;
   char          *s;
@@ -3922,7 +3927,8 @@ static inline bool stringToUInt(const char *string, uint *i)
   assert(i != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == NUL)
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
   {
     (*i) = (uint)n;
     return TRUE;
@@ -3939,12 +3945,14 @@ static inline bool stringToUInt(const char *string, uint *i)
 * Purpose: convert string to int64-value
 * Input  : string - string
 *          l      - value variable
-* Output : l - value
+*          tail   - tail variable (can be NULL)
+* Output : l    - value
+*          tail - not parsed tail part of string
 * Return : TRUE iff no error
-* Notes  :
+* Notes  : -
 \***********************************************************************/
 
-static inline bool stringToInt64(const char *string, int64 *l)
+static inline bool stringToInt64(const char *string, int64 *l, const char **tail)
 {
   long long int n;
   char          *s;
@@ -3953,7 +3961,8 @@ static inline bool stringToInt64(const char *string, int64 *l)
   assert(l != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == NUL)
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
   {
     (*l) = (int64)n;
     return TRUE;
@@ -3970,12 +3979,14 @@ static inline bool stringToInt64(const char *string, int64 *l)
 * Purpose: convert string to uint64-value
 * Input  : string - string
 *          l      - value variable
-* Output : l - value
+*          tail   - tail variable (can be NULL)
+* Output : l    - value
+*          tail - not parsed tail part of string
 * Return : TRUE iff no error
-* Notes  :
+* Notes  : -
 \***********************************************************************/
 
-static inline bool stringToUInt64(const char *string, uint64 *l)
+static inline bool stringToUInt64(const char *string, uint64 *l, const char **tail)
 {
   long long int n;
   char          *s;
@@ -3984,7 +3995,8 @@ static inline bool stringToUInt64(const char *string, uint64 *l)
   assert(l != NULL);
 
   n = strtoll(string,&s,0);
-  if ((*s) == NUL)
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
   {
     (*l) = (uint64)n;
     return TRUE;
@@ -4001,12 +4013,14 @@ static inline bool stringToUInt64(const char *string, uint64 *l)
 * Purpose: convert string to double value
 * Input  : string - string
 *          d      - value variable
-* Output : d - value
+*          tail   - tail variable (can be NULL)
+* Output : d    - value
+*          tail - not parsed tail part of string
 * Return : TRUE iff no error
-* Notes  :
+* Notes  : -
 \***********************************************************************/
 
-static inline bool stringToDouble(const char *string, double *d)
+static inline bool stringToDouble(const char *string, double *d, const char **tail)
 {
   double n;
   char   *s;
@@ -4015,7 +4029,8 @@ static inline bool stringToDouble(const char *string, double *d)
   assert(d != NULL);
 
   n = strtod(string,&s);
-  if ((*s) == NUL)
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
   {
     (*d) = n;
     return TRUE;
@@ -4036,7 +4051,7 @@ static inline bool stringToDouble(const char *string, double *d)
 *          ...       - optional variables, last value have to be NULL!
 * Output : -
 * Return : TRUE iff string scanned with format
-* Notes  :
+* Notes  : -
 \***********************************************************************/
 
 bool stringVScan(const char *string, const char *format, va_list arguments);

@@ -1343,7 +1343,7 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
   if (text != NULL)
   {
     // try convert number value
-    if (stringToUInt64(text,&timestamp))
+    if (stringToUInt64(text,&timestamp,NULL))
     {
       // done
     }
@@ -2618,7 +2618,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                                  );
   if (   (postgresqlResult != NULL)
       && (PQresultStatus(postgresqlResult) == PGRES_TUPLES_OK)
-      && stringToUInt64(PQgetvalue(postgresqlResult,0,0),&n)
+      && stringToUInt64(PQgetvalue(postgresqlResult,0,0),&n,NULL)
      )
   {
     databaseId = (DatabaseId)n;
@@ -5956,7 +5956,8 @@ abort();
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
         {
-          uint i;
+          uint       i;
+          const char *tail;
 
           if (databaseStatementHandle->postgresql.rowIndex < databaseStatementHandle->postgresql.rowCount)
           {
@@ -5984,28 +5985,28 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
-                  stringToInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].id);
+                  stringToInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].id,&tail);
                   break;
                 case DATABASE_DATATYPE_BOOL:
                   stringToBool(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].b);
                   break;
                 case DATABASE_DATATYPE_INT:
-                  stringToInt(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].i);
+                  stringToInt(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].i,&tail);
                   break;
                 case DATABASE_DATATYPE_INT64:
-                  stringToInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].i64);
+                  stringToInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].i64,&tail);
                   break;
                 case DATABASE_DATATYPE_UINT:
-                  stringToUInt(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].u);
+                  stringToUInt(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].u,&tail);
                   break;
                 case DATABASE_DATATYPE_UINT64:
-                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].u64);
+                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].u64,&tail);
                   break;
                 case DATABASE_DATATYPE_DOUBLE:
-                  stringToDouble(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].d);
+                  stringToDouble(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].d,&tail);
                   break;
                 case DATABASE_DATATYPE_DATETIME:
-                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].dateTime);
+                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].dateTime,NULL);
                   break;
                 case DATABASE_DATATYPE_STRING:
                   String_setBuffer(databaseStatementHandle->results[i].string,
@@ -6025,6 +6026,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
                   #endif /* NDEBUG */
                   break;
               }
+              UNUSED_VARIABLE(tail);
 
               result = TRUE;
             }
