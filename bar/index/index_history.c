@@ -102,7 +102,6 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
-//TODO newest
                            "history \
                               LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
                            ",
@@ -115,10 +114,10 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_STRING  ("history.scheduleUUID"),
                              DATABASE_COLUMN_STRING  ("history.hostName"),
                              DATABASE_COLUMN_STRING  ("history.userName"),
-                             DATABASE_COLUMN_STRING  ("history.type"),
+                             DATABASE_COLUMN_UINT    ("history.type"),
                              DATABASE_COLUMN_DATETIME("history.created"),
                              DATABASE_COLUMN_STRING  ("history.errorMessage"),
-                             DATABASE_COLUMN_UINT    ("history.duration"),
+                             DATABASE_COLUMN_UINT64  ("history.duration"),
                              DATABASE_COLUMN_UINT    ("history.totalEntryCount"),
                              DATABASE_COLUMN_UINT64  ("history.totalEntrySize"),
                              DATABASE_COLUMN_UINT    ("history.skippedEntryCount"),
@@ -126,18 +125,12 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("history.errorEntryCount"),
                              DATABASE_COLUMN_UINT64  ("history.errorEntrySize")
                            ),
-                           stringFormat(sqlString,sizeof(sqlString),
-                                        " %s \
-                                          %s \
-                                        ",
-                                        String_cString(filterString),
-                                        String_cString(orderString)
-                                       ),
+                           String_cString(filterString),
                            DATABASE_FILTERS
                            (
                            ),
                            NULL,  // groupBy
-                           NULL,  // orderBy,
+                           String_cString(orderString),
                            offset,
                            limit
                           );

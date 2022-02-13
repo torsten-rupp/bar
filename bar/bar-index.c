@@ -6951,7 +6951,7 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
       case DATABASE_DATATYPE_BLOB:        break;
       default:                            break;
     }
-    printRowData->widths[i] = MAX(n,printRowData->widths[i]);
+    printRowData->widths[i] = MAX(printRowData->widths[i],n);
   }
 
   return ERROR_NONE;
@@ -7032,17 +7032,14 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
     }
     if (s != NULL)
     {
-      n = stringLength(s);
-      UNUSED_RESULT(fwrite(s,n,1,stdout));
+      n = stringLengthCodepointsUTF8(s);
+      UNUSED_RESULT(fwrite(s,1,n,stdout));
       if (printRowData->showHeaderFlag)
       {
         assert(printRowData->widths[i] >= n);
         printChars(' ',printRowData->widths[i]-n);
       }
-      else
-      {
-        putc(' ',stdout);
-      }
+      putc(' ',stdout);
     }
   }
   printf("\n");

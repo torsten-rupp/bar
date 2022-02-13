@@ -3490,8 +3490,8 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
 
   // get host name/encrypted UUID for authorization
   error = ServerIO_encryptData(&connectorInfo->io,
-                               String_cString(uuid),
-                               String_length(uuid),
+                               String_cString(instanceUUID),
+                               String_length(instanceUUID),
                                encryptedUUID
                               );
   if (error != ERROR_NONE)

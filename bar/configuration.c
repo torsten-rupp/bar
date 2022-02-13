@@ -75,7 +75,7 @@
 
 /***************************** Variables *******************************/
 GlobalOptions        globalOptions;
-String               uuid;
+String               instanceUUID;
 
 bool                 configModified;
 
@@ -7579,7 +7579,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SEPARATOR("general"),
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("UUID",                             &uuid,-1,                                                      "<uuid>"),
+  CONFIG_VALUE_STRING            ("UUID",                             &instanceUUID,-1,                                              "<uuid>"),
 
   CONFIG_VALUE_SPACE(),
 
