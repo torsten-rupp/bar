@@ -1502,7 +1502,6 @@ Dprintf.dprintf("");
     public void setState(IndexStates indexState)
     {
       this.indexState = indexState;
-//      update();
     }
 
     /** write storage index data object to object stream
@@ -1768,18 +1767,18 @@ Dprintf.dprintf("");
   {
     private final int PAGE_SIZE = 32;
 
-    private Object           trigger                       = new Object();   // trigger update object
-    private boolean          requestUpdateStorageCountSize = false;
-    private HashSet<Integer> requestUpdateOffsets          = new HashSet<Integer>();
-    private Command          storageCountCommand           = null;
-    private int              totalStorageCount             = 0;
-    private long             totalStorageSize              = 0;
-    private Command          storageTableCommand           = null;
-    private String           storageName                   = "";
-    private String           jobUUID                       = null;
-    private IndexStateSet    storageIndexStateSet          = INDEX_STATE_SET_ALL;
-    private EntityStates     storageEntityState            = EntityStates.ANY;
-    private boolean          requestSetUpdateIndicator     = false;          // true to set color/cursor on update
+    private Object           trigger                   = new Object();   // trigger update object
+    private boolean          requestUpdateStorageCount = false;
+    private HashSet<Integer> requestUpdateOffsets      = new HashSet<Integer>();
+    private Command          storageCountCommand       = null;
+    private int              totalStorageCount         = 0;
+    private long             totalStorageSize          = 0;
+    private Command          storageTableCommand       = null;
+    private String           storageName               = "";
+    private String           jobUUID                   = null;
+    private IndexStateSet    storageIndexStateSet      = INDEX_STATE_SET_ALL;
+    private EntityStates     storageEntityState        = EntityStates.ANY;
+    private boolean          requestSetUpdateIndicator = false;          // true to set color/cursor on update
 
     /** create update storage list thread
      */
@@ -1831,31 +1830,29 @@ Dprintf.dprintf("");
             try
             {
               // update count
-              if (   !this.requestUpdateStorageCountSize  // no new update count request pending
-                  && updateStorageCount                   // updated count requested
-                 )
+              if (updateStorageCount)
               {
                 updateStorageTableCount();
               }
 
               // update tree
               HashSet<TreeItem> expandedUUIDTreeItems = new HashSet<TreeItem>();
-              if (!this.requestUpdateStorageCountSize)
+              if (!this.requestUpdateStorageCount)
               {
                 updateUUIDTreeItems(expandedUUIDTreeItems);
               }
               HashSet<TreeItem> expandedEntityTreeItems = new HashSet<TreeItem>();
-              if (!this.requestUpdateStorageCountSize)
+              if (!this.requestUpdateStorageCount)
               {
                 updateEntityTreeItems(expandedUUIDTreeItems,expandedEntityTreeItems);
               }
-              if (!this.requestUpdateStorageCountSize)
+              if (!this.requestUpdateStorageCount)
               {
                 updateStorageTreeItems(expandedEntityTreeItems);
               }
 
               // update table
-              if (   !this.requestUpdateStorageCountSize  // no new update count request pending
+              if (   !this.requestUpdateStorageCount  // no new update count request pending
                   && !updateOffsets.isEmpty()             // updated offset requested
                  )
               {
@@ -1903,19 +1900,19 @@ Dprintf.dprintf("");
           // wait for trigger or sleep a short time
           synchronized(trigger)
           {
-            if (!this.requestUpdateStorageCountSize && this.requestUpdateOffsets.isEmpty())
+            if (!this.requestUpdateStorageCount && this.requestUpdateOffsets.isEmpty())
             {
               // wait for refresh request trigger or timeout
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // get update count, offsets to update
-            updateStorageCount = this.requestUpdateStorageCountSize;
+            updateStorageCount = this.requestUpdateStorageCount;
             updateOffsets.addAll(this.requestUpdateOffsets);
             setUpdateIndicator = this.requestSetUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
-            if (!this.requestUpdateStorageCountSize && this.requestUpdateOffsets.isEmpty())
+            if (!this.requestUpdateStorageCount && this.requestUpdateOffsets.isEmpty())
             {
               updateStorageCount = true;
               setUpdateIndicator = false;
@@ -1924,18 +1921,17 @@ Dprintf.dprintf("");
             // wait for immediate further triggers
             do
             {
-              this.requestUpdateStorageCountSize = false;
+              this.requestUpdateStorageCount = false;
               this.requestUpdateOffsets.clear();
               this.requestSetUpdateIndicator     = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
 
-              updateStorageCount |= this.requestUpdateStorageCountSize;
+              updateStorageCount |= this.requestUpdateStorageCount;
               updateOffsets.addAll(this.requestUpdateOffsets);
               setUpdateIndicator |= this.requestSetUpdateIndicator;
             }
-            while (this.requestUpdateStorageCountSize || !this.requestUpdateOffsets.isEmpty());
-//Dprintf.dprintf("%s entryName=%s",updateStorageCount,storageName);
+            while (this.requestUpdateStorageCount || !this.requestUpdateOffsets.isEmpty());
           }
 
           if (updateOffsets.isEmpty())
@@ -2017,7 +2013,7 @@ Dprintf.dprintf("");
           this.storageName                   = storageName;
           this.storageIndexStateSet          = storageIndexStateSet;
           this.storageEntityState            = storageEntityState;
-          this.requestUpdateStorageCountSize = true;
+          this.requestUpdateStorageCount = true;
           this.requestSetUpdateIndicator     = true;
           restart();
         }
@@ -2040,7 +2036,7 @@ Dprintf.dprintf("");
            )
         {
           this.storageName                   = storageName;
-          this.requestUpdateStorageCountSize = true;
+          this.requestUpdateStorageCount = true;
           this.requestSetUpdateIndicator     = true;
           restart();
         }
@@ -2064,7 +2060,7 @@ Dprintf.dprintf("");
           this.jobUUID                       = jobUUID;
           this.storageIndexStateSet          = storageIndexStateSet;
           this.storageEntityState            = storageEntityState;
-          this.requestUpdateStorageCountSize = true;
+          this.requestUpdateStorageCount = true;
           this.requestSetUpdateIndicator     = true;
           restart();
         }
@@ -2125,7 +2121,7 @@ Dprintf.dprintf("");
     {
       synchronized(trigger)
       {
-        this.requestUpdateStorageCountSize = true;
+        this.requestUpdateStorageCount = true;
         restart();
       }
     }
@@ -2135,14 +2131,14 @@ Dprintf.dprintf("");
      */
     private boolean isRequestUpdate()
     {
-      return requestUpdateStorageCountSize || !requestUpdateOffsets.isEmpty();
+      return requestUpdateStorageCount || !requestUpdateOffsets.isEmpty();
     }
 
     /** restart updates
      */
     private void restart()
     {
-      if (requestUpdateStorageCountSize)
+      if (requestUpdateStorageCount)
       {
         if (storageCountCommand != null) storageCountCommand.abort();
         if (storageTableCommand != null) storageTableCommand.abort();
@@ -2853,15 +2849,12 @@ Dprintf.dprintf("");
 
             if (!widgetStorageTable.isDisposed())
             {
-              if (oldTotalStorageCount != totalStorageCount)
-              {
-                widgetStorageTable.setRedraw(false);
+              widgetStorageTable.setRedraw(false);
 
-                widgetStorageTable.clearAll();
-                widgetStorageTable.setItemCount(totalStorageCount);
+              widgetStorageTable.clearAll();
+              widgetStorageTable.setItemCount(totalStorageCount);
 
-                widgetStorageTable.setRedraw(true);
-              }
+              widgetStorageTable.setRedraw(true);
             }
           }
         });
@@ -3409,17 +3402,17 @@ Dprintf.dprintf("");
   {
     private final int PAGE_SIZE = 32;
 
-    private Object           trigger                          = new Object();   // trigger update object
-    private boolean          requestUpdateTotalEntryCountSize = false;
-    private HashSet<Integer> requestUpdateOffsets             = new HashSet<Integer>();
-    private Command          totalEntryCountCommand           = null;
-    private long             totalEntryCount                  = 0;
-    private long             totalEntrySize                   = 0;
-    private Command          entryTableCommand                = null;
-    private EntryTypes       entryType                        = EntryTypes.ANY;
-    private String           name                             = "";
-    private boolean          newestOnly                       = false;
-    private boolean          requestSetUpdateIndicator        = false;          // true to set color/cursor on update
+    private Object           trigger                      = new Object();   // trigger update object
+    private boolean          requestUpdateTotalEntryCount = false;
+    private HashSet<Integer> requestUpdateOffsets         = new HashSet<Integer>();
+    private Command          totalEntryCountCommand       = null;
+    private long             totalEntryCount              = 0;
+    private long             totalEntrySize               = 0;
+    private Command          entryTableCommand            = null;
+    private EntryTypes       entryType                    = EntryTypes.ANY;
+    private String           name                         = "";
+    private boolean          newestOnly                   = false;
+    private boolean          requestSetUpdateIndicator    = false;          // true to set color/cursor on update
 
     /** create update entry list thread
      */
@@ -3473,15 +3466,11 @@ Dprintf.dprintf("");
           }
           try
           {
-            if (   !this.requestUpdateTotalEntryCountSize  // new update count request pending
-                && updateTotalEntryCount                   // updated count requested
-               )
+            if (updateTotalEntryCount)
             {
               updateEntryTableTotalEntryCount();
             }
-            if (   !this.requestUpdateTotalEntryCountSize  // new update count request pending
-                && !updateOffsets.isEmpty()                // updated offset requested
-               )
+            if (!updateOffsets.isEmpty())
             {
               updateEntryTableItems(updateOffsets);
             }
@@ -3523,18 +3512,18 @@ Dprintf.dprintf("");
           synchronized(trigger)
           {
             // wait for refresh request trigger or timeout
-            if (!this.requestUpdateTotalEntryCountSize && this.requestUpdateOffsets.isEmpty())
+            if (!this.requestUpdateTotalEntryCount && this.requestUpdateOffsets.isEmpty())
             {
               try { trigger.wait(5*60*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // check if update count, offsets to update
-            updateTotalEntryCount = this.requestUpdateTotalEntryCountSize;
+            updateTotalEntryCount = this.requestUpdateTotalEntryCount;
             updateOffsets.addAll(this.requestUpdateOffsets);
             setUpdateIndicator = this.requestSetUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
-            if (!this.requestUpdateTotalEntryCountSize && this.requestUpdateOffsets.isEmpty())
+            if (!this.requestUpdateTotalEntryCount && this.requestUpdateOffsets.isEmpty())
             {
               updateTotalEntryCount = true;
               setUpdateIndicator    = false;
@@ -3543,17 +3532,17 @@ Dprintf.dprintf("");
             // wait for immediate further triggers
             do
             {
-              this.requestUpdateTotalEntryCountSize = false;
+              this.requestUpdateTotalEntryCount = false;
               this.requestUpdateOffsets.clear();
-              this.requestSetUpdateIndicator        = false;
+              this.requestSetUpdateIndicator    = false;
 
               try { trigger.wait(2000); } catch (InterruptedException exception) { /* ignored */ };
 
-              updateTotalEntryCount |= this.requestUpdateTotalEntryCountSize;
+              updateTotalEntryCount |= this.requestUpdateTotalEntryCount;
               updateOffsets.addAll(this.requestUpdateOffsets);
               setUpdateIndicator |= this.requestSetUpdateIndicator;
             }
-            while (this.requestUpdateTotalEntryCountSize || !this.requestUpdateOffsets.isEmpty());
+            while (this.requestUpdateTotalEntryCount || !this.requestUpdateOffsets.isEmpty());
           }
 
           if (updateOffsets.isEmpty())
@@ -3643,7 +3632,7 @@ Dprintf.dprintf("");
           this.name                             = name;
           this.entryType                        = entryType;
           this.newestOnly                       = newestOnly;
-          this.requestUpdateTotalEntryCountSize = true;
+          this.requestUpdateTotalEntryCount = true;
           this.requestSetUpdateIndicator        = true;
           restart();
         }
@@ -3666,7 +3655,7 @@ Dprintf.dprintf("");
            )
         {
           this.name                             = name;
-          this.requestUpdateTotalEntryCountSize = true;
+          this.requestUpdateTotalEntryCount = true;
           this.requestSetUpdateIndicator        = true;
           restart();
         }
@@ -3683,7 +3672,7 @@ Dprintf.dprintf("");
         if (entryType != this.entryType)
         {
           this.entryType                        = entryType;
-          this.requestUpdateTotalEntryCountSize = true;
+          this.requestUpdateTotalEntryCount = true;
           this.requestSetUpdateIndicator        = true;
           restart();
         }
@@ -3701,7 +3690,7 @@ Dprintf.dprintf("");
         if (this.newestOnly != newestOnly)
         {
           this.newestOnly                       = newestOnly;
-          this.requestUpdateTotalEntryCountSize = true;
+          this.requestUpdateTotalEntryCount = true;
           this.requestSetUpdateIndicator        = true;
           restart();
         }
@@ -3730,7 +3719,7 @@ Dprintf.dprintf("");
     {
       synchronized(trigger)
       {
-        this.requestUpdateTotalEntryCountSize = true;
+        this.requestUpdateTotalEntryCount = true;
         restart();
       }
     }
@@ -3740,14 +3729,14 @@ Dprintf.dprintf("");
      */
     private boolean isRequestUpdate()
     {
-      return requestUpdateTotalEntryCountSize || !requestUpdateOffsets.isEmpty();
+      return requestUpdateTotalEntryCount || !requestUpdateOffsets.isEmpty();
     }
 
     /** restart updates
      */
     private void restart()
     {
-      if (requestUpdateTotalEntryCountSize)
+      if (requestUpdateTotalEntryCount)
       {
         if (totalEntryCountCommand != null) totalEntryCountCommand.abort();
         if (entryTableCommand      != null) entryTableCommand.abort();
@@ -7766,10 +7755,8 @@ Dprintf.dprintf("");
           return false;
         }
 
-Dprintf.dprintf("------------------------------------------------------");
         if (!busyDialog.isAborted())
         {
-Dprintf.dprintf("indexDataHashSet=%s",indexDataHashSet);
           for (IndexData indexData : indexDataHashSet)
           {
             String info = indexData.getInfo();
@@ -8059,7 +8046,8 @@ Dprintf.dprintf("indexDataHashSet=%s",indexDataHashSet);
         busyDialog.close();
         BARControl.resetCursor();
       }
-      updateStorageTreeTableThread.triggerUpdate();
+
+      updateEntryTableThread.triggerUpdate();
     }
   }
 
@@ -8652,7 +8640,6 @@ Dprintf.dprintf("indexDataHashSet=%s",indexDataHashSet);
                                              0  // debugLevel
                                             );
                   }
-Dprintf.dprintf("indexData=%s",indexData);
 
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
                   Widgets.removeTableItem(widgetStorageTable,indexData);
@@ -9784,7 +9771,6 @@ Dprintf.dprintf("indexData=%s",indexData);
                                          1,  // debugLevel
                                          valueMap
                                         );
-Dprintf.dprintf("valueMap=%s",valueMap);
                 data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
                 data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount");
