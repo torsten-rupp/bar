@@ -1825,9 +1825,9 @@ Errors Database_compare(DatabaseHandle     *databaseHandleReference,
 *          copyPauseCallbackUserData    - user data for pause call-back
 *          copyProgressCallbackFunction - pause call-back
 *          copyProgressCallbackUserData - user data for pause call-back
-*          fromAdditional               - additional SQL condition
-*          ...                          - optional arguments for
-*                                         additional SQL condition
+*          filter                       - filter string
+*          filters                      - filter values
+*          filterCount                  - filter values count
 * Output : duration - duration [ms]
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1847,8 +1847,13 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
                           void                                 *copyPauseCallbackUserData,
                           DatabaseCopyProgressCallbackFunction copyProgressCallbackFunction,
                           void                                 *copyProgressCallbackUserData,
-                          const char                           *fromAdditional,
-                          ...
+                          const char                           *filter,
+                          const DatabaseFilter                 filters[],
+                          uint                                 filterCount,
+                          const char                           *groupBy,
+                          const char                           *orderBy,
+                          uint64                               offset,
+                          uint64                               limit
                          );
 
 /***********************************************************************\

@@ -11775,9 +11775,13 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
                           void                                 *copyPauseCallbackUserData,
                           DatabaseCopyProgressCallbackFunction copyProgressCallbackFunction,
                           void                                 *copyProgressCallbackUserData,
-// TODO: filter
-                          const char                           *fromAdditional,
-                          ...
+                          const char                           *filter,
+                          const DatabaseFilter                 filters[],
+                          uint                                 filterCount,
+                          const char                           *groupBy,
+                          const char                           *orderBy,
+                          uint64                               offset,
+                          uint64                               limit
                          )
 {
   /* mappings:
@@ -11833,6 +11837,7 @@ char      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS][200];
   uint                    i,j;
   uint                    n;
   String                  sqlSelectString,sqlInsertString;
+  uint                    selectParameterCount;
 
   DatabaseColumnInfo      fromColumnInfo,toColumnInfo;
 
@@ -11936,22 +11941,34 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   parameterValueCount = parameterMapCount;
 
   // create SQL select statement strings
-  sqlSelectString = String_format(String_new(),"SELECT ");
+  sqlSelectString      = String_format(String_new(),"SELECT ");
+  selectParameterCount = 0;
   for (i = 0; i < fromColumnCount; i++)
   {
     if (i > 0) String_appendChar(sqlSelectString,',');
     String_appendCString(sqlSelectString,fromColumns[i].name);
   }
   String_formatAppend(sqlSelectString," FROM %s",fromTableName);
-  if (fromAdditional != NULL)
+  if (filter != NULL)
   {
-    String_appendChar(sqlSelectString,' ');
-    va_start(arguments,fromAdditional);
-    vformatSQLString(sqlSelectString,
-                     fromAdditional,
-                     arguments
-                    );
-    va_end(arguments);
+    String_appendCString(sqlSelectString," WHERE ");
+    formatParameters(sqlSelectString,fromDatabaseHandle,filter,&selectParameterCount);
+  }
+  if (!stringIsEmpty(groupBy))
+  {
+    String_formatAppend(sqlSelectString," GROUP BY %s",groupBy);
+  }
+  if (!stringIsEmpty(orderBy))
+  {
+    String_formatAppend(sqlSelectString," ORDER BY %s",orderBy);
+  }
+  if (limit < DATABASE_UNLIMITED)
+  {
+    String_formatAppend(sqlSelectString," LIMIT %"PRIu64,limit);
+  }
+  if (offset > 0LL)
+  {
+    String_formatAppend(sqlSelectString," OFFSET %"PRIu64,offset);
   }
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
 //fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
@@ -11977,19 +11994,39 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   error = prepareStatement(&fromDatabaseStatementHandle,
                            fromDatabaseHandle,
                            String_cString(sqlSelectString),
-                           0
+                           selectParameterCount
                           );
   if (error != ERROR_NONE)
   {
+    String_delete(sqlInsertString);
+    String_delete(sqlSelectString);
     freeTableColumns(toColumns,toColumnCount);
     freeTableColumns(fromColumns,fromColumnCount);
     return error;
+  }
+  if (filter != NULL)
+  {
+    error = bindFilters(&fromDatabaseStatementHandle,
+                        filters,
+                        filterCount
+                       );
+    if (error != ERROR_NONE)
+    {
+      finalizeStatement(&fromDatabaseStatementHandle);
+      String_delete(sqlInsertString);
+      String_delete(sqlSelectString);
+      freeTableColumns(toColumns,toColumnCount);
+      freeTableColumns(fromColumns,fromColumnCount);
+      return error;
+    }
   }
 //fprintf(stderr,"%s:%d: bind from results %d\n",__FILE__,__LINE__,fromColumnCount);
   error = bindResults(&fromDatabaseStatementHandle,fromColumns,fromColumnCount);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&fromDatabaseStatementHandle);
+    String_delete(sqlInsertString);
+    String_delete(sqlSelectString);
     freeTableColumns(toColumns,toColumnCount);
     freeTableColumns(fromColumns,fromColumnCount);
     return error;
@@ -12006,6 +12043,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   if (error != ERROR_NONE)
   {
     finalizeStatement(&fromDatabaseStatementHandle);
+    String_delete(sqlInsertString);
+    String_delete(sqlSelectString);
     freeTableColumns(toColumns,toColumnCount);
     freeTableColumns(fromColumns,fromColumnCount);
     return error;
@@ -12034,6 +12073,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       {
         finalizeStatement(&toDatabaseStatementHandle);
         finalizeStatement(&fromDatabaseStatementHandle);
+        String_delete(sqlInsertString);
+        String_delete(sqlSelectString);
         freeTableColumns(toColumns,toColumnCount);
         freeTableColumns(fromColumns,fromColumnCount);
         return error;
@@ -12042,7 +12083,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
     // copy rows
     n = 0;
-#if 1
     error = executePreparedStatement(&fromDatabaseStatementHandle,
                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                      {
@@ -12052,7 +12092,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                                        UNUSED_VARIABLE(valueCount);
                                        UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);
                                        #ifdef DATABASE_DEBUG_COPY_TABLE
                                          rowCount++;
                                        #endif /* DATABASE_DEBUG_COPY_TABLE */
@@ -12281,260 +12320,12 @@ toDatabaseStatementHandle.parameterIndex=0;
                                     );
     if (error != ERROR_NONE)
     {
-      finalizeStatement(&toDatabaseStatementHandle);
-      finalizeStatement(&fromDatabaseStatementHandle);
       if (transactionFlag)
       {
        (void)Database_rollbackTransaction(toDatabaseHandle);
       }
       return error;
     }
-#else
-    while (getNextRow(&fromDatabaseStatementHandle,DATABASE_FLAG_NONE,fromDatabaseHandle->timeout))
-    {
-//fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);
-      #ifdef DATABASE_DEBUG_COPY_TABLE
-        rowCount++;
-      #endif /* DATABASE_DEBUG_COPY_TABLE */
-
-      // set parameter-values
-      for (i = 0; i < parameterMapCount; i++)
-      {
-        memCopyFast(&parameterValues[i].data,
-                    sizeof(parameterValues[i].data),
-                    &fromDatabaseStatementHandle.results[parameterMap[toColumnMap[i]]].data,
-                    sizeof(fromDatabaseStatementHandle.results[parameterMap[toColumnMap[i]]].data)
-                   );
-#if 0
-fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
-(i < parameterMapCount) ? toColumnMap[parameterMap[i]] : -1,
-(i < parameterMapCount) ? parameterMap[i] : -1,
-i,
-fromColumnNames[toColumnMap[parameterMap[i]]],
-toColumnNames[parameterMap[i]],
-DATABASE_DATATYPE_NAMES[fromColumnTypes[toColumnMap[parameterMap[i]]]],
-DATABASE_DATATYPE_NAMES[toColumnTypes[parameterMap[i]]],
-debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromValues[toColumnMap[parameterMap[i]]]),
-debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
-);
-#endif
-      }
-
-      for (i = 0; i < toColumnMapCount; i++)
-      {
-        memCopyFast(&toValues[i].data,
-                    sizeof(toValues[i].data),
-                    &fromDatabaseStatementHandle.results[toColumnMap[i]].data,
-                    sizeof(fromDatabaseStatementHandle.results[toColumnMap[i]].data)
-                   );
-      }
-
-      // call pre-copy callback (if defined)
-      if (preCopyTableFunction != NULL)
-      {
-        BLOCK_DOX(error,
-                  end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
-                  begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
-        {
-          return preCopyTableFunction(&fromColumnInfo,
-                                      &toColumnInfo,
-                                      preCopyTableUserData
-                                     );
-        });
-        if (error != ERROR_NONE)
-        {
-          finalizeStatement(&toDatabaseStatementHandle);
-          finalizeStatement(&fromDatabaseStatementHandle);
-          if (transactionFlag)
-          {
-            (void)Database_rollbackTransaction(toDatabaseHandle);
-          }
-          return error;
-        }
-
-        // copy parameter data
-        for (i = 0; i < parameterMapCount; i++)
-        {
-          memCopyFast(&parameterValues[i].data,
-                      sizeof(parameterValues[i].data),
-                      &toColumnInfo.values[parameterMap[i]].data,
-                      sizeof(toColumnInfo.values[parameterMap[i]].data)
-                   );
-
-          // fix broken UTF8 encodings
-          switch (parameterValues[i].type)
-          {
-            case DATABASE_DATATYPE_STRING:
-              String_makeValidUTF8(parameterValues[i].string,STRING_BEGIN);
-              assert(String_isValidUTF8(parameterValues[i].string,STRING_BEGIN));
-              break;
-            case DATABASE_DATATYPE_CSTRING:
-              HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-              break;
-            default:
-              break;
-          }
-        }
-      }
-
-      // insert row
-//fprintf(stderr,"%s:%d: bind insert parameter values %d\n",__FILE__,__LINE__,parameterValueCount);
-// TODO: implement resetBindValues()
-toDatabaseStatementHandle.parameterIndex=0;
-      error = bindValues(&toDatabaseStatementHandle,parameterValues,parameterValueCount);
-      if (error != ERROR_NONE)
-      {
-        finalizeStatement(&toDatabaseStatementHandle);
-        finalizeStatement(&fromDatabaseStatementHandle);
-        if (transactionFlag)
-        {
-          (void)Database_rollbackTransaction(toDatabaseHandle);
-        }
-        return error;
-      }
-      error = executePreparedQuery(&toDatabaseStatementHandle,
-                                   NULL,  // changeRowCount
-                                   toDatabaseHandle->timeout
-                                  );
-      if (error != ERROR_NONE)
-      {
-        finalizeStatement(&toDatabaseStatementHandle);
-        finalizeStatement(&fromDatabaseStatementHandle);
-        if (transactionFlag)
-        {
-          (void)Database_rollbackTransaction(toDatabaseHandle);
-        }
-        return error;
-      }
-
-      // get insert id
-      lastRowId = getLastInsertRowId(&toDatabaseStatementHandle);
-      if (toColumnPrimaryKeyIndex != UNUSED)
-      {
-        toValues[toColumnPrimaryKeyIndex].id = lastRowId;
-      }
-
-      // call post-copy callback (if defined)
-      if (postCopyTableFunction != NULL)
-      {
-        BLOCK_DOX(error,
-                  end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
-                  begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
-        {
-          return postCopyTableFunction(&fromColumnInfo,
-                                       &toColumnInfo,
-                                       postCopyTableUserData
-                                      );
-        });
-        if (error != ERROR_NONE)
-        {
-          finalizeStatement(&toDatabaseStatementHandle);
-          finalizeStatement(&fromDatabaseStatementHandle);
-          if (transactionFlag)
-          {
-            (void)Database_rollbackTransaction(toDatabaseHandle);
-          }
-          return error;
-        }
-      }
-
-      n++;
-
-      // progress
-      if (copyProgressCallbackFunction != NULL)
-      {
-        copyProgressCallbackFunction(copyProgressCallbackUserData);
-      }
-
-      // pause
-      if ((copyPauseCallbackFunction != NULL) && copyPauseCallbackFunction(copyPauseCallbackUserData))
-      {
-        // end transaction
-        if (transactionFlag)
-        {
-          error = Database_endTransaction(toDatabaseHandle);
-          if (error != ERROR_NONE)
-          {
-            finalizeStatement(&toDatabaseStatementHandle);
-            finalizeStatement(&fromDatabaseStatementHandle);
-            return error;
-          }
-        }
-
-        END_TIMER();
-
-        // wait
-        BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
-                   end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
-                 },
-                 { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ,WAIT_FOREVER);
-                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-                 },
-        {
-          do
-          {
-            Misc_udelay(10LL*US_PER_SECOND);
-          }
-          while (copyPauseCallbackFunction(copyPauseCallbackUserData));
-        });
-
-        START_TIMER();
-
-        // begin transaction
-        if (transactionFlag)
-        {
-          error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
-          if (error != ERROR_NONE)
-          {
-            finalizeStatement(&toDatabaseStatementHandle);
-            finalizeStatement(&fromDatabaseStatementHandle);
-            return error;
-          }
-        }
-      }
-
-      // interrupt copy
-      if (n > MAX_INTERRUPT_COPY_TABLE_COUNT)
-      {
-        if (   Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ)
-            || Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE)
-           )
-        {
-          // end transaction
-          if (transactionFlag)
-          {
-            error = Database_endTransaction(toDatabaseHandle);
-            if (error != ERROR_NONE)
-            {
-              finalizeStatement(&toDatabaseStatementHandle);
-              finalizeStatement(&fromDatabaseStatementHandle);
-              return error;
-            }
-          }
-
-          END_TIMER();
-
-          Thread_yield();
-
-          START_TIMER();
-
-          // begin transaction
-          if (transactionFlag)
-          {
-            error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
-            if (error != ERROR_NONE)
-            {
-              finalizeStatement(&toDatabaseStatementHandle);
-              finalizeStatement(&fromDatabaseStatementHandle);
-              return error;
-            }
-          }
-        }
-
-        n = 0;
-      }
-    }  // while
-#endif
 
     // end transaction
     if (transactionFlag)
@@ -12542,8 +12333,6 @@ toDatabaseStatementHandle.parameterIndex=0;
       error = Database_endTransaction(toDatabaseHandle);
       if (error != ERROR_NONE)
       {
-        finalizeStatement(&toDatabaseStatementHandle);
-        finalizeStatement(&fromDatabaseStatementHandle);
         return error;
       }
     }
@@ -13158,7 +12947,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                CALLBACK_(NULL,NULL),
                                CALLBACK_(NULL,NULL),
                                CALLBACK_(NULL,NULL),
-                               NULL  // fromAdditional
+                               DATABASE_FILTERS_NONE,
+                               NULL,  // groupBy
+                               NULL,  // orderby
+                               0L,
+                               DATABASE_UNLIMITED
                               );
     if (error != ERROR_NONE)
     {
