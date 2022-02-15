@@ -447,8 +447,11 @@ BAR_SOURCES_OTHER           = forward.h \
                               \
                               archive_format.pl \
                               archive_format.def \
-                              index_definition.pl \
-                              index_definition.def \
+                              index/index_definition.pl \
+                              index/index_common.def \
+                              index/index_sqlite3.def \
+                              index/index_mariadb.def \
+                              index/index_postgresql.def \
                               valgrind.supp \
                               bar.cfg \
                               bar-keygen.in \
@@ -607,11 +610,11 @@ BAR_INDEX_SOURCES_COMMON    = common/global.c \
 
 BAR_INDEX_HEADERS_COMMON    = \
 
-BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
-                              index_common.def \
-                              index_sqlite.def \
-                              index_mariadb.def \
-                              index_postgresql.def \
+BAR_INDEX_SOURCES_OTHER     = index/index_definition.pl \
+                              index/index_common.def \
+                              index/index_sqlite3.def \
+                              index/index_mariadb.def \
+                              index/index_postgresql.def \
                               index/index_current.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
@@ -1070,16 +1073,16 @@ valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
 index_definition.c index_definition.h: \
-  $(SOURCE_DIR)/index_definition.pl \
-  $(SOURCE_DIR)/index_common.def \
-  $(SOURCE_DIR)/index_sqlite.def \
-  $(SOURCE_DIR)/index_mariadb.def \
-  $(SOURCE_DIR)/index_postgresql.def
-	$(PERL) $(SOURCE_DIR)/index_definition.pl \
-	  --common $(SOURCE_DIR)/index_common.def \
-	  --sqlite $(SOURCE_DIR)/index_sqlite.def \
-	  --mariadb $(SOURCE_DIR)/index_mariadb.def \
-	  --postgresql $(SOURCE_DIR)/index_postgresql.def \
+  $(SOURCE_DIR)/index/index_definition.pl \
+  $(SOURCE_DIR)/index/index_common.def \
+  $(SOURCE_DIR)/index/index_sqlite3.def \
+  $(SOURCE_DIR)/index/index_mariadb.def \
+  $(SOURCE_DIR)/index/index_postgresql.def
+	$(PERL) $(SOURCE_DIR)/index/index_definition.pl \
+	  --common $(SOURCE_DIR)/index/index_common.def \
+	  --sqlite $(SOURCE_DIR)/index/index_sqlite3.def \
+	  --mariadb $(SOURCE_DIR)/index/index_mariadb.def \
+	  --postgresql $(SOURCE_DIR)/index/index_postgresql.def \
 	  --source index_definition.c \
 	  --header index_definition.h
 release/index_definition.o: index_definition.c index_definition.h
