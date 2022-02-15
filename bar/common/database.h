@@ -1238,16 +1238,42 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 //Database_delete(indexDatabaseSpecifier,databaseName);
 
 /***********************************************************************\
+* Name   : Database_create
+* Purpose: create database
+* Input  : databaseSpecifier - database specifier
+*          databaseName      - database name or NULL for naem from
+*                              database specifier
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
+                       const char              *databaseName
+                      );
+
+/***********************************************************************\
+* Name   : Database_drop
+* Purpose: drop database
+* Input  : databaseSpecifier - database specifier
+*          databaseName      - database name or NULL for naem from
+*                              database specifier
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
+                     const char              *databaseName
+                    );
+
+/***********************************************************************\
 * Name   : Database_open
 * Purpose: open database
-* Input  : databaseHandle   - database handle variable
-*          uri              - database URI:
-*                               - [(sqlite|sqlite3):]file name, NULL for
-*                                 sqlite3 "in memory",
-*                               - mariadb:<server>:<user>[:<database>]
-*                               - postgresql:<server>:<user>[:<database>]
-*          databaseOpenMode - open mode; see DatabaseOpenModes
-*          timeout          - timeout [ms] or WAIT_FOREVER
+* Input  : databaseHandle    - database handle variable
+*          databaseSpecifier - database specifier
+*          databaseOpenMode  - open mode; see DatabaseOpenModes
+*          timeout           - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -

@@ -1765,7 +1765,9 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 /***********************************************************************\
 * Name   : mysqlCreateDatabase
 * Purpose: create MariaDB database
-* Input  : handle       - MySQL handle
+* Input  : serverName   - server name
+*          userName     - user name
+*          password     - password
 *          databaseName - database name
 *          characterSet - character set name
 * Output : -
@@ -1773,17 +1775,65 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlCreateDatabase(MYSQL      *handle,
-                                 const char *databaseName,
-                                 const char *characterSet
+LOCAL Errors mysqlCreateDatabase(const char     *serverName,
+                                 const char     *userName,
+                                 const Password *password,
+                                 const char     *databaseName,
+                                 const char     *characterSet
                                 )
 {
-  char   sqlString[256];
-  int    mysqlResult;
-  Errors error;
+  MYSQL      *handle;
+  union
+  {
+    bool b;
+    uint u;
+  }          optionValue;
+  const char *deployPassword;
+  char       sqlString[256];
+  int        mysqlResult;
+  Errors     error;
 
-  assert(handle != NULL);
+  assert(serverName != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
   assert(databaseName != NULL);
+  assert(characterSet != NULL);
+
+  // open database
+  handle = mysql_init(NULL);
+  if (handle == NULL)
+  {
+    return ERROR_DATABASE;
+  }
+  optionValue.b = TRUE;
+  mysql_options(handle,MYSQL_OPT_RECONNECT,&optionValue);
+  optionValue.u = MARIADB_TIMEOUT;
+  mysql_options(handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+  mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+
+  // connect
+  deployPassword = Password_deploy(password);
+  if (mysql_real_connect(handle,
+                         serverName,
+                         userName,
+                         deployPassword,
+                         NULL,  // databaseName
+                         0,  // port
+                         NULL, // unix socket
+                         0  // client flag
+                        ) == NULL
+     )
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+    Password_undeploy(password,deployPassword);
+    mysql_close(handle);
+    return error;
+  }
+  Password_undeploy(password,deployPassword);
 
   stringFormat(sqlString,sizeof(sqlString),
                "CREATE DATABASE IF NOT EXISTS %s \
@@ -1793,6 +1843,117 @@ LOCAL Errors mysqlCreateDatabase(MYSQL      *handle,
                databaseName,
                characterSet,
                characterSet
+              );
+
+  mysqlResult = mysql_query(handle,sqlString);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  mysql_close(handle);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlDropDatabase
+* Purpose: drop MariaDB database
+* Input  : serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlDropDatabase(const char     *serverName,
+                               const char     *userName,
+                               const Password *password,
+                               const char     *databaseName
+                              )
+{
+  MYSQL      *handle;
+  union
+  {
+    bool b;
+    uint u;
+  }          optionValue;
+  const char *deployPassword;
+  char       sqlString[256];
+  int        mysqlResult;
+  Errors     error;
+
+  assert(serverName != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
+  assert(databaseName != NULL);
+
+  // open database
+  handle = mysql_init(NULL);
+  if (handle == NULL)
+  {
+    return ERROR_DATABASE;
+  }
+  optionValue.b = TRUE;
+  mysql_options(handle,MYSQL_OPT_RECONNECT,&optionValue);
+  optionValue.u = MARIADB_TIMEOUT;
+  mysql_options(handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+  mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+
+  // connect
+  deployPassword = Password_deploy(password);
+  if (mysql_real_connect(handle,
+                         serverName,
+                         userName,
+                         deployPassword,
+                         NULL,  // databaseName
+                         0,  // port
+                         NULL, // unix socket
+                         0  // client flag
+                        ) == NULL
+     )
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+    Password_undeploy(password,deployPassword);
+    mysql_close(handle);
+    return error;
+  }
+  Password_undeploy(password,deployPassword);
+
+  stringFormat(sqlString,sizeof(sqlString),
+               "DROP DATABASE %s",
+               databaseName
               );
 
   mysqlResult = mysql_query(handle,sqlString);
@@ -2161,7 +2322,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
   PGresult       *postgresqlResult;
   Errors         error;
 
-  // connect (with database template1)
+  // connect (with database 'template1')
   deployPassword = Password_deploy(password);
   POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
   POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
@@ -2205,6 +2366,104 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                "CREATE DATABASE %s WITH OWNER=%s",
                databaseName,
                userName
+              );
+  postgresqlResult = PQexec(handle,sqlString);
+  if (postgresqlResult != NULL)
+  {
+    // Note: ignore status
+    error = ERROR_NONE;
+    PQclear(postgresqlResult);
+  }
+  else
+  {
+    error = ERRORX_(DATABASE,
+                    0,
+                    "%s",
+                    PQerrorMessage(handle)
+                   );
+  }
+
+  // disconnect
+  PQfinish(handle);
+
+  return error;
+
+  #undef POSTGRESQL_CONNECT_PARAMETER
+}
+
+/***********************************************************************\
+* Name   : postgresqlDropDatabase
+* Purpose: drop PostgreSQL database (if it does not exists)
+* Input  : serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors postgresqlDropDatabase(const char     *serverName,
+                                    const char     *userName,
+                                    const Password *password,
+                                    const char     *databaseName
+                                   )
+{
+  #define POSTGRESQL_CONNECT_PARAMETER(i,name,value) \
+    keywords[i] = name; \
+    values[i]   = value
+
+  const char     *keywords[6+1],*values[6+1];
+  const char     *deployPassword;
+  PGconn         *handle;
+  ConnStatusType postgreSQLConnectionStatus;
+  char           sqlString[256];
+  PGresult       *postgresqlResult;
+  Errors         error;
+
+  // connect (with database 'template1')
+  deployPassword = Password_deploy(password);
+  POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
+  POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
+  POSTGRESQL_CONNECT_PARAMETER(2,"password",       deployPassword);
+  POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
+  POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
+  POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
+// TODO:
+//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
+  POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
+
+  handle = PQconnectdbParams(keywords,values,0);
+  if (handle == NULL)
+  {
+    error = ERRORX_(DATABASE,
+                    0,
+                    "connect"
+                   );
+    Password_undeploy(password,deployPassword);
+    return error;
+  }
+  Password_undeploy(password,deployPassword);
+
+  postgreSQLConnectionStatus = PQstatus(handle);
+  if (postgreSQLConnectionStatus != CONNECTION_OK)
+  {
+    error = ERRORX_(DATABASE,
+                    postgreSQLConnectionStatus,
+                    "%s",
+                    PQerrorMessage(handle)
+                   );
+    PQfinish(handle);
+    return error;
+  }
+  PQsetNoticeReceiver(handle,
+                      postgresqlReceiveMessageHandler,NULL
+                     );
+
+  // create database
+  stringFormat(sqlString,sizeof(sqlString),
+               "DROP DATABASE %s",
+               databaseName
               );
   postgresqlResult = PQexec(handle,sqlString);
   if (postgresqlResult != NULL)
@@ -2908,7 +3167,6 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           if ((openDatabaseMode & DATABASE_OPEN_MODE_MEMORY) == DATABASE_OPEN_MODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(sqliteName,"mode=memory");
           if ((openDatabaseMode & DATABASE_OPEN_MODE_SHARED) == DATABASE_OPEN_MODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(sqliteName,"cache=shared");
         }
-//sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
         // open database
         sqliteResult = sqlite3_open_v2(String_cString(sqliteName),&databaseHandle->sqlite.handle,sqliteMode,NULL);
@@ -2951,13 +3209,14 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           {
             bool b;
             uint u;
-          }     optionValue;
+          }          optionValue;
           const char *deployPassword;
           ulong      serverVersion;
           char       sqlString[256];
 
           SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
+// TODO: create
             // open database
             databaseHandle->mysql.handle = mysql_init(NULL);
             if (databaseHandle->mysql.handle == NULL)
@@ -9102,6 +9361,153 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
   return ERROR_NONE;
 }
 
+Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
+                       const char              *databaseName
+                      )
+{
+  Errors error;
+
+  assert(databaseSpecifier != NULL);
+
+  error = ERROR_UNKNOWN;
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      {
+        String  directoryName;
+        sqlite3 *handle;
+        int     sqliteResult;
+
+        // create directory
+        directoryName = File_getDirectoryNameCString(String_new(),
+                                                     (databaseName != NULL)
+                                                       ? databaseName
+                                                       : String_cString(databaseSpecifier->postgresql.databaseName)
+                                                    );
+        if (   !String_isEmpty(directoryName)
+            && !File_isDirectory(directoryName)
+           )
+        {
+          error = File_makeDirectory(directoryName,
+                                     FILE_DEFAULT_USER_ID,
+                                     FILE_DEFAULT_GROUP_ID,
+                                     FILE_DEFAULT_PERMISSION,
+                                     FALSE
+                                    );
+          if (error != ERROR_NONE)
+          {
+            File_deleteFileName(directoryName);
+            return error;
+          }
+        }
+        String_delete(directoryName);
+
+        // create database
+        sqliteResult = sqlite3_open_v2((databaseName != NULL)
+                                         ? databaseName
+                                         : String_cString(databaseSpecifier->sqlite.fileName),
+                                       &handle,
+                                       SQLITE_OPEN_URI|SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,
+                                       NULL
+                                      );
+        if (sqliteResult != SQLITE_OK)
+        {
+          error = ERRORX_(DATABASE,
+                          sqlite3_errcode(handle),
+                          "%s: '%s'",
+                          sqlite3_errmsg(handle),
+                          (databaseName != NULL)
+                            ? databaseName
+                            : String_cString(databaseSpecifier->sqlite.fileName)
+                         );
+          return error;
+        }
+        sqlite3_close(handle);
+      }
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        error = mysqlCreateDatabase(String_cString(databaseSpecifier->mysql.serverName),
+                                    String_cString(databaseSpecifier->mysql.userName),
+                                    &databaseSpecifier->mysql.password,
+                                    (databaseName != NULL)
+                                      ? databaseName
+                                      : String_cString(databaseSpecifier->mysql.databaseName),
+                                    "utf8mb4"
+                                   );
+      #else /* HAVE_MARIADB */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        error = postgresqlCreateDatabase(String_cString(databaseSpecifier->postgresql.serverName),
+                                         String_cString(databaseSpecifier->postgresql.userName),
+                                         &databaseSpecifier->postgresql.password,
+                                         (databaseName != NULL)
+                                           ? databaseName
+                                           : String_cString(databaseSpecifier->postgresql.databaseName)
+                                        );
+      #else /* HAVE_POSTGRESQL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return ERROR_NONE;
+}
+
+Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
+                     const char              *databaseName
+                    )
+{
+  Errors error;
+
+  assert(databaseSpecifier != NULL);
+
+  error = ERROR_UNKNOWN;
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      error = File_delete((databaseName != NULL)
+                            ? databaseName
+                            : String_cString(databaseSpecifier->sqlite.fileName),
+                          FALSE
+                         );
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        error = mysqlDropDatabase(String_cString(databaseSpecifier->postgresql.serverName),
+                                  String_cString(databaseSpecifier->postgresql.userName),
+                                  &databaseSpecifier->postgresql.password,
+                                  (databaseName != NULL)
+                                    ? databaseName
+                                    : String_cString(databaseSpecifier->postgresql.databaseName)
+                                 );
+      #else /* HAVE_MARIADB */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        error = postgresqlDropDatabase(String_cString(databaseSpecifier->postgresql.serverName),
+                                       String_cString(databaseSpecifier->postgresql.userName),
+                                       &databaseSpecifier->postgresql.password,
+                                       (databaseName != NULL)
+                                         ? databaseName
+                                         : String_cString(databaseSpecifier->postgresql.databaseName)
+                                      );
+      #else /* HAVE_POSTGRESQL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle          *databaseHandle,
                        const DatabaseSpecifier *databaseSpecifier,
@@ -11235,7 +11641,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
       return error;
     }
   }
-fprintf(stderr,"%s:%d: ref tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&referenceTableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
+//fprintf(stderr,"%s:%d: ref tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&referenceTableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
 //assert(StringList_count(&referenceTableNameList) > 0);
 
   StringList_init(&tableNameList);
@@ -11256,7 +11662,7 @@ fprintf(stderr,"%s:%d: ref tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&r
       return error;
     }
   }
-fprintf(stderr,"%s:%d: tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
+//fprintf(stderr,"%s:%d: tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
 
   // compare tables
   STRINGLIST_ITERATEX(&referenceTableNameList,stringListIterator,tableName,error == ERROR_NONE)
@@ -11276,7 +11682,6 @@ fprintf(stderr,"%s:%d: tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&table
                                );
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
           break;
         }
         error = getTableColumns(compareColumns,
@@ -11287,15 +11692,14 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                                );
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
           break;
         }
 
-        // compare columns
+        // compare columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
         for (i = 0; i < referenceColumnCount; i++)
         {
           // find column
-          j = ARRAY_FIND(compareColumnNames,compareColumnCount,j,stringEquals(referenceColumns[i].name,compareColumns[j].name));
+          j = ARRAY_FIND(compareColumnNames,compareColumnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,compareColumns[j].name));
           if (j < compareColumnCount)
           {
             if (   (referenceColumns[j].type != DATABASE_DATATYPE_NONE)
@@ -11312,23 +11716,21 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         }
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
           break;
         }
 
-        // check for obsolete columns
+        // check for obsolete columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
         for (i = 0; i < compareColumnCount; i++)
         {
           // find column
-          j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEquals(compareColumns[i].name,referenceColumns[j].name));
+          j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEqualsIgnoreCase(compareColumns[i].name,referenceColumns[j].name));
           if (j >= referenceColumnCount)
           {
-            error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s in %s",referenceColumns[j].name,String_cString(tableName));
+            error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s in %s",compareColumns[i].name,String_cString(tableName));
           }
         }
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
           break;
         }
 
@@ -11342,8 +11744,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       }
     }
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: %lu\n",__FILE__,__LINE__,StringList_count(&tableNameList));
 
   // check for obsolete tables
   STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)

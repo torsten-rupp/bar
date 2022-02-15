@@ -464,8 +464,6 @@ LOCAL void busyHandler(void *userData)
                                  indexDefinition,
                                  DATABASE_PARAMETERS_NONE
                                 );
-fprintf(stderr,"%s:%d: %s error=%s\n",__FILE__,__LINE__,indexDefinition,Error_getText(error));
-
       }
 
       return error;
@@ -2535,7 +2533,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   bool        createFlag;
   Errors      error;
   uint        indexVersion;
-  IndexHandle indexHandle;
+  IndexHandle indexHandleReference,indexHandle;
 
   assert(databaseSpecifier != NULL);
 
@@ -2555,8 +2553,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
 
   createFlag = FALSE;
 
-// TODO: revert
-#if 0
   // check if index exists, check version
   if (!createFlag)
   {
@@ -2569,74 +2565,35 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
         if (indexVersion < INDEX_VERSION)
         {
           // rename existing index for upgrade
-          switch (indexDatabaseSpecifier->type)
+          String saveDatabaseName;
+          uint   n;
+
+          saveDatabaseName = String_new();
+
+          // get backup name
+          n = 0;
+          do
           {
-            case DATABASE_TYPE_SQLITE3:
-              {
-                String saveDatabaseName;
-                uint   n;
-
-                saveDatabaseName = String_new();
-
-                // get backup name
-                n = 0;
-                do
-                {
-                  String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
-                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
-                  n++;
-                }
-                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
-
-                // rename database
-                error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
-                if (error != ERROR_NONE)
-                {
-                  String_delete(printableDatabaseURI);
-                  Database_deleteSpecifier(indexDatabaseSpecifier);
-                  indexDatabaseSpecifier = NULL;
-                  return error;
-                }
-
-                String_delete(saveDatabaseName);
-              }
-              break;
-            case DATABASE_TYPE_MARIADB:
-              {
-                String saveDatabaseName;
-                uint   n;
-
-                saveDatabaseName = String_new();
-
-                // get backup name
-                n = 0;
-                do
-                {
-                  String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
-                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
-                  n++;
-                }
-                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
-
-                // rename database
-                error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
-                if (error != ERROR_NONE)
-                {
-                  String_delete(printableDatabaseURI);
-                  Database_deleteSpecifier(indexDatabaseSpecifier);
-                  indexDatabaseSpecifier = NULL;
-                  return error;
-                }
-
-                String_delete(saveDatabaseName);
-              }
-              break;
+            String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+            String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
+            n++;
           }
+          while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+
+          // rename database
+          error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
+          if (error != ERROR_NONE)
+          {
+            String_delete(printableDatabaseURI);
+            Database_deleteSpecifier(indexDatabaseSpecifier);
+            indexDatabaseSpecifier = NULL;
+            return error;
+          }
+
+          String_delete(saveDatabaseName);
 
           // upgrade version -> create new
           createFlag = TRUE;
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
@@ -2650,8 +2607,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       {
         // unknown version -> create new
         createFlag = TRUE;
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
@@ -2663,8 +2618,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     else
     {
       // does not exists -> create new
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
@@ -2680,11 +2633,38 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     // check if database is outdated or corrupt
     if (Database_exists(indexDatabaseSpecifier,NULL))
     {
-      #ifndef NDEBUG
-        DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, { .sqlite.fileName = String_newCString("/tmp/reference.db") } };
-      #else
-        DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, { .sqlite.fileName = NULL } };
-      #endif
+      DatabaseSpecifier indexDatabaseSpecifierReference;
+
+      Database_copySpecifier(&indexDatabaseSpecifierReference,indexDatabaseSpecifier);
+      switch (indexDatabaseSpecifier->type)
+      {
+        case DATABASE_TYPE_SQLITE3:
+          #ifndef NDEBUG
+            String_setCString(indexDatabaseSpecifierReference.sqlite.fileName,"/tmp/reference.db");
+          #else
+            String_setCString(indexDatabaseSpecifierReference.sqlite.fileName,"");
+          #endif
+          break;
+        case DATABASE_TYPE_MARIADB:
+          #if defined(HAVE_MARIADB)
+            String_format(indexDatabaseSpecifierReference.mysql.databaseName,"%s_tmp",DEFAULT_DATABASE_NAME);
+          #else /* HAVE_MARIADB */
+            Database_doneSpecifier(&indexDatabaseSpecifierReference);
+
+            return ERROR_FUNCTION_NOT_SUPPORTED;
+          #endif /* HAVE_MARIADB */
+          break;
+        case DATABASE_TYPE_POSTGRESQL:
+          #if defined(HAVE_POSTGRESQL)
+            String_format(indexDatabaseSpecifierReference.postgresql.databaseName,"%s_tmp",DEFAULT_DATABASE_NAME);
+          #else /* HAVE_POSTGRESQL */
+            Database_doneSpecifier(&indexDatabaseSpecifierReference);
+
+            return ERROR_FUNCTION_NOT_SUPPORTED;
+          #endif /* HAVE_POSTGRESQL */
+          break;
+      }
+
       error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
@@ -2701,9 +2681,10 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         }
         closeIndex(&indexHandleReference);
       }
-      #ifndef NDEBUG
-        String_delete(indexDatabaseSpecifierReference.sqlite.fileName);
-      #endif
+
+      Database_drop(&indexDatabaseSpecifierReference,NULL);
+
+      Database_doneSpecifier(&indexDatabaseSpecifierReference);
 
       if (error != ERROR_NONE)
       {
@@ -2719,8 +2700,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                     Error_getText(error)
                    );
 
-        // rename existing index for upgrade
         saveDatabaseName = String_new();
+
+        // get backup name
         n = 0;
         do
         {
@@ -2729,22 +2711,23 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           n++;
         }
         while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
-        error = renameIndex(indexDatabaseSpecifier,saveDatabaseName);
+
+        // rename database
+        error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
         if (error != ERROR_NONE)
         {
-          String_delete(saveDatabaseName);
           String_delete(printableDatabaseURI);
           Database_deleteSpecifier(indexDatabaseSpecifier);
           indexDatabaseSpecifier = NULL;
           return error;
         }
+
         String_delete(saveDatabaseName);
 
         createFlag = TRUE;
       }
     }
   }
-#endif
 
   if (createFlag)
   {
