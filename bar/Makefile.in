@@ -266,63 +266,28 @@ XDELTA3_FLAGS =
 # additional options
 OPTIONS ?= $(O)
 
-# test settings
-TEST_CONFIG                      = intermediate/bar.cfg
-TEST_KEY_CRYPT_PUBLIC            = intermediate/key-crypt.public
-TEST_KEY_CRYPT_PRIVATE           = intermediate/key-crypt.private
-TEST_KEY_SIGNATURE_PUBLIC        = intermediate/signature-key.public
-TEST_KEY_SIGNATURE_PRIVATE       = intermediate/signature-key.private
+SERVER_PORT                      = 39909
+SERVER_TLS_PORT                  = 39910
+SERVER_CONFIG                    = bar.cfg
+SERVER_PID_FILE                  = barserver.pid
+SERVER_JOBS                      = jobs
+SERVER_DATABASE                  = sqlite3:index.db
+SERVER_DATABASE2                 = sqlite3:index2.db
+SERVER_CONTINUOUS_DATABASE       = sqlite3:continuous.db
+SERVER_CONTINUOUS_DATABASE2      = sqlite3:continuous2.db
+SERVER_LOG_FILE                  = bar.log
 
-TEST_SERVER_PORT                 = 39909
-TEST_SERVER_TLS_PORT             = 39910
-TEST_SERVER_DIRECTORY            = test
-TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
-TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/barserver.pid
-TEST_SERVER_JOBS                 = $(TEST_SERVER_DIRECTORY)/jobs
-TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
-TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
-
-# hosts, ports, passwords, keys for tests
-TEST_HOST                        ?= localhost
-TEST_PASSWORD                    =
-
-TEST_HOST_FTP                    ?= $(TEST_HOST)
-TEST_PASSWORD_FTP                ?= $(TEST_PASSWORD)
-
-TEST_HOST_SSH                    ?= $(TEST_HOST)
-TEST_PORT_SSH                    ?= 22
-TEST_PASSWORD_SSH                ?= $(TEST_PASSWORD)
-TEST_PUBLIC_KEY_SSH              =  $(HOME)/.ssh/id_rsa.pub
-TEST_PRIVATE_KEY_SSH             =  $(HOME)/.ssh/id_rsa
-
-TEST_HOST_SCP                    ?= $(TEST_HOST)
-TEST_PORT_SCP                    ?= 22
-TEST_PASSWORD_SCP                ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SCP              =  $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SCP             =  $(TEST_PRIVATE_KEY_SSH)
-
-TEST_HOST_SFTP                   ?= $(TEST_HOST)
-TEST_PORT_SFTP                   ?= 22
-TEST_PASSWORD_SFTP               ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SFTP             =  $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SFTP            =  $(TEST_PRIVATE_KEY_SSH)
-
-TEST_HOST_WEBDAV                 ?= localhost/webdav
-TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
-
-TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
-
-TEST_SLAVE_HOST                  =
-TEST_SLAVE_PORT                  = 39911
-TEST_SLAVE_TLS_PORT              = 39912
-TEST_SLAVE_USERNAME              ?= test
-TEST_SLAVE_PASSWORD              ?= test
-TEST_SLAVE_DIRECTORY             = slave
-TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
-TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/barserver.pid
-TEST_SLAVE_JOBS                  = $(TEST_SLAVE_DIRECTORY)/jobs
-TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
-TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
+SERVER_SLAVE_HOST                =
+SERVER_SLAVE_PORT                = 39911
+SERVER_SLAVE_TLS_PORT            = 39912
+SERVER_SLAVE_USERNAME            ?= test
+SERVER_SLAVE_PASSWORD            ?= test
+SERVER_SLAVE_CONFIG              = bar-slave.cfg
+SERVER_SLAVE_PID_FILE            = barserver-slave.pid
+SERVER_SLAVE_JOBS                = jobs-slave
+SERVER_SLAVE_DATABASE            = sqlite3:index-slave.db
+SERVER_SLAVE_CONTINUOUS_DATABASE = sqlite3:continuous-slave.db
+SERVER_SLAVE_LOG_FILE            = bar-slave.log
 
 # languages
 LANGUAGES = de jp
@@ -1264,30 +1229,30 @@ run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
 
 rund runserverd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar-debug@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
 
 run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
@@ -1297,10 +1262,10 @@ run_slave runserver_slave: bar@EXEEXT@
 	touch /tmp/pairing
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=slave \
-          --index-database=bar-index-slave.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
@@ -1310,34 +1275,11 @@ rund_slave runserverd_slave: bar-debug@EXEEXT@
 	touch /tmp/pairing
 	nice ./bar-debug@EXEEXT@ --daemon -D \
           --server-mode=slave \
-          --index-database=bar-index-slave.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
-          $(OPTIONS)
-
-.PHONY: rundevd_wine rundevd_slave_wine
-rundevd_wine:
-	nice $(WINE) ./bar-debug.exe --daemon -D \
-          --server-mode=master \
-          --index-database=bar-index-slave.db \
-          --jobs-directory=jobs \
-          --incremental-data-directory=C:/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
-          --pairing-master-file=C:/tmp/pairing \
-          --log-file=C:/tmp/bar-slave.log --log=all \
-          $(OPTIONS)
-
-rundevd_slave_wine:
-	nice $(WINE) ./bar-debug.exe --daemon -D \
-          --server-mode=slave \
-          --index-database=bar-index-slave.db \
-          --jobs-directory=jobs \
-          --incremental-data-directory=C:/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
-          --pairing-master-file=C:/tmp/pairing \
-          --log-file=C:/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
 .PHONY: run_en runserver_en run_de runserver_de run_ssl runserver_ssl
@@ -1345,30 +1287,30 @@ run_en runserver_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
 
 run_de runserver_de: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
 
 run_jp runserver_jp: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
 
 .PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundevcallgrind rundevgcov rundevgprof rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
@@ -1377,10 +1319,10 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --index-database=bar-index.db --index-database-keep-time=365days \
+          --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
@@ -1391,10 +1333,10 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	$(INSTALL) -d jobs
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
@@ -1405,10 +1347,10 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
 	$(INSTALL) -d jobs
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE2) --index-database=$(SERVER_DATABASE2) --index-database-keep-time=365days \
           --jobs-directory=jobs2 \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=0 \
+          --server-port=$(SERVER_PORT) --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
@@ -1419,10 +1361,10 @@ rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(INSTALL) -d jobs
 	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
@@ -1433,10 +1375,10 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(INSTALL) -d jobs
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1447,10 +1389,10 @@ rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(INSTALL) -d jobs
 	./bar-gcov@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1461,10 +1403,10 @@ rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem
 	$(INSTALL) -d jobs
 	./bar-gprof@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1475,10 +1417,10 @@ rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-ce
 	$(INSTALL) -d jobs
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1489,14 +1431,37 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
 	$(INSTALL) -d jobs
 	$(VALGRIND) --tool=callgrind $(CALLGRIND_FLAGS) ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
           --log-file=/tmp/bar.log --log=all --debug-server \
+          $(OPTIONS)
+
+.PHONY: rundevd_wine rundevd_slave_wine
+rundevd_wine:
+	nice $(WINE) ./bar-debug.exe --daemon -D \
+          --server-mode=master \
+          --index-database=$(SERVER_DATABASE) \
+          --jobs-directory=jobs \
+          --incremental-data-directory=C:/tmp \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
+          --pairing-master-file=C:/tmp/pairing \
+          --log-file=C:/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rundevd_slave_wine:
+	nice $(WINE) ./bar-debug.exe --daemon -D \
+          --server-mode=slave \
+          --index-database=$(SERVER_DATABASE) \
+          --jobs-directory=jobs \
+          --incremental-data-directory=C:/tmp \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
+          --pairing-master-file=C:/tmp/pairing \
+          --log-file=C:/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
 rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1504,10 +1469,10 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
 	touch /tmp/pairing
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
-          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_SLAVE_TLS_PORT) \
+          --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1520,10 +1485,10 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
 	touch /tmp/pairing
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
-          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
+          --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1536,10 +1501,10 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	touch /tmp/pairing
 	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
-          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
+          --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1552,10 +1517,10 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	touch /tmp/pairing
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
-          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
+          --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1567,10 +1532,10 @@ rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db --index-database-keep-time=365days \
+          --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1579,10 +1544,10 @@ rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --index-database=bar-index.db \
+          --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1591,10 +1556,10 @@ rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
-          --index-database=bar-index.db --index-database-keep-time=365days \
+          --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1603,10 +1568,10 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
-          --index-database=bar-index.db --index-database-keep-time=365days \
+          --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1618,7 +1583,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
           --index-database=intermediate/index.db \
           --jobs-directory=intermediate/jobs \
           --incremental-data-directory=/tmp \
-          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1908,251 +1873,6 @@ gprof%: \
 
 # ----------------------------------------------------------------------------
 
-# valgrind checks
-.PHONY: memcheck
-memcheck: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(MAKE) \
-          VALGRIND_OPTIONS="--leak-check=summary" \
-          $(if $(CHECK),\
-            memcheck$(CHECK),\
-            memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8 \
-           )
-
-.PHONY: memcheck_extended
-memcheck_extended: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(MAKE) \
-          VALGRIND_OPTIONS="--leak-check=full" \
-            $(if $(CHECK),\
-              memcheck$(CHECK),\
-              memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8 \
-             )
-
-.PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8
-memcheck1: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) --help >/dev/null
-memcheck2: \
-  memcheck2a \
-  memcheck2b \
-  memcheck2c \
-  memcheck2d \
-  memcheck2e
-memcheck2a: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-memcheck2b: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files >/dev/null
-memcheck2c: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files >/dev/null
-memcheck2d: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --overwrite-archive-files >/dev/null
-memcheck2e: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -c intermediate/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files >/dev/null
-memcheck2f: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run >/dev/null
-memcheck3:  \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -l intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
-memcheck4: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -t intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
-memcheck5: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -d intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
-memcheck6: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) -x intermediate/test*.bar $(BAR_OPTIONS) --destination intermediate/restore >/dev/null
-memcheck7: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
-	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) >/dev/null
-memcheck8: \
-  $(BAR_VALGRIND) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
-          --log-file=valgrind.log \
-          --leak-check=full \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          $(BAR_VALGRIND) \
-            --daemon \
-            --no-detach \
-            --no-default-config \
-            --jobs-directory=jobs \
-            --server-ca-file=bar-ca.pem \
-            --server-cert-file=bar-server-cert.pem \
-            --server-key-file=bar-server-key.pem \
-            --server-port=$(TEST_SERVER_PORT) \
-            --server-tls-port=$(TEST_SERVER_SSL_PORT) \
-            --debug-server &
-	$(SLEEP) 30
-	$(ECHO) '1 VERSION' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 JOB_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) 'UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-	$(ECHO) '1 QUIT' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
-
-#valgrind --tool=callgrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
-#valgrind --tool=cachegrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
-
-# ----------------------------------------------------------------------------
-
 DEVICE_ZERO    = /dev/zero
 DEVICE_RANDOM  = /dev/urandom
 
@@ -2315,237 +2035,6 @@ ifeq (@HAVE_XDELTA3@,1)
 	@$(ECHO_NO_LF) "  Extract: "
 	@($(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
 endif
-
-# ----------------------------------------------------------------------------
-
-# testcode runs:
-#   1A+2+3+4: full+list+diff+extract
-#   1B+2+3+4: differentiell+list+diff+extract
-#   1C+2+3+4: incremental+list+diff+extract
-
-TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
-                     --compress-algorithm=lzma9 \
-                     --crypt-algorithm=AES256 \
-                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
-                     --archive-part-size=100K \
-                     --overwrite-archive-files \
-                     --full \
-                     --log-post-command='true' \
-                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
-TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
-                     --compress-algorithm=lzma9 \
-                     --crypt-algorithm=AES256 \
-                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
-                     --archive-part-size=100K \
-                     --overwrite-archive-files \
-                     --differential \
-                     --incremental-list-file=intermediate/test.bid \
-                     --log-post-command='true' \
-                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
-TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
-                     --compress-algorithm=lzma9 \
-                     --crypt-algorithm=AES256 \
-                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
-                     --archive-part-size=100K \
-                     --overwrite-archive-files \
-                     --incremental \
-                     --incremental-list-file=intermediate/test.bid \
-                     --log-post-command='true' \
-                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
-TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
-                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
-                     -l intermediate/test-*.bar
-TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
-                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
-                     -d intermediate/test-*.bar
-TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
-                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
-                     --destination=intermediate/restore \
-                     -x intermediate/test-*.bar
-
-TESTCODE_COMMANDS = \
-  TESTCODE_COMMAND1A \
-  TESTCODE_COMMAND1B \
-  TESTCODE_COMMAND1C \
-  TESTCODE_COMMAND2 \
-  TESTCODE_COMMAND3 \
-  TESTCODE_COMMAND4 \
-
-# call functionTestcode(command)
-functionTestcode = \
- if test $$rc -ne $(TESTCODE_EXITCODE); then \
-   TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-     $($1) >/dev/null; \
-   rc=$$?; \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     $(ECHO) "Test code fail $1 (exitcode: $$rc):"; \
-     $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $($1)"; \
-   fi; \
- fi
-
-# helper function to execute test code
-# call functionTestcodeA
-# call functionTestcodeB
-# call functionTestcodeC
-functionTestcodeA = \
-  ( \
-   rc=0; \
-   \
-   $(call functionTestcode,TESTCODE_COMMAND1A); \
-   $(call functionTestcode,TESTCODE_COMMAND2); \
-   $(call functionTestcode,TESTCODE_COMMAND3); \
-   $(call functionTestcode,TESTCODE_COMMAND4); \
-   \
-   exit $$rc; \
-  )
-
-functionTestcodeB = \
-  ( \
-   rc=0; \
-   \
-   $(call functionTestcode,TESTCODE_COMMAND1B); \
-   $(call functionTestcode,TESTCODE_COMMAND2); \
-   $(call functionTestcode,TESTCODE_COMMAND3); \
-   $(call functionTestcode,TESTCODE_COMMAND4); \
-   \
-   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-     $(ECHO) "ERROR: No more testcode executed!"; \
-     $(ECHO) ""; \
-     $(ECHO) "Available and not executed testcode:"; \
-     $(MAKE) --quiet testcode_diff; \
-   fi; \
-   \
-   exit $$rc; \
-  )
-
-functionTestcodeC = \
-  ( \
-   rc=0; \
-   \
-   $(call functionTestcode,TESTCODE_COMMAND1C); \
-   $(call functionTestcode,TESTCODE_COMMAND2); \
-   $(call functionTestcode,TESTCODE_COMMAND3); \
-   $(call functionTestcode,TESTCODE_COMMAND4); \
-   \
-   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-     $(ECHO) "ERROR: No more testcode executed!"; \
-     $(ECHO) ""; \
-     $(ECHO) "Available and not executed testcode:"; \
-     $(MAKE) --quiet testcode_diff; \
-   fi; \
-   \
-   exit $$rc; \
-  )
-
-.PHONY: testcode_clean testcode_init testcode_all testcode testcodex testcode_list testcode_diff
-
-testcode_clean:
-	$(RMF) testcode.list testcode.skip testcode.name testcode.done
-
-testcode_init: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	$(ECHO_NO_LF) >testcode.list
-	$(ECHO_NO_LF) >testcode.done
-	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done >testcode.skip
-	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
-
-testcode_all: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	rc=$(TESTCODE_EXITCODE); \
-        while test $$rc -eq $(TESTCODE_EXITCODE); do \
-          rc=0; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeA) 1>/dev/null 2>/dev/null; \
-            rc=$$?; \
-          fi; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeB); \
-            rc=$$?; \
-          fi; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeC); \
-            rc=$$?; \
-          fi; \
-        done
-
-testcode: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-          rc=0; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeA); \
-            rc=$$?; \
-          fi; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeB); \
-            rc=$$?; \
-          fi; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeC); \
-            rc=$$?; \
-          fi; \
-
-testcodex: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND1)
-	$(TESTCODE_COMMAND1) >/dev/null
-	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND2) >/dev/null; \
-	$(TESTCODE_COMMAND1) >/dev/null
-	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND3) >/dev/null; \
-	$(TESTCODE_COMMAND1) >/dev/null
-	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND4) >/dev/null; \
-
-testcode_list:
-	$(ECHO_NO_LF) >testcode.list
-	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
-
-testcode_diff:
-	$(CAT) testcode.list | $(CUT) -d " " -f 1 | $(SORT) >testcode.list.sorted
-	$(CAT) testcode.done | $(CUT) -d " " -f 1 | $(SORT) >testcode.done.sorted
-	$(DIFF) testcode.list.sorted testcode.done.sorted | $(GREP) '<' | $(SED) 's/<\s*/  /g'
-	$(RMF) testcode.list.sorted testcode.done.sorted
 
 # ----------------------------------------------------------------------------
 # install/uninstall
