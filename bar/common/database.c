@@ -6476,17 +6476,6 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                         uint                    valueCount
                        )
 {
-  /* data flow:
-
-     application    ->    values -> database internal
-
-                 select             sqlite:
-                 insert             MySQL: bind, dateTime
-                 update             Postgres: ?
-                 delete
-
-   */
-
   Errors error;
   uint   i;
 
@@ -6936,16 +6925,6 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                          uint                    filterCount
                         )
 {
-  /* data flow:
-
-     application    ->    values -> database internal
-
-                 select             sqlite:
-                 insert             MySQL: bind, dateTime
-                 update             Postgres: ?
-                 delete
-
-   */
   Errors error;
   uint   i;
 
@@ -7555,14 +7534,6 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                                   long                    timeout
                                  )
 {
-  /* data flow:
-
-     database internal -> database
-
-       sqlite:
-       MySQL: bind, dateTime
-       Postgres: ?
-   */
   #define SLEEP_TIME 500L  // [ms]
 
   bool                          done;
@@ -7784,15 +7755,6 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
                                       long                    timeout
                                      )
 {
-  /* data flow:
-
-     application    ->    values -> database internal     -> results   ->    application
-
-                 insert             sqlite:                          select
-                 update             MySQL: bind, dateTime
-                 delete             Postgres: ?
-
-   */
   #define SLEEP_TIME 500L  // [ms]
 
   bool                          done;
@@ -8629,7 +8591,7 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                          )
           )
   {
-    // sqlite:<file name>
+    // sqlite[3]:<file name>
     databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
     databaseSpecifier->sqlite.fileName = String_setBuffer(String_new(),s1,n1);
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
@@ -8912,7 +8874,7 @@ String Database_getPrintableName(String                  string,
   {
     case DATABASE_TYPE_SQLITE3:
       String_format(string,
-                    "sqlite:%S",
+                    "sqlite3:%S",
                     databaseSpecifier->sqlite.fileName
                    );
       break;
@@ -9176,7 +9138,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
     {
       case DATABASE_TYPE_SQLITE3:
         fprintf(stderr,
-                "Database debug: opened 'sqlite:%s'\n",
+                "Database debug: opened 'sqlite3:%s'\n",
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                );
         break;
@@ -9250,7 +9212,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
     {
       case DATABASE_TYPE_SQLITE3:
         fprintf(stderr,
-                "Database debug: close 'sqlite:%s'\n",
+                "Database debug: close 'sqlite3:%s'\n",
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                );
         break;
@@ -15691,7 +15653,7 @@ void Database_debugPrintSimpleLockInfo(void)
     switch (databaseNode->databaseSpecifier.type)
     {
       case DATABASE_TYPE_SQLITE3:
-        printf("Database: 'sqlite:%s'\n",String_cString(databaseNode->databaseSpecifier.sqlite.fileName));
+        printf("Database: 'sqlite3:%s'\n",String_cString(databaseNode->databaseSpecifier.sqlite.fileName));
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
@@ -15804,7 +15766,7 @@ void Database_debugPrintInfo(void)
         {
           case DATABASE_TYPE_SQLITE3:
             fprintf(stderr,
-                    "  opened 'sqlite:%s': %u\n",
+                    "  opened 'sqlite3:%s': %u\n",
                     String_cString(databaseNode->databaseSpecifier.sqlite.fileName),
                     databaseNode->openCount
                    );
@@ -16073,7 +16035,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
       {
         case DATABASE_TYPE_SQLITE3:
           fprintf(stderr,
-                  "Database lock info 'sqlite:%s':\n",
+                  "Database lock info 'sqlite3:%s':\n",
                   String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                  );
           break;
@@ -16167,7 +16129,7 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
   {
     case DATABASE_TYPE_SQLITE3:
       fprintf(stderr,
-              "DEBUG database %s, %lu: 'sqlite:%s': %s\n",
+              "DEBUG database %s, %lu: 'sqlite3:%s': %s\n",
               __fileName__,__lineNb__,
               String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName),
               String_cString(databaseStatementHandle->debug.sqlString)
