@@ -7766,8 +7766,10 @@ Dprintf.dprintf("");
           return false;
         }
 
+Dprintf.dprintf("------------------------------------------------------");
         if (!busyDialog.isAborted())
         {
+Dprintf.dprintf("indexDataHashSet=%s",indexDataHashSet);
           for (IndexData indexData : indexDataHashSet)
           {
             String info = indexData.getInfo();
