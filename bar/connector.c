@@ -3192,11 +3192,7 @@ LOCAL bool findConnectorCommand(ConstString              name,
   assert(connectorCommandFunction != NULL);
 
   // find command by name
-  i = 0;
-  while ((i < SIZE_OF_ARRAY(CONNECTOR_COMMANDS)) && !String_equalsCString(name,CONNECTOR_COMMANDS[i].name))
-  {
-    i++;
-  }
+  i = ARRAY_FIND(CONNECTOR_COMMANDS,SIZE_OF_ARRAY(CONNECTOR_COMMANDS),i,String_equalsCString(name,CONNECTOR_COMMANDS[i].name));
   if (i >= SIZE_OF_ARRAY(CONNECTOR_COMMANDS))
   {
     return FALSE;
@@ -3241,7 +3237,13 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   #endif /* HAVE_SIGALRM */
 
   // init index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+  do
+  {
+    indexHandle = Index_open(NULL,1000);
+  }
+  while (   (indexHandle == NULL)
+         && !Thread_isQuit(&connectorInfo->thread)
+        );
 
   // process client requests
   while (   Connector_isConnected(connectorInfo)

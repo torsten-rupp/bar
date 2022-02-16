@@ -878,6 +878,13 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 
   assert(createInfo != NULL);
   assert(Semaphore_isLocked(&createInfo->statusInfoLock));
+fprintf(stderr,"%s:%d: done=%d error=%d total=%d forceUpdate=%d\n",__FILE__,__LINE__,
+
+createInfo->statusInfo.done.count,
+createInfo->statusInfo.error.count,
+createInfo->statusInfo.total.count,
+forceUpdate
+);
 
   if (createInfo->statusInfoFunction != NULL)
   {
@@ -5145,7 +5152,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           String_set(prefixFileName,storageMsg.archiveName);
         }
         String_set(storageMsg.archiveName,prefixFileName);
-        Misc_formatDateTime(storageMsg.archiveName,fileInfo.timeModified,"-%H:%M:%S");
         String_append(storageMsg.archiveName,postfixFileName);
         if (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName))
         {
@@ -5153,7 +5159,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           do
           {
             String_set(storageMsg.archiveName,prefixFileName);
-            Misc_formatDateTime(storageMsg.archiveName,fileInfo.timeModified,"-%H:%M:%S");
             String_appendFormat(storageMsg.archiveName,"-%u",n);
             String_append(storageMsg.archiveName,postfixFileName);
             n++;
