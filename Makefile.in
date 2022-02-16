@@ -57,7 +57,7 @@ CERTTOOL               = @CERTTOOL@
 OPENSSL                = @OPENSSL@
 KEYTOOL                = @KEYTOOL@
 
-DOCKER_RUN_FLAGS       = run -i -t
+DOCKER_RUN_FLAGS       = run -i -t --net=host
 
 TXT2MAN                = @TXT2MAN@
 UNOCONV                = @UNOCONV@

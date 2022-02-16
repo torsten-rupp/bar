@@ -475,7 +475,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                         return ERROR_DATABASE_INDEX_NOT_FOUND;
                                       }
                                     },NULL),
-                                    "INDEX_FIND_UUID jobUUID=%'S scheduleUUID=%'s",
+                                    "INDEX_FIND_UUID jobUUID=%'s scheduleUUID=%'s",
                                     findJobUUID,
                                     (findScheduleUUID != NULL) ? findScheduleUUID : ""
                                    );

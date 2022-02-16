@@ -2453,7 +2453,6 @@ Errors Job_write(JobNode *jobNode)
     }
 
     // write config
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(jobNode->fileName));
     error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
     if (error != ERROR_NONE)
     {

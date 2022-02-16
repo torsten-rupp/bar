@@ -26,6 +26,8 @@
   * upgrade pcre 8.44
   * upgrade SQLite 3.34
   * upgrade binutils 2.35
+  * BARControl: fix display of entry progress: count
+    done+error+skipped
 
 2020-09-27 0.21f
   * fixed auto-index of new archives

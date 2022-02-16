@@ -2559,7 +2559,10 @@ public class TabStatus
             storageProgress.set      (getProgress(valueMap.getLong("storageDoneSize"),valueMap.getLong("storageTotalSize")));
             volumeNumber.set         (valueMap.getLong("volumeNumber"));
             volumeProgress.set       (valueMap.getDouble("volumeProgress")*100.0);
-            totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
+            totalEntriesProgress.set (getProgress(doneCount.getLong()+skippedEntryCount.getLong()+errorEntryCount.getLong(),
+                                                  totalEntryCount.getLong()
+                                                 )
+                                     );
             totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
             requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
             message.set              (valueMap.getString("message"));

@@ -4032,7 +4032,7 @@ LOCAL void updateStatusInfo(Errors           error,
 
   UNUSED_VARIABLE(error);
 
-  // Note: only try for 2s
+  // Note: update status has low priority; only try for 2s
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // store status
@@ -4585,8 +4585,14 @@ NULL,//                                                        scheduleTitle,
 
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        if (!Connector_isAuthorized(connectorInfo))
+        if      (!Connector_isConnected(connectorInfo))
         {
+          jobNode->slaveState = SLAVE_STATE_OFFLINE;
+          jobNode->runningInfo.error = ERROR_SLAVE_DISCONNECTED;
+        }
+        else if (!Connector_isAuthorized(connectorInfo))
+        {
+          jobNode->slaveState = SLAVE_STATE_OFFLINE;
           jobNode->runningInfo.error = ERROR_NOT_PAIRED;
         }
       }

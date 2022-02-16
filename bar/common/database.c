@@ -5507,27 +5507,6 @@ LOCAL void formatParameters(String               sqlString,
   return ERROR_NONE;
 }
 
-// TODO: remove
-LOCAL void dumpStatementHandle(DatabaseStatementHandle *databaseStatementHandle)
-{
-#ifndef NDEBUG
-  uint i;
-//  char buffer[1024];
-
-fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
-fprintf(stderr,"%s:%d: value Count=%d\n",__FILE__,__LINE__,databaseStatementHandle->parameterCount);
-
-        for (i = 0; i < databaseStatementHandle->parameterCount; i++)
-        {
-//          Database_valueToCString(buffer,sizeof(buffer),&databaseStatementHandle->mysql.values[i]);
-//fprintf(stderr,"%s:%d: %d: %s=%s\n",__FILE__,__LINE__,i,DATABASE_DATATYPE_NAMES[databaseStatementHandle->values[i].type],buffer);
-
-        }
-#else
-UNUSED_VARIABLE(databaseStatementHandle);
-#endif
-}
-
 /***********************************************************************\
 * Name   : bindResults
 * Purpose: bind SQL result values
@@ -9470,11 +9449,11 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
-      error = File_delete((databaseName != NULL)
-                            ? databaseName
-                            : String_cString(databaseSpecifier->sqlite.fileName),
-                          FALSE
-                         );
+      error = File_deleteCString((databaseName != NULL)
+                                   ? databaseName
+                                   : String_cString(databaseSpecifier->sqlite.fileName),
+                                 FALSE
+                                );
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -11842,7 +11821,6 @@ char      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS][200];
   DatabaseColumnInfo      fromColumnInfo,toColumnInfo;
 
   DatabaseStatementHandle fromDatabaseStatementHandle,toDatabaseStatementHandle;
-  va_list                 arguments;
   DatabaseId              lastRowId;
   #ifdef DATABASE_DEBUG_COPY_TABLE
     uint64 t0,t1;
