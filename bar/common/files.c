@@ -4314,11 +4314,11 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   #ifdef HAVE_LLISTXATTR
     int                       n;
     char                      *names;
-    uint                      namesLength;
+    int                       namesLength;
     Errors                    error;
     const char                *name;
     void                      *data;
-    uint                      dataLength;
+    int                       dataLength;
     FileExtendedAttributeNode *fileExtendedAttributeNode;
   #endif
 
@@ -4330,7 +4330,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   List_init(fileExtendedAttributeList);
 
   #ifdef HAVE_LLISTXATTR
-    // allocate buffer for attribute names
+    // allocate buffer for attribute names (Note: it is possible a value > 0 is returned here, but later 0 is returned)
     n = llistxattr(String_cString(fileName),NULL,0);
     if (n < 0)
     {
@@ -4338,8 +4338,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
       return error;
     }
-    namesLength = (uint)n;
-    names = (char*)malloc(namesLength);
+    names = (char*)malloc(n);
     if (names == NULL)
     {
       List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
@@ -4347,7 +4346,8 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     }
 
     // get attribute names
-    if (llistxattr(String_cString(fileName),names,namesLength) < 0)
+    namesLength = llistxattr(String_cString(fileName),names,n);
+    if (namesLength < 0)
     {
       error = getLastError(ERROR_CODE_IO,String_cString(fileName));
       free(names);
@@ -4357,7 +4357,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
 
     // get attributes
     name = names;
-    while ((uint)(name-names) < namesLength)
+    while ((name-names) < namesLength)
     {
       // allocate buffer for data
       n = lgetxattr(String_cString(fileName),name,NULL,0);
@@ -4368,8 +4368,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
         List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
         return error;
       }
-      dataLength = (uint)n;
-      data = malloc(dataLength);
+      data = malloc(n);
       if (data == NULL)
       {
         free(names);
@@ -4378,8 +4377,8 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       }
 
       // get extended attribute
-      n = lgetxattr(String_cString(fileName),name,data,dataLength);
-      if (n < 0)
+      dataLength = lgetxattr(String_cString(fileName),name,data,n);
+      if (dataLength < 0)
       {
         error = getLastError(ERROR_CODE_IO,String_cString(fileName));
         free(data);
@@ -4399,7 +4398,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       }
       fileExtendedAttributeNode->name       = String_newCString(name);
       fileExtendedAttributeNode->data       = data;
-      fileExtendedAttributeNode->dataLength = dataLength;
+      fileExtendedAttributeNode->dataLength = (uint)dataLength;
       List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
 
       // next attribute

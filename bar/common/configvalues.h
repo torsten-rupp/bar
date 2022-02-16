@@ -1587,7 +1587,11 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
 * Notes  : -
 \***********************************************************************/
 
-void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData);
+void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator,
+                                          ConfigValueOperations          operation,
+                                          void                           *data,
+                                          void                           *userData
+                                         );
 
 #ifndef NDEBUG
 /***********************************************************************\

@@ -1768,7 +1768,7 @@ LOCAL Errors writeCommentLines(FileHandle       *fileHandle,
   {
     STRINGLIST_ITERATEX(commentList,iterator,string,error == ERROR_NONE)
     {
-      error = File_printLine(fileHandle,"%*C# %S",indent,' ',string);
+      error = File_printLine(fileHandle,"#%*C %S",indent,' ',string);
     }
   }
 
@@ -1809,11 +1809,12 @@ LOCAL Errors flushCommentLines(FileHandle *fileHandle,
 /***********************************************************************\
 * Name   : writeValue
 * Purpose: write value
-* Input  : fileHandle  - file handle
-*          indent      - indention
-*          configValue - config valule
-*          variable    - variable
-*          commentList - comment lines list
+* Input  : fileHandle   - file handle
+*          indent       - indention
+*          configValue  - config valule
+*          variable     - variable
+*          commentList  - comment lines list
+*          templateFlag - TRUE to write a template only
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1823,7 +1824,8 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
                         uint              indent,
                         const ConfigValue *configValue,
                         const void        *variable,
-                        const StringList  *commentList
+                        const StringList  *commentList,
+                        bool              templateFlag
                        )
 {
   const CommentsNode  *commentsNode;
@@ -1879,15 +1881,16 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (value != 0)
+        if (!templateFlag && (value != 0))
         {
+          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %d%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
       break;
@@ -1929,15 +1932,16 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (value != 0)
+        if (!templateFlag && (value != 0))
         {
+          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %"PRIi64"%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
       break;
@@ -1979,15 +1983,16 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (value != 0)
+        if (!templateFlag && (value != 0))
         {
+          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %"PRIi64"%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
       break;
@@ -2023,13 +2028,14 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 
         // write value/template
 //TODO: compare with default
-        if (value)
+        if (!templateFlag)
         {
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,value ? "yes" : "no");
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
       break;
@@ -2077,15 +2083,16 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (value != 0)
+        if (!templateFlag && (value != 0))
         {
+          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,select->name);
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
 #endif
@@ -2128,15 +2135,16 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (value != 0)
+        if (!templateFlag && (value != 0))
         {
+          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,select->name);
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
       break;
@@ -2194,15 +2202,16 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (!String_isEmpty(s))
+        if (!templateFlag && !String_isEmpty(s))
         {
+          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,String_cString(s));
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
 
         // free resources
@@ -2241,10 +2250,10 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (!String_isEmpty(value))
+        if (!templateFlag && !String_isEmpty(value))
         {
+          // write value
           String_escape(value,
                         STRING_ESCAPE_CHARACTER,
                         NULL,  // chars
@@ -2258,7 +2267,8 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
 
         // free resources
@@ -2297,10 +2307,10 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // write value/template
 //TODO: compare with default
-        if (!String_isEmpty(value))
+        if (!templateFlag && !String_isEmpty(value))
         {
+          // write value
           String_escape(value,
                         STRING_ESCAPE_CHARACTER,
                         NULL,  // chars
@@ -2314,7 +2324,8 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+          // write template
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
 
         // free resources
@@ -2333,34 +2344,41 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // write comments
         if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
 
-        // format init
-        ConfigValue_formatInit(&configValueFormat,
-                               configValue,
-                               CONFIG_VALUE_FORMAT_MODE_LINE,
-                               variable
-                              );
-
-        // format string
-        writtenFlag = FALSE;
-        while (ConfigValue_format(&configValueFormat,line))
+        if (!templateFlag)
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%S",indent,' ',line);
-          writtenFlag = TRUE;
+          // write value
+
+          // format init
+          ConfigValue_formatInit(&configValueFormat,
+                                 configValue,
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 variable
+                                );
+
+          // format string
+          writtenFlag = FALSE;
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%S",indent,' ',line);
+            writtenFlag = TRUE;
+          }
+
+          // format done
+          ConfigValue_formatDone(&configValueFormat);
         }
-
-        // format done
-        ConfigValue_formatDone(&configValueFormat);
-
-        // write template if no values written
-        if (!writtenFlag && (configValue->specialValue.format != NULL))
+        else
         {
-          String_format(line,"%*C#%s = ",indent,' ',configValue->name);
-          configValue->specialValue.format(&configValueFormat.formatUserData,
-                                           CONFIG_VALUE_OPERATION_TEMPLATE,
-                                           line,
-                                           configValue->specialValue.userData
-                                          );
-          if (error == ERROR_NONE) error = File_writeLine(fileHandle,line);
+          // write template
+          if (!writtenFlag && (configValue->specialValue.format != NULL))
+          {
+            String_format(line,"#%*C%s = ",indent,' ',configValue->name);
+            configValue->specialValue.format(&configValueFormat.formatUserData,
+                                             CONFIG_VALUE_OPERATION_TEMPLATE,
+                                             line,
+                                             configValue->specialValue.userData
+                                            );
+            if (error == ERROR_NONE) error = File_writeLine(fileHandle,line);
+          }
         }
 
         // free resources
@@ -2471,6 +2489,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 *          configValues                   - config values
 *          firstValueIndex,lastValueIndex - first/last value index
 *          variable                       - variable or NULL
+*          templateFlag                   - TRUE to write a template only
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2481,7 +2500,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                              const ConfigValue configValues[],
                              uint              firstValueIndex,
                              uint              lastValueIndex,
-                             const void        *variable
+                             const void        *variable,
+                             bool              templateFlag
                             )
 {
   Errors             error;
@@ -2530,6 +2550,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             error = flushCommentLines(fileHandle,indent,&commentList);
             error = writeCommentLines(fileHandle,indent,(commentsNode != NULL) ? &commentsNode->commentList : NULL);
 
+// TODO: if no sections
             // write a single commented section if there are no sections
             if (error == ERROR_NONE) error = File_printLine(fileHandle,"#[%s]",configValues[index].name);
             if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
@@ -2537,10 +2558,10 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                              configValues,
                                                              sectionFirstValueIndex,
                                                              sectionLastValueIndex,
-                                                             NULL  // variable
+                                                             NULL,  // variable
+                                                             TRUE
                                                             );
             if (error == ERROR_NONE) error = File_printLine(fileHandle,"#[end]");
-            if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
 
             // init iterator
             data = NULL;
@@ -2616,7 +2637,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                  configValues,
                                                                  sectionFirstValueIndex,
                                                                  sectionLastValueIndex,
-                                                                 data
+                                                                 data,
+                                                                 FALSE
                                                                 );
 
                 // write section end
@@ -2631,6 +2653,25 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                    );
               }
               String_delete(name);
+            }
+            else
+            {
+              // write section begin
+              if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
+
+              // write section
+              if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
+                                                               indent+2,
+                                                               configValues,
+                                                               sectionFirstValueIndex,
+                                                               sectionLastValueIndex,
+                                                               variable,
+                                                               FALSE
+                                                              );
+
+              // write section end
+              if (error == ERROR_NONE) error = File_printLine(fileHandle,"[end]");
+              if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
             }
 
             // done iterator
@@ -2675,7 +2716,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
         }
         else
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C# %s",indent,' ',SEPARATOR);
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C %s",indent,' ',SEPARATOR);
         }
         break;
       case CONFIG_VALUE_TYPE_SPACE:
@@ -2696,7 +2737,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                            variable,
                            !StringList_isEmpty(&commentList)
                              ? &commentList
-                             : ((commentsNode != NULL) ? &commentsNode->commentList : NULL)
+                             : ((commentsNode != NULL) ? &commentsNode->commentList : NULL),
+                           templateFlag
                           );
         StringList_clear(&commentList);
         break;
@@ -4341,7 +4383,8 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                           configValues,
                           firstValueIndex,
                           lastValueIndex,
-                          variable
+                          variable,
+                          FALSE
                          );
   if (error != ERROR_NONE)
   {
@@ -4400,7 +4443,11 @@ void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *se
 }
 #endif
 
-void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
+void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator,
+                                          ConfigValueOperations          operation,
+                                          void                           *data,
+                                          void                           *userData
+                                         )
 {
   void *result;
 
