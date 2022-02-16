@@ -652,8 +652,15 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  CALLBACK_(NULL,NULL),  // post-copy
                                  CALLBACK_(NULL,NULL),  // pause
                                  CALLBACK_(NULL,NULL),  // pause
-                                 "WHERE entryId=%lld LIMIT 1",
-                                 fromEntryId
+                                 "entryId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(fromEntryId)
+                                 ),
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
+                                 0L,
+                                 1L
                                 );
       break;
     case INDEX_TYPE_LINK:
@@ -704,8 +711,15 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  CALLBACK_(NULL,NULL),  // post-copy
                                  CALLBACK_(NULL,NULL),  // pause
                                  CALLBACK_(NULL,NULL),  // pause
-                                 "WHERE entryId=%lld LIMIT 1",
-                                 fromEntryId
+                                 "entryId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(fromEntryId)
+                                 ),
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
+                                 0L,
+                                 1L
                                 );
       break;
     case INDEX_TYPE_HARDLINK:
@@ -765,8 +779,15 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  CALLBACK_(NULL,NULL),  // post-copy
                                  CALLBACK_(NULL,NULL),  // pause
                                  CALLBACK_(NULL,NULL),  // pause
-                                 "WHERE entryId=%lld LIMIT 1",
-                                 fromEntryId
+                                 "entryId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(fromEntryId)
+                                 ),
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
+                                 0L,
+                                 1L
                                 );
       break;
     default:
@@ -949,7 +970,11 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
                            CALLBACK_(ProgressInfo_step,progressInfo),
-                           NULL  // filter
+                           DATABASE_FILTERS_NONE,
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   DIMPORT("imported UUIDs");
 
@@ -1079,8 +1104,15 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
                                                           CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                          "WHERE entityId=%lld",
-                                                          fromEntityId
+                                                          "entityId=?",
+                                                          DATABASE_FILTERS
+                                                          (
+                                                            DATABASE_FILTER_KEY(fromEntityId)
+                                                          ),
+                                                          NULL,  // groupBy
+                                                          NULL,  // orderby
+                                                          0L,
+                                                          DATABASE_UNLIMITED
                                                          );
                                if (error != ERROR_NONE)
                                {
@@ -1144,8 +1176,15 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
                                                           CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                          "WHERE entityId=%lld",
-                                                          fromEntityId
+                                                          "entityId=?",
+                                                          DATABASE_FILTERS
+                                                          (
+                                                            DATABASE_FILTER_KEY(fromEntityId)
+                                                          ),
+                                                          NULL,  // groupBy
+                                                          NULL,  // orderby
+                                                          0L,
+                                                          DATABASE_UNLIMITED
                                                          );
                                if (error != ERROR_NONE)
                                {
@@ -1158,7 +1197,15 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(ProgressInfo_step,progressInfo),
-                             "WHERE id!=0"
+                             "id!=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(DATABASE_ID_NONE)
+                             ),
+                             NULL,  // groupBy
+                             NULL,  // orderby
+                             0L,
+                             DATABASE_UNLIMITED
                             );
   if (error != ERROR_NONE)
   {

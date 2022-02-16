@@ -191,8 +191,15 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // post-copy
                                      CALLBACK_(NULL,NULL),  // pause
                                      CALLBACK_(NULL,NULL),  // progress
-                                     "WHERE entryId=%lld LIMIT 01",
-                                     fromEntryId
+                                     "entryId=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_KEY(fromEntryId)
+                                     ),
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
+                                     0L,
+                                     1L
                                     );
           break;
         case INDEX_TYPE_LINK:
@@ -235,8 +242,15 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // post-copy
                                      CALLBACK_(NULL,NULL),  // pause
                                      CALLBACK_(NULL,NULL),  // progress
-                                     "WHERE entryId=%lld LIMIT 1",
-                                     fromEntryId
+                                     "entryId=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_KEY(fromEntryId)
+                                     ),
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
+                                     0L,
+                                     1L
                                     );
           break;
         case INDEX_TYPE_HARDLINK:
@@ -287,8 +301,15 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // post-copy
                                      CALLBACK_(NULL,NULL),  // pause
                                      CALLBACK_(NULL,NULL),  // progress
-                                     "WHERE entryId=%lld LIMIT 1",
-                                     fromEntryId
+                                     "entryId=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_KEY(fromEntryId)
+                                     ),
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
+                                     0L,
+                                     1L
                                     );
           break;
         default:
@@ -606,7 +627,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
                            CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                           NULL  // filter
+                           DATABASE_FILTERS_NONE
                           );
   DIMPORT("imported UUIDs");
 
@@ -761,10 +782,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
                                                                                                                       CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                                                      "WHERE entryId=%lld \
-                                                                                                                       GROUP BY entryId \
-                                                                                                                      ",
-                                                                                                                      fromEntryId
+                                                                                                                      "entryId=?",
+                                                                                                                      DATABASE_FILTERS
+                                                                                                                      (
+                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
+                                                                                                                      ),
+                                                                                                                      "entryId",
+                                                                                                                      NULL,  // orderby
+                                                                                                                      0L,
+                                                                                                                      DATABASE_UNLIMITED
                                                                                                                      );
                                                                                          }
                                                                                          if (error == ERROR_NONE)
@@ -820,10 +846,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
                                                                                                                       CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                                                      "WHERE entryId=%lld \
-                                                                                                                       GROUP BY entryId \
-                                                                                                                      ",
-                                                                                                                      fromEntryId
+                                                                                                                      "entryId=?",
+                                                                                                                      DATABASE_FILTERS
+                                                                                                                      (
+                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
+                                                                                                                      ),
+                                                                                                                      "entryId",
+                                                                                                                      NULL,  // orderby
+                                                                                                                      0L,
+                                                                                                                      DATABASE_UNLIMITED
                                                                                                                      );
                                                                                          }
                                                                                          if (error == ERROR_NONE)
@@ -847,10 +878,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
                                                                                                                       CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                                                      "WHERE entryId=%lld \
-                                                                                                                       GROUP BY entryId \
-                                                                                                                      ",
-                                                                                                                      fromEntryId
+                                                                                                                      "entryId=?",
+                                                                                                                      DATABASE_FILTERS
+                                                                                                                      (
+                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
+                                                                                                                      ),
+                                                                                                                      "entryId",
+                                                                                                                      NULL,  // orderby
+                                                                                                                      0L,
+                                                                                                                      DATABASE_UNLIMITED
                                                                                                                      );
                                                                                          }
                                                                                          if (error == ERROR_NONE)
@@ -874,10 +910,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
                                                                                                                       CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                                                      "WHERE entryId=%lld \
-                                                                                                                       GROUP BY entryId \
-                                                                                                                      ",
-                                                                                                                      fromEntryId
+                                                                                                                      "entryId=?",
+                                                                                                                      DATABASE_FILTERS
+                                                                                                                      (
+                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
+                                                                                                                      ),
+                                                                                                                      "entryId",
+                                                                                                                      NULL,  // orderby
+                                                                                                                      0L,
+                                                                                                                      DATABASE_UNLIMITED
                                                                                                                      );
                                                                                          }
                                                                                          if (error == ERROR_NONE)
@@ -929,10 +970,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
                                                                                                                       CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                                                      "WHERE entryId=%lld \
-                                                                                                                       GROUP BY entryId \
-                                                                                                                      ",
-                                                                                                                      fromEntryId
+                                                                                                                      "entryId=?",
+                                                                                                                      DATABASE_FILTERS
+                                                                                                                      (
+                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
+                                                                                                                      ),
+                                                                                                                      "entryId",
+                                                                                                                      NULL,  // orderby
+                                                                                                                      0L,
+                                                                                                                      DATABASE_UNLIMITED
                                                                                                                      );
                                                                                          }
                                                                                          if (error == ERROR_NONE)
@@ -956,10 +1002,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
                                                                                                                       CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                                                      "WHERE entryId=%lld \
-                                                                                                                       GROUP BY entryId \
-                                                                                                                      ",
-                                                                                                                      fromEntryId
+                                                                                                                      "entryId=?",
+                                                                                                                      DATABASE_FILTERS
+                                                                                                                      (
+                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
+                                                                                                                      ),
+                                                                                                                      "entryId",
+                                                                                                                      NULL,  // orderby
+                                                                                                                      0L,
+                                                                                                                      DATABASE_UNLIMITED
                                                                                                                      );
                                                                                          }
 
@@ -967,8 +1018,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                        },NULL),
                                                                                        CALLBACK_(NULL,NULL),  // pause
                                                                                        CALLBACK_(NULL,NULL),  // progress
-                                                                                       "WHERE storageId=%lld",
-                                                                                       fromStorageId
+b                                                                                      "storageId=?",
+                                                                                       DATABASE_FILTERS
+                                                                                       (
+                                                                                         DATABASE_FILTER_KEY(fromtStorageId)
+                                                                                       ),
+                                                                                       NULL,  // groupBy
+                                                                                       NULL,  // orderby
+                                                                                       0L,
+                                                                                       DATABASE_UNLIMITED
                                                                                       );
                                                             if (error != ERROR_NONE)
                                                             {
@@ -986,8 +1044,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
                                                           CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                          "WHERE entityId=%lld",
-                                                          fromEntityId
+                                                          "entityId=?",
+                                                          DATABASE_FILTERS
+                                                          (
+                                                            DATABASE_FILTER_KEY(fromEntityId)
+                                                          ),
+                                                          NULL,  // groupBy
+                                                          NULL,  // orderby
+                                                          0L,
+                                                          DATABASE_UNLIMITED
                                                          );
                                if (error != ERROR_NONE)
                                {
@@ -1008,7 +1073,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                             "WHERE id!=0"
+                             "id!=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(DATABASE_ID_NONE)
+                             ),
+                             NULL,  // groupBy
+                             NULL,  // orderby
+                             0L,
+                             DATABASE_UNLIMITED
                             );
   if (error != ERROR_NONE)
   {
@@ -1181,10 +1254,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                         "WHERE entryId=%lld \
-                                                                                          GROUP BY entryId \
-                                                                                         ",
-                                                                                         fromEntryId
+                                                                                         "entryId=?",
+                                                                                         DATABASE_FILTERS
+                                                                                         (
+                                                                                           DATABASE_FILTER_KEY(fromEntryId)
+                                                                                         ),
+                                                                                         "entryId",
+                                                                                         NULL,  // orderby
+                                                                                         0L,
+                                                                                         DATABASE_UNLIMITED
                                                                                         );
                                                             }
                                                             if (error == ERROR_NONE)
@@ -1236,10 +1314,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                         "WHERE entryId=%lld \
-                                                                                          GROUP BY entryId \
-                                                                                         ",
-                                                                                         fromEntryId
+                                                                                         "entryId=?",
+                                                                                         DATABASE_FILTERS
+                                                                                         (
+                                                                                           DATABASE_FILTER_KEY(fromEntryId)
+                                                                                         ),
+                                                                                         "entryId",
+                                                                                         NULL,  // orderby
+                                                                                         0L,
+                                                                                         DATABASE_UNLIMITED
                                                                                         );
                                                             }
                                                             if (error == ERROR_NONE)
@@ -1264,10 +1347,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                         "WHERE entryId=%lld \
-                                                                                          GROUP BY entryId \
-                                                                                         ",
-                                                                                         fromEntryId
+                                                                                         "entryId=?",
+                                                                                         DATABASE_FILTERS
+                                                                                         (
+                                                                                           DATABASE_FILTER_KEY(fromEntryId)
+                                                                                         ),
+                                                                                         "entryId",
+                                                                                         NULL,  // orderby
+                                                                                         0L,
+                                                                                         DATABASE_UNLIMITED
                                                                                         );
                                                             }
                                                             if (error == ERROR_NONE)
@@ -1291,10 +1379,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                         "WHERE entryId=%lld \
-                                                                                          GROUP BY entryId \
-                                                                                         ",
-                                                                                         fromEntryId
+                                                                                         "entryId=?",
+                                                                                         DATABASE_FILTERS
+                                                                                         (
+                                                                                           DATABASE_FILTER_KEY(fromEntryId)
+                                                                                         ),
+                                                                                         "entryId",
+                                                                                         NULL,  // orderby
+                                                                                         0L,
+                                                                                         DATABASE_UNLIMITED
                                                                                         );
                                                             }
                                                             if (error == ERROR_NONE)
@@ -1346,10 +1439,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                         "WHERE entryId=%lld \
-                                                                                          GROUP BY entryId \
-                                                                                         ",
-                                                                                         fromEntryId
+                                                                                         "entryId=?",
+                                                                                         DATABASE_FILTERS
+                                                                                         (
+                                                                                           DATABASE_FILTER_KEY(fromEntryId)
+                                                                                         ),
+                                                                                         "entryId",
+                                                                                         NULL,  // orderby
+                                                                                         0L,
+                                                                                         DATABASE_UNLIMITED
                                                                                         );
                                                             }
                                                             if (error == ERROR_NONE)
@@ -1373,10 +1471,15 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                                                                                         "WHERE entryId=%lld \
-                                                                                          GROUP BY entryId \
-                                                                                         ",
-                                                                                         fromEntryId
+                                                                                         "entryId=?",
+                                                                                         DATABASE_FILTERS
+                                                                                         (
+                                                                                           DATABASE_FILTER_KEY(fromEntryId)
+                                                                                         ),
+                                                                                         "entryId",
+                                                                                         NULL,  // orderby
+                                                                                         0L,
+                                                                                         DATABASE_UNLIMITED
                                                                                         );
                                                             }
 
@@ -1384,8 +1487,11 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                           },NULL),
                                                           CALLBACK_(NULL,NULL),  // pause
                                                           CALLBACK_(NULL,NULL),  // progress
-                                                          "WHERE storageId=%lld",
-                                                          fromStorageId
+                                                          "storageId=?",
+                                                          DATABASE_FILTERS
+                                                          (
+                                                            DATABASE_FILTER_KEY(fromStorageId)
+                                                          )
                                                          );
                                (void)Index_unlockEntity(newIndexHandle,toEntityId);
                                t1 = Misc_getTimestamp();
@@ -1403,7 +1509,14 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                              },NULL),
                              CALLBACK_(NULL,NULL),
                              CALLBACK_(ProgressInfo_step,&importProgressInfo),  // progress
-                             "WHERE entityId IS NULL"
+                             "entityId IS NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL,  // groupBy
+                             NULL,  // orderby
+                             0L,
+                             DATABASE_UNLIMITED
                             );
   if (error != ERROR_NONE)
   {
