@@ -878,13 +878,6 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 
   assert(createInfo != NULL);
   assert(Semaphore_isLocked(&createInfo->statusInfoLock));
-fprintf(stderr,"%s:%d: done=%d error=%d total=%d forceUpdate=%d\n",__FILE__,__LINE__,
-
-createInfo->statusInfo.done.count,
-createInfo->statusInfo.error.count,
-createInfo->statusInfo.total.count,
-forceUpdate
-);
 
   if (createInfo->statusInfoFunction != NULL)
   {

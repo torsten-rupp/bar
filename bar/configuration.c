@@ -4744,6 +4744,7 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
     {"G",1024LL*1024LL*1024LL},
     {"M",1024LL*1024LL},
     {"K",1024LL},
+    {NULL,0LL}
   };
 
   assert(formatUserData != NULL);
@@ -4760,7 +4761,12 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
     case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
-        String_appendFormat(line,"<band width>[K|M])|<file path> <date> [<weekday>] <time>");
+        char   buffer[32];
+
+        String_appendFormat(line,
+                            "<band width>%s)|<file path> <date> [<weekday>] <time>",
+                            ConfigValue_formatUnitsTemplate(buffer,sizeof(buffer),UNITS)
+                           );
       }
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
@@ -6706,6 +6712,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
   File_ungetLine(fileHandle,line,lineNb);
 
   // free resources
+  StringList_done(&commentList);
   String_delete(value);
   String_delete(name);
   String_delete(line);
@@ -7633,8 +7640,9 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SEPARATOR("index database"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("database URI"),
-  CONFIG_VALUE_COMMENT("  sqlite:<filename>"),
+  CONFIG_VALUE_COMMENT("  sqlite3:<filename>"),
   CONFIG_VALUE_COMMENT("  mariadb:<server>:<user>:<password>"),
+  CONFIG_VALUE_COMMENT("  postgresql:<server>:<user>:<password>"),
   CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseURI,-1,                            "<URI>"),
   CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1,                 "yes|no"),

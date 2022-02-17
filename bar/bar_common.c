@@ -349,6 +349,7 @@ bool parseBandWidthNumber(ConstString s, ulong *n)
     {"G",1024LL*1024LL*1024LL},
     {"M",1024LL*1024LL},
     {"K",1024LL},
+    {NULL,0LL}
   };
 
   assert(s != NULL);
