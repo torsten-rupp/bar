@@ -1492,6 +1492,19 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                        );
 
 /***********************************************************************\
+* Name   : ConfigValue_formatUnitsTemplate
+* Purpose: format units template text
+* Input  : buffer     - string variable
+*          bufferSize - string variable size
+*          units      - units array
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+const char *ConfigValue_formatUnitsTemplate(char *buffer, uint bufferSize, const ConfigValueUnit *units);
+
+/***********************************************************************\
 * Name   : ConfigValue_selectToString
 * Purpose: get select string
 * Input  : selects       - select name/value array
