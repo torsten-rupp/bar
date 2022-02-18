@@ -231,6 +231,7 @@ typedef struct
   IndexId                  uuidId;                                     // UUID index id
   IndexId                  entityId;                                   // entity index id
 
+// TODO: use datatype UUID
   String                   jobUUID;
   String                   scheduleUUID;
 
