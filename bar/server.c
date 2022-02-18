@@ -653,32 +653,86 @@ LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
 }
 
 /***********************************************************************\
+* Name   : parseScheduleTime
+* Purpose: parse schedule time
+* Input  : scheduleTime - schedule time variable
+*          string       - time string <hour|*>:<minute|*>
+* Output : scheduleTime - schedule time
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors parseScheduleTime(ScheduleTime *scheduleTime,
+                               ConstString  string
+                              )
+{
+  Errors error;
+  String s0,s1;
+
+  assert(scheduleTime != NULL);
+  assert(string != NULL);
+
+  // init variables
+  s0 = String_new();
+  s1 = String_new();
+
+  // parse time
+  if (String_parse(string,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  {
+    if (   !Configuration_parseTimeNumber(s0,&scheduleTime->hour  )
+        || !Configuration_parseTimeNumber(s1,&scheduleTime->minute)
+       )
+    {
+      error = ERROR_PARSE_TIME;
+    }
+  }
+  else
+  {
+    error = ERROR_PARSE_TIME;
+  }
+
+  // free resources
+  String_delete(s1);
+  String_delete(s0);
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : parseScheduleDateTime
 * Purpose: parse schedule date/time
-* Input  : scheduleNode - schedule node variable
-*          date         - date string (<year|*>-<month|*>-<day|*>)
-*          weekDays     - week days string (<day>,...)
-*          time         - time string <hour|*>:<minute|*>
-* Output : scheduleNode - schedule node
+* Input  : scheduleDate       - schedule date variable
+*          scheduleWeekDaySet - schedule week day set variable
+*          scheduleTime       - schedule time variable
+*          dateString         - date string (<year|*>-<month|*>-<day|*>)
+*          weekDaysString     - week days string (<day>,...)
+*          timeString         - time string <hour|*>:<minute|*>
+* Output : scheduleDate       - schedule date
+*          scheduleWeekDaySet - schedule week day set
+*          scheduleTime       - schedule time
 * Return : ERROR_NONE or error code
 * Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
 *          nov, dec
 *          week day names: mon, tue, wed, thu, fri, sat, sun
 \***********************************************************************/
 
-LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
-                                   ConstString  date,
-                                   ConstString  weekDays,
-                                   ConstString  time
+LOCAL Errors parseScheduleDateTime(ScheduleDate       *scheduleDate,
+                                   ScheduleWeekDaySet *scheduleWeekDaySet,
+                                   ScheduleTime       *scheduleTime,
+                                   ConstString        dateString,
+                                   ConstString        weekDaysString,
+                                   ConstString        timeString
                                   )
 {
   Errors error;
   String s0,s1,s2;
 
-  assert(scheduleNode != NULL);
-  assert(date != NULL);
-  assert(weekDays != NULL);
-  assert(time != NULL);
+  assert(scheduleDate != NULL);
+  assert(scheduleWeekDaySet != NULL);
+  assert(scheduleTime != NULL);
+  assert(dateString != NULL);
+  assert(weekDaysString != NULL);
+  assert(timeString != NULL);
 
   error = ERROR_NONE;
 
@@ -688,40 +742,37 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   s2 = String_new();
 
   // parse date
-  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
+  if (error == ERROR_NONE)
   {
-    if (   !Configuration_parseDateNumber(s0,&scheduleNode->date.year )
-        || !Configuration_parseDateMonth (s1,&scheduleNode->date.month)
-        || !Configuration_parseDateNumber(s2,&scheduleNode->date.day  )
-       )
+    if      (String_parse(dateString,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
+    {
+      if (   !Configuration_parseDateNumber(s0,&scheduleDate->year )
+          || !Configuration_parseDateMonth (s1,&scheduleDate->month)
+          || !Configuration_parseDateNumber(s2,&scheduleDate->day  )
+         )
+      {
+        error = ERROR_PARSE_DATE;
+      }
+    }
+    else
     {
       error = ERROR_PARSE_DATE;
     }
   }
-  else
-  {
-    error = ERROR_PARSE_DATE;
-  }
 
   // parse week days
-  if (!Configuration_parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
+  if (error == ERROR_NONE)
   {
-    error = ERROR_PARSE_WEEKDAYS;
+    if (!Configuration_parseWeekDaySet(String_cString(weekDaysString),scheduleWeekDaySet))
+    {
+      error = ERROR_PARSE_WEEKDAYS;
+    }
   }
 
   // parse time
-  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  if (error == ERROR_NONE)
   {
-    if (   !Configuration_parseTimeNumber(s0,&scheduleNode->time.hour  )
-        || !Configuration_parseTimeNumber(s1,&scheduleNode->time.minute)
-       )
-    {
-      error = ERROR_PARSE_TIME;
-    }
-  }
-  else
-  {
-    error = ERROR_PARSE_TIME;
+    error = parseScheduleTime(scheduleTime,timeString);
   }
 
   // free resources
@@ -5892,23 +5943,25 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  if (!ConfigValue_parse(&CONFIG_VALUES[i],
-                         NULL, // sectionName
-                         String_cString(value),
-                         CALLBACK_(NULL,NULL),  // errorFunction
-                         CALLBACK_(NULL,NULL),  // warningFunction
-                         NULL,
-                         NULL // commentLineList  //variable
-                        )
+  if (ConfigValue_parse(&CONFIG_VALUES[i],
+                        NULL, // sectionName
+                        String_cString(value),
+                        CALLBACK_(NULL,NULL),  // errorFunction
+                        CALLBACK_(NULL,NULL),  // warningFunction
+                        NULL,
+                        NULL // commentLineList  //variable
+                       )
      )
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+  }
+  else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid server config '%S'",name);
     String_delete(value);
     String_delete(name);
     return;
   }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(value);
@@ -9238,7 +9291,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
                           CALLBACK_(NULL,NULL),  // errorFunction
                           CALLBACK_(NULL,NULL),  // warningFunction
                           jobNode,
-NULL // commentLineList
+                          NULL // commentLineList
                          )
        )
     {
@@ -11977,6 +12030,8 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 *            time=<hour>|*:<minute>|* \
 *            interval=<n>
 *            customText=<text> \
+*            beginTime=<hour>|*:<minute>|* \
+*            endTime=<hour>|*:<minute>|* \
 *            noStorage=yes|no \
 *            enabled=yes|no \
 *            totalEntities=<n>|0 \
@@ -12002,10 +12057,13 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   {
     ScheduleNode *scheduleNode;
     String       date,weekDays,time;
+    String       beginTime,endTime;
 
-    date     = String_new();
-    weekDays = String_new();
-    time     = String_new();
+    date      = String_new();
+    weekDays  = String_new();
+    time      = String_new();
+    beginTime = String_new();
+    endTime   = String_new();
     LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
     {
       if ((archiveType == ARCHIVE_TYPE_NONE) || (scheduleNode->archiveType == archiveType))
@@ -12076,9 +12134,48 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
           String_appendCString(time,"*");
         }
 
+        // get begin/end time string
+        String_clear(beginTime);
+        if (scheduleNode->beginTime.hour != TIME_ANY)
+        {
+          String_appendFormat(beginTime,"%02d",scheduleNode->beginTime.hour);
+        }
+        else
+        {
+          String_appendCString(beginTime,"*");
+        }
+        String_appendChar(beginTime,':');
+        if (scheduleNode->beginTime.minute != TIME_ANY)
+        {
+          String_appendFormat(beginTime,"%02d",scheduleNode->beginTime.minute);
+        }
+        else
+        {
+          String_appendCString(beginTime,"*");
+        }
+
+        String_clear(endTime);
+        if (scheduleNode->endTime.hour != TIME_ANY)
+        {
+          String_appendFormat(endTime,"%02d",scheduleNode->endTime.hour);
+        }
+        else
+        {
+          String_appendCString(endTime,"*");
+        }
+        String_appendChar(endTime,':');
+        if (scheduleNode->endTime.minute != TIME_ANY)
+        {
+          String_appendFormat(endTime,"%02d",scheduleNode->endTime.minute);
+        }
+        else
+        {
+          String_appendCString(endTime,"*");
+        }
+
         // send schedule info
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "jobUUID=%S scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                            "jobUUID=%S scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S beginTime=%S endTime=%S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                             jobNode->job.uuid,
                             scheduleNode->uuid,
                             (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType) : "*",
@@ -12087,6 +12184,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                             time,
                             scheduleNode->interval,
                             scheduleNode->customText,
+                            beginTime,
+                            endTime,
                             scheduleNode->noStorage,
                             scheduleNode->enabled,
                             scheduleNode->lastExecutedDateTime,
@@ -12097,6 +12196,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                            );
       }
     }
+    String_delete(endTime);
+    String_delete(beginTime);
     String_delete(time);
     String_delete(weekDays);
     String_delete(date);
@@ -12179,6 +12280,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   ArchiveTypes archiveType;
   uint         interval;
   String       customText;
+  String       beginTime,endTime;
   bool         noStorage;
   bool         enabled;
   ScheduleNode *scheduleNode;
@@ -12242,9 +12344,36 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   StringMap_getUInt(argumentMap,"interval",&interval,0);
   customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
+  beginTime = String_new();
+  if (!StringMap_getString(argumentMap,"beginTime",time,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
+    String_delete(beginTime);
+    String_delete(time);
+    String_delete(customText);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
+  endTime = String_new();
+  if (!StringMap_getString(argumentMap,"endTime",time,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
   if (!StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"noStorage=yes|no");
+    String_delete(endTime);
+    String_delete(beginTime);
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12255,6 +12384,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   if (!StringMap_getBool(argumentMap,"enabled",&enabled,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"enabled=yes|no");
+    String_delete(endTime);
+    String_delete(beginTime);
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12268,7 +12399,9 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   assert(scheduleNode != NULL);
 
   // parse schedule
-  error = parseScheduleDateTime(scheduleNode,
+  error = parseScheduleDateTime(&scheduleNode->date,
+                                &scheduleNode->weekDaySet,
+                                &scheduleNode->time,
                                 date,
                                 weekDays,
                                 time
@@ -12285,6 +12418,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
                         time
                        );
     deleteScheduleNode(scheduleNode);
+    String_delete(endTime);
+    String_delete(beginTime);
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12295,6 +12430,50 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   scheduleNode->archiveType = archiveType;
   scheduleNode->interval    = interval;
   String_set(scheduleNode->customText,customText);
+  error = parseScheduleTime(&scheduleNode->beginTime,
+                            beginTime
+                           );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_PARSE_SCHEDULE,
+                        "%S",
+                        beginTime
+                       );
+    deleteScheduleNode(scheduleNode);
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
+  error = parseScheduleTime(&scheduleNode->endTime,
+                            endTime
+                           );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_PARSE_SCHEDULE,
+                        "%S",
+                        endTime
+                       );
+    deleteScheduleNode(scheduleNode);
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
   scheduleNode->noStorage   = noStorage;
   scheduleNode->enabled     = enabled;
   scheduleNode->minKeep     = 0;
@@ -12310,6 +12489,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       deleteScheduleNode(scheduleNode);
+      String_delete(endTime);
+      String_delete(beginTime);
       String_delete(customText);
       String_delete(time);
       String_delete(weekDays);
@@ -12331,6 +12512,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
 
   // free resources
+  String_delete(endTime);
+  String_delete(beginTime);
   String_delete(customText);
   String_delete(time);
   String_delete(weekDays);
@@ -13069,7 +13252,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   String       name,value;
   JobNode      *jobNode;
   ScheduleNode *scheduleNode;
-  uint         i;
+  uint         i,i0,i1;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13128,9 +13311,17 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // parse
+    i = ConfigValue_findSection(JOB_CONFIG_VALUES,
+                                "schedule",
+                                &i0,
+                                &i1
+                               );
+    assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
+    UNUSED_VARIABLE(i);
+
     i = ConfigValue_find(JOB_CONFIG_VALUES,
-                         CONFIG_VALUE_INDEX_NONE,
-                         CONFIG_VALUE_INDEX_NONE,
+                         i0,
+                         i1,
                          String_cString(name)
                         );
     if (i == CONFIG_VALUE_INDEX_NONE)
@@ -13148,9 +13339,13 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
                           CALLBACK_(NULL,NULL),  // errorFunction
                           CALLBACK_(NULL,NULL),  // warningFunction
                           scheduleNode,
-NULL // commentLineList
+                          NULL // commentLineList
                          )
        )
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+    }
+    else
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid schedule config '%S'",name);
       Job_listUnlock();
@@ -13158,8 +13353,6 @@ NULL // commentLineList
       String_delete(name);
       return;
     }
-
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);

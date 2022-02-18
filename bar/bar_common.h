@@ -408,6 +408,7 @@ typedef struct ScheduleNode
   ArchiveTypes       archiveType;                             // archive type to create
   uint               interval;                                // continuous interval [min]
   String             customText;                              // custom text
+  ScheduleTime       beginTime,endTime;                       // begin/end time
   bool               noStorage;                               // TRUE to skip storage, only create incremental data
   bool               enabled;                                 // TRUE iff enabled
 

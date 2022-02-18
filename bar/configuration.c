@@ -7771,36 +7771,6 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
-//TODO remove
-#if 0
-  // ignored schedule settings (server only)
-  CONFIG_VALUE_SEPARATOR("schedule"),
-  CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_SECTION_ARRAY     ("schedule",NULL,-1,NULL,NULL,
-    CONFIG_VALUE_IGNORE          ("UUID",                                                                                            NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("parentUUID",                                                                                      NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("date",                                                                                            NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("weekdays",                                                                                        NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("time",                                                                                            NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("archive-type",                                                                                    NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("interval",                                                                                        NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("text",                                                                                            NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("enabled",                                                                                         NULL,FALSE),
-  ),
-
-  // ignored persitence settings (server only)
-  CONFIG_VALUE_SEPARATOR("persistence"),
-  CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_SECTION_ARRAY     ("persistence",NULL,-1,NULL,NULL,
-    CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
-    CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
-  ),
-#endif
-
   // commands
   CONFIG_VALUE_SEPARATOR("commands"),
   CONFIG_VALUE_SPACE(),
@@ -8074,7 +8044,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ,"<uuid>"),
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT           ("slave settings"),
+  CONFIG_VALUE_COMMENT            ("slave settings"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
   CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL,"<n>"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS,                  "yes|no"),
@@ -8183,6 +8153,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ,"<text>"),
     CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage,                          "yes|no"),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("begin",                     ScheduleNode,beginTime,                          configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("end",                       ScheduleNode,endTime,                            configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
     CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled,                            "yes|no"),
 
     // deprecated

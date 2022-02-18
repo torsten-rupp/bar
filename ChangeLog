@@ -1,6 +1,10 @@
 2020-11-30 0.22
   * added option --save-configuration: format and
     save configuration file
+  * added support for external index database engines
+    MariaDB, PostgreSQL
+  * use threads pools for client connections+worker
+    threads
   * fixed reading cryption keys via config file
   * fixed CD/DVD/BD blank command: use
     "dvd+rw-format -force" to create medium in
@@ -26,8 +30,9 @@
   * upgrade pcre 8.44
   * upgrade SQLite 3.34
   * upgrade binutils 2.35
-  * BARControl: fix display of entry progress: count
+  * BARControl: fixed display of entry progress: count
     done+error+skipped
+  * BARControl: fixed closing tooltips
 
 2020-09-27 0.21f
   * fixed auto-index of new archives
