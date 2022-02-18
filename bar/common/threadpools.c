@@ -51,10 +51,7 @@ typedef struct
   ThreadPool     *threadPool;
   ThreadPoolNode *threadPoolNode;
   char           name[64];
-  int            niceLevel;
   sem_t          started;
-//  void       (*entryFunction)(void*);
-//  void       *argument;
 } StartInfo;
 
 
@@ -110,6 +107,8 @@ LOCAL void *threadPoolStartCode(void *userData)
   void           *argument;
 
   assert(startInfo != NULL);
+  assert(startInfo->threadPool != NULL);
+  assert(startInfo->threadPoolNode != NULL);
 
   pthread_cleanup_push(threadPoolTerminated,&startInfo->threadPoolNode->thread);
   {
@@ -122,7 +121,7 @@ LOCAL void *threadPoolStartCode(void *userData)
     #endif /* HAVE_PTHREAD_SETNAME_NP */
 
     #if   defined(PLATFORM_LINUX)
-      if (nice(startInfo->niceLevel) == -1)
+      if (nice(startInfo->threadPool->niceLevel) == -1)
       {
         // ignore error
       }
@@ -171,7 +170,6 @@ LOCAL void *threadPoolStartCode(void *userData)
             pthread_cond_broadcast(&threadPool->modified);
           }
         }
-//fprintf(stderr,"%s:%d: threadPoolNode=%p _quitFlag=%d\n",__FILE__,__LINE__,threadPoolNode,threadPool->quitFlag);
       }
     }
     pthread_mutex_unlock(&threadPool->lock);
@@ -179,11 +177,93 @@ LOCAL void *threadPoolStartCode(void *userData)
   pthread_cleanup_pop(1);
 
   // quit
-//fprintf(stderr,"%s:%d: quit %p\n",__FILE__,__LINE__,threadPoolNode);
   threadPoolNode->state = THREADPOOL_THREAD_STATE_QUIT;
   pthread_cond_broadcast(&threadPool->modified);
 
   return NULL;
+}
+
+/***********************************************************************\
+* Name   : newThread
+* Purpose: add new thread to thread pool
+* Input  : threadPool - thread pool
+*          niceLevel  - nice level
+* Output : -
+* Return : thread pool node or nULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
+{
+  ThreadPoolNode *threadPoolNode;
+  StartInfo      startInfo;
+  pthread_attr_t threadAttributes;
+  int            result;
+
+  assert(threadPool != NULL);
+
+  // new thread pool node
+  threadPoolNode = LIST_NEW_NODE(ThreadPoolNode);
+  if (threadPoolNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  threadPoolNode->state = THREADPOOL_THREAD_STATE_IDLE;
+  pthread_cond_init(&threadPoolNode->trigger,NULL);
+
+  // init start info
+  if (sem_init(&startInfo.started,0,0) != 0)
+  {
+    HALT_INTERNAL_ERROR("cannot initialise start trigger");
+  }
+  startInfo.threadPool     = threadPool;
+  startInfo.threadPoolNode = threadPoolNode;
+  stringFormat(startInfo.name,sizeof(startInfo.name),"%s%d",threadPool->namePrefix,threadPool->size);
+
+  // init thread attributes
+  pthread_attr_init(&threadAttributes);
+  #ifdef HAVE_PTHREAD_ATTR_SETNAME
+    if (name != NULL)
+    {
+      pthread_attr_setname(&threadAttributes,startInfo.name);
+    }
+  #endif /* HAVE_PTHREAD_ATTR_SETNAME */
+
+  // start thread
+  if (pthread_create(&threadPoolNode->thread,
+                     &threadAttributes,
+                     threadPoolStartCode,
+                     &startInfo
+                    ) != 0
+     )
+  {
+    sem_destroy(&startInfo.started);
+    pthread_attr_destroy(&threadAttributes);
+    LIST_DELETE_NODE(threadPoolNode);
+
+    return NULL;
+  }
+  pthread_attr_destroy(&threadAttributes);
+
+  // wait until thread started
+  do
+  {
+    result = sem_wait(&startInfo.started);
+  }
+  while ((result != 0) && (errno == EINTR));
+  if (result != 0)
+  {
+    HALT_INTERNAL_ERROR("wait for start lock failed");
+  }
+
+  // add to idle list
+  List_append(&threadPool->idle,threadPoolNode);
+  threadPool->size++;
+
+  // free resources
+  sem_destroy(&startInfo.started);
+
+  return threadPoolNode;
 }
 
 /***********************************************************************\
@@ -267,63 +347,31 @@ void ThreadPool_doneAll(void)
 bool ThreadPool_init(ThreadPool *threadPool,
                      const char *namePrefix,
                      int        niceLevel,
-                     uint       size
+                     uint       size,
+                     uint       maxSize
                     )
 {
-  StartInfo      startInfo;
   uint           i;
   ThreadPoolNode *threadPoolNode;
-  pthread_attr_t threadAttributes;
-  int            result;
 
   assert(threadPool != NULL);
 
   // init
+  stringSet(threadPool->namePrefix,sizeof(threadPool->namePrefix),namePrefix);
+  threadPool->niceLevel = niceLevel;
+  threadPool->maxSize   = maxSize;
   pthread_mutex_init(&threadPool->lock,NULL);
   pthread_cond_init(&threadPool->modified,NULL);
   List_init(&threadPool->idle);
   List_init(&threadPool->running);
-  threadPool->quitFlag = FALSE;
-  if (sem_init(&startInfo.started,0,0) != 0)
-  {
-    HALT_INTERNAL_ERROR("cannot initialise start trigger");
-  }
-  startInfo.threadPool = threadPool;
-  startInfo.niceLevel  = niceLevel;
+  threadPool->size      = 0;
+  threadPool->quitFlag  = FALSE;
 
   for (i = 0; i < size; i++)
   {
-    threadPoolNode = LIST_NEW_NODE(ThreadPoolNode);
+    threadPoolNode = newThread(threadPool);
     if (threadPoolNode == NULL)
     {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    threadPoolNode->state = THREADPOOL_THREAD_STATE_IDLE;
-    pthread_cond_init(&threadPoolNode->trigger,NULL);
-
-    // init start info
-    startInfo.threadPoolNode = threadPoolNode;
-    stringFormat(startInfo.name,sizeof(startInfo.name),"%s%d",namePrefix,i);
-
-    // init thread attributes
-    pthread_attr_init(&threadAttributes);
-    #ifdef HAVE_PTHREAD_ATTR_SETNAME
-      if (name != NULL)
-      {
-        pthread_attr_setname(&threadAttributes,startInfo.name);
-      }
-    #endif /* HAVE_PTHREAD_ATTR_SETNAME */
-
-    // start thread
-    if (pthread_create(&threadPoolNode->thread,
-                       &threadAttributes,
-                       threadPoolStartCode,
-                       &startInfo
-                      ) != 0
-       )
-    {
-      pthread_attr_destroy(&threadAttributes);
-
       // stop threads
       threadPool->quitFlag = TRUE;
       pthread_mutex_lock(&threadPool->lock);
@@ -351,29 +399,10 @@ bool ThreadPool_init(ThreadPool *threadPool,
 
       return FALSE;
     }
-    pthread_attr_destroy(&threadAttributes);
-
-    // wait until thread started
-    do
-    {
-      result = sem_wait(&startInfo.started);
-    }
-    while ((result != 0) && (errno == EINTR));
-    if (result != 0)
-    {
-      HALT_INTERNAL_ERROR("wait for start lock failed");
-    }
-
-    List_append(&threadPool->idle,threadPoolNode);
   }
   assert(List_count(&threadPool->idle) == size);
-  sem_destroy(&startInfo.started);
 
-//  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(threadPool,ThreadPool);
-//  #else /* not NDEBUG */
-//    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,threadPool,ThreadPool);
-//  #endif /* not NDEBUG */
+  DEBUG_ADD_RESOURCE_TRACE(threadPool,ThreadPool);
 
   return TRUE;
 }
@@ -419,10 +448,10 @@ void ThreadPool_done(ThreadPool *threadPool)
   pthread_mutex_destroy(&threadPool->lock);
 }
 
-void ThreadPool_run(ThreadPool *threadPool,
-                    const void *entryFunction,
-                    void       *argument
-                   )
+ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
+                               const void *entryFunction,
+                               void       *argument
+                              )
 {
   ThreadPoolNode *threadPoolNode;
 
@@ -432,10 +461,20 @@ void ThreadPool_run(ThreadPool *threadPool,
 
   pthread_mutex_lock(&threadPool->lock);
   {
-    // wait for idle thread
-    while (List_isEmpty(&threadPool->idle))
+    if (   List_isEmpty(&threadPool->idle)
+        && (threadPool->size < threadPool->maxSize)
+       )
     {
-      pthread_cond_wait(&threadPool->modified,&threadPool->lock);
+      // create new thread
+      threadPoolNode = newThread(threadPool);
+    }
+    else
+    {
+      // wait for idle thread
+      while (List_isEmpty(&threadPool->idle))
+      {
+        pthread_cond_wait(&threadPool->modified,&threadPool->lock);
+      }
     }
 
     // remove from idle list
@@ -450,9 +489,30 @@ void ThreadPool_run(ThreadPool *threadPool,
 
     // run thread with funciton
     pthread_cond_signal(&threadPoolNode->trigger);
-//fprintf(stderr,"%s:%d: signaled start\n",__FILE__,__LINE__);
   }
   pthread_mutex_unlock(&threadPool->lock);
+
+  return threadPoolNode;
+}
+
+bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode)
+{
+  assert(threadPool != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(threadPool);
+  assert(threadPoolNode != NULL);
+
+  pthread_mutex_lock(&threadPool->lock);
+  {
+    while (   (pthread_equal(threadPoolNode->usedBy,pthread_self()) == 0)
+           && (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING)
+          )
+    {
+      pthread_cond_wait(&threadPool->modified,&threadPool->lock);
+    }
+  }
+  pthread_mutex_unlock(&threadPool->lock);
+
+  return TRUE;
 }
 
 bool ThreadPool_joinAll(ThreadPool *threadPool)

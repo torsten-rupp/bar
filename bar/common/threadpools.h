@@ -62,11 +62,16 @@ typedef struct
 
 typedef struct
 {
+  char            namePrefix[32];
+  int             niceLevel;
+  uint            maxSize;
+
   pthread_mutex_t lock;
   pthread_cond_t  modified;
 
   ThreadPoolList  idle;
   ThreadPoolList  running;
+  uint            size;
 
   bool            quitFlag;
 } ThreadPool;
@@ -119,6 +124,7 @@ void ThreadPool_doneAll(void);
 *          namePrefix - thread name prefix
 *          niceLevel  - nice level or 0 for default level
 *          size       - number of threads in pool
+*          maxSize    - max. number of threads in pool
 * Output : threadPool - thread pool
 * Return : TURE iff no error
 * Notes  : -
@@ -127,7 +133,8 @@ void ThreadPool_doneAll(void);
 bool ThreadPool_init(ThreadPool *threadPool,
                      const char *namePrefix,
                      int        niceLevel,
-                     uint       size
+                     uint       size,
+                     uint       maxSize
                     );
 
 /***********************************************************************\
@@ -169,18 +176,31 @@ void ThreadPool_doneSet(ThreadPoolSet *threadPoolSet);
 *          entryFunction - thread entry function
 *          argument      - thread argument
 * Output : -
-* Return : -
+* Return : thread pool node
 * Notes  : -
 \***********************************************************************/
 
-void ThreadPool_run(ThreadPool *threadPool,
-                    const void *entryFunction,
-                    void       *argument
-                   );
+ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
+                               const void *entryFunction,
+                               void       *argument
+                              );
+
+/***********************************************************************\
+* Name   : ThreadPool_join
+* Purpose: wait for termination of thread
+* Input  : threadPool     - thread pool
+*          threadPoolNode - thread pool node
+* Output : -
+* Return : TRUE if no error, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode);
 
 /***********************************************************************\
 * Name   : ThreadPool_joinAll
-* Purpose: wait for termination of all threads in poll
+* Purpose: wait for termination of all threads in pool allocated by
+*          calling thread
 * Input  : threadPool - thread pool
 * Output : -
 * Return : TRUE if no error, FALSE otherwise

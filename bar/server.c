@@ -250,7 +250,7 @@ typedef struct
   uint64                connectTimestamp;
   bool                  quitFlag;
 
-  // authization data
+  // authorization data
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
 
@@ -263,7 +263,7 @@ typedef struct
   ServerIO              io;
 
   // command processing
-  Thread                threads[MAX_NETWORK_CLIENT_THREADS];
+  ThreadPoolNode        *threads[MAX_NETWORK_CLIENT_THREADS];
   MsgQueue              commandQueue;
 
   // current list settings
@@ -19417,7 +19417,8 @@ LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
   }
   for (i = 0; i < MAX_NETWORK_CLIENT_THREADS; i++)
   {
-    if (!Thread_init(&clientInfo->threads[i],"BAR client",0,networkClientThreadCode,clientInfo))
+    clientInfo->threads[i] = ThreadPool_run(&clientThreadPool,networkClientThreadCode,clientInfo);
+    if (clientInfo->threads[i] == NULL)
     {
       HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
@@ -19449,17 +19450,13 @@ LOCAL void doneNetworkClient(ClientInfo *clientInfo)
   MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
   for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
   {
-    if (!Thread_join(&clientInfo->threads[i]))
+    if (!ThreadPool_join(&clientThreadPool,clientInfo->threads[i]))
     {
       HALT_INTERNAL_ERROR("Cannot stop command threads!");
     }
   }
 
   // free resources
-  for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
-  {
-    Thread_done(&clientInfo->threads[i]);
-  }
   MsgQueue_done(&clientInfo->commandQueue);
 
   // disconnect

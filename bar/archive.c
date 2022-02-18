@@ -6250,6 +6250,8 @@ UNUSED_VARIABLE(storageInfo);
   if (archiveHandle->cryptPassword != NULL) Password_delete(archiveHandle->cryptPassword);
   Semaphore_done(&archiveHandle->passwordLock);
   List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
+  String_delete(archiveHandle->scheduleUUID);
+  String_delete(archiveHandle->jobUUID);
   String_delete(archiveHandle->userName);
   String_delete(archiveHandle->hostName);
 
