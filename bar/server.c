@@ -58,7 +58,7 @@
 #include "server.h"
 
 // TODO:
-//#include <valgrind/callgrind.h>
+#include <valgrind/callgrind.h>
 
 /****************** Conditional compilation switches *******************/
 
@@ -364,6 +364,16 @@ LOCAL bool                  quitFlag;                    // TRUE iff quit reques
 #endif /* SIMULATE_PURGE */
 
 /****************************** Macros *********************************/
+// get time from hour/minute
+#define TIME(hour,minute) ((hour)*60+(minute))
+// get begin time from hour/minute or 00:00
+#define TIME_BEGIN(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) :  0)*60+ \
+                                 (((minute) != TIME_ANY) ? (uint)(minute) :  0) \
+                                )
+// get end time from hour/minute or 24:00
+#define TIME_END(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) : 23)*60+ \
+                               (((minute) != TIME_ANY) ? (uint)(minute) : 60) \
+                              )
 
 /***************************** Forwards ********************************/
 
@@ -671,6 +681,8 @@ LOCAL Errors parseScheduleTime(ScheduleTime *scheduleTime,
 
   assert(scheduleTime != NULL);
   assert(string != NULL);
+
+  error = ERROR_NONE;
 
   // init variables
   s0 = String_new();
@@ -1667,12 +1679,6 @@ LOCAL void schedulerThreadCode(void)
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
-#ifndef WERROR
-#warning remove/revert
-#endif
-//TODO: avoid long running lock
-//CALLGRIND_START_INSTRUMENTATION;
-//CALLGRIND_TOGGLE_COLLECT;
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
       JOB_LIST_ITERATEX(jobNode,!isQuit() && !jobListPendingFlag)
@@ -1689,6 +1695,7 @@ LOCAL void schedulerThreadCode(void)
           // check if job have to be executed by regular schedule (check backward in time)
           if (!List_isEmpty(&jobNode->job.options.scheduleList))
           {
+// TODO: remove
 #if 0
 fprintf(stderr,"%s:%d: jobuuid=%s\n",__FILE__,__LINE__,String_cString(jobNode->job.uuid));
 LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
@@ -1729,7 +1736,13 @@ fprintf(stderr,"%s:%d: %d %d %d : %d %d : %x\n",__FILE__,__LINE__,scheduleNode->
             LIST_ITERATEX(&jobNode->job.options.scheduleList,scheduleNode,executeScheduleNode == NULL)
             {
 //fprintf(stderr,"%s:%d: scheduld date time %d %d %d - %d %d - %x\n",__FILE__,__LINE__,scheduleNode->date.year,scheduleNode->date.month,scheduleNode->date.day,scheduleNode->time.hour,scheduleNode->time.minute,scheduleNode->weekDaySet);
-              if (scheduleNode->enabled)
+              if (   scheduleNode->enabled
+                  && (   (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                      || (   (TIME(dateTime.hour,dateTime.minute) >= TIME_BEGIN(scheduleNode->beginTime.hour,scheduleNode->beginTime.minute))
+                          && (TIME(dateTime.hour,dateTime.minute) <= TIME_END  (scheduleNode->endTime.hour,  scheduleNode->endTime.minute  ))
+                         )
+                     )
+                 )
               {
                 while (year >= (int)lastScheduleDateTime.year)
                 {
@@ -1910,10 +1923,6 @@ exit(1);
         }
       }
     }
-// TODO:
-//CALLGRIND_TOGGLE_COLLECT;
-//CALLGRIND_STOP_INSTRUMENTATION;
-//exit(0);
 
     if (!isQuit())
     {
@@ -2025,17 +2034,6 @@ LOCAL void pauseThreadCode(void)
 
 LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
 {
-  // get time from hour/minute
-  #define TIME(hour,minute) ((hour)*60+(minute))
-  // get begin time from hour/minute or 00:00
-  #define TIME_BEGIN(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) :  0)*60+ \
-                                   (((minute) != TIME_ANY) ? (uint)(minute) :  0) \
-                                  )
-  // get end time from hour/minute or 24:00
-  #define TIME_END(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) : 23)*60+ \
-                                 (((minute) != TIME_ANY) ? (uint)(minute) : 60) \
-                                )
-
   bool                  maintenanceTimeFlag;
   uint                  year;
   uint                  month;
@@ -12263,6 +12261,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 *            time=<hour>|*:<minute>|*
 *            interval=<n>
 *            customText=<text>
+*            beginTime=<hour>|*:<minute>|*
+*            endTime=<hour>|*:<minute>|*
 *            noStorage=yes|no
 *            enabled=yes|no
 *          Result:
@@ -12345,7 +12345,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
   beginTime = String_new();
-  if (!StringMap_getString(argumentMap,"beginTime",time,NULL))
+  if (!StringMap_getString(argumentMap,"beginTime",beginTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
     String_delete(beginTime);
@@ -12357,7 +12357,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
   endTime = String_new();
-  if (!StringMap_getString(argumentMap,"endTime",time,NULL))
+  if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
     String_delete(endTime);
