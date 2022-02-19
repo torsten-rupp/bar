@@ -15941,7 +15941,7 @@ endTime
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S noStorage=%y enabled=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S beginTime=%s endTime=%s noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
                                                        scheduleData.getDate(),
                                                        scheduleData.weekDaysToString(),
@@ -15949,6 +15949,8 @@ endTime
                                                        scheduleData.archiveType.toString(),
                                                        scheduleData.interval,
                                                        scheduleData.customText,
+                                                       scheduleData.getBeginTime(),
+                                                       scheduleData.getEndTime(),
                                                        scheduleData.noStorage,
                                                        scheduleData.enabled
                                                       ),
@@ -15999,7 +16001,6 @@ endTime
         {
           try
           {
-Dprintf.dprintf("+++++++++++++++");
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.weekDaysToString());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime());
@@ -16055,13 +16056,15 @@ Dprintf.dprintf("+++++++++++++++");
           try
           {
             ValueMap valueMap = new ValueMap();
-            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S noStorage=%y enabled=%y",
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S beginTime=%s endTime=%s noStorage=%y enabled=%y",
                                                          selectedJobData.uuid,
                                                          newScheduleData.getDate(),
                                                          newScheduleData.getWeekDays(),
                                                          newScheduleData.getTime(),
                                                          newScheduleData.archiveType.toString(),
                                                          newScheduleData.customText,
+                                                         scheduleData.getBeginTime(),
+                                                         scheduleData.getEndTime(),
                                                          newScheduleData.noStorage,
                                                          newScheduleData.enabled
                                                         ),
