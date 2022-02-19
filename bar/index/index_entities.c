@@ -715,7 +715,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(entryId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -847,7 +847,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY     ("uuids.id"),
-                             DATABASE_COLUMN_UINT64  ("entities.jobUUID"),
+                             DATABASE_COLUMN_STRING  ("entities.jobUUID"),
                              DATABASE_COLUMN_DATETIME("entities.created"),
                              DATABASE_COLUMN_UINT    ("entities.type")
                            ),
@@ -879,7 +879,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                               (
                                 DATABASE_FILTER_KEY(entityId)
                               ),
-                              0
+                              DATABASE_UNLIMITED
                              );
       if (error != ERROR_NONE)
       {

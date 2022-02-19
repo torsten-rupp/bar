@@ -1244,7 +1244,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
                             DATABASE_VALUES
                             (
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
 #endif
 #if 0
@@ -1298,7 +1298,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
                                 DATABASE_FILTER_STRING(name)
                                 DATABASE_FILTER_STRING(name)
                               ),
-                              0
+                              DATABASE_UNLIMITED
                              );
       }
       Database_finalize(&databaseStatementHandle);
@@ -1850,7 +1850,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(entryId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
