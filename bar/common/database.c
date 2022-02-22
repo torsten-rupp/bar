@@ -3090,9 +3090,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           fileName = databaseSpecifier->sqlite.fileName;
         }
 
-        // create directory if needed
         if (!String_isEmpty(fileName))
         {
+          // create directory if needed
           directoryName = File_getDirectoryName(String_new(),fileName);
           if (   !String_isEmpty(directoryName)
               && !File_isDirectory(directoryName)
@@ -3112,25 +3112,30 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
             }
           }
           String_delete(directoryName);
-        }
 
-        // create database
-        if (   !String_isEmpty(fileName)
-            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
-           )
-        {
-          // delete existing file
-          (void)File_delete(fileName,FALSE);
-        }
+          // delete database on force
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
+          {
+            // delete existing file
+            (void)File_delete(fileName,FALSE);
+          }
 
-        // check if exists
-        if (   !String_isEmpty(fileName)
-            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_CREATE)
-           )
-        {
+          // check if exists
           if (File_exists(fileName))
           {
-            return ERROR_DATABASE_EXISTS;
+            if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_CREATE)
+            {
+              return ERROR_DATABASE_EXISTS;
+            }
+          }
+          else
+          {
+            if (   ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_READ)
+                || ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_READWRITE)
+               )
+            {
+              return ERROR_DATABASE_NOT_FOUND;
+            }
           }
         }
 
@@ -13747,14 +13752,15 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   va_list arguments;
   union
   {
-    bool   *b;
-    int    *i;
-    int64  *i64;
-    uint   *u;
-    uint64 *u64;
-    float  *f;
-    double *d;
-    char   *ch;
+    DatabaseId *id;
+    bool       *b;
+    int        *i;
+    int64      *i64;
+    uint       *u;
+    uint64     *u64;
+    float      *f;
+    double     *d;
+    char       *ch;
     const char **s;
     String string;
   }       value;
@@ -13781,10 +13787,10 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           break;
         case DATABASE_DATATYPE_PRIMARY_KEY:
         case DATABASE_DATATYPE_KEY:
-          value.i64 = va_arg(arguments,int64*);
-          if (value.i64 != NULL)
+          value.id = va_arg(arguments,DatabaseId*);
+          if (value.id != NULL)
           {
-            (*value.i64) = (int64)databaseStatementHandle->results[i].i64;
+            (*value.id) = (int64)databaseStatementHandle->results[i].id;
           }
           break;
         case DATABASE_DATATYPE_BOOL:
@@ -14729,13 +14735,15 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
-bool Database_existsValue(DatabaseHandle      *databaseHandle,
-                         const char           *tableName,
-                         const char           *columnName,
-                         const char           *filter,
-                         const DatabaseFilter filters[],
-                         uint                 filterCount
-                        )
+bool Database_existsValue(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+// TODO: use DatabaseColumn
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
+                         )
 {
   bool   existsFlag;
   Errors error;
@@ -14764,7 +14772,7 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
                        (
                          tableName
                        ),
-                       DATABASE_FLAG_NONE,
+                       flags,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY   (columnName)

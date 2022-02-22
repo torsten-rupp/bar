@@ -1381,7 +1381,7 @@ bool Job_isSomeRunning(void)
   runningFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    LIST_ITERATE(&jobList,jobNode)
+    JOB_LIST_ITERATE(jobNode)
     {
       if (Job_isRunning(jobNode->jobState))
       {
@@ -1462,7 +1462,6 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
 {
   ScheduleNode *scheduleNode;
 
-  assert(jobNode != NULL);
   assert(scheduleUUID != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -1473,7 +1472,7 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   else
   {
     scheduleNode = NULL;
-    LIST_ITERATEX(&jobList,jobNode,scheduleNode == NULL)
+    JOB_LIST_ITERATEX(jobNode,scheduleNode == NULL)
     {
       scheduleNode = LIST_FIND(&jobNode->job.options.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
     }
@@ -2495,7 +2494,7 @@ void Job_writeAllModified(void)
 
   SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    LIST_ITERATE(&jobList,jobNode)
+    JOB_LIST_ITERATE(jobNode)
     {
       if (jobNode->modifiedFlag)
       {
@@ -3016,6 +3015,43 @@ void Job_connectorUnlock(ConnectorInfo *connectorInfo)
     if (slaveNode != NULL)
     {
       slaveNode->lockCount--;
+    }
+  }
+}
+
+void Job_updateNotifies(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+}
+
+void Job_updateAllNotifies(void)
+{
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+
+  JOB_LIST_ITERATE(jobNode)
+  {
+    LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+    {
+      if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+      {
+        if (scheduleNode->enabled)
+        {
+          Continuous_initNotify(jobNode->name,
+                                jobNode->job.uuid,
+                                scheduleNode->uuid,
+                                &jobNode->job.includeEntryList
+                               );
+        }
+        else
+        {
+          Continuous_doneNotify(jobNode->name,
+                                jobNode->job.uuid,
+                                scheduleNode->uuid
+                               );
+        }
+      }
     }
   }
 }

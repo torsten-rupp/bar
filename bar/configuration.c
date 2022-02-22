@@ -9184,11 +9184,6 @@ bool Configuration_validate(void)
     if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
   }
 
-  if (!Continuous_isAvailable())
-  {
-    printWarning("Continuous support is not available");
-  }
-
   return TRUE;
 }
 

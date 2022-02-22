@@ -504,6 +504,20 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
+bool inTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute)
+{
+  if (TIME_BEGIN(beginHour,beginMinute) <= TIME_END(endHour,endMinute))
+  {
+    return    (TIME(hour,minute) >= TIME_BEGIN(beginHour,beginMinute))
+           && (TIME(hour,minute) <= TIME_END  (endHour,  endMinute  ));
+  }
+  else
+  {
+    return    (TIME(hour,minute) >= TIME_BEGIN(beginHour,beginMinute))
+           || (TIME(hour,minute) <= TIME_END  (endHour,  endMinute  ));
+  }
+}
+
 #ifdef __cplusplus
   }
 #endif

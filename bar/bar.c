@@ -2955,7 +2955,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 
 LOCAL Errors runDaemon(void)
 {
-  Errors error;
+  Errors  error;
+  JobNode *jobNode;
 
   // open log file
   openLog();
@@ -2983,27 +2984,20 @@ LOCAL Errors runDaemon(void)
     return error;
   }
 
-  if (Continuous_isAvailable())
+  // init continuous
+  error = Continuous_init(globalOptions.continuousDatabaseFileName);
+  if (error != ERROR_NONE)
   {
-      // init continuous
-      error = Continuous_init(globalOptions.continuousDatabaseFileName);
-      if (error != ERROR_NONE)
-      {
-        printError(_("Cannot initialise continuous (error: %s)!"),
-                   Error_getText(error)
-                  );
-        deletePIDFile();
-        closeLog();
-        return error;
-      }
+    printWarning("Continuous support is not available (reason: %s)",Error_getText(error));
   }
+  Job_updateAllNotifies();
 
   // daemon mode -> run server with network
   globalOptions.runMode = RUN_MODE_SERVER;
   error = Server_socket();
   if (error != ERROR_NONE)
   {
-    if (Continuous_isAvailable()) Continuous_done();
+    Continuous_done();
     deletePIDFile();
     closeLog();
     return error;
@@ -3027,13 +3021,9 @@ LOCAL Errors runDaemon(void)
     }
   }
 
-  // done continouous
-  if (Continuous_isAvailable()) Continuous_done();
-
-  // delete pid file
+  // free resources
+  Continuous_done();
   deletePIDFile();
-
-  // close log file
   closeLog();
 
   return ERROR_NONE;

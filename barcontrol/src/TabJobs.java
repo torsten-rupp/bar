@@ -15426,10 +15426,6 @@ throw new Error("NYI");
                                      long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
                                      long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
                                      long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
-Dprintf.dprintf("%s - %s",
-beginTime,
-endTime
-);
 
                                      ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
                                      if (scheduleData != null)
@@ -15753,6 +15749,7 @@ endTime
         widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
         Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",                        0,
+                                                               BARControl.tr("1 min"),    1,
                                                                BARControl.tr("5 min"),    5,
                                                                BARControl.tr("10 min"),  10,
                                                                BARControl.tr("30 min"),  30,

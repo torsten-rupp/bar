@@ -364,16 +364,6 @@ LOCAL bool                  quitFlag;                    // TRUE iff quit reques
 #endif /* SIMULATE_PURGE */
 
 /****************************** Macros *********************************/
-// get time from hour/minute
-#define TIME(hour,minute) ((hour)*60+(minute))
-// get begin time from hour/minute or 00:00
-#define TIME_BEGIN(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) :  0)*60+ \
-                                 (((minute) != TIME_ANY) ? (uint)(minute) :  0) \
-                                )
-// get end time from hour/minute or 24:00
-#define TIME_END(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) : 23)*60+ \
-                               (((minute) != TIME_ANY) ? (uint)(minute) : 60) \
-                              )
 
 /***************************** Forwards ********************************/
 
@@ -1613,6 +1603,30 @@ Connector_isConnected(&slaveNode->connectorInfo)
 
 LOCAL void schedulerThreadCode(void)
 {
+  typedef struct JobScheduleNode
+  {
+    LIST_NODE_HEADER(struct JobScheduleNode);
+
+    // job
+    String             jobUUID;
+    uint64             lastScheduleCheckDateTime;
+
+    // settings
+    String             scheduleUUID;
+    ScheduleDate       date;
+    ScheduleWeekDaySet weekDaySet;
+    ScheduleTime       time;
+    ArchiveTypes       archiveType;
+    uint               interval;
+    ScheduleTime       beginTime,endTime;
+    uint64             lastExecutedDateTime;
+  } JobScheduleNode;
+
+  typedef struct
+  {
+    LIST_HEADER(JobScheduleNode);
+  } JobScheduleList;
+
   typedef struct
   {
     uint     year,month,day,hour,minute;
@@ -1620,21 +1634,43 @@ LOCAL void schedulerThreadCode(void)
     bool     isDayLightSaving;
   } DateTime;
 
-  DatabaseHandle continuousDatabaseHandle;
-  IndexHandle    *indexHandle;
-  JobNode        *jobNode;
-  TimeoutInfo    rereadJobTimeout;
-  bool           jobListPendingFlag;
-  uint64         currentDateTime;
-  DateTime       dateTime;
-  int            year,month,day,hour,minute;
-  WeekDays       weekDay;
-  DateTime       lastScheduleDateTime;
-  ScheduleNode   *executeScheduleNodeFull,*executeScheduleNode,*executeScheduleNodeContinuous;
-  uint64         executeScheduleDateTimeFull,executeScheduleDateTime,executeScheduleDateTimeContinuous;
-  ScheduleNode   *scheduleNode;
-  uint64         scheduleDateTime;
-  char           buffer[64];
+  /***********************************************************************\
+  * Name   : freeJobScheduleNode
+  * Purpose: free job schedule node
+  * Input  : jobScheduleNode - job schedule node
+  *          userData        - user data (not used)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData);
+  auto void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData)
+  {
+    assert(jobScheduleNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    String_delete(jobScheduleNode->scheduleUUID);
+    String_delete(jobScheduleNode->jobUUID);
+  }
+
+  DatabaseHandle  continuousDatabaseHandle;
+  IndexHandle     *indexHandle;
+  TimeoutInfo     rereadJobTimeout;
+  JobScheduleList jobScheduleList;
+  JobNode         *jobNode;
+  ScheduleNode    *scheduleNode;
+  JobScheduleNode *jobScheduleNode;
+  uint64          currentDateTime;
+  DateTime        dateTime;
+  int             year,month,day,hour,minute;
+  WeekDays        weekDay;
+  DateTime        lastScheduleDateTime;
+  JobScheduleNode *executeScheduleNode;
+  uint64          executeScheduleDateTime;
+  uint64          scheduleDateTime;
+  char            buffer[64];
 
   // open continuous database
   if (Continuous_isAvailable())
@@ -1664,6 +1700,7 @@ LOCAL void schedulerThreadCode(void)
   Job_rereadAll(globalOptions.jobsDirectory);
 
   Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD*MS_PER_SECOND);
+  List_init(&jobScheduleList);
   executeScheduleDateTime = 0LL;
   while (!isQuit())
   {
@@ -1676,217 +1713,235 @@ LOCAL void schedulerThreadCode(void)
       Misc_restartTimeout(&rereadJobTimeout,0);
     }
 
-    // check for jobs triggers
-    jobListPendingFlag  = FALSE;
-    currentDateTime     = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
+    // get jobs schedule list
+    List_clear(&jobScheduleList,freeJobScheduleNode,NULL);
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      JOB_LIST_ITERATEX(jobNode,!isQuit() && !jobListPendingFlag)
+      JOB_LIST_ITERATE(jobNode)
       {
         if (!Job_isActive(jobNode->jobState))
         {
-          executeScheduleNodeFull           = NULL;
-          executeScheduleDateTimeFull       = 0LL;
-          executeScheduleNode               = NULL;
-          executeScheduleDateTime           = 0LL;
-          executeScheduleNodeContinuous     = NULL;
-          executeScheduleDateTimeContinuous = 0LL;
-
-          // check if job have to be executed by regular schedule (check backward in time)
-          if (!List_isEmpty(&jobNode->job.options.scheduleList))
+          LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
           {
-// TODO: remove
-#if 0
-fprintf(stderr,"%s:%d: jobuuid=%s\n",__FILE__,__LINE__,String_cString(jobNode->job.uuid));
-LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-{
-fprintf(stderr,"%s:%d: %d %d %d : %d %d : %x\n",__FILE__,__LINE__,scheduleNode->date.year,scheduleNode->date.month,scheduleNode->date.day,scheduleNode->time.hour,scheduleNode->time.minute,scheduleNode->weekDaySet);
-}
-#endif
-            Misc_splitDateTime(currentDateTime,
-                               &dateTime.year,
-                               &dateTime.month,
-                               &dateTime.day,
-                               &dateTime.hour,
-                               &dateTime.minute,
-                               NULL,  // second
-                               &dateTime.weekDay,
-                               &dateTime.isDayLightSaving
-                              );
-            Misc_splitDateTime(jobNode->lastScheduleCheckDateTime,
-                               &lastScheduleDateTime.year,
-                               &lastScheduleDateTime.month,
-                               &lastScheduleDateTime.day,
-                               &lastScheduleDateTime.hour,
-                               &lastScheduleDateTime.minute,
-                               NULL,  // second
-                               &lastScheduleDateTime.weekDay,
-                               NULL  // isDayLightSaving
-                              );
+            if (scheduleNode->enabled)
+            {
+              jobScheduleNode = LIST_NEW_NODE(JobScheduleNode);
+              if (jobScheduleNode == NULL)
+              {
+                HALT_INSUFFICIENT_MEMORY();
+              }
+              jobScheduleNode->jobUUID                   = String_duplicate(jobNode->job.uuid);
+              jobScheduleNode->lastScheduleCheckDateTime = jobNode->lastScheduleCheckDateTime;
+
+              jobScheduleNode->scheduleUUID              = String_duplicate(scheduleNode->uuid);
+              jobScheduleNode->date                      = scheduleNode->date;
+              jobScheduleNode->weekDaySet                = scheduleNode->weekDaySet;
+              jobScheduleNode->time                      = scheduleNode->time;
+              jobScheduleNode->archiveType               = scheduleNode->archiveType;
+              jobScheduleNode->interval                  = scheduleNode->interval;
+              jobScheduleNode->beginTime                 = scheduleNode->beginTime;
+              jobScheduleNode->endTime                   = scheduleNode->endTime;
+              jobScheduleNode->lastExecutedDateTime      = scheduleNode->lastExecutedDateTime;
+
+              List_append(&jobScheduleList,jobScheduleNode);
+            }
+          }
+        }
+      }
+    }
+
+    // check for jobs triggers
+    currentDateTime = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
+    LIST_ITERATEX(&jobScheduleList,jobScheduleNode,!isQuit())
+    {
+      executeScheduleNode     = NULL;
+      executeScheduleDateTime = 0LL;
+
+      // check if job have to be executed by regular schedule (check backward in time)
+      Misc_splitDateTime(currentDateTime,
+                         &dateTime.year,
+                         &dateTime.month,
+                         &dateTime.day,
+                         &dateTime.hour,
+                         &dateTime.minute,
+                         NULL,  // second
+                         &dateTime.weekDay,
+                         &dateTime.isDayLightSaving
+                        );
+      Misc_splitDateTime(jobScheduleNode->lastScheduleCheckDateTime,
+                         &lastScheduleDateTime.year,
+                         &lastScheduleDateTime.month,
+                         &lastScheduleDateTime.day,
+                         &lastScheduleDateTime.hour,
+                         &lastScheduleDateTime.minute,
+                         NULL,  // second
+                         &lastScheduleDateTime.weekDay,
+                         NULL  // isDayLightSaving
+                        );
 
 //fprintf(stderr,"%s:%d: currentDateTime=%llu\n",__FILE__,__LINE__,currentDateTime);
 //fprintf(stderr,"%s:%d: dateTime=%d %d %d - %d %d\n",__FILE__,__LINE__,dateTime.year,dateTime.month,dateTime.day,dateTime.hour,dateTime.minute);
 //fprintf(stderr,"%s:%d: lastScheduleDateTime %d %d %d : %d %d\n",__FILE__,__LINE__,lastScheduleDateTime.year,lastScheduleDateTime.month,lastScheduleDateTime.day,lastScheduleDateTime.hour,lastScheduleDateTime.minute);
-            // check if matching with some schedule list node
-            year   = dateTime.year;
-            month  = dateTime.month;
-            day    = dateTime.day;
-            hour   = dateTime.hour;
-            minute = dateTime.minute;
-            LIST_ITERATEX(&jobNode->job.options.scheduleList,scheduleNode,executeScheduleNode == NULL)
-            {
-//fprintf(stderr,"%s:%d: scheduld date time %d %d %d - %d %d - %x\n",__FILE__,__LINE__,scheduleNode->date.year,scheduleNode->date.month,scheduleNode->date.day,scheduleNode->time.hour,scheduleNode->time.minute,scheduleNode->weekDaySet);
-              if (   scheduleNode->enabled
-                  && (   (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                      || (   (TIME(dateTime.hour,dateTime.minute) >= TIME_BEGIN(scheduleNode->beginTime.hour,scheduleNode->beginTime.minute))
-                          && (TIME(dateTime.hour,dateTime.minute) <= TIME_END  (scheduleNode->endTime.hour,  scheduleNode->endTime.minute  ))
-                         )
-                     )
-                 )
-              {
-                while (year >= (int)lastScheduleDateTime.year)
-                {
+      // check if matching with schedule
+      year   = dateTime.year;
+      month  = dateTime.month;
+      day    = dateTime.day;
+      hour   = dateTime.hour;
+      minute = dateTime.minute;
+      while (year >= (int)lastScheduleDateTime.year)
+      {
 //fprintf(stderr,"%s:%d: year=%d\n",__FILE__,__LINE__,year);
-                  if ((scheduleNode->date.year == DATE_ANY) || (scheduleNode->date.year == (int)year))
-                  {
-                    while (month >= 1)
-                    {
+        if ((jobScheduleNode->date.year == DATE_ANY) || (jobScheduleNode->date.year == (int)year))
+        {
+          while (month >= 1)
+          {
 //fprintf(stderr,"%s:%d: month=%d\n",__FILE__,__LINE__,month);
-                      if ((scheduleNode->date.month == DATE_ANY) || (scheduleNode->date.month == (int)month))
-                      {
-                        while (day >= 1)
-                        {
+            if ((jobScheduleNode->date.month == DATE_ANY) || (jobScheduleNode->date.month == (int)month))
+            {
+              while (day >= 1)
+              {
 //const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
-                          weekDay = Misc_getWeekDay(year,month,day);
-//fprintf(stderr,"%s:%d: month=%d day=%d weekday=%d %s %d\n",__FILE__,__LINE__,month,day,weekDay,W[weekDay],scheduleNode->date.day);
+                weekDay = Misc_getWeekDay(year,month,day);
+//fprintf(stderr,"%s:%d: month=%d day=%d weekday=%d %s %d\n",__FILE__,__LINE__,month,day,weekDay,W[weekDay],jobScheduleNode->date.day);
 
-                          if (   ((scheduleNode->date.day   == DATE_ANY       ) || (scheduleNode->date.day == (int)day)    )
-                              && ((scheduleNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay))
-                             )
+                if (   ((jobScheduleNode->date.day   == DATE_ANY       ) || (jobScheduleNode->date.day == (int)day)    )
+                    && ((jobScheduleNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(jobScheduleNode->weekDaySet,weekDay))
+                   )
+                {
+                  while (hour >= 0)
+                  {
+//fprintf(stderr,"%s:%d: hour=%d\n",__FILE__,__LINE__,hour);
+                    if (   (jobScheduleNode->time.hour == TIME_ANY)
+                        || (jobScheduleNode->time.hour == (int)hour)
+                        || (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+                       )
+                    {
+                      while (minute >= 0)
+                      {
+                        if (   (jobScheduleNode->time.minute == TIME_ANY)
+                            || (jobScheduleNode->time.minute == (int)minute)
+                            || (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+                           )
+                        {
+//fprintf(stderr,"%s:%d: minute=%d\n",__FILE__,__LINE__,minute);
+                          scheduleDateTime = Misc_makeDateTime(year,month,day,hour,minute,0,dateTime.isDayLightSaving);
+                          assert(scheduleDateTime <= currentDateTime);
+
+                          if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
                           {
-                            while (hour >= 0)
+                            if      (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_FULL)
+                                     && (   (executeScheduleNode == NULL)
+                                         || (   (executeScheduleNode->archiveType == jobScheduleNode->archiveType)
+                                             && (jobScheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
+                                            )
+                                        )
+                                    )
                             {
-                              if ((scheduleNode->time.hour == TIME_ANY) || (scheduleNode->time.hour == (int)hour))
+                              // schedule full job
+                              executeScheduleNode     = jobScheduleNode;
+                              executeScheduleDateTime = scheduleDateTime;
+                            }
+                            else if (   (jobScheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                                     && (   (executeScheduleNode == NULL)
+                                         || (   (executeScheduleNode->archiveType == jobScheduleNode->archiveType)
+                                             && (jobScheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
+                                            )
+                                        )
+                                    )
+                            {
+                              // schedule normal/differential/incremental job
+                              executeScheduleNode     = jobScheduleNode;
+                              executeScheduleDateTime = scheduleDateTime;
+                            }
+                            else if (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+                                     && (   (executeScheduleNode == NULL)
+                                         || (   (executeScheduleNode->archiveType == jobScheduleNode->archiveType)
+                                             && (jobScheduleNode->lastExecutedDateTime < executeScheduleNode->lastExecutedDateTime)
+                                            )
+                                        )
+                                     && (scheduleDateTime >= (  jobScheduleNode->lastExecutedDateTime
+                                                              + (uint64)jobScheduleNode->interval*S_PER_MINUTE)
+                                                             )
+                                     && Continuous_isEntryAvailable(&continuousDatabaseHandle,
+                                                                    jobScheduleNode->jobUUID,
+                                                                    jobScheduleNode->scheduleUUID
+                                                                   )
+                                    )
+                            {
+                              // schedule continuouss job
+                              if (inTimeRange(dateTime.hour,dateTime.minute,
+                                              jobScheduleNode->beginTime.hour,jobScheduleNode->beginTime.minute,
+                                              jobScheduleNode->endTime.hour,jobScheduleNode->endTime.minute
+                                             )
+                                 )
                               {
-                                while (minute >= 0)
-                                {
-                                  if ((scheduleNode->time.minute == TIME_ANY) || (scheduleNode->time.minute == (int)minute))
-                                  {
-                                    scheduleDateTime = Misc_makeDateTime(year,month,day,hour,minute,0,dateTime.isDayLightSaving);
-                                    assert(scheduleDateTime <= currentDateTime);
-
-                                    if (scheduleDateTime > scheduleNode->lastExecutedDateTime)
-                                    {
-                                      if      (   (scheduleNode->archiveType == ARCHIVE_TYPE_FULL)
-                                               || (executeScheduleNodeFull == NULL)
-                                               || (scheduleNode->lastExecutedDateTime < executeScheduleNodeFull->lastExecutedDateTime)
-                                              )
-                                      {
-                                        executeScheduleNodeFull     = scheduleNode;
-                                        executeScheduleDateTimeFull = scheduleDateTime;
-                                      }
-                                      else if (   (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                                               || (executeScheduleNodeFull == NULL)
-                                               || (scheduleNode->lastExecutedDateTime < executeScheduleNodeFull->lastExecutedDateTime)
-                                              )
-                                      {
-                                        executeScheduleNode     = scheduleNode;
-                                        executeScheduleDateTime = scheduleDateTime;
-                                      }
-                                      else if (   (   (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
-                                                   || (executeScheduleNodeContinuous == NULL)
-                                                   || (scheduleNode->lastExecutedDateTime < executeScheduleNodeContinuous->lastExecutedDateTime)
-                                                  )
-                                               && (scheduleDateTime >= (scheduleNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
-                                               && Continuous_isAvailable()
-                                               && Continuous_isEntryAvailable(&continuousDatabaseHandle,jobNode->job.uuid,scheduleNode->uuid)
-                                              )
-                                      {
-                                        executeScheduleNodeContinuous     = scheduleNode;
-                                        executeScheduleDateTimeContinuous = scheduleDateTime;
-                                      }
-                                    }
-                                  }
-                                  if (executeScheduleNodeFull != NULL) break;
-                                  minute--;
-                                } // minute
-                                if (executeScheduleNodeFull != NULL) break;
+                                executeScheduleNode     = jobScheduleNode;
+                                executeScheduleDateTime = scheduleDateTime;
                               }
-                              if (executeScheduleNodeFull != NULL) break;
-                              hour--;
-                              minute = 59;
-                            } // hour
-                            if (executeScheduleNodeFull != NULL) break;
+                              else
+                              {
+                                (void)Continuous_discardEntries(&continuousDatabaseHandle,
+                                                                String_cString(jobScheduleNode->jobUUID),
+                                                                String_cString(jobScheduleNode->scheduleUUID)
+                                                               );
+                              }
+                            }
                           }
-                          if (executeScheduleNodeFull != NULL) break;
-                          day--;
-                          hour = 23;
-                        } // day
-                        if (executeScheduleNodeFull != NULL) break;
-                      }
-                      if (executeScheduleNodeFull != NULL) break;
-                      month--;
-                      if (month > 0) day = Misc_getLastDayOfMonth(year,month);
-                    } // month
-                    if (executeScheduleNodeFull != NULL) break;
-                  }
-                  if (executeScheduleNodeFull != NULL) break;
-                  year--;
-                  month = 12;
+                        }
+                        if (executeScheduleNode!= NULL) break;
+                        minute--;
+                      } // minute
+                      if (executeScheduleNode != NULL) break;
+                    }
+                    if (executeScheduleNode != NULL) break;
+                    hour--;
+                    minute = 59;
+                  } // hour
+                  if (executeScheduleNode != NULL) break;
                 }
-              }
-// TODO: remove
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-if (executeScheduleNodeFull != NULL)
-{
-fprintf(stderr,"%s:%d: full %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNodeFull->uuid),executeScheduleDateTimeFull);
-//Misc_mdelay(5000);
-//exit(1);
-}
-else if (executeScheduleNodeFull != NULL)
-{
-fprintf(stderr,"%s:%d: %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNode->uuid),executeScheduleDateTime);
-Misc_mdelay(5000);
-exit(1);
-}
-else if (executeScheduleNodeContinuous != NULL)
-{
-fprintf(stderr,"%s:%d: cont %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNodeContinuous->uuid),executeScheduleDateTimeContinuous);
-Misc_mdelay(5000);
-exit(1);
-}
-
-              // check if another thread is pending for job list
-              jobListPendingFlag = Job_isListLockPending();
+                if (executeScheduleNode != NULL) break;
+                day--;
+                hour = 23;
+              } // day
+              if (executeScheduleNode != NULL) break;
             }
-          }
-          if (jobListPendingFlag || isQuit()) break;
+            if (executeScheduleNode != NULL) break;
+            month--;
+            if (month > 0) day = Misc_getLastDayOfMonth(year,month);
+          } // month
+          if (executeScheduleNode != NULL) break;
+        }
+        if (executeScheduleNode != NULL) break;
+        year--;
+        month = 12;
+      }
+// TODO: remove
+#if 0
+if (executeScheduleNode != NULL)
+{
+fprintf(stderr,"%s:%d: %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNode->jobUUID),executeScheduleDateTime);
+}
+else
+{
+fprintf(stderr,"%s:%d: no schedule found\n",__FILE__,__LINE__);
+}
+#endif
+
+      if (executeScheduleNode != NULL)
+      {
+        JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        {
+          jobNode      = Job_findByUUID(executeScheduleNode->jobUUID);
+          scheduleNode = Job_findScheduleByUUID(jobNode,executeScheduleNode->scheduleUUID);
 
           // trigger job
-          if      (executeScheduleNodeFull != NULL)
+          if ((jobNode != NULL) && (scheduleNode != NULL))
           {
             Job_trigger(jobNode,
-                        executeScheduleNodeFull->uuid,
-                        executeScheduleNodeFull->customText,
-                        executeScheduleNodeFull->archiveType,
-                        executeScheduleNodeFull->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
-                        executeScheduleDateTimeFull,
-                        "scheduler"
-                       );
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_WARNING,
-                       "Scheduled job '%s' for execution at %s",
-                       String_cString(jobNode->name),
-                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,NULL)
-                      );
-          }
-          else if (executeScheduleNode != NULL)
-          {
-            Job_trigger(jobNode,
-                        executeScheduleNode->uuid,
-                        executeScheduleNode->customText,
-                        executeScheduleNode->archiveType,
-                        executeScheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
+                        scheduleNode->uuid,
+                        scheduleNode->customText,
+                        scheduleNode->archiveType,
+                        scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
                         executeScheduleDateTime,
                         "scheduler"
                        );
@@ -1896,50 +1951,21 @@ exit(1);
                        String_cString(jobNode->name),
                        Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,NULL)
                       );
-          }
-          else if (executeScheduleNodeContinuous != NULL)
-          {
-            Job_trigger(jobNode,
-                        executeScheduleNodeContinuous->uuid,
-                        executeScheduleNodeContinuous->customText,
-                        executeScheduleNodeContinuous->archiveType,
-                        executeScheduleNodeContinuous->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
-                        executeScheduleDateTimeContinuous,
-                        "scheduler"
-                       );
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_WARNING,
-                       "Scheduled job '%s' for execution at %s",
-                       String_cString(jobNode->name),
-                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,NULL)
-                      );
-          }
 
-          // store last schedule check time
-          jobNode->lastScheduleCheckDateTime = currentDateTime;
-
-          // check if another thread is pending for job list
-          jobListPendingFlag = Job_isListLockPending();
+            // store last schedule check time
+            jobNode->lastScheduleCheckDateTime = currentDateTime;
+          }
         }
       }
     }
 
     if (!isQuit())
     {
-      if (!jobListPendingFlag)
-      {
-//fprintf(stderr,"%s:%d: sleeeeeeeep\n",__FILE__,__LINE__);
-        // sleep and check quit flag
-        delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
-      }
-      else
-      {
-//fprintf(stderr,"%s:%d: sleeeeeeeep\n",__FILE__,__LINE__);
-        // short sleep
-        delayThread(5,NULL);
-      }
+      // sleep and check quit flag
+      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
     }
   }
+  List_done(&jobScheduleList,freeJobScheduleNode,NULL);
   Misc_doneTimeout(&rereadJobTimeout);
 
   // done index
@@ -4241,9 +4267,9 @@ LOCAL void jobThreadCode(void)
   StorageFlags     storageFlags;
   uint64           startDateTime;
   JobOptions       jobOptions;
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
   TextMacros       (textMacros,9);
@@ -4326,6 +4352,7 @@ LOCAL void jobThreadCode(void)
       String_set(jobName,jobNode->name);
       String_set(storageName,jobNode->job.storageName);
       String_set(jobUUID,jobNode->job.uuid);
+      String_set(scheduleUUID,jobNode->scheduleUUID);
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);

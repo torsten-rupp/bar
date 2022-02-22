@@ -208,6 +208,21 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                         );
 
 /***********************************************************************\
+* Name   : Continuous_discardEntry
+* Purpose: discard all entries
+* Input  : jobUUID      - job UUID
+*          scheduleUUID  schedule UUID
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Continuous_discardEntries(DatabaseHandle *databaseHandle,
+                               const char     *jobUUID,
+                               const char     *scheduleUUID
+                              );
+
+/***********************************************************************\
 * Name   : Continuous_isEntryAvailable
 * Purpose: check if continuous entries available
 * Input  : databaseHandle - database handle
