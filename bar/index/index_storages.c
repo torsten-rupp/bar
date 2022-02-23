@@ -2263,6 +2263,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
   return    (storageId != DATABASE_ID_NONE)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entryFragments",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2272,6 +2273,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "directoryEntries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2281,6 +2283,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                 )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "linkEntries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2290,6 +2293,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "specialEntries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -5644,6 +5648,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                // check if entry fragment from other storage exists
                                if (!Database_existsValue(&indexHandle->databaseHandle,
                                                          "entryFragments",
+                                                         DATABASE_FLAG_NONE,
                                                          "id",
                                                          "    entryId=? \
                                                           AND storageId!=? \
@@ -5913,6 +5918,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                // check if entry fragment from other storage exists
                                if (!Database_existsValue(&indexHandle->databaseHandle,
                                                          "entryFragments",
+                                                         DATABASE_FLAG_NONE,
                                                          "id",
                                                          "    entryId=? \
                                                           AND storageId!=? \
@@ -6151,6 +6157,7 @@ bool Index_isDeletedStorage(IndexHandle *indexHandle,
     {
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "storages",
+                                   DATABASE_FLAG_NONE,
                                    "id",
                                    "id=? AND deletedFlag!=TRUE",
                                    DATABASE_FILTERS

@@ -346,6 +346,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
   return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "storages",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "entityId=?",
                                   DATABASE_FILTERS
@@ -355,6 +356,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "entityId=?",
                                   DATABASE_FILTERS
@@ -364,6 +366,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entriesNewest",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "entityId=?",
                                   DATABASE_FILTERS
@@ -2505,6 +2508,7 @@ bool Index_isDeletedEntity(IndexHandle *indexHandle,
     {
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "entities",
+                                   DATABASE_FLAG_NONE,
                                    "id",
                                    "id=? AND deletedFlag!=1",
                                    DATABASE_FILTERS

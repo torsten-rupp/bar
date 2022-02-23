@@ -175,6 +175,7 @@ LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
                                   "entities \
                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   ",
+                                  DATABASE_FLAG_NONE,
                                   "entities.id",
                                   "uuids.id=?",
                                   DATABASE_FILTERS
