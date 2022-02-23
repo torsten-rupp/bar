@@ -2143,6 +2143,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
 * Notes  : Database is locked until Database_finalize() is called
 \***********************************************************************/
 
+// TODO: remove, use insert/update/select
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
@@ -2319,7 +2320,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 *                                NULL)
 *          databaseRowUserData - user data for callback function
 *          changedRowCount     - number of changd rows (can be NULL)
-*          tableName           - table name,
+*          tableName           - table name
 *          flags               - insert flags; see DATABASE_FLAG__...
 *          columns             - select columns
 *          columnCount         - select columns count
@@ -2337,7 +2338,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 
 Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
-                       const char              *tables,
+                       const char              *tableName,
                        uint                    flags,
                        DatabaseColumn          columns[],
                        uint                    columnCount,
@@ -2382,13 +2383,14 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
 * Notes  : use DATABASE_FILTERS() for filters
 \***********************************************************************/
 
-bool Database_existsValue(DatabaseHandle      *databaseHandle,
-                         const char           *tableName,
-                         const char           *columnName,
-                         const char           *filter,
-                         const DatabaseFilter filters[],
-                         uint                 filterCount
-                        );
+bool Database_existsValue(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
+                         );
 
 /***********************************************************************\
 * Name   : Database_get

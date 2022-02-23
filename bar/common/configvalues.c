@@ -2982,6 +2982,9 @@ LOCAL uint findSection(const ConfigValue configValues[],
   }
   else
   {
+    if (firstValueIndex != NULL) (*firstValueIndex) = CONFIG_VALUE_INDEX_NONE;
+    if (lastValueIndex  != NULL) (*lastValueIndex ) = CONFIG_VALUE_INDEX_NONE;
+
     return CONFIG_VALUE_INDEX_NONE;
   }
 }

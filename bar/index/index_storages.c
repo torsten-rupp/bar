@@ -2263,6 +2263,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
   return    (storageId != DATABASE_ID_NONE)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entryFragments",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2272,6 +2273,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "directoryEntries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2281,6 +2283,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                 )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "linkEntries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2290,6 +2293,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "specialEntries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "storageId=?",
                                   DATABASE_FILTERS
@@ -2413,10 +2417,45 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
     case DATABASE_TYPE_MARIADB:
       break;
     case DATABASE_TYPE_POSTGRESQL:
+      // purge FTS storages
+      if (error == ERROR_NONE)
+      {
+        INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                          indexHandle,
+                                          transactionFlag,
+        {
+          do
+          {
+            doneFlag = TRUE;
+    // TODO:
+            error = IndexCommon_purge(indexHandle,
+                                      &doneFlag,
+                                      #ifndef NDEBUG
+                                        &deletedCounter,
+                                      #else
+                                        NULL,  // deletedCounter
+                                      #endif
+                                      "FTS_storages",
+                                      "storageId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(storageId)
+                                      )
+                                     );
+            if (error == ERROR_NONE)
+            {
+              error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
+            }
+          }
+          while ((error == ERROR_NONE) && !doneFlag);
+
+          return error;
+        });
+      }
       break;
   }
 
-  // delete storage (set deleted flag)
+  // delete storage
   if (error == ERROR_NONE)
   {
     error = Database_delete(&indexHandle->databaseHandle,
@@ -2428,7 +2467,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                             (
                               DATABASE_FILTER_KEY(storageId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
   }
 
@@ -3123,7 +3162,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(entryNode->entryId)
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         if (error != ERROR_NONE)
         {
@@ -5160,7 +5199,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                               (
                                 DATABASE_FILTER_KEY(databaseId)
                               ),
-                              0
+                              DATABASE_UNLIMITED
                              );
         return error;
       }
@@ -5609,6 +5648,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                // check if entry fragment from other storage exists
                                if (!Database_existsValue(&indexHandle->databaseHandle,
                                                          "entryFragments",
+                                                         DATABASE_FLAG_NONE,
                                                          "id",
                                                          "    entryId=? \
                                                           AND storageId!=? \
@@ -5878,6 +5918,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                // check if entry fragment from other storage exists
                                if (!Database_existsValue(&indexHandle->databaseHandle,
                                                          "entryFragments",
+                                                         DATABASE_FLAG_NONE,
                                                          "id",
                                                          "    entryId=? \
                                                           AND storageId!=? \
@@ -6116,6 +6157,7 @@ bool Index_isDeletedStorage(IndexHandle *indexHandle,
     {
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "storages",
+                                   DATABASE_FLAG_NONE,
                                    "id",
                                    "id=? AND deletedFlag!=TRUE",
                                    DATABASE_FILTERS

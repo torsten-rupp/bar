@@ -346,6 +346,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
   return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "storages",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "entityId=?",
                                   DATABASE_FILTERS
@@ -355,6 +356,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entries",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "entityId=?",
                                   DATABASE_FILTERS
@@ -364,6 +366,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entriesNewest",
+                                  DATABASE_FLAG_NONE,
                                   "id",
                                   "entityId=?",
                                   DATABASE_FILTERS
@@ -715,7 +718,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(entryId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -847,7 +850,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY     ("uuids.id"),
-                             DATABASE_COLUMN_UINT64  ("entities.jobUUID"),
+                             DATABASE_COLUMN_STRING  ("entities.jobUUID"),
                              DATABASE_COLUMN_DATETIME("entities.created"),
                              DATABASE_COLUMN_UINT    ("entities.type")
                            ),
@@ -879,7 +882,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                               (
                                 DATABASE_FILTER_KEY(entityId)
                               ),
-                              0
+                              DATABASE_UNLIMITED
                              );
       if (error != ERROR_NONE)
       {
@@ -2505,6 +2508,7 @@ bool Index_isDeletedEntity(IndexHandle *indexHandle,
     {
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "entities",
+                                   DATABASE_FLAG_NONE,
                                    "id",
                                    "id=? AND deletedFlag!=1",
                                    DATABASE_FILTERS

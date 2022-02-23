@@ -1602,6 +1602,28 @@ ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout);
 
 void Job_connectorUnlock(ConnectorInfo *connectorInfo);
 
+/***********************************************************************\
+* Name   : Job_updateNotifies
+* Purpose: update notifies of job
+* Input  : jobNode - job
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_updateNotifies(const JobNode *jobNode);
+
+/***********************************************************************\
+* Name   : Job_updateAllNotifies
+* Purpose: update notifies of all jobs
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_updateAllNotifies(void);
+
 #ifdef __cplusplus
   }
 #endif

@@ -81,7 +81,7 @@
   "  scheduleUUID TEXT NOT NULL," \
   "  name         TEXT NOT NULL," \
   "  storedFlag   INTEGER DEFAULT 0," \
-  "  UNIQUE (jobUUID,name) " \
+  "  UNIQUE (jobUUID,scheduleUUID,name) " \
   ");" \
   "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID,scheduleUUID,name);"
 
@@ -125,9 +125,8 @@ typedef struct
 } InitNotifyMsg;
 
 /***************************** Variables *******************************/
-LOCAL bool              initFlag = FALSE;
+LOCAL Errors            initFlag = FALSE;
 LOCAL DatabaseSpecifier *continuousDatabaseSpecifier;
-LOCAL DatabaseOpenModes continuousDatabaseOpenMode;
 LOCAL DatabaseHandle    continuousDatabaseHandle;
 LOCAL Semaphore         notifyLock;                  // lock
 LOCAL Dictionary        notifyHandles;
@@ -246,14 +245,14 @@ LOCAL void printNotifies(void)
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
-                          continuousDatabaseOpenMode|DATABASE_OPEN_MODE_READWRITE,
+                          DATABASE_OPEN_MODE_READWRITE,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
-                            continuousDatabaseOpenMode|DATABASE_OPEN_MODE_READWRITE,
+                            DATABASE_OPEN_MODE_READWRITE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
@@ -309,20 +308,23 @@ LOCAL void printNotifies(void)
   Errors error;
 
   assert(databaseHandle != NULL);
+  assert(databaseSpecifier != NULL);
+
+  // discard existing continuous database, create new database
+  (void)Database_drop(databaseSpecifier,NULL);
 
   // create continuous database
-// TODO:  if (!stringIsEmpty(continuousDatabaseFileName)) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
-                          continuousDatabaseOpenMode|DATABASE_OPEN_MODE_CREATE,
+                          DATABASE_OPEN_MODE_CREATE,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
-                            continuousDatabaseOpenMode|DATABASE_OPEN_MODE_CREATE,
+                            DATABASE_OPEN_MODE_CREATE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
@@ -396,6 +398,11 @@ LOCAL Errors getContinuousVersion(uint *continuousVersion, const DatabaseSpecifi
 {
   Errors         error;
   DatabaseHandle databaseHandle;
+
+  assert(continuousVersion != NULL);
+  assert(databaseSpecifier != NULL);
+
+  (*continuousVersion) = 0;
 
   // open continuous database
   error = openContinuous(&databaseHandle,databaseSpecifier);
@@ -1184,12 +1191,11 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                           NULL,  // changedRowCount
                           "names",
                           DATABASE_FLAG_NONE,
-                          "    storedFlag=? \
-                           AND DATETIME('now','-? seconds')>=dateTime \
+                          "    storedFlag=TRUE \
+                           AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
                           ",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_BOOL  (TRUE),
                             DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta)
                           ),
                           DATABASE_UNLIMITED
@@ -1206,8 +1212,8 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                           DATABASE_FLAG_IGNORE,
                           DATABASE_VALUES
                           (
-                            DATABASE_VALUE_STRING  ("jobUUID",      jobUUID),
-                            DATABASE_VALUE_STRING  ("scheduleUUID", scheduleUUID),
+                            DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
+                            DATABASE_VALUE_CSTRING ("scheduleUUID", scheduleUUID),
                             DATABASE_VALUE_STRING  ("name",         name)
                           ),
                           DATABASE_COLUMNS_NONE,
@@ -1273,8 +1279,8 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
                          DATABASE_FLAG_NONE,
                          DATABASE_VALUES
                          (
-                           DATABASE_VALUE_DATETIME("dateTime", "NOW()"),
-                           DATABASE_VALUE_BOOL    ("storedFag",TRUE)
+                           DATABASE_VALUE     ("dateTime",  "NOW()"),
+                           DATABASE_VALUE_BOOL("storedFlag",TRUE)
                          ),
                          "id=?",
                          DATABASE_FILTERS
@@ -1282,6 +1288,55 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
                            DATABASE_FILTER_KEY(databaseId)
                          )
                         );
+}
+
+/***********************************************************************\
+* Name   : existsEntry
+* Purpose: check if entry exists in database and is still not marked
+*          as stored
+* Input  : databaseHandle - database handle
+*          jobUUID        - job UUID
+*          scheduleUUID   - schedule UUID
+*          name           - entry name
+* Output : -
+* Return : TRUE iff non-stored entry exists
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool existsEntry(DatabaseHandle *databaseHandle,
+                       const char     *jobUUID,
+                       const char     *scheduleUUID,
+                       ConstString    name
+                      )
+{
+  assert(initFlag);
+  assert(databaseHandle != NULL);
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+  assert(name != NULL);
+//  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
+
+// TODO: lock required?
+//  BLOCK_DOX(result,
+//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
+//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//  {
+  return Database_existsValue(databaseHandle,
+                              "names",
+                              DATABASE_FLAG_NONE,
+                              "id",
+                              "    storedFlag=FALSE \
+                               AND jobUUID=? \
+                               AND scheduleUUID=? \
+                               AND name=? \
+                              ",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_CSTRING(jobUUID),
+                                DATABASE_FILTER_CSTRING(scheduleUUID),
+                                DATABASE_FILTER_STRING (name)
+                              )
+                             );
 }
 
 /***********************************************************************\
@@ -1355,7 +1410,6 @@ LOCAL void continuousThreadCode(void)
     inotifyEvent = (const struct inotify_event*)buffer;
     while ((n > 0) && !quitFlag)
     {
-//fprintf(stderr,"%s, %d: n=%d %d\n",__FILE__,__LINE__,n,inotifyEvent->len);
 #if 0
 fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
    if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
@@ -1394,25 +1448,32 @@ fprintf(stderr,"\n");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                if (error == ERROR_NONE)
+                if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                 {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Marked for storage '%s'",
-                              String_cString(absoluteName)
-                             );
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Marked for storage '%s'",
+                                String_cString(absoluteName)
+                               );
+                  }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Store continuous entry fail (error: %s)",
+                                Error_getText(error)
+                               );
+                  }
                 }
-                else
-                {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Store continuous entry fail (error: %s)",
-                              Error_getText(error)
-                             );
-                }
+else {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+}
 
                 // add directory and sub-directories to notify
                 addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
@@ -1433,25 +1494,31 @@ fprintf(stderr,"\n");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                if (error == ERROR_NONE)
+                if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                 {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Marked for storage '%s'",
-                              String_cString(absoluteName)
-                             );
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Marked for storage '%s'",
+                                String_cString(absoluteName)
+                               );
+                  }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Store continuous entry fail (error: %s)",
+                                Error_getText(error)
+                               );
+                  }
                 }
-                else
-                {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Store continuous entry fail (error: %s)",
-                              Error_getText(error)
-                             );
-                }
+else {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+}
 
                 // add directory and sub-directories to notify
                 addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
@@ -1459,28 +1526,35 @@ fprintf(stderr,"\n");
             }
             else
             {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                if (error == ERROR_NONE)
+                if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                 {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Marked for storage '%s'",
-                              String_cString(absoluteName)
-                             );
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Marked for storage '%s'",
+                                String_cString(absoluteName)
+                               );
+                  }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Store continuous entry fail (error: %s)",
+                                Error_getText(error)
+                               );
+                  }
                 }
-                else
-                {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Store continuous entry fail (error: %s)",
-                              Error_getText(error)
-                             );
-                }
+else {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+}
               }
             }
           }
@@ -1499,24 +1573,27 @@ fprintf(stderr,"\n");
             {
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
-                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                if (error == ERROR_NONE)
+                if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                 {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Marked for storage '%s'",
-                              String_cString(absoluteName)
-                             );
-                }
-                else
-                {
-                  plogMessage(NULL,  // logHandle
-                              LOG_TYPE_CONTINUOUS,
-                              LOG_PREFIX,
-                              "Store continuous entry fail (error: %s)",
-                              Error_getText(error)
-                             );
+                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Marked for storage '%s'",
+                                String_cString(absoluteName)
+                               );
+                  }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                LOG_PREFIX,
+                                "Store continuous entry fail (error: %s)",
+                                Error_getText(error)
+                               );
+                  }
                 }
               }
             }
@@ -1552,7 +1629,33 @@ fprintf(stderr,"\n");
 
 Errors Continuous_initAll(void)
 {
+  ulong n;
+
+  // check number of possible notifies
+  n = getMaxNotifyWatches();
+  if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+  n = getMaxNotifyInstances();
+  if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
+
+  return ERROR_NONE;
+}
+
+void Continuous_doneAll(void)
+{
+}
+
+bool Continuous_isAvailable(void)
+{
+  return initFlag;
+}
+
+Errors Continuous_init(const char *databaseURI)
+{
+  Errors error;
+  uint   continuousVersion;
+
   // init variables
+  quitFlag = FALSE;
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
@@ -1570,10 +1673,18 @@ Errors Continuous_initAll(void)
     inotifyHandle = inotify_init();
     if (inotifyHandle == -1)
     {
+      if (errno == EMFILE)
+      {
+        error = ERRORX_(INSUFFICIENT_FILE_NOTIFY,errno,"%s",strerror(errno));
+      }
+      else
+      {
+        error = ERRORX_(INIT_FILE_NOTIFY,errno,"%s",strerror(errno));
+      }
       Dictionary_done(&notifyNames);
       Dictionary_done(&notifyHandles);
       Semaphore_done(&notifyLock);
-      return ERROR_INIT_FILE_NOTIFY;
+      return error;
     }
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
@@ -1588,12 +1699,67 @@ Errors Continuous_initAll(void)
     HALT_FATAL_ERROR("Cannot initialize init notify message queue!");
   }
 
+  // get database specifier
+  assert(continuousDatabaseSpecifier == NULL);
+  continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
+  if (continuousDatabaseSpecifier == NULL)
+  {
+    return ERROR_DATABASE;
+  }
+  assert(continuousDatabaseSpecifier->type == DATABASE_TYPE_SQLITE3);
+
+  // check if continuous database exists in expected version, create database
+  error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
+  if (error == ERROR_NONE)
+  {
+    if (continuousVersion < CONTINUOUS_VERSION)
+    {
+      // create new database
+      error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
+      if (error != ERROR_NONE)
+      {
+        Database_deleteSpecifier(continuousDatabaseSpecifier);
+        return error;
+      }
+    }
+    else
+    {
+      // open continuous database
+      error = openContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
+      if (error != ERROR_NONE)
+      {
+        Database_deleteSpecifier(continuousDatabaseSpecifier);
+        return error;
+      }
+    }
+  }
+  else
+  {
+    // create new database
+    error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
+    if (error != ERROR_NONE)
+    {
+      Database_deleteSpecifier(continuousDatabaseSpecifier);
+      return error;
+    }
+  }
+
   initFlag = TRUE;
+
+  // start threads
+  if (!Thread_init(&continuousInitThread,"BAR continuous init",globalOptions.niceLevel,continuousInitThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize continuous init thread!");
+  }
+  if (!Thread_init(&continuousThread,"BAR continuous",globalOptions.niceLevel,continuousThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize continuous thread!");
+  }
 
   return ERROR_NONE;
 }
 
-void Continuous_doneAll(void)
+void Continuous_done(void)
 {
   DictionaryIterator dictionaryIterator;
   void               *data;
@@ -1602,6 +1768,22 @@ void Continuous_doneAll(void)
 
   if (initFlag)
   {
+    quitFlag = TRUE;
+    MsgQueue_setEndOfMsg(&initDoneNotifyMsgQueue);
+    if (!Thread_join(&continuousThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop continuous thread!");
+    }
+    Thread_done(&continuousThread);
+    if (!Thread_join(&continuousInitThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop continuous init thread!");
+    }
+    Thread_done(&continuousInitThread);
+
+    (void)closeContinuous(&continuousDatabaseHandle);
+    Database_deleteSpecifier(continuousDatabaseSpecifier);
+
     // done notify event message queue
     MsgQueue_done(&initDoneNotifyMsgQueue);
 
@@ -1653,113 +1835,12 @@ void Continuous_doneAll(void)
   }
 }
 
-bool Continuous_isAvailable(void)
-{
-  return continuousDatabaseSpecifier != NULL;
-}
-
-Errors Continuous_init(const char *databaseURI)
-{
-  Errors error;
-  uint   continuousVersion;
-
-  if (initFlag)
-  {
-    // init variables
-    quitFlag = FALSE;
-
-    // get database specifier
-    assert(continuousDatabaseSpecifier == NULL);
-    continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
-    if (continuousDatabaseSpecifier == NULL)
-    {
-      return ERROR_DATABASE;
-    }
-
-    // check if continuous database exists in expected version, create database
-    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
-    if (error == ERROR_NONE)
-    {
-      if (continuousVersion < CONTINUOUS_VERSION)
-      {
-        // discard existing continuous database, create new database
-// TODO:        if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);
-        error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-        if (error != ERROR_NONE)
-        {
-          Database_deleteSpecifier(continuousDatabaseSpecifier);
-          return error;
-        }
-      }
-      else
-      {
-        // open continuous database
-        error = openContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-        if (error != ERROR_NONE)
-        {
-          Database_deleteSpecifier(continuousDatabaseSpecifier);
-          return error;
-        }
-      }
-    }
-    else
-    {
-      // create new database
-      error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-      if (error != ERROR_NONE)
-      {
-        Database_deleteSpecifier(continuousDatabaseSpecifier);
-        return error;
-      }
-    }
-
-    // start threads
-    if (!Thread_init(&continuousInitThread,"BAR continuous init",globalOptions.niceLevel,continuousInitThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize continuous init thread!");
-    }
-    if (!Thread_init(&continuousThread,"BAR continuous",globalOptions.niceLevel,continuousThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize continuous thread!");
-    }
-  }
-  else
-  {
-    return ERROR_INIT_FILE_NOTIFY;
-  }
-
-  return ERROR_NONE;
-}
-
-void Continuous_done(void)
-{
-  if (initFlag)
-  {
-    quitFlag = TRUE;
-    MsgQueue_setEndOfMsg(&initDoneNotifyMsgQueue);
-    if (!Thread_join(&continuousThread))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop continuous thread!");
-    }
-    Thread_done(&continuousThread);
-    if (!Thread_join(&continuousInitThread))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop continuous init thread!");
-    }
-    Thread_done(&continuousInitThread);
-
-    (void)closeContinuous(&continuousDatabaseHandle);
-    Database_deleteSpecifier(continuousDatabaseSpecifier);
-  }
-}
-
 Errors Continuous_initNotify(ConstString     name,
                              ConstString     jobUUID,
                              ConstString     scheduleUUID,
                              const EntryList *entryList
                             )
 {
-  ulong         n;
   InitNotifyMsg initNotifyMsg;
 
   assert(!String_isEmpty(jobUUID));
@@ -1768,15 +1849,6 @@ Errors Continuous_initNotify(ConstString     name,
 
   if (initFlag)
   {
-    // check number of possible notifies
-    EXECUTE_ONCE(
-    {
-      n = getMaxNotifyWatches();
-      if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
-      n = getMaxNotifyInstances();
-      if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
-    });
-
     initNotifyMsg.type = INIT;
     initNotifyMsg.name = String_duplicate(name);
     stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
@@ -1784,9 +1856,13 @@ Errors Continuous_initNotify(ConstString     name,
     EntryList_initDuplicate(&initNotifyMsg.entryList,entryList,NULL,NULL);
 
     (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
-  }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  }
+  else
+  {
+    return ERROR_INIT_FILE_NOTIFY;
+  }
 }
 
 Errors Continuous_doneNotify(ConstString name,
@@ -1801,7 +1877,6 @@ Errors Continuous_doneNotify(ConstString name,
 
   if (initFlag)
   {
-//fprintf(stderr,"%s, %d: Continuous_doneNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
     initNotifyMsg.type = DONE;
     initNotifyMsg.name = String_duplicate(name);
     stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
@@ -1822,21 +1897,11 @@ Errors Continuous_doneNotify(ConstString name,
 
 Errors Continuous_open(DatabaseHandle *databaseHandle)
 {
-  Errors error;
-
+  assert(initFlag);
   assert(databaseHandle != NULL);
   assert(continuousDatabaseSpecifier != NULL);
 
-  if (initFlag)
-  {
-    error = openContinuous(databaseHandle,continuousDatabaseSpecifier);
-  }
-  else
-  {
-    error = ERROR_INIT_FILE_NOTIFY;
-  }
-
-  return error;
+  return openContinuous(databaseHandle,continuousDatabaseSpecifier);
 }
 
 void Continuous_close(DatabaseHandle *databaseHandle)
@@ -1888,6 +1953,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   assert(scheduleUUID != NULL);
   assert(name != NULL);
 
+  result = FALSE;
+
 // TODO: lock required?
 //  BLOCK_DOX(result,
 //            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
@@ -1903,8 +1970,9 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                        UNUSED_VARIABLE(valueCount);
 
                        databaseId_ = values[0].id;
-// TODO:remove                       String_setBuffer(name,values[1].text.data,values[1].text.length);
                        String_set(name,values[1].string);
+// TODO: Database_get() return code to bool
+result = TRUE;
 
                        return ERROR_NONE;
                      },NULL),
@@ -1919,8 +1987,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                        DATABASE_COLUMN_KEY   ("id"),
                        DATABASE_COLUMN_STRING("name")
                      ),
-                     "    storedFlag=0 \
-                      AND DATETIME('now','-? seconds')>=dateTime \
+                     "    storedFlag=FALSE \
+                      AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
                       AND jobUUID=? \
                       AND scheduleUUID=? \
                      ",
@@ -1948,11 +2016,44 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
 
 //    return TRUE;
 //  });
-result = TRUE;
 
   if (databaseId != NULL) (*databaseId) = databaseId_;
 
   return result;
+}
+
+void Continuous_discardEntries(DatabaseHandle *databaseHandle,
+                               const char     *jobUUID,
+                               const char     *scheduleUUID
+                              )
+{
+  assert(initFlag);
+  assert(databaseHandle != NULL);
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+
+// TODO: lock required?
+//  BLOCK_DOX(result,
+//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
+//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//  {
+  Database_delete(databaseHandle,
+                  NULL,  // changedRowCount
+                  "names",
+                  DATABASE_FLAG_NONE,
+                  "    jobUUID=? \
+                   AND scheduleUUID=? \
+                  ",
+                  DATABASE_FILTERS
+                  (
+                    DATABASE_FILTER_CSTRING(jobUUID),
+                    DATABASE_FILTER_CSTRING(scheduleUUID)
+                  ),
+                  DATABASE_UNLIMITED
+                 );
+
+//    return TRUE;
+//  });
 }
 
 bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
@@ -1967,18 +2068,18 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
 
   return Database_existsValue(databaseHandle,
                               "names",
+                              DATABASE_FLAG_NONE,
                               "id",
-                              "    DATETIME('now','-? seconds')>=dateTime \
+                              "    storedFlag=FALSE \
+                               AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
                                AND jobUUID=? \
                                AND scheduleUUID=? \
-                               AND storedFlag=? \
                               ",
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
                                 DATABASE_FILTER_STRING(jobUUID),
                                 DATABASE_FILTER_STRING(scheduleUUID),
-                                DATABASE_FILTER_BOOL  (FALSE)
                               )
                              );
 }
@@ -1990,12 +2091,12 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                           )
 {
   Errors error;
+  char   sqlString[256];
 
   assert(initFlag);
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
   assert(!stringIsEmpty(jobUUID));
-  assert(!stringIsEmpty(scheduleUUID));
 
   // prepare list
   error = Database_select(databaseStatementHandle,
@@ -2008,7 +2109,7 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                             DATABASE_COLUMN_STRING("name")
                           ),
                           "    storedFlag=FALSE \
-                           AND DATETIME('now','-? seconds')>=dateTime \
+                           AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
                            AND jobUUID=? \
                            AND scheduleUUID=? \
                           ",
@@ -2040,11 +2141,10 @@ void Continuous_doneList(DatabaseStatementHandle *databaseStatementHandle)
 }
 
 bool Continuous_getNext(DatabaseStatementHandle *databaseStatementHandle,
-                        DatabaseId          *databaseId,
-                        String              name
+                        DatabaseId              *databaseId,
+                        String                  name
                        )
 {
-  assert(initFlag);
   assert(databaseStatementHandle != NULL);
 
   return Database_getNextRow(databaseStatementHandle,
@@ -2064,6 +2164,10 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
   String     name;
   uint       storedFlag;
 
+  assert(databaseHandle != NULL);
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+
   name = String_new();
 
   Database_get(databaseHandle,
@@ -2077,18 +2181,17 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
                  databaseId = values[0].id;
                  dateTime   = values[1].dateTime;
-// TODO:remove                 String_setBuffer(name,values[3].text.data,values[3].text.length);
                  String_set(name,values[2].string);
                  storedFlag = values[3].b;
 
-                 fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
+                 printf("#%ld: %lu %s %d\n",databaseId,dateTime,String_cString(name),storedFlag);
 
                  return ERROR_NONE;
                },NULL),
                NULL,  // changedRowCount
                DATABASE_TABLES
                (
-                 "storages"
+                 "names"
                ),
                DATABASE_FLAG_NONE,
                DATABASE_COLUMNS

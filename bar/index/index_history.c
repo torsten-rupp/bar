@@ -354,7 +354,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(Index_getDatabaseId(historyId))
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {

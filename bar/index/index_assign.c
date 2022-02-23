@@ -279,7 +279,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(storageId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
   }
 

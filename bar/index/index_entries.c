@@ -109,7 +109,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                              (
                                DATABASE_FILTER_KEY(entryId)
                              ),
-                             0
+                             DATABASE_UNLIMITED
                             );
   }
 
@@ -125,7 +125,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                              (
                                DATABASE_FILTER_KEY(entryId)
                              ),
-                             0
+                             DATABASE_UNLIMITED
                             );
 #if 0
     error = Database_insertSelect(&indexHandle->databaseHandle,
@@ -187,7 +187,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(entryId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
   }
 
@@ -616,7 +616,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(entryId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -3132,7 +3132,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         break;
       case INDEX_TYPE_IMAGE:
@@ -3145,7 +3145,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         break;
       case INDEX_TYPE_DIRECTORY:
@@ -3158,7 +3158,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         break;
       case INDEX_TYPE_LINK:
@@ -3171,7 +3171,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         break;
       case INDEX_TYPE_HARDLINK:
@@ -3184,7 +3184,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         break;
       case INDEX_TYPE_SPECIAL:
@@ -3197,7 +3197,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 (
                                   DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                                 ),
-                                0
+                                DATABASE_UNLIMITED
                                );
         break;
       default:
@@ -3221,7 +3221,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -3237,7 +3237,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -5510,7 +5510,7 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
                              (
                                DATABASE_FILTER_KEY(Index_getDatabaseId(indexId))
                              ),
-                             0
+                             DATABASE_UNLIMITED
                             );
     if (error != ERROR_NONE)
     {

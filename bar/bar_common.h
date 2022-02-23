@@ -399,7 +399,7 @@ typedef struct ScheduleNode
   LIST_NODE_HEADER(struct ScheduleNode);
 
   // settings
-  String             uuid;                                    // unique id
+  String             uuid;                                    // unique schedule id
   String             parentUUID;                              // unique parent id or NULL
 //TODO: begin/end date/time
   ScheduleDate       date;
@@ -408,6 +408,7 @@ typedef struct ScheduleNode
   ArchiveTypes       archiveType;                             // archive type to create
   uint               interval;                                // continuous interval [min]
   String             customText;                              // custom text
+  ScheduleTime       beginTime,endTime;                       // begin/end time
   bool               noStorage;                               // TRUE to skip storage, only create incremental data
   bool               enabled;                                 // TRUE iff enabled
 
@@ -1084,6 +1085,17 @@ typedef bool(*IsAbortedFunction)(void *userData);
 
 /****************************** Macros *********************************/
 
+// get time from hour/minute
+#define TIME(hour,minute) ((hour)*60+(minute))
+// get begin time from hour/minute or 00:00
+#define TIME_BEGIN(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) :  0)*60+ \
+                                 (((minute) != TIME_ANY) ? (uint)(minute) :  0) \
+                                )
+// get end time from hour/minute or 24:00
+#define TIME_END(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) : 23)*60+ \
+                               (((minute) != TIME_ANY) ? (uint)(minute) : 60) \
+                              )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -1207,6 +1219,19 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : inTimeRange
+* Purpose: check if time is in time range
+* Input  : hour,minute           - time
+*          beginHour,beginMinute - begin time range
+*          endHour,endMinute     - end time range
+* Output : -
+* Return : TRUE iff in time range
+* Notes  : handle begin* > end*
+\***********************************************************************/
+
+bool inTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute);
 
 #ifdef __cplusplus
   }

@@ -129,28 +129,6 @@ Errors updateConfig(void);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : getArchiveTypeText
-* Purpose: get archive type text
-* Input  : archiveType - archive type
-* Output : -
-* Return : name
-* Notes  : -
-\***********************************************************************/
-
-const char *getArchiveTypeText(ArchiveTypes archiveType);
-
-/***********************************************************************\
-* Name   : getArchiveTypeShortText
-* Purpose: get archive type short text
-* Input  : archiveType - archive type
-* Output : -
-* Return : short name
-* Notes  : -
-\***********************************************************************/
-
-const char *getArchiveTypeShortText(ArchiveTypes archiveType);
-
-/***********************************************************************\
 * Name   : getPasswordTypeName
 * Purpose: get password type text
 * Input  : passwordType - password type

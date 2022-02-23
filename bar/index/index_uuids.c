@@ -103,7 +103,7 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
                             DATABASE_FILTERS
                             (
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
   });
 
@@ -175,6 +175,7 @@ LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
                                   "entities \
                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   ",
+                                  DATABASE_FLAG_NONE,
                                   "entities.id",
                                   "uuids.id=?",
                                   DATABASE_FILTERS
@@ -226,7 +227,7 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(uuidId)
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -1544,7 +1545,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                             (
                               DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
                             ),
-                            0
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {

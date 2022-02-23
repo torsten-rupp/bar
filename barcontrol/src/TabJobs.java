@@ -1054,6 +1054,8 @@ public class TabJobs
     ArchiveTypes archiveType;
     int          interval;
     String       customText;
+    int          beginHour,beginMinute;
+    int          endHour,endMinute;
     boolean      noStorage;
     boolean      enabled;
     long         lastExecutedDateTime;
@@ -1087,6 +1089,10 @@ public class TabJobs
                  ArchiveTypes archiveType,
                  int          interval,
                  String       customText,
+                 int          beginHour,
+                 int          beginMinute,
+                 int          endHour,
+                 int          endMinute,
                  boolean      noStorage,
                  boolean      enabled,
                  long         lastExecutedDateTime,
@@ -1105,6 +1111,10 @@ public class TabJobs
       this.archiveType          = archiveType;
       this.interval             = interval;
       this.customText           = customText;
+      this.beginHour            = beginHour;
+      this.beginMinute          = beginMinute;
+      this.endHour              = endHour;
+      this.endMinute            = endMinute;
       this.noStorage            = noStorage;
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
@@ -1117,7 +1127,27 @@ public class TabJobs
      */
     ScheduleData()
     {
-      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ArchiveTypes.NORMAL,0,"",false,true,0,0,0,0);
+      this(null,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ArchiveTypes.NORMAL,
+           0,
+           "",
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           false,
+           true,
+           0,
+           0,
+           0,
+           0
+          );
     }
 
     /** create schedule data
@@ -1141,6 +1171,8 @@ public class TabJobs
                  ArchiveTypes archiveType,
                  int          interval,
                  String       customText,
+                 String       beginTime,
+                 String       endTime,
                  boolean      noStorage,
                  boolean      enabled,
                  long         lastExecutedDateTime,
@@ -1156,6 +1188,8 @@ public class TabJobs
       this.archiveType          = archiveType;
       this.interval             = interval;
       this.customText           = customText;
+      setBeginTime(beginTime);
+      setEndTime(endTime);
       this.noStorage            = noStorage;
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
@@ -1179,6 +1213,10 @@ public class TabJobs
                               archiveType,
                               interval,
                               customText,
+                              beginHour,
+                              beginMinute,
+                              endHour,
+                              endMinute,
                               noStorage,
                               enabled,
                               lastExecutedDateTime,
@@ -1329,6 +1367,27 @@ public class TabJobs
       return buffer.toString();
     }
 
+    /** set time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setTime(String hour, String minute)
+    {
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
+      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
+    }
+
+    /** set time
+     * @param time time string
+     */
+    void setTime(String time)
+    {
+      String[] parts = time.split(":");
+      setTime(parts[0],parts[1]);
+    }
+
     /** get archive type
      * @return archive type
      */
@@ -1449,23 +1508,114 @@ public class TabJobs
       }
     }
 
-    /** set time
+    /** get begin hour value
+     * @return begin hour string
+     */
+    String getBeginHour()
+    {
+      assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
+
+      return (beginHour != ANY) ? String.format("%02d",beginHour) : "*";
+    }
+
+    /** get begin minute value
+     * @return begin minute string
+     */
+    String getBeginMinute()
+    {
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+
+      return (endMinute != ANY) ? String.format("%02d",endMinute) : "*";
+    }
+
+    /** get begin time value
+     * @return begin time string
+     */
+    String getBeginTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getBeginHour());
+      buffer.append(':');
+      buffer.append(getBeginMinute());
+
+      return buffer.toString();
+    }
+
+    /** set begin time
      * @param hour hour value
      * @param minute minute value
      */
-    void setTime(String hour, String minute)
+    void setBeginTime(String hour, String minute)
     {
-      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
-      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      this.beginHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.beginMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
+      assert (beginMinute == ANY) || ((beginMinute >= 0) && (beginMinute <= 59)) : beginMinute;
     }
 
-    /** set time
+    /** set beginn time
      * @param time time string
      */
-    void setTime(String time)
+    void setBeginTime(String time)
     {
       String[] parts = time.split(":");
-      setTime(parts[0],parts[1]);
+      setBeginTime(parts[0],parts[1]);
+    }
+
+    /** get end hour value
+     * @return end hour string
+     */
+    String getEndHour()
+    {
+      assert (endHour == ANY) || ((endHour >= 0) && (endHour <= 23)) : endHour;
+
+      return (endHour != ANY) ? String.format("%02d",endHour) : "*";
+    }
+
+    /** get end minute value
+     * @return end minute string
+     */
+    String getEndMinute()
+    {
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+
+      return (endMinute != ANY) ? String.format("%02d",endMinute) : "*";
+    }
+
+    /** get end time value
+     * @return end time string
+     */
+    String getEndTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getEndHour());
+      buffer.append(':');
+      buffer.append(getEndMinute());
+
+      return buffer.toString();
+    }
+
+    /** set end time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setEndTime(String hour, String minute)
+    {
+      this.endHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.endMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (endHour == ANY) || ((endHour >= 0) && (endHour <= 23)) : endHour;
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+    }
+
+    /** set end time
+     * @param time time string
+     */
+    void setEndTime(String time)
+    {
+      String[] parts = time.split(":");
+      setEndTime(parts[0],parts[1]);
     }
 
     /** check if week day enabled
@@ -1574,6 +1724,8 @@ public class TabJobs
       TIME,
       ARCHIVE_TYPE,
       CUSTOM_TEXT,
+      BEGIN_TIME,
+      END_TIME,
       ENABLED
     };
 
@@ -1590,7 +1742,9 @@ public class TabJobs
       else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TIME;
       else if (table.getColumn(3) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
       else if (table.getColumn(4) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
-      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.ENABLED;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.BEGIN_TIME;
+      else if (table.getColumn(6) == sortColumn) sortMode = SortModes.END_TIME;
+      else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ENABLED;
       else                                       sortMode = SortModes.DATE;
     }
 
@@ -1606,7 +1760,9 @@ public class TabJobs
       else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TIME;
       else if (table.getColumn(3) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
       else if (table.getColumn(4) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
-      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.ENABLED;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.BEGIN_TIME;
+      else if (table.getColumn(6) == sortColumn) sortMode = SortModes.END_TIME;
+      else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ENABLED;
       else                                       sortMode = SortModes.DATE;
     }
 
@@ -1694,6 +1850,18 @@ public class TabJobs
           break;
         case CUSTOM_TEXT:
           result = scheduleData1.customText.compareTo(scheduleData2.customText);
+          break;
+        case BEGIN_TIME:
+          String beginTime1 = scheduleData1.getBeginTime();
+          String beginTime2 = scheduleData2.getBeginTime();
+
+          result = beginTime1.compareTo(beginTime2);
+          break;
+        case END_TIME:
+          String endTime1 = scheduleData1.getEndTime();
+          String endTime2 = scheduleData2.getEndTime();
+
+          result = endTime1.compareTo(endTime2);
           break;
         case ENABLED:
           if      (scheduleData1.enabled && !scheduleData2.enabled) result = -1;
@@ -9693,6 +9861,10 @@ public class TabJobs
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,5,BARControl.tr("Begin"),       SWT.LEFT,100,false);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,6,BARControl.tr("End"),         SWT.LEFT,100,false);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         Widgets.setTableColumnWidth(widgetScheduleTable,Settings.scheduleListColumns.width);
 
         widgetScheduleTable.addSelectionListener(new SelectionListener()
@@ -15247,6 +15419,8 @@ throw new Error("NYI");
                                      int          interval             = valueMap.getInt    ("interval",0                    );
                                      String       customText           = valueMap.getString ("customText"                    );
                                      boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
+                                     String       beginTime            = valueMap.getString ("beginTime"                     );
+                                     String       endTime              = valueMap.getString ("endTime"                       );
                                      boolean      enabled              = valueMap.getBoolean("enabled"                       );
                                      long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
                                      long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
@@ -15262,6 +15436,8 @@ throw new Error("NYI");
                                        scheduleData.archiveType          = archiveType;
                                        scheduleData.interval             = interval;
                                        scheduleData.customText           = customText;
+                                       scheduleData.setBeginTime(beginTime);
+                                       scheduleData.setEndTime(endTime);
                                        scheduleData.lastExecutedDateTime = lastExecutedDateTime;
                                        scheduleData.totalEntities        = totalEntities;
                                        scheduleData.totalEntryCount      = totalEntryCount;
@@ -15278,6 +15454,8 @@ throw new Error("NYI");
                                                                         archiveType,
                                                                         interval,
                                                                         customText,
+                                                                        beginTime,
+                                                                        endTime,
                                                                         noStorage,
                                                                         enabled,
                                                                         lastExecutedDateTime,
@@ -15317,6 +15495,7 @@ throw new Error("NYI");
               final ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable);
               for (ScheduleData scheduleData : scheduleDataMap.values())
               {
+/*
                 // find table item
                 TableItem tableItem = Widgets.getTableItem(widgetScheduleTable,scheduleData);
 
@@ -15329,7 +15508,9 @@ throw new Error("NYI");
                                           scheduleData.getWeekDays(),
                                           scheduleData.getTime(),
                                           scheduleData.archiveType.getText(),
-                                          scheduleData.customText
+                                          scheduleData.customText,
+                                          scheduleData.getBeginTime(),
+                                          scheduleData.getEndTime()
                                          );
                   tableItem.setChecked(scheduleData.enabled);
 
@@ -15346,11 +15527,29 @@ throw new Error("NYI");
                                                       scheduleData.getWeekDays(),
                                                       scheduleData.getTime(),
                                                       scheduleData.archiveType.toString(),
-                                                      scheduleData.customText
+                                                      scheduleData.customText,
+                                                      scheduleData.getBeginTime(),
+                                                      scheduleData.getEndTime()
                                                      );
                   tableItem.setChecked(scheduleData.enabled);
                   tableItem.setData(scheduleData);
                 }
+*/
+                TableItem tableItem = Widgets.updateInsertTableItem(widgetScheduleTable,
+                                                                    scheduleDataComparator,
+                                                                    scheduleData,
+                                                                    scheduleData.getDate(),
+                                                                    scheduleData.getWeekDays(),
+                                                                    scheduleData.getTime(),
+                                                                    scheduleData.archiveType.toString(),
+                                                                    scheduleData.customText,
+                                                                    scheduleData.getBeginTime(),
+                                                                    scheduleData.getEndTime()
+                                                                   );
+                tableItem.setChecked(scheduleData.enabled);
+
+                // keep table item
+                removeTableItemSet.remove(tableItem);
               }
 
               // remove not existing entries
@@ -15386,11 +15585,12 @@ throw new Error("NYI");
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
+    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
     final Combo    widgetYear,widgetMonth,widgetDay;
     final Button[] widgetWeekDays = new Button[7];
     final Combo    widgetHour,widgetMinute;
-    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
     final Combo    widgetInterval;
+    final Combo    widgetBeginHour,widgetBeginMinute,widgetEndHour,widgetEndMinute;
     final Text     widgetCustomText;
     final Button   widgetNoStorage;
     final Button   widgetEnabled;
@@ -15399,11 +15599,43 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Date")+":",Settings.hasNormalRole());
+      label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      subComposite = Widgets.newComposite(composite,SWT.NONE,Settings.hasNormalRole());
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
+        widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
+        Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
+        widgetTypeNormal.setSelection(scheduleData.archiveType == ArchiveTypes.NORMAL);
+
+        widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
+        widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
+        Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
+        widgetTypeFull.setSelection(scheduleData.archiveType == ArchiveTypes.FULL);
+
+        widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
+        widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
+        Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
+        widgetTypeIncremental.setSelection(scheduleData.archiveType == ArchiveTypes.INCREMENTAL);
+
+        widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
+        widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
+        Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
+        widgetTypeDifferential.setSelection(scheduleData.archiveType == ArchiveTypes.DIFFERENTIAL);
+
+        widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
+        widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
+        Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
+        widgetTypeContinuous.setSelection(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Date")+":",Settings.hasNormalRole());
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE,Settings.hasNormalRole());
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
@@ -15426,10 +15658,10 @@ throw new Error("NYI");
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Week days")+":");
-      Widgets.layout(label,1,0,TableLayoutData.W);
+      Widgets.layout(label,2,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
       {
         widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,BARControl.tr("Mon"));
         widgetWeekDays[ScheduleData.MON].setToolTipText(BARControl.tr("Week days to execute job."));
@@ -15487,87 +15719,79 @@ throw new Error("NYI");
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Time")+":");
-      Widgets.layout(label,2,0,TableLayoutData.W);
+      Widgets.layout(label,3,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
       {
         widgetHour = Widgets.newOptionMenu(subComposite);
+        widgetHour.setEnabled(scheduleData.archiveType != ArchiveTypes.CONTINUOUS);
         widgetHour.setToolTipText(BARControl.tr("Hour to execute job. Leave to '*' for every hour."));
         widgetHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
         widgetMinute = Widgets.newOptionMenu(subComposite);
+        widgetMinute.setEnabled(scheduleData.archiveType != ArchiveTypes.CONTINUOUS);
         widgetMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
         widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
         widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
-      Widgets.layout(label,3,0,TableLayoutData.W);
-
-      subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
-      {
-        widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
-        widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
-        Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
-        widgetTypeNormal.setSelection(scheduleData.archiveType == ArchiveTypes.NORMAL);
-
-        widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
-        widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
-        Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
-        widgetTypeFull.setSelection(scheduleData.archiveType == ArchiveTypes.FULL);
-
-        widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
-        widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
-        Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
-        widgetTypeIncremental.setSelection(scheduleData.archiveType == ArchiveTypes.INCREMENTAL);
-
-        widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
-        widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
-        Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
-        widgetTypeDifferential.setSelection(scheduleData.archiveType == ArchiveTypes.DIFFERENTIAL);
-
-        widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
-        widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
-        Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
-        widgetTypeContinuous.setSelection(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
-      }
-
       label = Widgets.newLabel(composite,BARControl.tr("Interval")+":",Settings.hasExpertRole());
       Widgets.layout(label,4,0,TableLayoutData.W);
 
-      widgetInterval = Widgets.newOptionMenu(composite,Settings.hasExpertRole());
-      widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
-      widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
-      Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",                        0,
-                                                             BARControl.tr("5 min"),    5,
-                                                             BARControl.tr("10 min"),  10,
-                                                             BARControl.tr("30 min"),  30,
-                                                             BARControl.tr("1 h"),   1*60,
-                                                             BARControl.tr("2 h"),   3*60,
-                                                             BARControl.tr("4 h"),   4*60,
-                                                             BARControl.tr("8 h"),   8*60
-                                                            }
-                                );
-      Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleData.interval));
-      widgetTypeContinuous.addSelectionListener(new SelectionListener()
+      subComposite = Widgets.newComposite(composite,SWT.NONE,Settings.hasExpertRole());
+      Widgets.layout(subComposite,4,1,TableLayoutData.WE);
       {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          widgetInterval.setEnabled(widget.getSelection());
-        }
-      });
-      Widgets.layout(widgetInterval,4,1,TableLayoutData.W);
+        widgetInterval = Widgets.newOptionMenu(subComposite);
+        widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
+        widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
+        Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",                        0,
+                                                               BARControl.tr("1 min"),    1,
+                                                               BARControl.tr("5 min"),    5,
+                                                               BARControl.tr("10 min"),  10,
+                                                               BARControl.tr("30 min"),  30,
+                                                               BARControl.tr("1 h"),   1*60,
+                                                               BARControl.tr("2 h"),   3*60,
+                                                               BARControl.tr("4 h"),   4*60,
+                                                               BARControl.tr("8 h"),   8*60
+                                                              }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleData.interval));
+        Widgets.layout(widgetInterval,0,0,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Active time")+":");
+        Widgets.layout(label,0,1,TableLayoutData.W);
+
+        widgetBeginHour = Widgets.newOptionMenu(subComposite);
+        widgetBeginHour.setToolTipText(BARControl.tr("Begin hour where continuous storage is active."));
+        widgetBeginHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
+        widgetBeginHour.setText(scheduleData.getBeginHour()); if (widgetBeginHour.getText().equals("")) widgetBeginHour.setText("*");
+        Widgets.layout(widgetBeginHour,0,2,TableLayoutData.W);
+
+        widgetBeginMinute = Widgets.newOptionMenu(subComposite);
+        widgetBeginMinute.setToolTipText(BARControl.tr("Begin minute where continuous storage is active."));
+        widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetBeginMinute.setText(scheduleData.getBeginMinute()); if (widgetBeginMinute.getText().equals("")) widgetBeginMinute.setText("*");
+        Widgets.layout(widgetBeginMinute,0,3,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,"..");
+        Widgets.layout(label,0,4,TableLayoutData.W);
+
+        widgetEndHour = Widgets.newOptionMenu(subComposite);
+        widgetEndHour.setToolTipText(BARControl.tr("End hour where continuous storage is active."));
+        widgetEndHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
+        widgetEndHour.setText(scheduleData.getEndHour()); if (widgetEndHour.getText().equals("")) widgetEndHour.setText("*");
+        Widgets.layout(widgetEndHour,0,5,TableLayoutData.W);
+
+        widgetEndMinute = Widgets.newOptionMenu(subComposite);
+        widgetEndMinute.setToolTipText(BARControl.tr("End minute where continuous storage is active."));
+        widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetEndMinute.setText(scheduleData.getEndMinute()); if (widgetEndMinute.getText().equals("")) widgetEndMinute.setText("*");
+        Widgets.layout(widgetEndMinute,0,6,TableLayoutData.W);
+      }
 
       label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":",Settings.hasExpertRole());
       Widgets.layout(label,5,0,TableLayoutData.W);
@@ -15619,21 +15843,27 @@ throw new Error("NYI");
     }
 
     // add selection listeners
-/*
-    widgetPattern.addSelectionListener(new SelectionListener()
+    widgetTypeContinuous.addSelectionListener(new SelectionListener()
     {
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        widgetSave.forceFocus();
       }
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-throw new Error("NYI");
+        Button widget = (Button)selectionEvent.widget;
+
+        widgetHour.setEnabled(!widget.getSelection());
+        widgetMinute.setEnabled(!widget.getSelection());
+
+        widgetInterval.setEnabled(widget.getSelection());
+        widgetBeginHour.setEnabled(widget.getSelection());
+        widgetBeginMinute.setEnabled(widget.getSelection());
+        widgetEndHour.setEnabled(widget.getSelection());
+        widgetEndMinute.setEnabled(widget.getSelection());
       }
     });
-*/
     widgetSave.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -15643,6 +15873,12 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
+        if      (widgetTypeNormal.getSelection())       scheduleData.archiveType = ArchiveTypes.NORMAL;
+        else if (widgetTypeFull.getSelection())         scheduleData.archiveType = ArchiveTypes.FULL;
+        else if (widgetTypeIncremental.getSelection())  scheduleData.archiveType = ArchiveTypes.INCREMENTAL;
+        else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = ArchiveTypes.DIFFERENTIAL;
+        else if (widgetTypeContinuous.getSelection())   scheduleData.archiveType = ArchiveTypes.CONTINUOUS;
+        else                                            scheduleData.archiveType = ArchiveTypes.NORMAL;
         scheduleData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
         scheduleData.setWeekDays(widgetWeekDays[ScheduleData.MON].getSelection(),
                                  widgetWeekDays[ScheduleData.TUE].getSelection(),
@@ -15653,14 +15889,10 @@ throw new Error("NYI");
                                  widgetWeekDays[ScheduleData.SUN].getSelection()
                                 );
         scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
-        if      (widgetTypeNormal.getSelection())       scheduleData.archiveType = ArchiveTypes.NORMAL;
-        else if (widgetTypeFull.getSelection())         scheduleData.archiveType = ArchiveTypes.FULL;
-        else if (widgetTypeIncremental.getSelection())  scheduleData.archiveType = ArchiveTypes.INCREMENTAL;
-        else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = ArchiveTypes.DIFFERENTIAL;
-        else if (widgetTypeContinuous.getSelection())   scheduleData.archiveType = ArchiveTypes.CONTINUOUS;
-        else                                            scheduleData.archiveType = ArchiveTypes.NORMAL;
         scheduleData.interval   = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
         scheduleData.customText = widgetCustomText.getText();
+        scheduleData.setBeginTime(widgetBeginHour.getText(),widgetBeginMinute.getText());
+        scheduleData.setEndTime(widgetEndHour.getText(),widgetEndMinute.getText());
         scheduleData.noStorage  = widgetNoStorage.getSelection();
         scheduleData.enabled    = widgetEnabled.getSelection();
 
@@ -15706,7 +15938,7 @@ throw new Error("NYI");
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S noStorage=%y enabled=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S beginTime=%s endTime=%s noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
                                                        scheduleData.getDate(),
                                                        scheduleData.weekDaysToString(),
@@ -15714,6 +15946,8 @@ throw new Error("NYI");
                                                        scheduleData.archiveType.toString(),
                                                        scheduleData.interval,
                                                        scheduleData.customText,
+                                                       scheduleData.getBeginTime(),
+                                                       scheduleData.getEndTime(),
                                                        scheduleData.noStorage,
                                                        scheduleData.enabled
                                                       ),
@@ -15769,6 +16003,8 @@ throw new Error("NYI");
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.toString());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"interval",scheduleData.interval);
+            BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"begin",scheduleData.getBeginTime());
+            BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"end",scheduleData.getEndTime());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"text",scheduleData.customText);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
@@ -15779,7 +16015,9 @@ throw new Error("NYI");
                                     scheduleData.getWeekDays(),
                                     scheduleData.getTime(),
                                     scheduleData.archiveType.getText(),
-                                    scheduleData.customText
+                                    scheduleData.customText,
+                                    scheduleData.getBeginTime(),
+                                    scheduleData.getEndTime()
                                    );
             tableItem.setChecked(scheduleData.enabled);
           }
@@ -15815,13 +16053,15 @@ throw new Error("NYI");
           try
           {
             ValueMap valueMap = new ValueMap();
-            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S noStorage=%y enabled=%y",
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S beginTime=%s endTime=%s noStorage=%y enabled=%y",
                                                          selectedJobData.uuid,
                                                          newScheduleData.getDate(),
                                                          newScheduleData.getWeekDays(),
                                                          newScheduleData.getTime(),
                                                          newScheduleData.archiveType.toString(),
                                                          newScheduleData.customText,
+                                                         scheduleData.getBeginTime(),
+                                                         scheduleData.getEndTime(),
                                                          newScheduleData.noStorage,
                                                          newScheduleData.enabled
                                                         ),
