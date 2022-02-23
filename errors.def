@@ -436,6 +436,13 @@ ERROR INVALID_MAC_ALGORITHM            TR("invalid message authentication code a
 ERROR UNKNOWN_MAC_ALGORITHM            TR("unknown message authentication code algorithm")
 
 // --- file i/o ---------------------------------------------------------
+ERROR DIRECTORY_NOT_FOUND_
+  stringSet(errorText,sizeof(errorText),TR("directory not found"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR NO_FILE_NAME                     TR("no file name given")
 
 ERROR CREATE_FILE
