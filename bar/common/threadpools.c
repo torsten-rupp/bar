@@ -362,8 +362,8 @@ bool ThreadPool_init(ThreadPool *threadPool,
   threadPool->maxSize   = maxSize;
   pthread_mutex_init(&threadPool->lock,NULL);
   pthread_cond_init(&threadPool->modified,NULL);
-  List_init(&threadPool->idle);
-  List_init(&threadPool->running);
+  List_init(&threadPool->idle,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  List_init(&threadPool->running,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   threadPool->size      = 0;
   threadPool->quitFlag  = FALSE;
 
@@ -392,8 +392,8 @@ bool ThreadPool_init(ThreadPool *threadPool,
       assert(List_isEmpty(&threadPool->idle));
 
       // free resources
-      List_done(&threadPool->running,CALLBACK_(NULL,NULL));
-      List_done(&threadPool->idle,CALLBACK_(NULL,NULL));
+      List_done(&threadPool->running);
+      List_done(&threadPool->idle);
       pthread_cond_destroy(&threadPool->modified);
       pthread_mutex_destroy(&threadPool->lock);
 
@@ -442,8 +442,8 @@ void ThreadPool_done(ThreadPool *threadPool)
   assert(List_isEmpty(&threadPool->idle));
 
   // free resources
-  List_done(&threadPool->running,CALLBACK_(NULL,NULL));
-  List_done(&threadPool->idle,CALLBACK_(NULL,NULL));
+  List_done(&threadPool->running);
+  List_done(&threadPool->idle);
   pthread_cond_destroy(&threadPool->modified);
   pthread_mutex_destroy(&threadPool->lock);
 }

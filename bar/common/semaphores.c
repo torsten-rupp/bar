@@ -563,7 +563,7 @@ LOCAL void debugSemaphoreInit(void)
 {
   // init variables
   debugSemaphoreThreadId = Thread_getCurrentId();
-  List_init(&debugSemaphoreList);
+  List_init(&debugSemaphoreList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   // init lock
 //TODO: use Windows WaitForSingleObject?

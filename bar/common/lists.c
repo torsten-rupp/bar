@@ -218,9 +218,9 @@ LOCAL void debugListInit(void)
   pthread_mutexattr_init(&debugListLockAttributes);
   pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&debugListLock,&debugListLockAttributes);
-  List_init(&debugListAllocNodeList);
+  List_init(&debugListAllocNodeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   memClear(debugListAllocNodeList.hash,sizeof(debugListAllocNodeList.hash));
-  List_init(&debugListFreeNodeList);
+  List_init(&debugListFreeNodeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   memClear(debugListFreeNodeList.hash,sizeof(debugListFreeNodeList.hash));
 }
 #endif /* not NDEBUG */
@@ -616,16 +616,32 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
 }
 
 #ifdef NDEBUG
-void List_init(void *list)
+void List_init(void                      *list,
+               ListNodeDuplicateFunction duplicateFunction,
+               void                      *duplicateUserData,
+               ListNodeFreeFunction      freeFunction,
+               void                      *freeUserData
+              )
 #else /* not NDEBUG */
-void __List_init(const char *__fileName__, ulong __lineNb__, void *list)
+void __List_init(const char                *__fileName__,
+                 ulong                     __lineNb__,
+                 void                      *list,
+                 ListNodeDuplicateFunction duplicateFunction,
+                 void                      *duplicateUserData,
+                 ListNodeFreeFunction      freeFunction,
+                 void                      *freeUserData
+                )
 #endif /* NDEBUG */
 {
   assert(list != NULL);
 
-  ((List*)list)->head  = NULL;
-  ((List*)list)->tail  = NULL;
-  ((List*)list)->count = 0;
+  ((List*)list)->head              = NULL;
+  ((List*)list)->tail              = NULL;
+  ((List*)list)->count             = 0;
+  ((List*)list)->duplicateFunction = duplicateFunction;
+  ((List*)list)->duplicateUserData = duplicateUserData;
+  ((List*)list)->freeFunction      = freeFunction;
+  ((List*)list)->freeUserData      = freeUserData;
   #ifndef NDEBUG
     ((List*)list)->fileName = __fileName__;
     ((List*)list)->lineNb   = __lineNb__;
@@ -637,8 +653,10 @@ void List_initDuplicate(void                      *list,
                         const void                *fromList,
                         const void                *fromListFromNode,
                         const void                *fromListToNode,
-                        ListNodeDuplicateFunction listNodeDuplicateFunction,
-                        void                      *listNodeDuplicateUserData
+                        ListNodeDuplicateFunction duplicateFunction,
+                        void                      *duplicateUserData,
+                        ListNodeFreeFunction      freeFunction,
+                        void                      *freeUserData
                        )
 #else /* not NDEBUG */
 void __List_initDuplicate(const char                *__fileName__,
@@ -647,37 +665,35 @@ void __List_initDuplicate(const char                *__fileName__,
                           const void                *fromList,
                           const void                *fromListFromNode,
                           const void                *fromListToNode,
-                          ListNodeDuplicateFunction listNodeDuplicateFunction,
-                          void                      *listNodeDuplicateUserData
+                          ListNodeDuplicateFunction duplicateFunction,
+                          void                      *duplicateUserData,
+                          ListNodeFreeFunction      freeFunction,
+                          void                      *freeUserData
                          )
 #endif /* NDEBUG */
 {
   assert(list != NULL);
   assert(fromList != NULL);
 
+// TODO: free callback
   #ifdef NDEBUG
-    List_init(list);
+    List_init(list,CALLBACK_(duplicateFunction,duplicateUserData),CALLBACK_(freeFunction,freeUserData));
   #else /* not NDEBUG */
-    __List_init(__fileName__,__lineNb__,list);
+    __List_init(__fileName__,__lineNb__,list,CALLBACK_(duplicateFunction,duplicateUserData),CALLBACK_(freeFunction,freeUserData));
   #endif /* NDEBUG */
   List_copy(list,
             NULL,
             fromList,
             fromListFromNode,
-            fromListToNode,
-            listNodeDuplicateFunction,
-            listNodeDuplicateUserData
+            fromListToNode
            );
 }
 
-void List_done(void                 *list,
-               ListNodeFreeFunction listNodeFreeFunction,
-               void                 *listNodeFreeUserData
-              )
+void List_done(void *list)
 {
   assert(list != NULL);
 
-  List_clear(list,listNodeFreeFunction,listNodeFreeUserData);
+  List_clear(list);
 }
 
 #ifdef NDEBUG
@@ -693,7 +709,8 @@ List *__List_new(const char *fileName,
   list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
 
-  List_init(list);
+// TODO: free callback
+  List_init(list,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   return list;
 }
@@ -702,8 +719,10 @@ List *__List_new(const char *fileName,
 List *List_duplicate(const void                *fromList,
                      const void                *fromListFromNode,
                      const void                *fromListToNode,
-                     ListNodeDuplicateFunction listNodeDuplicateFunction,
-                     void                      *listNodeDuplicateUserData
+                     ListNodeDuplicateFunction duplicateFunction,
+                     void                      *duplicateUserData,
+                     ListNodeFreeFunction      freeFunction,
+                     void                      *freeUserData
                     )
 #else /* not NDEBUG */
 List *__List_duplicate(const char                *__fileName__,
@@ -711,15 +730,17 @@ List *__List_duplicate(const char                *__fileName__,
                        const void                *fromList,
                        const void                *fromListFromNode,
                        const void                *fromListToNode,
-                       ListNodeDuplicateFunction listNodeDuplicateFunction,
-                       void                      *listNodeDuplicateUserData
+                       ListNodeDuplicateFunction duplicateFunction,
+                       void                      *duplicateUserData,
+                       ListNodeFreeFunction      freeFunction,
+                       void                      *freeUserData
                       )
 #endif /* NDEBUG */
 {
   List *list;
 
   assert(fromList != NULL);
-  assert(listNodeDuplicateFunction != NULL);
+  assert(duplicateFunction != NULL);
 
   list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
@@ -729,8 +750,10 @@ List *__List_duplicate(const char                *__fileName__,
                        fromList,
                        fromListFromNode,
                        fromListToNode,
-                       listNodeDuplicateFunction,
-                       listNodeDuplicateUserData
+                       duplicateFunction,
+                       duplicateUserData,
+                       freeFunction,
+                       freeUserData
                       );
   #else /* not NDEBUG */
     __List_initDuplicate(__fileName__,
@@ -739,41 +762,37 @@ List *__List_duplicate(const char                *__fileName__,
                          fromList,
                          fromListFromNode,
                          fromListToNode,
-                         listNodeDuplicateFunction,
-                         listNodeDuplicateUserData
+                         duplicateFunction,
+                         duplicateUserData,
+                         freeFunction,
+                         freeUserData
                         );
   #endif /* NDEBUG */
 
   return list;
 }
 
-void List_delete(void                 *list,
-                 ListNodeFreeFunction listNodeFreeFunction,
-                 void                 *listNodeFreeUserData
-                )
+void List_delete(void *list)
 {
   assert(list != NULL);
 
-  List_done(list,listNodeFreeFunction,listNodeFreeUserData);\
+  List_done(list);\
   free(list);
 }
 
-void *List_clear(void                 *list,
-                 ListNodeFreeFunction listNodeFreeFunction,
-                 void                 *listNodeFreeUserData
-                )
+void *List_clear(void *list)
 {
   Node *node;
 
   assert(list != NULL);
 
-  if (listNodeFreeFunction != NULL)
+  if (((List*)list)->freeFunction != NULL)
   {
     while (!List_isEmpty(list))
     {
       node = ((List*)list)->tail;
       listRemove(list,node);
-      listNodeFreeFunction(node,listNodeFreeUserData);
+      ((List*)list)->freeFunction(node,((List*)list)->freeUserData);
       LIST_DELETE_NODE(node);
     }
   }
@@ -786,19 +805,17 @@ void *List_clear(void                 *list,
       LIST_DELETE_NODE(node);
     }
   }
-//  ((List*)list)->head  = NULL;
-//  ((List*)list)->count = 0;
+  assert(((List*)list)->head == NULL);
+  assert(((List*)list)->count == 0);
 
   return list;
 }
 
-void List_copy(void                      *toList,
-               void                      *toListNextNode,
-               const void                *fromList,
-               const void                *fromListFromNode,
-               const void                *fromListToNode,
-               ListNodeDuplicateFunction listNodeDuplicateFunction,
-               void                      *listNodeDuplicateUserData
+void List_copy(void       *toList,
+               void       *toListNextNode,
+               const void *fromList,
+               const void *fromListFromNode,
+               const void *fromListToNode
               )
 {
   Node *node;
@@ -806,20 +823,20 @@ void List_copy(void                      *toList,
 
   assert(toList != NULL);
   assert(fromList != NULL);
-  assert(listNodeDuplicateFunction != NULL);
+  assert(((List*)toList)->duplicateFunction != NULL);
 
   if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
 
   node = (Node*)fromListFromNode;
   while (node != fromListToNode)
   {
-    newNode = listNodeDuplicateFunction(node,listNodeDuplicateUserData);
+    newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
     List_insert(toList,newNode,toListNextNode);
     node = node->next;
   }
   if (node != NULL)
   {
-    newNode = listNodeDuplicateFunction(node,listNodeDuplicateUserData);
+    newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
     List_insert(toList,newNode,toListNextNode);
   }
 }

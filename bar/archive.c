@@ -1576,7 +1576,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
   if (archiveHandle->indexHandle != NULL)
   {
     // init variables
-    List_init(&archiveIndexList);
+    List_init(&archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
 
     // get list to flush
     SEMAPHORE_LOCKED_DO(&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -1733,7 +1733,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
     }
 
     // free resources
-    List_done(&archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL));
+    List_done(&archiveIndexList);
   }
 
   return error;
@@ -5285,11 +5285,11 @@ Errors Archive_initAll(void)
 {
   // initialize variables
   Semaphore_init(&decryptPasswordList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&decryptPasswordList);
+  List_init(&decryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freePasswordNode,NULL));
   decryptPasswordList.newPasswordNode = NULL;
 
   Semaphore_init(&decryptKeyList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&decryptKeyList);
+  List_init(&decryptKeyList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDecryptKeyNode,NULL));
   decryptKeyList.newDecryptKeyNode = NULL;
 
   return ERROR_NONE;
@@ -5297,10 +5297,10 @@ Errors Archive_initAll(void)
 
 void Archive_doneAll(void)
 {
-  List_done(&decryptKeyList,(ListNodeFreeFunction)freeDecryptKeyNode,NULL);
+  List_done(&decryptKeyList);
   Semaphore_done(&decryptKeyList.lock);
 
-  List_done(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
+  List_done(&decryptPasswordList);
   Semaphore_done(&decryptPasswordList.lock);
 }
 
@@ -5408,7 +5408,7 @@ void Archive_clearDecryptPasswords(void)
 {
   SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
+    List_clear(&decryptPasswordList);
   }
 }
 
@@ -5635,8 +5635,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->getNamePasswordUserData = getNamePasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  List_init(&archiveHandle->archiveCryptInfoList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
+  List_init(&archiveHandle->archiveCryptInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList); });
   archiveHandle->archiveCryptInfo        = NULL;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
@@ -5664,8 +5664,8 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = INDEX_ID_NONE;
-  List_init(&archiveHandle->archiveIndexList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL)); });
+  List_init(&archiveHandle->archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
@@ -5906,8 +5906,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->getNamePasswordUserData = getNamePasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  List_init(&archiveHandle->archiveCryptInfoList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
+  List_init(&archiveHandle->archiveCryptInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList); });
   archiveHandle->archiveCryptInfo        = NULL;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
@@ -5934,8 +5934,8 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = INDEX_ID_NONE;
-  List_init(&archiveHandle->archiveIndexList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL)); });
+  List_init(&archiveHandle->archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
@@ -6053,8 +6053,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->getNamePasswordUserData = fromArchiveHandle->getNamePasswordUserData;
   archiveHandle->logHandle               = fromArchiveHandle->logHandle;
 
-  List_init(&archiveHandle->archiveCryptInfoList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL); });
+  List_init(&archiveHandle->archiveCryptInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveCryptInfoList,{ List_done(&archiveHandle->archiveCryptInfoList); });
   archiveHandle->archiveCryptInfo        = fromArchiveHandle->archiveCryptInfo;
 
   Semaphore_init(&archiveHandle->passwordLock,SEMAPHORE_TYPE_BINARY);
@@ -6080,8 +6080,8 @@ UNUSED_VARIABLE(storageInfo);
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->storageId               = INDEX_ID_NONE;
-  List_init(&archiveHandle->archiveIndexList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL)); });
+  List_init(&archiveHandle->archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
@@ -6227,7 +6227,7 @@ UNUSED_VARIABLE(storageInfo);
 
   // free resources
   Semaphore_done(&archiveHandle->archiveIndexList.lock);
-  List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL));
+  List_done(&archiveHandle->archiveIndexList);
   Semaphore_done(&archiveHandle->indexLock);
   switch (archiveHandle->mode)
   {
@@ -6249,7 +6249,7 @@ UNUSED_VARIABLE(storageInfo);
   if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
   if (archiveHandle->cryptPassword != NULL) Password_delete(archiveHandle->cryptPassword);
   Semaphore_done(&archiveHandle->passwordLock);
-  List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
+  List_done(&archiveHandle->archiveCryptInfoList);
   String_delete(archiveHandle->scheduleUUID);
   String_delete(archiveHandle->jobUUID);
   String_delete(archiveHandle->userName);

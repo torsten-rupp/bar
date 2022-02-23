@@ -2997,7 +2997,7 @@ bool ConfigValue_init(const ConfigValue configValues[])
 
   UNUSED_VARIABLE(configValues);
 
-  List_init(&commentsList);
+  List_init(&commentsList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCommentsNode,NULL));
 
   return TRUE;
 }
@@ -3008,7 +3008,7 @@ void ConfigValue_done(const ConfigValue configValues[])
 
   UNUSED_VARIABLE(configValues);
 
-  List_done(&commentsList,(ListNodeFreeFunction)freeCommentsNode,NULL);
+  List_done(&commentsList);
 }
 
 uint ConfigValue_findSection(const ConfigValue configValues[],

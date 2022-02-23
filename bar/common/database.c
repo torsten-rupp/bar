@@ -964,7 +964,7 @@ LOCAL void debugDatabaseInit(void)
 {
   // init variables
   debugDatabaseThreadId = Thread_getCurrentId();
-  List_init(&debugDatabaseHandleList);
+  List_init(&debugDatabaseHandleList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   // init lock
   if (pthread_mutexattr_init(&debugDatabaseLockAttribute) != 0)
@@ -1264,9 +1264,9 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
   DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,DatabaseNode);
 
   Semaphore_done(&databaseNode->progressHandlerList.lock);
-  List_done(&databaseNode->progressHandlerList,CALLBACK_(NULL,NULL));
+  List_done(&databaseNode->progressHandlerList);
   Semaphore_done(&databaseNode->busyHandlerList.lock);
-  List_done(&databaseNode->busyHandlerList,CALLBACK_(NULL,NULL));
+  List_done(&databaseNode->busyHandlerList);
   pthread_cond_destroy(&databaseNode->readWriteTrigger);
   #ifdef DATABASE_LOCK_PER_INSTANCE
      pthread_mutex_destroy(&databaseNode->lock);
@@ -3033,10 +3033,10 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
       databaseNode->transactionCount        = 0;
       pthread_cond_init(&databaseNode->transactionTrigger,NULL);
 
-      List_init(&databaseNode->busyHandlerList);
+      List_init(&databaseNode->busyHandlerList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
       Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
-      List_init(&databaseNode->progressHandlerList);
+      List_init(&databaseNode->progressHandlerList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
       Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
       #ifdef DATABASE_DEBUG_LOCK
@@ -8767,7 +8767,7 @@ Errors Database_initAll(void)
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 
   // init database list
-  List_init(&databaseList);
+  List_init(&databaseList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
   Semaphore_init(&databaseList.lock,SEMAPHORE_TYPE_BINARY);
 
   // enable sqlite3 multi-threaded support
@@ -8775,7 +8775,7 @@ Errors Database_initAll(void)
   if (sqliteResult != SQLITE_OK)
   {
     Semaphore_done(&databaseList.lock);
-    List_done(&databaseList,CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
+    List_done(&databaseList);
     pthread_mutex_destroy(&databaseLock);
     pthread_mutexattr_destroy(&databaseLockAttribute);
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
@@ -8801,7 +8801,7 @@ void Database_doneAll(void)
 
   // done database list
   Semaphore_done(&databaseList.lock);
-  List_done(&databaseList,CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
+  List_done(&databaseList);
 
   #ifndef DATABASE_LOCK_PER_INSTANCE
     // done global lock

@@ -1100,6 +1100,10 @@ typedef bool(*IsAbortedFunction)(void *userData);
 
 /***************************** Functions *******************************/
 
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 /***********************************************************************\
 * Name   : templateInit
 * Purpose: init template
@@ -1215,10 +1219,6 @@ bool parseBandWidthNumber(ConstString s, ulong *n);
 \***********************************************************************/
 
 ulong getBandWidth(BandWidthList *bandWidthList);
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
 /***********************************************************************\
 * Name   : inTimeRange

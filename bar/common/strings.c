@@ -221,10 +221,10 @@ LOCAL void debugStringInit(void)
   pthread_mutexattr_settype(&debugStringLockAttributes,PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&debugStringLock,&debugStringLockAttributes);
   #ifdef TRACE_STRING_ALLOCATIONS
-    List_init(&debugStringAllocList);
+    List_init(&debugStringAllocList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
     debugStringAllocList.memorySize = 0L;
     memClear(debugStringAllocList.hash,sizeof(debugStringAllocList.hash));
-    List_init(&debugStringFreeList);
+    List_init(&debugStringFreeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
     debugStringFreeList.memorySize = 0L;
     memClear(debugStringFreeList.hash,sizeof(debugStringFreeList.hash));
   #endif /* TRACE_STRING_ALLOCATIONS */

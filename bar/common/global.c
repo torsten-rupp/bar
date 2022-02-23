@@ -168,8 +168,8 @@ LOCAL void debugResourceInit(void)
   pthread_mutexattr_init(&debugResourceLockAttributes);
   pthread_mutexattr_settype(&debugResourceLockAttributes,PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&debugResourceLock,&debugResourceLockAttributes);
-  List_init(&debugResourceAllocList);
-  List_init(&debugResourceFreeList);
+  List_init(&debugResourceAllocList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  List_init(&debugResourceFreeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 }
 #endif /* not NDEBUG */
 
@@ -1200,8 +1200,8 @@ void debugResourceDone(void)
 
   pthread_mutex_lock(&debugResourceLock);
   {
-    List_done(&debugResourceAllocList,CALLBACK_(NULL,NULL));
-    List_done(&debugResourceFreeList,CALLBACK_(NULL,NULL));
+    List_done(&debugResourceAllocList);
+    List_done(&debugResourceFreeList);
   }
   pthread_mutex_unlock(&debugResourceLock);
 }
@@ -1261,7 +1261,7 @@ void debugResourceDumpInfo(FILE                     *handle,
   pthread_mutex_lock(&debugResourceLock);
   {
     // init variables
-    List_init(&resourceHistogramList);
+    List_init(&resourceHistogramList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
     n     = 0L;
     count = 0L;
 
@@ -1382,7 +1382,7 @@ void debugResourceDumpInfo(FILE                     *handle,
     // free resources
     if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
     {
-      List_done(&resourceHistogramList,CALLBACK_(NULL,NULL));
+      List_done(&resourceHistogramList);
     }
   }
   pthread_mutex_unlock(&debugResourceLock);

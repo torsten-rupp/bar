@@ -1026,7 +1026,7 @@ void Thread_initLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLoca
   threadLocalStorage->allocFunction = threadLocalStorageAllocFunction;
   threadLocalStorage->allocUserData = threadLocalStorageAllocUserData;
   pthread_mutex_init(&threadLocalStorage->lock,NULL);
-  List_init(&threadLocalStorage->instanceList);
+  List_init(&threadLocalStorage->instanceList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 }
 
 void Thread_doneLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageFreeFunction threadLocalStorageFreeFunction, void *threadLocalStorageFreeUserData)

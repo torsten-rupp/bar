@@ -159,6 +159,22 @@ LOCAL bool              quitFlag;
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : freeUUIDNode
+* Purpose: free UUID node
+* Input  : uuidNode - UUID node
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeUUIDNode(UUIDNode *uuidNode, void *userData)
+{
+  UNUSED_VARIABLE(uuidNode);
+  UNUSED_VARIABLE(userData);
+}
+
 #ifndef NDEBUG
 //TODO
 #ifndef WERROR
@@ -511,7 +527,7 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(notifyInfo->name);
-  List_done(&notifyInfo->uuidList,CALLBACK_(NULL,NULL));
+  List_done(&notifyInfo->uuidList);
 }
 
 /***********************************************************************\
@@ -618,7 +634,7 @@ LOCAL NotifyInfo *addNotify(ConstString name)
     }
     notifyInfo->watchHandle = watchHandle;
     notifyInfo->name        = String_duplicate(name);
-    List_init(&notifyInfo->uuidList);
+    List_init(&notifyInfo->uuidList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
     // add notify
     Dictionary_add(&notifyHandles,

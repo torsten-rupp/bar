@@ -1700,7 +1700,7 @@ LOCAL void schedulerThreadCode(void)
   Job_rereadAll(globalOptions.jobsDirectory);
 
   Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD*MS_PER_SECOND);
-  List_init(&jobScheduleList);
+  List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
   executeScheduleDateTime = 0LL;
   while (!isQuit())
   {
@@ -1714,7 +1714,7 @@ LOCAL void schedulerThreadCode(void)
     }
 
     // get jobs schedule list
-    List_clear(&jobScheduleList,freeJobScheduleNode,NULL);
+    List_clear(&jobScheduleList);
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       JOB_LIST_ITERATE(jobNode)
@@ -1965,7 +1965,7 @@ fprintf(stderr,"%s:%d: no schedule found\n",__FILE__,__LINE__);
       delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
     }
   }
-  List_done(&jobScheduleList,freeJobScheduleNode,NULL);
+  List_done(&jobScheduleList);
   Misc_doneTimeout(&rereadJobTimeout);
 
   // done index
@@ -2731,7 +2731,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
   assert(expirationEntityList != NULL);
 
   // init variables
-  List_init(expirationEntityList);
+  List_init(expirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
 
   if (indexHandle != NULL)
   {
@@ -2826,7 +2826,8 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
   assert(Job_isListLocked());
 
   // init variables
-  List_init(jobExpirationEntityList);
+// TODO: free correct?
+  List_init(jobExpirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
 
   now = Misc_getCurrentDateTime();
   LIST_ITERATE(expirationEntityList,expirationEntityNode)
@@ -2991,7 +2992,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   expiredJobName = String_new();
   string         = String_new();
-  List_init(&expirationEntityList);
+// TODO: free correct
+  List_init(&expirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
 
   Array_clear(&entityIdArray);
   error = ERROR_NONE;
@@ -3008,7 +3010,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     expiredCreatedDateTime = 0LL;
     expiredTotalEntryCount = 0;
     expiredTotalEntrySize  = 0LL;
-    List_init(&mountList);
+    List_init(&mountList,CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
 
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
@@ -3096,8 +3098,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                           NULL,
                           &jobNode->job.options.mountList,
                           NULL,
-                          NULL,
-                          (ListNodeDuplicateFunction)Configuration_duplicateMountNode,
                           NULL
                          );
               }
@@ -3105,7 +3105,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
           }
         }
 
-        List_done(&jobExpirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+        List_done(&jobExpirationEntityList);
       }
     } // jobList
 
@@ -3151,8 +3151,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     }
 
     // free resources
-    List_done(&mountList,(ListNodeFreeFunction)Configuration_freeMountNode,NULL);
-    List_done(&expirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+    List_done(&mountList);
+    List_done(&expirationEntityList);
   }
   while (   !INDEX_ID_IS_NONE(expiredEntityId)
  //TODO: remove
@@ -3381,7 +3381,7 @@ LOCAL void updateIndexThreadCode(void)
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
-  List_init(&indexCryptPasswordList);
+  List_init(&indexCryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
 
   // open index
   indexHandle = NULL;
@@ -3611,7 +3611,7 @@ LOCAL void updateIndexThreadCode(void)
         }
 
         // free resources
-        List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
+        List_done(&indexCryptPasswordList);
       }
       if (isQuit()) break;
 
@@ -3635,7 +3635,7 @@ LOCAL void updateIndexThreadCode(void)
   }
 
   // free resources
-  List_done(&indexCryptPasswordList,CALLBACK_((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
+  List_done(&indexCryptPasswordList);
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -11102,7 +11102,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // clear mount list
-    List_clear(&jobNode->job.options.mountList,CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
+    List_clear(&jobNode->job.options.mountList);
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -12730,7 +12730,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // free resources
-  List_done(&jobExpirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+  List_done(&jobExpirationEntityList);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -12778,7 +12778,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     }
 
     // clear persistence list
-    List_clear(&jobNode->job.options.persistenceList,CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
+    List_clear(&jobNode->job.options.persistenceList);
     jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
     // notify about changed lists
@@ -14989,7 +14989,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // init variables
-  List_init(&uuidList);
+  List_init(&uuidList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeUUIDNode,NULL));
   lastErrorMessage = String_new();
 
   // get UUIDs from database (Note: store into list to avoid dead-lock in job list)
@@ -15004,7 +15004,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   if (error != ERROR_NONE)
   {
     String_delete(lastErrorMessage);
-    List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
+    List_done(&uuidList);
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init uuid list fail");
 
@@ -15098,7 +15098,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
   // free resources
   String_delete(lastErrorMessage);
-  List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
+  List_done(&uuidList);
   String_delete(name);
 }
 
@@ -19759,7 +19759,8 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   clientInfo->quitFlag              = FALSE;
 
-  List_init(&clientInfo->commandInfoList);
+// TODO: free correct?
+  List_init(&clientInfo->commandInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCommand,NULL));
   if (!RingBuffer_init(&clientInfo->abortedCommandIds,sizeof(uint),MAX_ABORT_COMMAND_IDS))
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -19769,7 +19770,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   Job_initOptions(&clientInfo->jobOptions);
-  List_init(&clientInfo->directoryInfoList);
+  List_init(&clientInfo->directoryInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
@@ -19840,13 +19841,13 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   // free resources
   Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->indexIdArray);
-  List_done(&clientInfo->directoryInfoList,CALLBACK_((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
+  List_done(&clientInfo->directoryInfoList);
   Job_doneOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
 
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_(NULL,NULL));
-  List_done(&clientInfo->commandInfoList,CALLBACK_(NULL,NULL));
+  List_done(&clientInfo->commandInfoList);
   Semaphore_done(&clientInfo->lock);
 }
 
@@ -20351,8 +20352,8 @@ Errors Server_socket(void)
 //  serverMode                     = mode;
 //  serverPort                     = port;
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&clientList);
-  List_init(&authorizationFailList);
+  List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
+  List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   jobList.activeCount             = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                     = SERVER_STATE_RUNNING;
@@ -20371,9 +20372,9 @@ Errors Server_socket(void)
   intermediateMaintenanceDateTime = 0LL;
   quitFlag                        = FALSE;
   AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
-  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
@@ -21213,8 +21214,8 @@ Errors Server_socket(void)
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
-  List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
-  List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
+  List_done(&authorizationFailList);
+  List_done(&clientList);
   Semaphore_done(&clientList.lock);
   String_delete(hostName);
   AutoFree_done(&autoFreeList);
@@ -21248,8 +21249,8 @@ Errors Server_batch(int inputDescriptor,
   // initialize variables
   AutoFree_init(&autoFreeList);
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&clientList);
-  List_init(&authorizationFailList);
+  List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
+  List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   jobList.activeCount             = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                     = SERVER_STATE_RUNNING;
@@ -21262,9 +21263,9 @@ Errors Server_batch(int inputDescriptor,
   indexHandle                     = NULL;
   intermediateMaintenanceDateTime = 0LL;
   quitFlag                        = FALSE;
-  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // init index database
@@ -21456,8 +21457,8 @@ processCommand(&clientInfo,commandString);
   doneClient(&clientInfo);
   if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
   Semaphore_done(&serverStateLock);
-  List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
-  List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
+  List_done(&authorizationFailList);
+  List_done(&clientList);
   Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
 
