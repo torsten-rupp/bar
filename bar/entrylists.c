@@ -222,7 +222,7 @@ void EntryList_init(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  List_init(entryList,CALLBACK_(NULL,NULL),CALLBACK_(freeEntryNode,NULL));
+  List_init(entryList,CALLBACK_(duplicateEntryNode,NULL),CALLBACK_(freeEntryNode,NULL));
 }
 
 void EntryList_initDuplicate(EntryList       *entryList,
