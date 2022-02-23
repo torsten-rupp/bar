@@ -87,7 +87,7 @@
 LOCAL void debugRingBufferInit(void)
 {
   pthread_mutex_init(&debugRingBufferLock,NULL);
-  List_init(&debugRingBufferList);
+  List_init(&debugRingBufferList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   debugRingBufferList.allocatedMemory = 0L;
 }
 #endif /* not NDEBUG */
@@ -929,7 +929,7 @@ void RingBuffer_debugDone(void)
 
   pthread_mutex_lock(&debugRingBufferLock);
   {
-    List_done(&debugRingBufferList,NULL,NULL);
+    List_done(&debugRingBufferList);
   }
   pthread_mutex_unlock(&debugRingBufferLock);
 }

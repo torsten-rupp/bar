@@ -4287,8 +4287,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   } DirectoryEntryList;
 
   /***********************************************************************\
-  * Name   : freeEntryNode
-  * Purpose: free entry node
+  * Name   : freeDirectoryEntryNode
+  * Purpose: free directory entry node
   * Input  : entryNode - entry node
   *          userData  - not used
   * Output : -
@@ -4327,7 +4327,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
 
   // init variables
   printableStorageName = String_new();
-  List_init(&directoryEntryList);
+  List_init(&directoryEntryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDirectoryEntryNode,NULL));
   fileName             = String_new();
   dateTimeString       = String_new();
   line                 = String_new();
@@ -4345,7 +4345,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       String_delete(line);
       String_delete(dateTimeString);
       String_delete(fileName);
-      List_done(&directoryEntryList,(ListNodeFreeFunction)freeDirectoryEntryNode,NULL);
+      List_done(&directoryEntryList);
       String_delete(printableStorageName);
       return error;
     }
@@ -4468,7 +4468,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   String_delete(line);
   String_delete(dateTimeString);
   String_delete(fileName);
-  List_done(&directoryEntryList,(ListNodeFreeFunction)freeDirectoryEntryNode,NULL);
+  List_done(&directoryEntryList);
   String_delete(printableStorageName);
 
   return ERROR_NONE;
@@ -4504,7 +4504,7 @@ Errors Command_list(StringList              *storageNameList,
   assert(jobOptions != NULL);
 
   // init variables
-  List_init(&archiveContentList);
+  List_init(&archiveContentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveContentNode,NULL));
   Storage_initSpecifier(&storageSpecifier);
 
   // list archive content
@@ -4641,7 +4641,7 @@ Errors Command_list(StringList              *storageNameList,
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
-  List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
+  List_done(&archiveContentList);
 
   return failError;
 }

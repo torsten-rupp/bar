@@ -1597,24 +1597,24 @@ LOCAL void initGlobalOptions(void)
   initHash(&globalOptions.masterInfo.uuidHash);
   Configuration_initKey(&globalOptions.masterInfo.publicKey);
 
-  List_init(&globalOptions.maxBandWidthList);
+  List_init(&globalOptions.maxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
 
   Semaphore_init(&globalOptions.serverList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.serverList);
+  List_init(&globalOptions.serverList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
   Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.deviceList);
+  List_init(&globalOptions.deviceList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
 
   globalOptions.indexDatabaseUpdateFlag                         = TRUE;
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
-  List_init(&globalOptions.indexDatabaseMaxBandWidthList);
+  List_init(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
   globalOptions.indexDatabaseMaxBandWidthList.n                 = 0L;
   globalOptions.indexDatabaseMaxBandWidthList.lastReadTimestamp = 0LL;
   globalOptions.indexDatabaseKeepTime                           = S_PER_DAY;
 
   Semaphore_init(&globalOptions.maintenanceList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.maintenanceList);
+  List_init(&globalOptions.maintenanceList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
 
   globalOptions.metaInfoFlag                                    = FALSE;
   globalOptions.groupFlag                                       = FALSE;
@@ -1695,7 +1695,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.excludeListFileName                             = String_new();
   globalOptions.excludeCommand                                  = String_new();
 
-  List_init(&globalOptions.mountList);
+  List_init(&globalOptions.mountList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
   globalOptions.mountCommand                                    = String_newCString(MOUNT_COMMAND);
   globalOptions.mountDeviceCommand                              = String_newCString(MOUNT_DEVICE_COMMAND);
   globalOptions.unmountCommand                                  = String_newCString(UNMOUNT_COMMAND);
@@ -1930,7 +1930,7 @@ LOCAL void doneGlobalOptions(void)
   Configuration_doneServer(&globalOptions.defaultFTPServer);
   Configuration_doneServer(&globalOptions.defaultFileServer);
 
-  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
+  List_done(&globalOptions.indexDatabaseMaxBandWidthList);
 
   Configuration_doneKey(&globalOptions.signaturePrivateKey);
   Configuration_doneKey(&globalOptions.signaturePublicKey);
@@ -1951,7 +1951,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.unmountCommand);
   String_delete(globalOptions.mountDeviceCommand);
   String_delete(globalOptions.mountCommand);
-  List_done(&globalOptions.mountList,CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
+  List_done(&globalOptions.mountList);
 
   String_delete(globalOptions.excludeCommand);
   String_delete(globalOptions.excludeListFileName);
@@ -1975,15 +1975,15 @@ LOCAL void doneGlobalOptions(void)
 
   String_delete(globalOptions.jobUUIDOrName);
 
-  List_done(&globalOptions.maintenanceList,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
+  List_done(&globalOptions.maintenanceList);
   Semaphore_done(&globalOptions.maintenanceList.lock);
 
-  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
+  List_done(&globalOptions.deviceList);
   Semaphore_done(&globalOptions.deviceList.lock);
-  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
+  List_done(&globalOptions.serverList);
   Semaphore_done(&globalOptions.serverList.lock);
 
-  List_done(&globalOptions.maxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
+  List_done(&globalOptions.maxBandWidthList);
 
   Configuration_doneKey(&globalOptions.masterInfo.publicKey);
   doneHash(&globalOptions.masterInfo.uuidHash);
@@ -1994,7 +1994,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.tmpDirectory);
   String_delete(globalOptions.barExecutable);
 
-  List_done(&configFileList,CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL));
+  List_done(&configFileList);
 }
 
 // ----------------------------------------------------------------------

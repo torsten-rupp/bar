@@ -135,7 +135,7 @@ void DeltaSourceList_doneAll(void)
 {
   assert(deltaSourceList != NULL);
 
-  List_init(deltaSourceList);
+  List_init(deltaSourceList,CALLBACK_(duplicateDeltaSourceNode,NULL),CALLBACK_(freeDeltaSourceNode,NULL));
   Semaphore_init(&deltaSourceList->lock,SEMAPHORE_TYPE_BINARY);
 
   #ifdef NDEBUG
@@ -190,14 +190,14 @@ void DeltaSourceList_doneAll(void)
   #endif /* NDEBUG */
 
   Semaphore_done(&deltaSourceList->lock);
-  List_done(deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
+  List_done(deltaSourceList);
 }
 
 DeltaSourceList *DeltaSourceList_clear(DeltaSourceList *deltaSourceList)
 {
   assert(deltaSourceList != NULL);
 
-  return (DeltaSourceList*)List_clear(deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
+  return (DeltaSourceList*)List_clear(deltaSourceList);
 }
 
 void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
@@ -209,7 +209,7 @@ void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
   assert(toDeltaSourceList != NULL);
   assert(fromDeltaSourceList != NULL);
 
-  List_copy(toDeltaSourceList,NULL,fromDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode,(ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL);
+  List_copy(toDeltaSourceList,NULL,fromDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
 }
 
 Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,

@@ -75,6 +75,22 @@ typedef bool MsgQueueLock;
 #endif
 
 /***********************************************************************\
+* Name   : freeMsgNode
+* Purpose: free message node
+* Input  : msgNode  - message node
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeMsgNode(MsgNode *msgNode, void *userData)
+{
+  UNUSED_VARIABLE(msgNode);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
 * Name   : clear
 * Purpose: discard all remaining messages in queue
 * Input  : msgQueue - message queue
@@ -97,6 +113,7 @@ LOCAL void clear(MsgQueue *msgQueue)
     {
       msgQueue->msgQueueMsgFreeFunction(msgNode->data,msgQueue->msgQueueMsgFreeUserData);
     }
+    freeMsgNode(msgNode,NULL);
     free(msgNode);
   }
 }
@@ -249,7 +266,7 @@ xxx
   msgQueue->modifiedFlag = FALSE;
   msgQueue->lockCount    = 0;
   msgQueue->endOfMsgFlag = FALSE;
-  List_init(&msgQueue->list);
+  List_init(&msgQueue->list,CALLBACK_(NULL,NULL),CALLBACK_(freeMsgNode,NULL));
 
   return TRUE;
 }

@@ -80,7 +80,7 @@
 LOCAL void debugArrayInit(void)
 {
   pthread_mutex_init(&debugArrayLock,NULL);
-  List_init(&debugArrayList);
+  List_init(&debugArrayList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   debugArrayList.allocatedMemory = 0L;
 }
 #endif /* not NDEBUG */
@@ -744,7 +744,7 @@ void Array_debugDone(void)
 
   pthread_mutex_lock(&debugArrayLock);
   {
-    List_done(&debugArrayList,NULL,NULL);
+    List_done(&debugArrayList);
   }
   pthread_mutex_unlock(&debugArrayLock);
 }

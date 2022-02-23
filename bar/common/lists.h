@@ -25,35 +25,17 @@
 
 /***************************** Datatypes *******************************/
 
-#define LIST_NODE_HEADER(type) \
-  type *prev; \
-  type *next
+/***********************************************************************\
+* Name   : ListNodeDuplicateFunction
+* Purpose: duplicate list node function
+* Input  : fromNode - copy from node
+*          userData - user data
+* Output : -
+* Return : duplicated list node
+* Notes  : -
+\***********************************************************************/
 
-#ifndef NDEBUG
-  #define LIST_HEADER(type) \
-    type          *head; \
-    type          *tail; \
-    unsigned long count; \
-    const char    *fileName; \
-    ulong         lineNb
-#else /* NDEBUG */
-  #define LIST_HEADER(type) \
-    type          *head; \
-    type          *tail; \
-    unsigned long count
-#endif /* not NDEBUG */
-
-// list node
-typedef struct Node
-{
-  LIST_NODE_HEADER(struct Node);
-} Node;
-
-// list
-typedef struct
-{
-  LIST_HEADER(Node);
-} List;
+typedef void*(*ListNodeDuplicateFunction)(const void *fromNode, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeFreeFunction
@@ -66,18 +48,6 @@ typedef struct
 \***********************************************************************/
 
 typedef void(*ListNodeFreeFunction)(void *node, void *userData);
-
-/***********************************************************************\
-* Name   : ListNodeDuplicateFunction
-* Purpose: duplicate list node function
-* Input  : fromNode - copy from node
-*          userData - user data
-* Output : -
-* Return : duplicated list node
-* Notes  : -
-\***********************************************************************/
-
-typedef void*(*ListNodeDuplicateFunction)(const void *fromNode, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeEqualsFunction
@@ -109,6 +79,45 @@ typedef enum
   LIST_FIND_FORWARD,
   LIST_FIND_BACKWARD
 } ListFindModes;
+
+#define LIST_NODE_HEADER(type) \
+  type *prev; \
+  type *next
+
+#ifndef NDEBUG
+  #define LIST_HEADER(type) \
+    type                      *head; \
+    type                      *tail; \
+    unsigned long             count; \
+    ListNodeDuplicateFunction duplicateFunction; \
+    void                      *duplicateUserData; \
+    ListNodeFreeFunction      freeFunction; \
+    void                      *freeUserData; \
+    \
+    const char                *fileName; \
+    ulong                     lineNb
+#else /* NDEBUG */
+  #define LIST_HEADER(type) \
+    type                      *head; \
+    type                      *tail; \
+    unsigned long             count; \
+    ListNodeDuplicateFunction duplicateFunction; \
+    void                      *duplicateUserData; \
+    ListNodeFreeFunction      freeFunction; \
+    void                      *freeUserData
+#endif /* not NDEBUG */
+
+// list node
+typedef struct Node
+{
+  LIST_NODE_HEADER(struct Node);
+} Node;
+
+// list
+typedef struct
+{
+  LIST_HEADER(Node);
+} List;
 
 /***************************** Variables *******************************/
 
@@ -428,9 +437,21 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
 \***********************************************************************/
 
 #ifdef NDEBUG
-void List_init(void *list);
+void List_init(void                      *list,
+               ListNodeDuplicateFunction duplicateFunction,
+               void                      *duplicateUserData,
+               ListNodeFreeFunction      freeFunction,
+               void                      *freeUserData
+              );
 #else /* not NDEBUG */
-void __List_init(const char *__fileName__, ulong __lineNb__, void *list);
+void __List_init(const char                *__fileName__,
+                 ulong                     __lineNb__,
+                 void                      *list,
+                 ListNodeDuplicateFunction duplicateFunction,
+                 void                      *duplicateUserData,
+                 ListNodeFreeFunction      freeFunction,
+                 void                      *freeUserData
+                );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -452,8 +473,10 @@ void List_initDuplicate(void                      *list,
                         const void                *fromList,
                         const void                *fromListFromNode,
                         const void                *fromListToNode,
-                        ListNodeDuplicateFunction listNodeDuplicateFunction,
-                        void                      *listNodeDuplicateUserData
+                        ListNodeDuplicateFunction duplicateFunction,
+                        void                      *duplicateUserData,
+                        ListNodeFreeFunction      freeFunction,
+                        void                      *freeUserData
                        );
 #else /* not NDEBUG */
 void __List_initDuplicate(const char                *__fileName__,
@@ -462,26 +485,23 @@ void __List_initDuplicate(const char                *__fileName__,
                           const void                *fromList,
                           const void                *fromListFromNode,
                           const void                *fromListToNode,
-                          ListNodeDuplicateFunction listNodeDuplicateFunction,
-                          void                      *listNodeDuplicateUserData
+                          ListNodeDuplicateFunction duplicateFunction,
+                          void                      *duplicateUserData,
+                          ListNodeFreeFunction      freeFunction,
+                          void                      *freeUserData
                          );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_done
 * Purpose: free all nodes
-* Input  : list                 - list to free
-*          listNodeFreeFunction - free function for single node or NULL
-*          listNodeFreeUserData - user data for free function
+* Input  : list - list to free
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void List_done(void                 *list,
-               ListNodeFreeFunction listNodeFreeFunction,
-               void                 *listNodeFreeUserData
-              );
+void List_done(void *list);
 
 /***********************************************************************\
 * Name   : List_new
@@ -506,8 +526,8 @@ List *__List_new(const char *fileName,
 * Input  : fromList                        - from list
 *          fromListFromNode,fromListToNode - from/to node (could be
 *                                            NULL)
-*          listNodeDuplicateFunction       - node duplicate function
-*          listNodeDuplicateUserData       - node duplicate user data
+*          duplicateFunction               - node duplicate function
+*          duplicateUserData               - node duplicate user data
 * Output : -
 * Return : -
 * Notes  : -
@@ -517,8 +537,10 @@ List *__List_new(const char *fileName,
 List *List_duplicate(const void                *fromList,
                      const void                *fromListFromNode,
                      const void                *fromListToNode,
-                     ListNodeDuplicateFunction listNodeDuplicateFunction,
-                     void                      *listNodeDuplicateUserData
+                     ListNodeDuplicateFunction duplicateFunction,
+                     void                      *duplicateUserData,
+                     ListNodeFreeFunction      freeFunction,
+                     void                      *freeUserData
                     );
 #else /* not NDEBUG */
 List *__List_duplicate(const char                *__fileName__,
@@ -526,42 +548,34 @@ List *__List_duplicate(const char                *__fileName__,
                        const void                *fromList,
                        const void                *fromListFromNode,
                        const void                *fromListToNode,
-                       ListNodeDuplicateFunction listNodeDuplicateFunction,
-                       void                      *listNodeDuplicateUserData
+                       ListNodeDuplicateFunction duplicateFunction,
+                       void                      *duplicateUserData,
+                       ListNodeFreeFunction      freeFunction,
+                       void                      *freeUserData
                       );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_delete
 * Purpose: free all nodes and delete list
-* Input  : list                 - list to free
-*          listNodeFreeFunction - free function for single node or NULL
-*          listNodeFreeUserData - user data for free function
+* Input  : list - list to free
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void List_delete(void                 *list,
-                 ListNodeFreeFunction listNodeFreeFunction,
-                 void                 *listNodeFreeUserData
-                );
+void List_delete(void *list);
 
 /***********************************************************************\
 * Name   : List_clear
 * Purpose: free all nodes in list
-* Input  : list                 - list
-*          listNodeFreeFunction - free function for single node or NULL
-*          listNodeFreeUserData - user data for free function
+* Input  : list - list
 * Output : -
 * Return : list
 * Notes  : -
 \***********************************************************************/
 
-void *List_clear(void                 *list,
-                 ListNodeFreeFunction listNodeFreeFunction,
-                 void                 *listNodeFreeUserData
-                );
+void *List_clear(void *list);
 
 /***********************************************************************\
 * Name   : List_copy
@@ -572,20 +586,16 @@ void *List_clear(void                 *list,
 *          fromList                        - from list
 *          fromListFromNode,fromListToNode - from/to node (could be
 *                                            NULL)
-*          listNodeDuplicateFunction       - node duplicate function
-*          listNodeDuplicateUserData       - node duplicate user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void List_copy(void                      *toList,
-               void                      *toListNextNode,
-               const void                *fromList,
-               const void                *fromListFromNode,
-               const void                *fromListToNode,
-               ListNodeDuplicateFunction listNodeDuplicateFunction,
-               void                      *listNodeDuplicateUserData
+void List_copy(void       *toList,
+               void       *toListNextNode,
+               const void *fromList,
+               const void *fromListFromNode,
+               const void *fromListToNode
               );
 
 /***********************************************************************\

@@ -191,7 +191,7 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
 
   serverIO->commandId         = 1;
   Semaphore_init(&serverIO->resultList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&serverIO->resultList);
+  List_init(&serverIO->resultList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeResultNode,NULL));
 
   switch (type)
   {
@@ -240,7 +240,7 @@ LOCAL void doneIO(ServerIO *serverIO)
     #endif /* NDEBUG */
   }
 
-  List_done(&serverIO->resultList,CALLBACK_((ListNodeFreeFunction)freeResultNode,NULL));
+  List_done(&serverIO->resultList);
   Semaphore_done(&serverIO->resultList.lock);
   String_delete(serverIO->line);
   free(serverIO->outputBuffer);
@@ -570,7 +570,7 @@ bool ServerIO_parseAction(const char      *actionText,
   serverIO->inputBufferLength = 0;
   String_clear(serverIO->line);
   serverIO->lineFlag          = FALSE;
-  List_clear(&serverIO->resultList,CALLBACK_((ListNodeFreeFunction)freeResultNode,NULL));
+  List_clear(&serverIO->resultList);
 
   // connect to server
   error = Network_connect(&serverIO->network.socketHandle,
@@ -773,7 +773,7 @@ SOCKET_TYPE_PLAIN,
   serverIO->inputBufferLength = 0;
   String_clear(serverIO->line);
   serverIO->lineFlag          = FALSE;
-  List_clear(&serverIO->resultList,CALLBACK_((ListNodeFreeFunction)freeResultNode,NULL));
+  List_clear(&serverIO->resultList);
 
   // connect client
   error = Network_accept(&serverIO->network.socketHandle,
@@ -896,7 +896,7 @@ Errors ServerIO_rejectNetwork(const ServerSocketHandle *serverSocketHandle)
   serverIO->inputBufferLength = 0;
   String_clear(serverIO->line);
   serverIO->lineFlag          = FALSE;
-  List_clear(&serverIO->resultList,CALLBACK_((ListNodeFreeFunction)freeResultNode,NULL));
+  List_clear(&serverIO->resultList);
 
   error = File_openDescriptor(&serverIO->file.inputHandle,inputDescriptor,FILE_OPEN_READ|FILE_STREAM);
   if (error != ERROR_NONE)

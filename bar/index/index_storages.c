@@ -2552,7 +2552,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
-  List_init(&entryList);
+  List_init(&entryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
   error = ERROR_NONE;
 
   // get entries info to add
@@ -2788,7 +2788,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
 //fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
 
   // free resources
-  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  List_done(&entryList);
 
   return error;
 }
@@ -2851,7 +2851,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
-  List_init(&entryList);
+  List_init(&entryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
   entryName = String_new();
   error     = ERROR_NONE;
 
@@ -3220,7 +3220,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
 
   // free resources
   String_delete(entryName);
-  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  List_done(&entryList);
 
   return error;
 }

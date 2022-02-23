@@ -98,8 +98,6 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlString[MAX_SQL_COMMAND_LENGTH];
-
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "history \

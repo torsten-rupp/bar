@@ -546,7 +546,7 @@ LOCAL Errors initAll(void)
   #endif /* HAVE_NEWLOCALE */
 
   Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&mountedList);
+  List_init(&mountedList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
 
   jobUUID                                = String_new();
 
@@ -558,7 +558,7 @@ LOCAL Errors initAll(void)
 
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
-  AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
   AUTOFREE_ADD(&autoFreeList,jobUUID,{ String_delete(jobUUID); });
   AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
@@ -793,7 +793,7 @@ LOCAL void doneAll(void)
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   String_delete(jobUUID);
 
-  List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
+  List_done(&mountedList);
   Semaphore_done(&mountedList.lock);
 
   Semaphore_done(&consoleLock);
@@ -2955,8 +2955,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 
 LOCAL Errors runDaemon(void)
 {
-  Errors  error;
-  JobNode *jobNode;
+  Errors error;
 
   // open log file
   openLog();

@@ -222,7 +222,7 @@ void EntryList_init(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  List_init(entryList);
+  List_init(entryList,CALLBACK_(NULL,NULL),CALLBACK_(freeEntryNode,NULL));
 }
 
 void EntryList_initDuplicate(EntryList       *entryList,
@@ -245,14 +245,14 @@ void EntryList_done(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  List_done(entryList,CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
+  List_done(entryList);
 }
 
 EntryList *EntryList_clear(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  return (EntryList*)List_clear(entryList,CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
+  return (EntryList*)List_clear(entryList);
 }
 
 void EntryList_copy(EntryList       *toEntryList,
@@ -268,8 +268,7 @@ void EntryList_copy(EntryList       *toEntryList,
             NULL,  // toEntryNode
             fromEntryList,
             fromEntryListFromNode,
-            fromEntryListToNode,
-            CALLBACK_((ListNodeDuplicateFunction)duplicateEntryNode,NULL)
+            fromEntryListToNode
            );
 }
 

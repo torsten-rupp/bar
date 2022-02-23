@@ -2415,7 +2415,7 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
-  List_init(&entryList);
+  List_init(&entryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
   error     = ERROR_NONE;
 
   // get entries info to add
@@ -2634,7 +2634,7 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
   }
 
   // free resources
-  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  List_done(&entryList);
 
   return error;
 }
@@ -2704,7 +2704,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
-  List_init(&entryList);
+  List_init(&entryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
   error = ERROR_NONE;
 
   // get entries info to remove
@@ -3034,7 +3034,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
   }
 
   // free resources
-  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  List_done(&entryList);
 
   return error;
 }

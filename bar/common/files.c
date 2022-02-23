@@ -257,8 +257,8 @@ LOCAL void debugFileInit(void)
   }
   pthread_mutexattr_settype(&debugFileLockAttribute,PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&debugFileLock,&debugFileLockAttribute);
-  List_init(&debugOpenFileList);
-  List_init(&debugClosedFileList);
+  List_init(&debugOpenFileList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  List_init(&debugClosedFileList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 }
 #endif /* NDEBUG */
 
@@ -4238,7 +4238,7 @@ void __File_initExtendedAttributes(const char                *__fileName__,
 {
   assert(fileExtendedAttributeList != NULL);
 
-  List_init(fileExtendedAttributeList);
+  List_init(fileExtendedAttributeList,CALLBACK_(NULL,NULL),CALLBACK_(freeExtendedAttributeNode,NULL));
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(fileExtendedAttributeList,FileExtendedAttributeList);
@@ -4258,7 +4258,7 @@ void __File_doneExtendedAttributes(const char                *__fileName__,
 {
   assert(fileExtendedAttributeList != NULL);
 
-  List_done(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+  List_done(fileExtendedAttributeList);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(fileExtendedAttributeList,FileExtendedAttributeList);
@@ -4327,7 +4327,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   assert(!String_isEmpty(fileName));
 
   // init variables
-  List_init(fileExtendedAttributeList);
+  List_init(fileExtendedAttributeList,CALLBACK_(NULL,NULL),CALLBACK_(freeExtendedAttributeNode,NULL));
 
   #ifdef HAVE_LLISTXATTR
     // allocate buffer for attribute names (Note: it is possible a value > 0 is returned here, but later 0 is returned)
@@ -4335,13 +4335,13 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     if (n < 0)
     {
       error = getLastError(ERROR_CODE_IO,String_cString(fileName));
-      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+      List_done(fileExtendedAttributeList);
       return error;
     }
     names = (char*)malloc(n);
     if (names == NULL)
     {
-      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+      List_done(fileExtendedAttributeList);
       return ERROR_INSUFFICIENT_MEMORY;
     }
 
@@ -4351,7 +4351,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     {
       error = getLastError(ERROR_CODE_IO,String_cString(fileName));
       free(names);
-      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+      List_done(fileExtendedAttributeList);
       return error;
     }
 
@@ -4365,14 +4365,14 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       {
         error = getLastError(ERROR_CODE_IO,String_cString(fileName));
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList);
         return error;
       }
       data = malloc(n);
       if (data == NULL)
       {
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList);
         return ERROR_INSUFFICIENT_MEMORY;
       }
 
@@ -4383,7 +4383,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
         error = getLastError(ERROR_CODE_IO,String_cString(fileName));
         free(data);
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList);
         return error;
       }
 
@@ -4393,7 +4393,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       {
         free(data);
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList);
         return ERROR_INSUFFICIENT_MEMORY;
       }
       fileExtendedAttributeNode->name       = String_newCString(name);
@@ -5132,8 +5132,8 @@ void File_debugDone(void)
 
   pthread_mutex_lock(&debugFileLock);
   {
-    List_done(&debugClosedFileList,NULL,NULL);
-    List_done(&debugOpenFileList,NULL,NULL);
+    List_done(&debugClosedFileList);
+    List_done(&debugOpenFileList);
   }
   pthread_mutex_unlock(&debugFileLock);
 }

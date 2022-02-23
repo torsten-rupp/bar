@@ -141,7 +141,7 @@ void __FragmentList_init(const char   *__fileName__,
 {
   assert(fragmentList != NULL);
 
-  List_init(fragmentList);
+  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_(FragmentList_doneNode,NULL));
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);
@@ -157,7 +157,7 @@ void FragmentList_done(FragmentList *fragmentList)
 
   DEBUG_REMOVE_RESOURCE_TRACE(fragmentList,FragmentList);
 
-  List_done(fragmentList,(ListNodeFreeFunction)FragmentList_doneNode,NULL);
+  List_done(fragmentList);
 }
 
 #ifdef NDEBUG
@@ -200,7 +200,7 @@ void __FragmentList_initNode(const char   *__fileName__,
     fragmentNode->userDataSize = 0;
   }
   fragmentNode->lockCount    = lockCount;
-  List_init(&fragmentNode->rangeList);
+  List_init(&fragmentNode->rangeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   fragmentNode->rangeListSum = 0LL;
 
   #ifdef NDEBUG
@@ -217,7 +217,7 @@ void FragmentList_doneNode(FragmentNode *fragmentNode)
 
   DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
 
-  List_done(&fragmentNode->rangeList,CALLBACK_(NULL,NULL));
+  List_done(&fragmentNode->rangeList);
   if (fragmentNode->userData != NULL)
   {
     free(fragmentNode->userData);
@@ -300,7 +300,7 @@ void FragmentList_clearRanges(FragmentNode *fragmentNode)
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  List_done(&fragmentNode->rangeList,NULL,NULL);
+  List_done(&fragmentNode->rangeList);
   fragmentNode->rangeListSum = 0LL;
 }
 
