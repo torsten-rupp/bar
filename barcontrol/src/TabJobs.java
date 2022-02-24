@@ -2401,7 +2401,8 @@ public class TabJobs
   private WidgetVariable  cryptPasswordMode         = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
   private WidgetVariable  cryptPassword             = new WidgetVariable<String> ("crypt-password","");
   private WidgetVariable  incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
-  private WidgetVariable  storageOnMaster           = new WidgetVariable<Boolean>("storage-on-master",true);
+  private WidgetVariable  testCreatedArchives       = new WidgetVariable<Boolean>("test-created-archives",false);
+  private WidgetVariable  storageOnMasterFlag           = new WidgetVariable<Boolean>("storage-on-master",true);
   private WidgetVariable  storageType               = new WidgetVariable<String> ("storage-type",
                                                                                   new String[]{"filesystem",
                                                                                                "ftp",
@@ -5631,11 +5632,11 @@ public class TabJobs
                 {
                   if (i < s.length)
                   {
-                    widgetCryptAlgorithms[i].setText(s[i]);
+                    Widgets.setSelectedComboItem(widgetCryptAlgorithms[i],s[i]);
                   }
                   else
                   {
-                    widgetCryptAlgorithms[i].setText("none");
+                    Widgets.setSelectedComboItem(widgetCryptAlgorithms[i],"none");
                   }
                   i++;
                 }
@@ -6610,11 +6611,47 @@ public class TabJobs
           });
         }
 
+        label = Widgets.newLabel(tab,BARControl.tr("Options")+":",Settings.hasExpertRole());
+        Widgets.layout(label,10,0,TableLayoutData.W);
+        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
+        composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
+        Widgets.layout(composite,10,1,TableLayoutData.WE);
+        {
+          button = Widgets.newCheckbox(composite,BARControl.tr("Test created archives"));
+          button.setToolTipText(BARControl.tr("Test created archives."));
+          Widgets.layout(button,0,0,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+Dprintf.dprintf("_");
+              Button  widget      = (Button)selectionEvent.widget;
+              boolean checkedFlag = widget.getSelection();
+
+              try
+              {
+                testCreatedArchives.set(checkedFlag);
+                BARServer.setJobOption(selectedJobData.uuid,testCreatedArchives);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(button,testCreatedArchives));
+        }
+
         // destination
         label = Widgets.newLabel(tab,BARControl.tr("Destination")+":");
-        Widgets.layout(label,10,0,TableLayoutData.W);
+        Widgets.layout(label,11,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,10,1,TableLayoutData.WE);
+        Widgets.layout(composite,11,1,TableLayoutData.WE);
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Storage destination type:\n"+
@@ -6659,7 +6696,6 @@ public class TabJobs
               try
               {
                 storageType.set(string);
-//                BARServer.setJobOption(selectedJobData.uuid,storageType);
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
                 if      (string.equals("cd"))
@@ -6801,8 +6837,8 @@ public class TabJobs
 
               try
               {
-                storageOnMaster.set(widget.getSelection());
-                BARServer.setJobOption(selectedJobData.uuid,storageOnMaster);
+                storageOnMasterFlag.set(widget.getSelection());
+                BARServer.setJobOption(selectedJobData.uuid,storageOnMasterFlag);
               }
               catch (Exception exception)
               {
@@ -6810,13 +6846,13 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(button,storageOnMaster));
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageOnMasterFlag));
         }
 
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -7028,7 +7064,7 @@ public class TabJobs
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -7367,7 +7403,7 @@ public class TabJobs
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -8037,7 +8073,7 @@ public class TabJobs
         // destination WebDAV
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -8707,7 +8743,7 @@ public class TabJobs
         // destination cd/dvd/bd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE);
+        Widgets.layout(composite,12,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -9122,7 +9158,7 @@ public class TabJobs
         // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -10800,12 +10836,12 @@ TODO: implement delete entity
   {
     final JobData jobData = selectedJobData;
 
-      display.syncExec(new Runnable()
+    display.syncExec(new Runnable()
+    {
+      @Override
+      public void run()
       {
-        @Override
-        public void run()
-        {
-    Widgets.setEnabled(widgetTabFolder,false);
+        Widgets.setEnabled(widgetTabFolder,false);
     }});
     if (jobData != null)
     {
@@ -10835,8 +10871,9 @@ TODO: implement delete entity
         cryptPasswordMode.set(BARServer.getStringJobOption(jobData.uuid,"crypt-password-mode"));
         BARServer.getJobOption(jobData.uuid,cryptPassword);
         BARServer.getJobOption(jobData.uuid,incrementalListFileName);
+        BARServer.getJobOption(jobData.uuid,testCreatedArchives);
         archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
-        BARServer.getJobOption(jobData.uuid,storageOnMaster);
+        BARServer.getJobOption(jobData.uuid,storageOnMasterFlag);
         BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
         BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
 /* NYI ???
@@ -11031,7 +11068,6 @@ throw new Error("NYI");
         catch (CommunicationError error)
         {
           Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",error.getMessage()));
-          widgetJobName.forceFocus();
           return false;
         }
       }
@@ -11482,38 +11518,28 @@ throw new Error("NYI");
     clearScheduleTable();
     clearPersistenceTable();
 
-/*
-    Background.run(new BackgroundRunnable()
+    // update data
+    try
     {
+      updateJobData();
+    }
+    catch (ConnectionError error)
+    {
+      // ignored
+    }
+
+    // trigger selected job
+    display.syncExec(new Runnable()
+    {
+      @Override
       public void run()
       {
-*/
-        // update data
-        try
-        {
-          updateJobData();
-        }
-        catch (ConnectionError error)
-        {
-          // ignored
-        }
+        addDirectoryRoots();
+        addDevicesList();
 
-        // trigger selected job
-        display.syncExec(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            addDirectoryRoots();
-            addDevicesList();
-
-            selectJobEvent.trigger();
-          }
-        });
-/*
+        selectJobEvent.trigger();
       }
     });
-*/
   }
 
   /** clear selected

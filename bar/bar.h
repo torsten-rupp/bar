@@ -53,7 +53,6 @@ typedef struct
 } ConsoleSave;
 
 /***************************** Variables *******************************/
-extern String     tmpDirectory;           // temporary directory
 extern Semaphore  consoleLock;            // lock console
 #ifdef HAVE_NEWLOCALE
   extern locale_t POSIXLocale;            // POSIX locale

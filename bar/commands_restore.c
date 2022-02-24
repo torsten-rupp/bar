@@ -1678,9 +1678,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
 
 LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                                    ArchiveHandle *archiveHandle,
-                                   ConstString   printableStorageName,
-                                   byte          *buffer,
-                                   uint          bufferSize
+                                   ConstString   printableStorageName
                                   )
 {
   AutoFreeList              autoFreeList;
@@ -1694,9 +1692,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   String                    prefixFileName,postfixFileName;
   uint                      n;
 //            FileInfo localFileInfo;
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1980,9 +1975,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
 
 LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                               ArchiveHandle *archiveHandle,
-                              ConstString   printableStorageName,
-                              byte          *buffer,
-                              uint          bufferSize
+                              ConstString   printableStorageName
                              )
 {
   AutoFreeList              autoFreeList;
@@ -1997,9 +1990,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   String                    prefixFileName,postfixFileName;
   uint                      n;
 //            FileInfo localFileInfo;
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -2955,9 +2945,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 
 LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                                  ArchiveHandle *archiveHandle,
-                                 ConstString   printableStorageName,
-                                 byte          *buffer,
-                                 uint          bufferSize
+                                 ConstString   printableStorageName
                                 )
 {
   AutoFreeList              autoFreeList;
@@ -2971,9 +2959,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   String                    prefixFileName,postfixFileName;
   uint                      n;
 //            FileInfo localFileInfo;
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -3273,12 +3258,13 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
         )
   {
     // open archive (only if new archive)
-    if (archiveIndex < entryMsg.archiveIndex)
+    if (archiveIndex != entryMsg.archiveIndex)
     {
       // close previous archive
       if (archiveIndex != 0)
       {
         Archive_close(&archiveHandle);
+        archiveIndex = 0;
       }
 
       // open new archive
@@ -3340,20 +3326,14 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = restoreDirectoryEntry(restoreInfo,
                                       &archiveHandle,
-                                      entryMsg.archiveHandle->printableStorageName,
-buffer,
-BUFFER_SIZE
-//                                      restoreInfo->includeEntryList,
-//                                      restoreInfo->excludePatternList
+                                      entryMsg.archiveHandle->printableStorageName
                                      );
 
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = restoreLinkEntry(restoreInfo,
                                  &archiveHandle,
-                                 entryMsg.archiveHandle->printableStorageName,
-                                 buffer,
-                                 BUFFER_SIZE
+                                 entryMsg.archiveHandle->printableStorageName
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
@@ -3367,9 +3347,7 @@ BUFFER_SIZE
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = restoreSpecialEntry(restoreInfo,
                                     &archiveHandle,
-                                    entryMsg.archiveHandle->printableStorageName,
-                                    buffer,
-                                    BUFFER_SIZE
+                                    entryMsg.archiveHandle->printableStorageName
                                    );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
@@ -3414,15 +3392,15 @@ BUFFER_SIZE
 * Purpose: restore archive content
 * Input  : restoreInfo      - restore info
 *          storageSpecifier - storage to restore from
-*          archiveName      - archive to restore from or NULL
+*          archiveName      - archive name to restore from or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreArchiveContent(RestoreInfo            *restoreInfo,
-                                   StorageSpecifier       *storageSpecifier,
-                                   ConstString             archiveName
+LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
+                                   StorageSpecifier *storageSpecifier,
+                                   ConstString       archiveName
                                   )
 {
   AutoFreeList           autoFreeList;
@@ -3635,7 +3613,7 @@ NULL, // masterIO
     if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
       // send entry to restore threads
-//TODO: increment on multiple archives and when threads are not restarted each time
+//TODO: increment on multiple archives and when threads are not restarted for each archive (multi-threaded restore over multiple archives)
       entryMsg.archiveIndex     = 1;
       entryMsg.archiveHandle    = &archiveHandle;
       entryMsg.archiveEntryType = archiveEntryType;

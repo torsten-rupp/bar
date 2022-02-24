@@ -2164,7 +2164,13 @@ Errors __Chunk_init(const char      *__fileName__,
   chunkInfo->alignment       = alignment;
   chunkInfo->cryptInfo       = cryptInfo;
 
-  chunkInfo->id              = chunkId;
+  #ifndef NDEBUG
+    chunkInfo->id            = (globalOptions.debug.createArchiveErrors > 0) ? CHUNK_ID_BROKEN : chunkId;
+    if (globalOptions.debug.createArchiveErrors > 0) globalOptions.debug.createArchiveErrors--;
+  #else
+    chunkInfo->id            = chunkId;
+  #endif
+
   chunkInfo->definition      = definition;
   chunkInfo->chunkSize       = 0L;
   chunkInfo->size            = 0LL;

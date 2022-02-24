@@ -33,6 +33,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+String tmpDirectory;
 
 /****************************** Macros *********************************/
 
@@ -43,6 +44,18 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+Errors Common_initAll(void)
+{
+  tmpDirectory = String_new();
+
+  return ERROR_NONE;
+}
+
+void Common_doneAll(void)
+{
+  String_delete(tmpDirectory);
+}
 
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,

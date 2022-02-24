@@ -40,8 +40,6 @@
 #include "common/strings.h"
 #include "common/threads.h"
 
-// TODO: remove bar.h
-#include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
 #include "jobs.h"
@@ -4060,6 +4058,187 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
 }
 
 /***********************************************************************\
+* Name   : simpleTestArchive
+* Purpose: simple test archive
+* Input  : storageInfo - storage info
+*          archiveName - archive name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
+                               ConstString  archiveName
+                              )
+{
+  Errors            error;
+  ArchiveHandle     archiveHandle;
+  ArchiveEntryTypes archiveEntryType;
+  ArchiveEntryInfo  archiveEntryInfo;
+
+  // open archive
+  error = Archive_open(&archiveHandle,
+                       storageInfo,
+                       archiveName,
+                       NULL,  // deltaSourceList,
+                       CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                       NULL // logHandle
+                      );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // simple test: read and skip content of archive entries
+  error = ERROR_NONE;
+  while (   (error == ERROR_NONE)
+         && !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
+        )
+  {
+    // get next archive entry type
+    error = Archive_getNextArchiveEntry(&archiveHandle,
+                                        &archiveEntryType,
+                                        NULL,  // archiveCryptInfo,
+                                        NULL,  // offset,
+                                        ARCHIVE_FLAG_NONE
+                                       );
+fprintf(stderr,"%s:%d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
+    if (error == ERROR_NONE)
+    {
+      switch (archiveEntryType)
+      {
+        case ARCHIVE_ENTRY_TYPE_NONE:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+        case ARCHIVE_ENTRY_TYPE_FILE:
+          error = Archive_readFileEntry(&archiveEntryInfo,
+                                        &archiveHandle,
+                                        NULL,  // deltaCompressAlgorithm
+                                        NULL,  // byteCompressAlgorithm
+                                        NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // fileName,
+                                        NULL,  // fileInfo,
+                                        NULL,  // fileExtendedAttributeList
+                                        NULL,  // deltaSourceName
+                                        NULL,  // deltaSourceSize
+                                        NULL,  // fragmentOffset,
+                                        NULL  // fragmentSize
+                                       );
+          if (error == ERROR_NONE)
+          {
+            error = Archive_closeEntry(&archiveEntryInfo);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          error = Archive_readImageEntry(&archiveEntryInfo,
+                                         &archiveHandle,
+                                         NULL,  // deltaCompressAlgorithm
+                                         NULL,  // byteCompressAlgorithm
+                                         NULL,  // cryptType
+                                         NULL,  // cryptAlgorithm
+                                         NULL,  // deviceName,
+                                         NULL,  // deviceInfo,
+                                         NULL,  // fileSystemType
+                                         NULL,  // deltaSourceName
+                                         NULL,  // deltaSourceSize
+                                         NULL,  // blockOffset,
+                                         NULL  // blockCount
+                                        );
+          if (error == ERROR_NONE)
+          {
+            error = Archive_closeEntry(&archiveEntryInfo);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+          error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                             &archiveHandle,
+                                             NULL,  // cryptType
+                                             NULL,  // cryptAlgorithm
+                                             NULL,  // directoryName,
+                                             NULL,  // fileInfo,
+                                             NULL   // fileExtendedAttributeList
+                                            );
+          if (error == ERROR_NONE)
+          {
+            error = Archive_closeEntry(&archiveEntryInfo);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_LINK:
+          error = Archive_readLinkEntry(&archiveEntryInfo,
+                                        &archiveHandle,
+                                        NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // linkName,
+                                        NULL,  // fileName,
+                                        NULL,  // fileInfo,
+                                        NULL   // fileExtendedAttributeList
+                                       );
+          if (error == ERROR_NONE)
+          {
+            error = Archive_closeEntry(&archiveEntryInfo);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                            &archiveHandle,
+                                            NULL,  // deltaCompressAlgorithm
+                                            NULL,  // byteCompressAlgorithm
+                                            NULL,  // cryptType
+                                            NULL,  // cryptAlgorithm
+                                            NULL,  // fileNameList,
+                                            NULL,  // fileInfo,
+                                            NULL,  // fileExtendedAttributeList
+                                            NULL,  // deltaSourceName
+                                            NULL,  // deltaSourceSize
+                                            NULL,  // fragmentOffset,
+                                            NULL  // fragmentSize
+                                           );
+          if (error == ERROR_NONE)
+          {
+            error = Archive_closeEntry(&archiveEntryInfo);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                           &archiveHandle,
+                                           NULL,  // cryptType
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // fileName,
+                                           NULL,  // fileInfo,
+                                           NULL   // fileExtendedAttributeList
+                                          );
+          if (error == ERROR_NONE)
+          {
+            error = Archive_closeEntry(&archiveEntryInfo);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_META:
+          // just skip
+          break;
+        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+          // just skip
+          break;
+        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+          error = ERROR_UNKNOWN_CHUNK;
+          break; /* not reached */
+      }
+
+      // skip entry
+      error = Archive_skipNextEntry(&archiveHandle);
+    }
+  }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+
+  // close archive
+  Archive_close(&archiveHandle);
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : archiveStore
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
@@ -4104,6 +4283,18 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
+
+  // test archive
+fprintf(stderr,"%s:%d: ++++++++++++++++ %d\n",__FILE__,__LINE__,storageInfo->jobOptions->testCreatedArchivesFlag);
+  if (storageInfo->jobOptions->testCreatedArchivesFlag)
+  {
+fprintf(stderr,"%s:%d: testttttttttttttttttttt\n",__FILE__,__LINE__);
+    error = simpleTestArchive(storageInfo,intermediateFileName);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
 
   // get file info
   error = File_getInfo(&fileInfo,intermediateFileName);

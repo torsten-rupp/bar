@@ -111,7 +111,6 @@ typedef struct
 } MountedList;
 
 /***************************** Variables *******************************/
-String     tmpDirectory;
 Semaphore  consoleLock;
 #ifdef HAVE_NEWLOCALE
   locale_t POSIXLocale;
@@ -537,7 +536,6 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,initSecure,{ doneSecure(); });
 
   // initialize variables
-  tmpDirectory = String_new();
   Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
@@ -578,6 +576,15 @@ LOCAL Errors initAll(void)
   #endif /* HAVE_SETLOCAL && HAVE_TEXTDOMAIN */
 
   // initialize modules
+  error = Common_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Common_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Common_initAll,{ Common_doneAll(); });
+
   error = Configuration_initAll();
   if (error != ERROR_NONE)
   {
@@ -783,6 +790,7 @@ LOCAL void doneAll(void)
   ThreadPool_doneAll();
   Thread_doneAll();
   Configuration_doneAll();
+  Common_initAll();
 
   // deinitialize variables
   #ifdef HAVE_NEWLOCALE
