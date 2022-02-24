@@ -40,6 +40,7 @@
 #include "common/strings.h"
 #include "common/threads.h"
 
+#include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
 #include "jobs.h"

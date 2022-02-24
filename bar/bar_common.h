@@ -1132,6 +1132,8 @@ Errors Common_initAll(void);
 
 void Common_doneAll(void);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : templateInit
 * Purpose: init template

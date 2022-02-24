@@ -329,7 +329,7 @@ LOCAL void printInfo(const char *format, ...)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printWarning(const char *text, ...)
+void printWarning(const char *text, ...)
 {
   String  line;
   va_list arguments;

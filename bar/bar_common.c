@@ -22,9 +22,9 @@
 
 #include "common/global.h"
 
-#include "bar_common.h"
+#include "configuration.h"
 
-#include "bar.h"
+#include "bar_common.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -33,7 +33,12 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-String tmpDirectory;
+Semaphore  consoleLock;
+#ifdef HAVE_NEWLOCALE
+  locale_t POSIXLocale;
+#endif /* HAVE_NEWLOCALE */
+
+String     tmpDirectory;
 
 /****************************** Macros *********************************/
 
@@ -47,6 +52,12 @@ String tmpDirectory;
 
 Errors Common_initAll(void)
 {
+  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
+  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); return DEBUG_TESTCODE_ERROR(); }
+  #ifdef HAVE_NEWLOCALE
+    POSIXLocale = newlocale(LC_ALL,"POSIX",0);
+  #endif /* HAVE_NEWLOCALE */
+
   tmpDirectory = String_new();
 
   return ERROR_NONE;

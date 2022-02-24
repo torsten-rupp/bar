@@ -128,6 +128,35 @@ Errors updateConfig(void);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : isPrintInfo
+* Purpose: check if info should be printed
+* Input  : verboseLevel - verbosity level
+* Output : -
+* Return : true iff info should be printed
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool isPrintInfo(uint verboseLevel);
+#if defined(NDEBUG) || defined(__CONFIGURATION_IMPLEMENTATION__)
+INLINE bool isPrintInfo(uint verboseLevel)
+{
+  return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
+}
+#endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : outputConsole
+* Purpose: output string to console
+* Input  : file   - output stream (stdout, stderr)
+*          string - string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void outputConsole(FILE *file, ConstString string);
+
+/***********************************************************************\
 * Name   : getPasswordTypeName
 * Purpose: get password type text
 * Input  : passwordType - password type
@@ -139,23 +168,6 @@ Errors updateConfig(void);
 const char *getPasswordTypeText(PasswordTypes passwordType);
 
 // ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : isPrintInfo
-* Purpose: check if info should be printed
-* Input  : verboseLevel - verbosity level
-* Output : -
-* Return : true iff info should be printed
-* Notes  : -
-\***********************************************************************/
-
-INLINE bool isPrintInfo(uint verboseLevel);
-#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
-INLINE bool isPrintInfo(uint verboseLevel)
-{
-  return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
-}
-#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : lockConsole
@@ -254,9 +266,11 @@ void printError(const char *text, ...);
 * Notes  : -
 \***********************************************************************/
 
-void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
-void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
-void printInfo(uint verboseLevel, const char *format, ...);
+//void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
+//void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
+//void printInfo(uint verboseLevel, const char *format, ...);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : executeIOOutput
