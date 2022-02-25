@@ -4286,10 +4286,8 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   UNUSED_VARIABLE(scheduleUUID);
 
   // test archive
-fprintf(stderr,"%s:%d: ++++++++++++++++ %d\n",__FILE__,__LINE__,storageInfo->jobOptions->testCreatedArchivesFlag);
   if (storageInfo->jobOptions->testCreatedArchivesFlag)
   {
-fprintf(stderr,"%s:%d: testttttttttttttttttttt\n",__FILE__,__LINE__);
     error = simpleTestArchive(storageInfo,intermediateFileName);
     if (error != ERROR_NONE)
     {

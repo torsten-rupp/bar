@@ -129,21 +129,18 @@ typedef struct CommandLineOption
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     int                           min,max;              // valid range
     const CommandLineUnit         *units;               // array with units
-    const char                    *descriptionArgument; // optional description text argument
   } integerOption;
   struct
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     int64                         min,max;              // valid range
     const CommandLineUnit         *units;               // array with units
-    const char                    *descriptionArgument; // optional description text argument
   } integer64Option;
   struct
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     double                        min,max;              // valid range
     const CommandLineUnit         *units;               // array with units
-    const char                    *descriptionArgument; // optional description text argument
   } doubleOption;
   struct
   {
@@ -152,13 +149,11 @@ typedef struct CommandLineOption
   struct
   {
     uint                          value;                // flag value
-    const char                    *descriptionArgument; // optional description text argument
   } flagOption;
   struct
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     int                           min,max;              // valid range
-    const char                    *descriptionArgument; // optional description text argument
   } incrementOption;
   struct
   {
@@ -167,10 +162,12 @@ typedef struct CommandLineOption
   struct
   {
     const CommandLineOptionSelect *selects;             // array with select values
+    const char                    *descriptionArgument; // optional description text argument
   } selectOption;
   struct
   {
     const CommandLineOptionSet    *sets;                // array with set values
+    const char                    *descriptionArgument; // optional description text argument
   } setOption;
   struct
   {
@@ -209,19 +206,19 @@ typedef struct CommandLineOption
 
 /* example
 
-CMD_OPTION_INTEGER        (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_INTEGER64      (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
-CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,                 <description>                       )
+CMD_OPTION_INTEGER        (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>,<description argument>)
+CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>,<description argument>)
+CMD_OPTION_INTEGER64      (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>,<description argument>)
+CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>,<description argument>)
+CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
+CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,                 <description>,<description argument>)
 CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
 CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
-CMD_OPTION_FLAG           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>                      <description>                       )
+CMD_OPTION_FLAG           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>                      <description>,<description argument>)
 CMD_OPTION_INCREMENT      (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
 CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,                     <description>                       )
-CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,                   <description>                       )
-CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,                       <description>                       )
+CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,                   <description>,<description argument>)
+CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,                       <description>,<description argument>)
 CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
 CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
 CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<user data>,<argument count>,<description>,<description argument>)
@@ -379,15 +376,14 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_INTEGER, CMD_OPTION_INTEGER_RANGE
 * Purpose: define an int command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          min,max             - min./max. value
-*          units               - unit definition array or NULL
-*          description         - description
-*          descriptionArgument - optional description argument text
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          min,max     - min./max. value
+*          units       - unit definition array or NULL
+*          description - description
 * Output : -
 * Return : -
 * Notes  : help output:
@@ -396,7 +392,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 *              is not in range of MIN_INT..MAX_INT/MIN_INT64..MAX_INT64
 \***********************************************************************/
 
-#define CMD_OPTION_INTEGER(name,shortName,helpLevel,priority,variable,min,max,units,description,descriptionArgument) \
+#define CMD_OPTION_INTEGER(name,shortName,helpLevel,priority,variable,min,max,units,description) \
   {\
     name,\
     shortName,\
@@ -405,7 +401,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER,\
     {&variable},\
     {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
-    {FALSE,min,max,units,NULL},\
+    {FALSE,min,max,units},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
@@ -419,7 +415,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL,NULL,0,NULL},\
     description \
   }
-#define CMD_OPTION_INTEGER_RANGE(name,shortName,helpLevel,priority,variable,min,max,units,description,descriptionArgument) \
+#define CMD_OPTION_INTEGER_RANGE(name,shortName,helpLevel,priority,variable,min,max,units,description) \
   {\
     name,\
     shortName,\
@@ -428,7 +424,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER,\
     {&variable},\
     {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
-    {TRUE,min,max,units,NULL},\
+    {TRUE,min,max,units},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
@@ -446,24 +442,23 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_INTEGER64, CMD_OPTION_INTEGER64_RANGE
 * Purpose: define an int64 command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          min,max             - min./max. value
-*          units               - unit definition array or NULL
-*          description         - description
-*          descriptionArgument - optional description argument text
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          min,max     - min./max. value
+*          units       - unit definition array or NULL
+*          description - description
 * Output : -
 * Return : -
 * Notes  : help output:
 *            - output a default value if default value != 0
-*            - output descriptionArgument if not NULL and default value
+*            - output <n> and default value
 *              is not in range of MIN_INT..MAX_INT/MIN_INT64..MAX_INT64
 \***********************************************************************/
 
-#define CMD_OPTION_INTEGER64(name,shortName,helpLevel,priority,variable,min,max,units,description,descriptionArgument) \
+#define CMD_OPTION_INTEGER64(name,shortName,helpLevel,priority,variable,min,max,units,description) \
   {\
     name,\
     shortName,\
@@ -473,7 +468,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {&variable},\
     {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
-    {FALSE,min,max,units,NULL},\
+    {FALSE,min,max,units},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0,NULL},\
@@ -486,7 +481,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {NULL,NULL,0,NULL},\
     description \
   }
-#define CMD_OPTION_INTEGER64_RANGE(name,shortName,helpLevel,priority,variable,min,max,units,description,descriptionArgument) \
+#define CMD_OPTION_INTEGER64_RANGE(name,shortName,helpLevel,priority,variable,min,max,units,description) \
   {\
     name,\
     shortName,\
@@ -496,7 +491,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {&variable},\
     {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
-    {TRUE,min,max,units,NULL},\
+    {TRUE,min,max,units},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0,NULL},\
@@ -513,14 +508,14 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_DOUBLE, CMD_OPTION_DOUBLE_RANGE
 * Purpose: define an double command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          min,max             - min./max. value
-*          units               - unit definition array or NULL
-*          description         - description
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          min,max     - min./max. value
+*          units       - unit definition array or NULL
+*          description - description
 * Output : -
 * Return : -
 * Notes  : -
@@ -537,7 +532,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
-    {FALSE,min,max,units,NULL},\
+    {FALSE,min,max,units},\
     {FALSE},\
     {0,NULL},\
     {FALSE,0,0,NULL},\
@@ -560,7 +555,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0,0,NULL,NULL},\
-    {TRUE,min,max,units,NULL},\
+    {TRUE,min,max,units},\
     {FALSE},\
     {0,NULL},\
     {FALSE,0,0,NULL},\
@@ -634,16 +629,17 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     description\
   }
 
+// TODO: remove?
 /***********************************************************************\
 * Name   : CMD_OPTION_FLAG
 * Purpose: define a flag command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          value               - flag value
-*          description         - description
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          value       - flag value
+*          description - description
 * Output : -
 * Return : -
 * Notes  : -
@@ -662,7 +658,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0,NULL,NULL},\
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
-    {value,NULL},\
+    {value},\
     {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
@@ -676,13 +672,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_INCREMENT
 * Purpose: define an increment command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          min,max             - min./max. value
-*          description         - description
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          min,max     - min./max. value
+*          description - description
 * Output : -
 * Return : -
 * Notes  : -
@@ -702,7 +698,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0,NULL},\
-    {FALSE,min,max,NULL},\
+    {FALSE,min,max},\
     {0},\
     {NULL},\
     {NULL},\
@@ -715,13 +711,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_ENUM
 * Purpose: define an enum command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          value               - enum value
-*          description         - description
+* Input  : name        - option name
+*          shortName   - option short name or NULL
+*          helpLevel   - help level (0..n)
+*          priority    - evaluation priority
+*          variable    - variable
+*          value       - enum value
+*          description - description
 * Output : -
 * Return : -
 * Notes  : -
@@ -761,12 +757,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 *          variable            - variable
 *          selects             - select definition array
 *          description         - description
+*          descriptionArgument - optional description argument text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CMD_OPTION_SELECT(name,shortName,helpLevel,priority,variable,selects,description) \
+#define CMD_OPTION_SELECT(name,shortName,helpLevel,priority,variable,selects,description,descriptionArgument) \
   {\
     name,\
     shortName,\
@@ -782,7 +779,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {0,NULL},\
     {FALSE,0,0,NULL},\
     {0},\
-    {selects},\
+    {selects,descriptionArgument},\
     {NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
@@ -800,12 +797,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 *          variable            - variable
 *          set                 - set definition array
 *          description         - description
+*          descriptionArgument - optional description argument text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CMD_OPTION_SET(name,shortName,helpLevel,priority,variable,set,description) \
+#define CMD_OPTION_SET(name,shortName,helpLevel,priority,variable,set,description,descriptionArgument) \
   {\
     name,\
     shortName,\
@@ -822,7 +820,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0,NULL},\
     {0},\
     {NULL},\
-    {set},\
+    {set,descriptionArgument},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
