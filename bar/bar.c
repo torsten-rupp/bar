@@ -112,6 +112,11 @@ typedef struct
 } MountedList;
 
 /***************************** Variables *******************************/
+Semaphore  consoleLock;
+#ifdef HAVE_NEWLOCALE
+  locale_t POSIXLocale;
+#endif /* HAVE_NEWLOCALE */
+
 ThreadPool clientThreadPool;
 ThreadPool workerThreadPool;
 
@@ -437,6 +442,12 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,initSecure,{ doneSecure(); });
 
   // initialize variables
+  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
+  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); return DEBUG_TESTCODE_ERROR(); }
+  #ifdef HAVE_NEWLOCALE
+    POSIXLocale = newlocale(LC_ALL,"POSIX",0);
+  #endif /* HAVE_NEWLOCALE */
+
   Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&mountedList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
 
@@ -686,7 +697,6 @@ LOCAL void doneAll(void)
   Common_initAll();
 
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
-  Semaphore_done(&consoleLock);
 
   // deinitialize variables
   #ifdef HAVE_NEWLOCALE
@@ -698,6 +708,8 @@ LOCAL void doneAll(void)
 
   List_done(&mountedList);
   Semaphore_done(&mountedList.lock);
+
+  Semaphore_done(&consoleLock);
 
   // done secure memory
   doneSecure();
@@ -1009,7 +1021,7 @@ void printError(const char *text, ...)
   String_delete(line);
 }
 
-void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
+LOCAL void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
   String line;
 

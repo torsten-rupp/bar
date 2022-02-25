@@ -33,12 +33,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-Semaphore  consoleLock;
-#ifdef HAVE_NEWLOCALE
-  locale_t POSIXLocale;
-#endif /* HAVE_NEWLOCALE */
-
-String     tmpDirectory;
+String tmpDirectory;
 
 /****************************** Macros *********************************/
 
@@ -52,12 +47,6 @@ String     tmpDirectory;
 
 Errors Common_initAll(void)
 {
-  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
-  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); return DEBUG_TESTCODE_ERROR(); }
-  #ifdef HAVE_NEWLOCALE
-    POSIXLocale = newlocale(LC_ALL,"POSIX",0);
-  #endif /* HAVE_NEWLOCALE */
-
   tmpDirectory = String_new();
 
   return ERROR_NONE;
