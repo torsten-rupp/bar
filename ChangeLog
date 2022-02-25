@@ -5,6 +5,7 @@
     MariaDB, PostgreSQL
   * use threads pools for client connections+worker
     threads
+  * added option --test-created-archives
   * fixed reading cryption keys via config file
   * fixed CD/DVD/BD blank command: use
     "dvd+rw-format -force" to create medium in
@@ -33,6 +34,7 @@
   * BARControl: fixed display of entry progress: count
     done+error+skipped
   * BARControl: fixed closing tooltips
+  * BARControl: fixed initial values for a new job
 
 2020-09-27 0.21f
   * fixed auto-index of new archives

@@ -1821,6 +1821,9 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.archiveFileMode                                 = ARCHIVE_FILE_MODE_STOP;
   globalOptions.restoreEntryMode                                = RESTORE_ENTRY_MODE_STOP;
+
+  globalOptions.testCreatedArchivesFlag                         = FALSE;
+
   globalOptions.skipUnreadableFlag                              = TRUE;
   globalOptions.errorCorrectionCodesFlag                        = FALSE;
   globalOptions.waitFirstVolumeFlag                             = FALSE;
@@ -7480,6 +7483,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("device-write-command",              0,  1,1,globalOptions.defaultDevice.writeCommand,                                                                         "write device command","command"                                           ),
 
   CMD_OPTION_INTEGER64    ("max-storage-size",                  0,  1,2,globalOptions.maxStorageSize,                        0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. storage size","unlimited"                                            ),
+  CMD_OPTION_BOOLEAN      ("test-created-archives",             0,  1,2,globalOptions.testCreatedArchivesFlag,                                                                            "test created archives"                                                    ),
+
   CMD_OPTION_INTEGER64    ("volume-size",                       0,  1,2,globalOptions.volumeSize,                            0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "volume size","unlimited"                                                  ),
   CMD_OPTION_BOOLEAN      ("ecc",                               0,  1,2,globalOptions.errorCorrectionCodesFlag,                                                                           "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",               0,  1,2,globalOptions.alwaysCreateImageFlag,                                                                              "always create image for CD/DVD/BD/device"                                 ),
@@ -7561,8 +7566,11 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   // only for debugging/testing
   #ifndef NDEBUG
+  CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,1,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "number of errors to create in archives"                                   ),
+
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  2,1,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
   CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,1,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
+
   CMD_OPTION_STRING       ("debug-index-uuid",                  0,  2,1,globalOptions.debug.indexUUID,                                                                                    "uuid","uuid"                                                              ),
   CMD_OPTION_INTEGER64    ("debug-index-entity-id",             0,  2,1,globalOptions.debug.indexEntityId,                   0LL,MAX_INT64,NULL,                                          "entity id","n"                                                            ),
   CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,1,globalOptions.debug.indexWaitOperationsFlag,                                                                      "wait for index operations"                                                ),
@@ -8084,7 +8092,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("storage-on-master",         JobNode,job.options.storageOnMaster,             "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("storage-on-master",         JobNode,job.options.storageOnMasterFlag,             "yes|no"),
 
   CONFIG_VALUE_SPACE(),
 
@@ -8122,6 +8130,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueMountParse,configValueMountFormat,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("test-created-archives",     JobNode,job.options.testCreatedArchivesFlag,     "yes|no"),
+
   CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                       JobNode,job.options.errorCorrectionCodesFlag,    "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                     JobNode,job.options.blankFlag,                   "yes|no"),

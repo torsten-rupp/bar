@@ -24,11 +24,6 @@
 #endif
 #include <assert.h>
 
-#if defined(HAVE_MARIADB_MYSQL_H) && defined(HAVE_MARIADB_ERRMSG_H)
-  #include "mariadb/mysql.h"
-  #include "mariadb/errmsg.h"
-#endif /* HAVE_MARIADB_MYSQL_H && HAVE_MARIADB_ERRMSG_H */
-
 #include "common/global.h"
 #include "common/strings.h"
 #include "common/files.h"
@@ -39,6 +34,7 @@
 
 #include "sqlite3.h"
 
+#include "bar_common.h"
 #include "index/index.h"
 #include "index/index_common.h"
 #include "index_definition.h"
@@ -138,7 +134,6 @@ LOCAL bool       transactionFlag                      = FALSE;
 LOCAL bool       foreignKeysFlag                      = TRUE;
 LOCAL bool       forceFlag                            = FALSE;
 LOCAL bool       pipeFlag                             = FALSE;
-LOCAL const char *tmpDirectory                        = NULL;
 LOCAL bool       verboseFlag                          = TRUE;
 LOCAL bool       timeFlag                             = FALSE;
 LOCAL bool       explainQueryPlanFlag                 = FALSE;
@@ -334,7 +329,7 @@ LOCAL void printInfo(const char *format, ...)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printWarning(const char *text, ...)
+void printWarning(const char *text, ...)
 {
   String  line;
   va_list arguments;
@@ -8921,12 +8916,20 @@ LOCAL void initAll(void)
   Errors error;
 
   // initialize modules
+  error = Common_initAll();
+  if (error != ERROR_NONE)
+  {
+    printError("%s",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
   error = Thread_initAll();
   if (error != ERROR_NONE)
   {
     printError("%s",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+
   error = Database_initAll();
   if (error != ERROR_NONE)
   {
@@ -8948,6 +8951,7 @@ LOCAL void doneAll(void)
 {
   Database_doneAll();
   Thread_doneAll();
+  Common_doneAll();
 }
 
 // TODO: remove
@@ -9877,7 +9881,7 @@ uint xxxShow=0;
         String_delete(entryName);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
-      tmpDirectory = argv[i+1];
+      String_setCString(tmpDirectory,argv[i+1]);
       i += 2;
     }
     else if (stringEquals(argv[i],"-v") || stringEquals(argv[i],"--verbose"))
@@ -10073,9 +10077,9 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // set temporary directory
-  if (tmpDirectory != NULL)
+  if (!String_isEmpty(tmpDirectory))
   {
-    error = Database_setTmpDirectory(&databaseHandle,tmpDirectory);
+    error = Database_setTmpDirectory(&databaseHandle,String_cString(tmpDirectory));
   }
   if (error != ERROR_NONE)
   {

@@ -1023,7 +1023,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   String_clear(jobOptions->slavePreProcessScript );
   String_clear(jobOptions->slavePostProcessScript);
 
-  jobOptions->storageOnMaster            = TRUE;
+  jobOptions->storageOnMasterFlag            = TRUE;
   clearOptionsFileServer(&jobOptions->fileServer);
   clearOptionsFTPServer(&jobOptions->ftpServer);
   clearOptionsSSHServer(&jobOptions->sshServer);
@@ -1033,16 +1033,20 @@ LOCAL void clearOptions(JobOptions *jobOptions)
 
   String_clear(jobOptions->comment);
 
-  jobOptions->skipUnreadableFlag         = FALSE;
-  jobOptions->forceDeltaCompressionFlag  = FALSE;
-  jobOptions->ignoreNoDumpAttributeFlag  = FALSE;
   jobOptions->archiveFileMode            = ARCHIVE_FILE_MODE_STOP;
   jobOptions->restoreEntryMode           = RESTORE_ENTRY_MODE_STOP;
+
+  jobOptions->testCreatedArchivesFlag    = FALSE;
+
   jobOptions->errorCorrectionCodesFlag   = FALSE;
   jobOptions->alwaysCreateImageFlag      = FALSE;
   jobOptions->blankFlag                  = FALSE;
   jobOptions->waitFirstVolumeFlag        = FALSE;
   jobOptions->rawImagesFlag              = FALSE;
+
+  jobOptions->skipUnreadableFlag         = FALSE;
+  jobOptions->forceDeltaCompressionFlag  = FALSE;
+  jobOptions->ignoreNoDumpAttributeFlag  = FALSE;
   jobOptions->noFragmentsCheckFlag       = FALSE;
 //TODO: job option or better global option only?
   jobOptions->noIndexDatabaseFlag        = FALSE;
@@ -1812,8 +1816,8 @@ bool Job_read(JobNode *jobNode)
   // reset job values
   String_clear(jobNode->job.uuid);
   String_clear(jobNode->job.slaveHost.name);
-  jobNode->job.slaveHost.port          = 0;
-  jobNode->job.slaveHost.forceTLS      = FALSE;
+  jobNode->job.slaveHost.port     = 0;
+  jobNode->job.slaveHost.forceTLS = FALSE;
   String_clear(jobNode->job.storageName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
@@ -2718,7 +2722,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->slavePreProcessScript                     = String_new();
   jobOptions->slavePostProcessScript                    = String_new();
 
-  jobOptions->storageOnMaster                           = TRUE;
+  jobOptions->storageOnMasterFlag                           = TRUE;
   initOptionsFileServer(&jobOptions->fileServer);
   initOptionsFTPServer(&jobOptions->ftpServer);
   initOptionsSSHServer(&jobOptions->sshServer);
@@ -2728,6 +2732,10 @@ void Job_initOptions(JobOptions *jobOptions)
 
   jobOptions->fragmentSize                              = globalOptions.fragmentSize;
   jobOptions->maxStorageSize                            = globalOptions.maxStorageSize;
+  jobOptions->skipUnreadableFlag                        = globalOptions.skipUnreadableFlag;
+
+  jobOptions->testCreatedArchivesFlag                   = globalOptions.testCreatedArchivesFlag;
+
   jobOptions->volumeSize                                = globalOptions.volumeSize;
 
   jobOptions->comment                                   = String_duplicate(globalOptions.comment);
@@ -2841,7 +2849,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->slavePreProcessScript                     = String_duplicate(fromJobOptions->slavePreProcessScript);
   jobOptions->slavePostProcessScript                    = String_duplicate(fromJobOptions->slavePostProcessScript);
 
-  jobOptions->storageOnMaster                           = fromJobOptions->storageOnMaster;
+  jobOptions->storageOnMasterFlag                           = fromJobOptions->storageOnMasterFlag;
   duplicateOptionsFileServer(&jobOptions->fileServer,&fromJobOptions->fileServer);
   duplicateOptionsFTPServer(&jobOptions->ftpServer,&fromJobOptions->ftpServer);
   duplicateOptionsSSHServer(&jobOptions->sshServer,&fromJobOptions->sshServer);
@@ -2851,6 +2859,9 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
 
   jobOptions->fragmentSize                              = fromJobOptions->fragmentSize;
   jobOptions->maxStorageSize                            = fromJobOptions->maxStorageSize;
+
+  jobOptions->testCreatedArchivesFlag                   = fromJobOptions->testCreatedArchivesFlag;
+
   jobOptions->volumeSize                                = fromJobOptions->volumeSize;
 
   jobOptions->comment                                   = String_duplicate(fromJobOptions->comment);

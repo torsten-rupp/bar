@@ -9366,7 +9366,6 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
-  assert(fileName != NULL);
   assert(SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms) == 4);
 
   // check for pending error
@@ -9748,7 +9747,10 @@ NULL//                             password
             AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileEntry.info,{ Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info); });
 
             // get file meta data
-            String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
+            if (fileName != NULL)
+            {
+              String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
+            }
             if (fileInfo != NULL)
             {
               memClear(fileInfo,sizeof(FileInfo));
@@ -9912,7 +9914,7 @@ NULL//                             password
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundFileEntryFlag)                                                      return ERROR_NO_FILE_ENTRY;
-    else if (!foundFileDataFlag)                                                       return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(fileName));
+    else if (!foundFileDataFlag)                                                       return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(archiveEntryInfo->file.chunkFileEntry.name));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -10347,7 +10349,10 @@ NULL//                             password
             AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageEntry.info,{ Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info); });
 
             // get image meta data
-            String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
+            if (deviceName != NULL)
+            {
+              String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
+            }
             if (fileSystemType != NULL)
             {
               (*fileSystemType) = FILE_SYSTEM_CONSTANT_TO_TYPE(archiveEntryInfo->image.chunkImageEntry.fileSystemType);
@@ -10468,7 +10473,7 @@ NULL//                             password
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundImageEntryFlag)                                                     return ERROR_NO_IMAGE_ENTRY;
-    else if (!foundImageDataFlag)                                                      return ERROR_NO_IMAGE_DATA;
+    else if (!foundImageDataFlag)                                                      return ERRORX_(NO_IMAGE_DATA,0,"%s",String_cString(archiveEntryInfo->image.chunkImageEntry.name));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -10814,7 +10819,10 @@ NULL//                             password
             AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.info,{ Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info); });
 
             // get directory meta data
-            String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
+            if (directoryName != NULL)
+            {
+              String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
+            }
             if (fileInfo != NULL)
             {
               memClear(fileInfo,sizeof(FileInfo));
@@ -11235,8 +11243,14 @@ NULL//                             password
             AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkEntry.info,{ Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info); });
 
             // get link meta data
-            String_set(linkName,archiveEntryInfo->link.chunkLinkEntry.name);
-            String_set(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
+            if (linkName != NULL)
+            {
+              String_set(linkName,archiveEntryInfo->link.chunkLinkEntry.name);
+            }
+            if (destinationName != NULL)
+            {
+              String_set(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
+            }
             if (fileInfo != NULL)
             {
               memClear(fileInfo,sizeof(FileInfo));
@@ -11418,7 +11432,6 @@ NULL//                             password
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
-  assert(fileNameList != NULL);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -11596,7 +11609,10 @@ NULL//                             password
   }
   foundHardLinkEntryFlag = FALSE;
   foundHardLinkDataFlag  = FALSE;
-  StringList_clear(fileNameList);
+  if (fileNameList != NULL)
+  {
+    StringList_clear(fileNameList);
+  }
   do
   {
     // reset
@@ -11836,7 +11852,10 @@ NULL//                             password
               break;
             }
 
-            StringList_append(fileNameList,archiveEntryInfo->hardLink.chunkHardLinkName.name);
+            if (fileNameList != NULL)
+            {
+              StringList_append(fileNameList,archiveEntryInfo->hardLink.chunkHardLinkName.name);
+            }
 
             // close hard link name chunk
             error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
@@ -11992,7 +12011,7 @@ NULL//                             password
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundHardLinkEntryFlag)                                                  return ERROR_NO_FILE_ENTRY;
-    else if (!foundHardLinkDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(StringList_first(fileNameList,NULL)));
+    else if (!foundHardLinkDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(StringList_first(archiveEntryInfo->hardLink.chunkHardLinkName.name,NULL)));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -12336,7 +12355,10 @@ NULL//                             password
             AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialEntry.info,{ Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info); });
 
             // get special meta data
-            String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
+            if (specialName != NULL)
+            {
+              String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
+            }
             if (fileInfo != NULL)
             {
               memClear(fileInfo,sizeof(FileInfo));

@@ -66,6 +66,7 @@
 #endif /* HAVE_BREAKPAD */
 
 #include "bar_common.h"
+#include "configuration.h"
 #include "commands_create.h"
 #include "commands_list.h"
 #include "commands_restore.h"
@@ -111,14 +112,11 @@ typedef struct
 } MountedList;
 
 /***************************** Variables *******************************/
-String     tmpDirectory;
-Semaphore  consoleLock;
-#ifdef HAVE_NEWLOCALE
-  locale_t POSIXLocale;
-#endif /* HAVE_NEWLOCALE */
-
 ThreadPool clientThreadPool;
 ThreadPool workerThreadPool;
+
+LOCAL ThreadLocalStorage outputLineHandle;
+LOCAL String             lastOutputLine;
 
 /*---------------------------------------------------------------------*/
 
@@ -127,9 +125,6 @@ LOCAL MountedList        mountedList;         // list of current mounts
 
 LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
-
-LOCAL ThreadLocalStorage outputLineHandle;
-LOCAL String             lastOutputLine;
 
 /****************************** Macros *********************************/
 
@@ -322,101 +317,6 @@ LOCAL void outputLineDone(void *variable, void *userData)
 }
 
 /***********************************************************************\
-* Name   : outputConsole
-* Purpose: output string to console
-* Input  : file   - output stream (stdout, stderr)
-*          string - string
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void outputConsole(FILE *file, ConstString string)
-{
-  String outputLine;
-  ulong  i;
-  size_t bytesWritten;
-  char   ch;
-
-  assert(file != NULL);
-  assert(Semaphore_isLocked(&consoleLock));
-
-  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
-  if (outputLine != NULL)
-  {
-    if (File_isTerminal(file))
-    {
-      // restore output line if different to current line
-      if (outputLine != lastOutputLine)
-      {
-        // wipe-out last line
-        if (lastOutputLine != NULL)
-        {
-          for (i = 0; i < String_length(lastOutputLine); i++)
-          {
-            bytesWritten = fwrite("\b",1,1,file);
-          }
-          for (i = 0; i < String_length(lastOutputLine); i++)
-          {
-            bytesWritten = fwrite(" ",1,1,file);
-          }
-          for (i = 0; i < String_length(lastOutputLine); i++)
-          {
-            bytesWritten = fwrite("\b",1,1,file);
-          }
-          fflush(file);
-        }
-
-        // restore line
-        bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
-      }
-
-      // output new string
-      bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
-
-      // store output string
-      STRING_CHAR_ITERATE(string,i,ch)
-      {
-        switch (ch)
-        {
-          case '\n':
-            String_clear(outputLine);
-            break;
-          case '\b':
-            String_remove(outputLine,STRING_END,1);
-            break;
-          default:
-            String_appendChar(outputLine,ch);
-            break;
-        }
-      }
-
-      lastOutputLine = outputLine;
-    }
-    else
-    {
-      if (String_index(string,STRING_END) == '\n')
-      {
-        if (outputLine != NULL) bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
-        bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
-        String_clear(outputLine);
-      }
-      else
-      {
-        String_append(outputLine,string);
-      }
-    }
-    fflush(file);
-  }
-  else
-  {
-    // no thread local vairable -> output string
-    bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
-  }
-  UNUSED_VARIABLE(bytesWritten);
-}
-
-/***********************************************************************\
 * Name   : freeMountedNode
 * Purpose: free mounted node
 * Input  : mountedNode - mounted node
@@ -537,14 +437,6 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,initSecure,{ doneSecure(); });
 
   // initialize variables
-  tmpDirectory = String_new();
-  Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
-  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-  #ifdef HAVE_NEWLOCALE
-    POSIXLocale                          = newlocale(LC_ALL,"POSIX",0);
-  #endif /* HAVE_NEWLOCALE */
-
   Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&mountedList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
 
@@ -556,7 +448,6 @@ LOCAL Errors initAll(void)
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
 
-  AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
   AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
@@ -578,6 +469,15 @@ LOCAL Errors initAll(void)
   #endif /* HAVE_SETLOCAL && HAVE_TEXTDOMAIN */
 
   // initialize modules
+  error = Common_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Common_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Common_initAll,{ Common_doneAll(); });
+
   error = Configuration_initAll();
   if (error != ERROR_NONE)
   {
@@ -783,6 +683,10 @@ LOCAL void doneAll(void)
   ThreadPool_doneAll();
   Thread_doneAll();
   Configuration_doneAll();
+  Common_initAll();
+
+  Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
+  Semaphore_done(&consoleLock);
 
   // deinitialize variables
   #ifdef HAVE_NEWLOCALE
@@ -790,14 +694,10 @@ LOCAL void doneAll(void)
   #endif /* HAVE_NEWLOCALE */
   Semaphore_done(&logLock);
 
-  Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   String_delete(jobUUID);
 
   List_done(&mountedList);
   Semaphore_done(&mountedList.lock);
-
-  Semaphore_done(&consoleLock);
-  String_delete(tmpDirectory);
 
   // done secure memory
   doneSecure();
@@ -829,7 +729,100 @@ LOCAL void doneAll(void)
   #endif /* HAVE_BREAKPAD */
 }
 
-/*---------------------------------------------------------------------*/
+/***********************************************************************\
+* Name   : outputConsole
+* Purpose: output string to console
+* Input  : file   - output stream (stdout, stderr)
+*          string - string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void outputConsole(FILE *file, ConstString string)
+{
+  String outputLine;
+  ulong  i;
+  size_t bytesWritten;
+  char   ch;
+
+  assert(file != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
+
+  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
+  if (outputLine != NULL)
+  {
+    if (File_isTerminal(file))
+    {
+      // restore output line if different to current line
+      if (outputLine != lastOutputLine)
+      {
+        // wipe-out last line
+        if (lastOutputLine != NULL)
+        {
+          for (i = 0; i < String_length(lastOutputLine); i++)
+          {
+            bytesWritten = fwrite("\b",1,1,file);
+          }
+          for (i = 0; i < String_length(lastOutputLine); i++)
+          {
+            bytesWritten = fwrite(" ",1,1,file);
+          }
+          for (i = 0; i < String_length(lastOutputLine); i++)
+          {
+            bytesWritten = fwrite("\b",1,1,file);
+          }
+          fflush(file);
+        }
+
+        // restore line
+        bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+      }
+
+      // output new string
+      bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
+
+      // store output string
+      STRING_CHAR_ITERATE(string,i,ch)
+      {
+        switch (ch)
+        {
+          case '\n':
+            String_clear(outputLine);
+            break;
+          case '\b':
+            String_remove(outputLine,STRING_END,1);
+            break;
+          default:
+            String_appendChar(outputLine,ch);
+            break;
+        }
+      }
+
+      lastOutputLine = outputLine;
+    }
+    else
+    {
+      if (String_index(string,STRING_END) == '\n')
+      {
+        if (outputLine != NULL) bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
+        String_clear(outputLine);
+      }
+      else
+      {
+        String_append(outputLine,string);
+      }
+    }
+    fflush(file);
+  }
+  else
+  {
+    // no thread local vairable -> output string
+    bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
+  }
+  UNUSED_VARIABLE(bytesWritten);
+}
 
 const char *getPasswordTypeText(PasswordTypes passwordType)
 {
@@ -850,52 +843,6 @@ const char *getPasswordTypeText(PasswordTypes passwordType)
   }
 
   return text;
-}
-
-void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
-{
-  String line;
-
-  assert(format != NULL);
-
-  if (isPrintInfo(verboseLevel))
-  {
-    line = String_new();
-
-    // format line
-    if (prefix != NULL) String_appendCString(line,prefix);
-    String_appendVFormat(line,format,arguments);
-
-    // output
-    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      outputConsole(stdout,line);
-    }
-
-    String_delete(line);
-  }
-}
-
-void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  vprintInfo(verboseLevel,prefix,format,arguments);
-  va_end(arguments);
-}
-
-void printInfo(uint verboseLevel, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  vprintInfo(verboseLevel,NULL,format,arguments);
-  va_end(arguments);
 }
 
 bool lockConsole(void)
@@ -1060,6 +1007,52 @@ void printError(const char *text, ...)
     UNUSED_VARIABLE(bytesWritten);
   }
   String_delete(line);
+}
+
+void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
+{
+  String line;
+
+  assert(format != NULL);
+
+  if (isPrintInfo(verboseLevel))
+  {
+    line = String_new();
+
+    // format line
+    if (prefix != NULL) String_appendCString(line,prefix);
+    String_appendVFormat(line,format,arguments);
+
+    // output
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      outputConsole(stdout,line);
+    }
+
+    String_delete(line);
+  }
+}
+
+void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vprintInfo(verboseLevel,prefix,format,arguments);
+  va_end(arguments);
+}
+
+void printInfo(uint verboseLevel, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vprintInfo(verboseLevel,NULL,format,arguments);
+  va_end(arguments);
 }
 
 void executeIOOutput(ConstString line,

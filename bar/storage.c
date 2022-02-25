@@ -1965,7 +1965,7 @@ uint Storage_getServerSettings(Server                 *server,
   // init protocol specific values
   error = ERROR_UNKNOWN;
   if (   (   (jobOptions == NULL)
-          || jobOptions->storageOnMaster
+          || jobOptions->storageOnMasterFlag
          )
       && (masterIO != NULL)
      )
@@ -2061,7 +2061,7 @@ uint Storage_getServerSettings(Server                 *server,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2124,7 +2124,7 @@ bool Storage_isServerAllocationPending(const StorageInfo *storageInfo)
 
   serverAllocationPending = FALSE;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2210,7 +2210,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
   assert(storageInfo->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMaster
+  if (   storageInfo->jobOptions->storageOnMasterFlag
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2273,7 +2273,7 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
   assert(storageInfo->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMaster
+  if (   storageInfo->jobOptions->storageOnMasterFlag
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2348,7 +2348,7 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo)
   assert(storageInfo->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMaster
+  if (   storageInfo->jobOptions->storageOnMasterFlag
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2412,7 +2412,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
 
   existsFlag = FALSE;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2478,7 +2478,7 @@ bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName)
 
   isFileFlag = FALSE;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2544,7 +2544,7 @@ bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName)
 
   isDirectoryFlag = FALSE;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2610,7 +2610,7 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
 
   isReadableFlag = FALSE;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2676,7 +2676,7 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
 
   isWritableFlag = FALSE;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2744,7 +2744,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -2833,7 +2833,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMaster
+  if (   storageInfo->jobOptions->storageOnMasterFlag
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2926,7 +2926,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -3003,7 +3003,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
 
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3070,7 +3070,7 @@ bool Storage_eof(StorageHandle *storageHandle)
 
   eofFlag = TRUE;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3143,7 +3143,7 @@ Errors Storage_read(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3210,7 +3210,7 @@ Errors Storage_write(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3277,7 +3277,7 @@ Errors Storage_transfer(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3345,7 +3345,7 @@ Errors Storage_tell(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3415,7 +3415,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3482,7 +3482,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
 
   size = 0LL;
   if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMaster
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3555,7 +3555,7 @@ Errors Storage_rename(const StorageInfo *storageInfo,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -3626,7 +3626,7 @@ Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )
@@ -3721,7 +3721,7 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
       {
         error = ERROR_UNKNOWN;
         if (   (   (storageInfo->jobOptions == NULL)
-                || storageInfo->jobOptions->storageOnMaster
+                || storageInfo->jobOptions->storageOnMasterFlag
                )
             && (storageInfo->masterIO != NULL)
            )
@@ -3806,7 +3806,7 @@ Errors Storage_getInfo(StorageInfo *storageInfo,
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMaster
+          || storageInfo->jobOptions->storageOnMasterFlag
          )
       && (storageInfo->masterIO != NULL)
      )

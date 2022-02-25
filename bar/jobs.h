@@ -75,7 +75,7 @@ struct JobOptions
   String                      slavePreProcessScript;         // script to execute before start of job on slave
   String                      slavePostProcessScript;        // script to execute after after termination of job on slave
 
-  bool                        storageOnMaster;               // TRUE for storage operation on master
+  bool                        storageOnMasterFlag;           // TRUE for storage operation on master
   FileServer                  fileServer;                    // job specific file server settings
   FTPServer                   ftpServer;                     // job specific FTP server settings
   SSHServer                   sshServer;                     // job specific SSH server settings
@@ -85,6 +85,8 @@ struct JobOptions
 
   uint64                      fragmentSize;                  // fragment size [bytes]
   uint64                      maxStorageSize;                // max. storage size [bytes]
+  bool                        testCreatedArchivesFlag;       // TRUE to test archives after creation
+
   uint64                      volumeSize;                    // volume size or 0LL for default [bytes]
 
   String                      comment;                       // comment

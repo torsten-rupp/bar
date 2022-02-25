@@ -739,4 +739,12 @@ CHUNK SIGNATURE "SIG0" Signature
 
 # ----------------------------------------------------------------------
 
+# ----------------------------------------------------------------------
+
+# broken id
+#
+# parent: none
+# never compress/encrypted
+CHUNK BROKEN "----" Broken
+
 # end of file

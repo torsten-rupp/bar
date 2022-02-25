@@ -943,6 +943,9 @@ typedef struct
 
   ArchiveFileModes            archiveFileMode;                // archive files write mode
   RestoreEntryModes           restoreEntryMode;               // overwrite existing entry mode on restore
+
+  bool                        testCreatedArchivesFlag;        // TRUE to simple test archives after creation
+
   bool                        skipUnreadableFlag;             // TRUE for skipping unreadable files
   bool                        errorCorrectionCodesFlag;       // TRUE iff error correction codes should be added
   bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
@@ -953,12 +956,14 @@ typedef struct
   #ifndef NDEBUG
   struct
   {
+    uint                      createArchiveErrors;            // number of errors in created archive
+
     uint                      serverLevel;                    // server debug level (for debug only)
     bool                      serverFixedIdsFlag;             // always generate id=1
     String                    indexUUID;                      // index UUID
 // TODO:
 //    DatabaseId                indexEntityId;
-    int64                indexEntityId;
+    int64                     indexEntityId;
     bool                      indexWaitOperationsFlag;        // TRUE to wait for index operation
     bool                      indexPurgeDeletedStoragesFlag;  // TRUE to purge deleted storages
     String                    indexAddStorage;                // add storage to index
@@ -1082,6 +1087,7 @@ typedef bool(*IsPauseFunction)(void *userData);
 typedef bool(*IsAbortedFunction)(void *userData);
 
 /***************************** Variables *******************************/
+extern String tmpDirectory;           // temporary directory
 
 /****************************** Macros *********************************/
 
@@ -1103,6 +1109,30 @@ typedef bool(*IsAbortedFunction)(void *userData);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : Common_initAll
+* Purpose: initialize common functions
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Common_initAll(void);
+
+/***********************************************************************\
+* Name   : Common_doneAll
+* Purpose: deinitialize common functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Common_doneAll(void);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : templateInit

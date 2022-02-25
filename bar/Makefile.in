@@ -590,23 +590,24 @@ BAR_INDEX_SOURCES           = bar-index.c \
 
 BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
-BAR_INDEX_SOURCES_COMMON    = common/global.c \
+BAR_INDEX_SOURCES_COMMON    = common/arrays.c \
                               common/cmdoptions.c \
-                              common/hashtables.c \
-                              common/lists.c \
-                              common/strings.c \
-                              common/stringlists.c \
+                              common/database.c \
+                              common/configvalues.c \
+                              common/devices.c \
                               common/dictionaries.c \
                               common/files.c \
-                              common/devices.c \
-                              common/database.c \
+                              common/global.c \
+                              common/hashtables.c \
+                              common/lists.c \
+                              common/misc.c \
                               common/passwords.c \
                               common/progressinfo.c \
-                              common/threads.c \
-                              common/misc.c \
-                              common/arrays.c \
                               common/semaphores.c \
                               common/stacktraces.c \
+                              common/stringlists.c \
+                              common/strings.c \
+                              common/threads.c \
 
 BAR_INDEX_HEADERS_COMMON    = \
 

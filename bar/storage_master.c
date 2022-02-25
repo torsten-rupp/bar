@@ -88,7 +88,7 @@ LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
 LOCAL Errors StorageMaster_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->jobOptions->storageOnMaster);
+  assert(storageInfo->jobOptions->storageOnMasterFlag);
 
   UNUSED_VARIABLE(storageInfo);
 
@@ -105,7 +105,7 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
   Errors     error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->jobOptions->storageOnMaster);
+  assert(storageInfo->jobOptions->storageOnMasterFlag);
 
   error = ERROR_NONE;
 
@@ -144,7 +144,7 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
   Errors     error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->jobOptions->storageOnMaster);
+  assert(storageInfo->jobOptions->storageOnMasterFlag);
 
   error = ERROR_NONE;
 
@@ -230,7 +230,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -266,7 +266,7 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
 {
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
   assert(!String_isEmpty(fileName));
 
   // init variables
@@ -283,7 +283,7 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
 
@@ -358,7 +358,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
   assert(buffer != NULL);
 
   // init variables
@@ -467,7 +467,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 
   // init variables
   buffer = malloc(MAX_BLOCK_SIZE);
@@ -621,7 +621,7 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 
   storageHandle->master.index = offset;
 
@@ -636,7 +636,7 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 
   return storageHandle->master.size;
 }

@@ -83,8 +83,8 @@ typedef struct
 } ConfigFileList;
 
 /***************************** Variables *******************************/
-extern GlobalOptions   globalOptions;          // global options
-extern String          instanceUUID;           // BAR instance UUID
+extern GlobalOptions globalOptions;            // global options
+extern String        instanceUUID;             // BAR instance UUID
 
 /****************************** Macros *********************************/
 

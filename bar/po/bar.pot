@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-02-23 07:20+0100\n"
+"POT-Creation-Date: 2022-02-24 15:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -194,7 +194,7 @@ msgid "no SSH password given"
 msgstr ""
 
 #: errors.def:129 errors.def:136 errors.def:143 errors.def:151 errors.def:228
-#: errors.def:615
+#: errors.def:622
 #, c-format
 msgid " for '%s'"
 msgstr ""
@@ -341,7 +341,7 @@ msgstr ""
 msgid "end of compressed file"
 msgstr ""
 
-#: errors.def:295 errors.def:895
+#: errors.def:295 errors.def:902
 msgid "delta source not found"
 msgstr ""
 
@@ -501,438 +501,442 @@ msgstr ""
 msgid "unknown message authentication code algorithm"
 msgstr ""
 
-#: errors.def:439
+#: errors.def:442
+msgid "directory not found"
+msgstr ""
+
+#: errors.def:446
 msgid "no file name given"
 msgstr ""
 
-#: errors.def:444
+#: errors.def:451
 msgid "create file fail"
 msgstr ""
 
-#: errors.def:451
+#: errors.def:458
 msgid "open file fail"
 msgstr ""
 
-#: errors.def:458
+#: errors.def:465
 msgid "create directory fail"
 msgstr ""
 
-#: errors.def:465
+#: errors.def:472
 msgid "i/o error"
 msgstr ""
 
-#: errors.def:472
+#: errors.def:479
 msgid "read file fail"
 msgstr ""
 
-#: errors.def:479
+#: errors.def:486
 msgid "end of file"
 msgstr ""
 
-#: errors.def:486
+#: errors.def:493
 msgid "write file fail"
 msgstr ""
 
-#: errors.def:493
+#: errors.def:500
 msgid "delete file fail"
 msgstr ""
 
-#: errors.def:500
+#: errors.def:507
 msgid "open directory"
 msgstr ""
 
-#: errors.def:504
+#: errors.def:511
 msgid "read directory fail"
 msgstr ""
 
-#: errors.def:516
+#: errors.def:523
 msgid "file already exists"
 msgstr ""
 
-#: errors.def:521
+#: errors.def:528
 msgid "file not found"
 msgstr ""
 
-#: errors.def:525
+#: errors.def:532
 msgid "access denied"
 msgstr ""
 
-#: errors.def:530
+#: errors.def:537
 msgid "not a directory"
 msgstr ""
 
-#: errors.def:534
+#: errors.def:541
 msgid "end of directory list"
 msgstr ""
 
-#: errors.def:539
+#: errors.def:546
 msgid "init file notify fail"
 msgstr ""
 
-#: errors.def:543
+#: errors.def:550
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: errors.def:549
+#: errors.def:556
 msgid "CD/DVD/BD device not found"
 msgstr ""
 
-#: errors.def:556
+#: errors.def:563
 msgid "open CD/DVD/BD disk fail"
 msgstr ""
 
-#: errors.def:563
+#: errors.def:570
 msgid "open ISO 9660 image fail"
 msgstr ""
 
-#: errors.def:568
+#: errors.def:575
 msgid "no device name given"
 msgstr ""
 
-#: errors.def:573
+#: errors.def:580
 msgid "open device fail"
 msgstr ""
 
-#: errors.def:577
+#: errors.def:584
 msgid "invalid device block size"
 msgstr ""
 
-#: errors.def:578
+#: errors.def:585
 msgid "read device fail"
 msgstr ""
 
-#: errors.def:579
+#: errors.def:586
 msgid "write device fail"
 msgstr ""
 
-#: errors.def:580
+#: errors.def:587
 msgid "error parsing device list"
 msgstr ""
 
-#: errors.def:585
+#: errors.def:592
 msgid "mount fail"
 msgstr ""
 
-#: errors.def:592
+#: errors.def:599
 msgid "unmount fail"
 msgstr ""
 
-#: errors.def:597
+#: errors.def:604
 msgid "no archive file name given"
 msgstr ""
 
-#: errors.def:598
+#: errors.def:605
 msgid "not an archive file"
 msgstr ""
 
-#: errors.def:602
+#: errors.def:609
 msgid "archive not found"
 msgstr ""
 
-#: errors.def:606
+#: errors.def:613
 msgid "end of archive"
 msgstr ""
 
-#: errors.def:607
+#: errors.def:614
 msgid "no meta entry"
 msgstr ""
 
-#: errors.def:608
+#: errors.def:615
 msgid "no file entry"
 msgstr ""
 
-#: errors.def:612
+#: errors.def:619
 msgid "no file data entry"
 msgstr ""
 
-#: errors.def:616
+#: errors.def:623
 msgid "no directory entry"
 msgstr ""
 
-#: errors.def:617
+#: errors.def:624
 msgid "no link entry"
 msgstr ""
 
-#: errors.def:618
+#: errors.def:625
 msgid "no hard link entry"
 msgstr ""
 
-#: errors.def:619
+#: errors.def:626
 msgid "no special entry"
 msgstr ""
 
-#: errors.def:620
+#: errors.def:627
 msgid "no image entry"
 msgstr ""
 
-#: errors.def:621
+#: errors.def:628
 msgid "no image data entry"
 msgstr ""
 
-#: errors.def:622
+#: errors.def:629
 msgid "end of data"
 msgstr ""
 
-#: errors.def:623
+#: errors.def:630
 msgid "incomplete archive"
 msgstr ""
 
-#: errors.def:624
+#: errors.def:631
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: errors.def:630
+#: errors.def:637
 msgid "wrong CRC"
 msgstr ""
 
-#: errors.def:634
+#: errors.def:641
 msgid "at offset"
 msgstr ""
 
-#: errors.def:647
+#: errors.def:654
 msgid "entry is incomplete"
 msgstr ""
 
-#: errors.def:654
+#: errors.def:661
 msgid "wrong entry type"
 msgstr ""
 
-#: errors.def:661
+#: errors.def:668
 msgid "entries differ"
 msgstr ""
 
-#: errors.def:668
+#: errors.def:675
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: errors.def:672
+#: errors.def:679
 msgid "invalid chunk size"
 msgstr ""
 
-#: errors.def:676
+#: errors.def:683
 msgid "unknown chunk"
 msgstr ""
 
-#: errors.def:680
+#: errors.def:687
 msgid "invalid signature"
 msgstr ""
 
-#: errors.def:683
+#: errors.def:690
 msgid "invalid incremental file"
 msgstr ""
 
-#: errors.def:684
+#: errors.def:691
 msgid "wrong incremental file version"
 msgstr ""
 
-#: errors.def:685
+#: errors.def:692
 msgid "corrupt incremental file"
 msgstr ""
 
-#: errors.def:688
+#: errors.def:695
 msgid "invalid device specifier"
 msgstr ""
 
-#: errors.def:689
+#: errors.def:696
 msgid "load volume fail"
 msgstr ""
 
-#: errors.def:695
+#: errors.def:702
 msgid "parse command fail"
 msgstr ""
 
-#: errors.def:699
+#: errors.def:706
 msgid "expand command template fail"
 msgstr ""
 
-#: errors.def:700
+#: errors.def:707
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: errors.def:704
+#: errors.def:711
 msgid "i/o redirect fail"
 msgstr ""
 
-#: errors.def:711
+#: errors.def:718
 msgid "execute external program fail"
 msgstr ""
 
-#: errors.def:722
+#: errors.def:729
 msgid "terminate external program fail"
 msgstr ""
 
-#: errors.def:734
+#: errors.def:741
 msgid "parsing data fail"
 msgstr ""
 
-#: errors.def:741
+#: errors.def:748
 msgid "parsing date fail"
 msgstr ""
 
-#: errors.def:748
+#: errors.def:755
 msgid "parsing time fail"
 msgstr ""
 
-#: errors.def:755
+#: errors.def:762
 msgid "parsing weekdays fail"
 msgstr ""
 
-#: errors.def:762
+#: errors.def:769
 msgid "parsing maintenance fail"
 msgstr ""
 
-#: errors.def:769
+#: errors.def:776
 msgid "parsing schedule fail"
 msgstr ""
 
-#: errors.def:776
+#: errors.def:783
 msgid "unknown command"
 msgstr ""
 
-#: errors.def:783
+#: errors.def:790
 msgid "expected parameter"
 msgstr ""
 
-#: errors.def:796
+#: errors.def:803
 msgid "unknown value"
 msgstr ""
 
-#: errors.def:800
+#: errors.def:807
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:807
+#: errors.def:814
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: errors.def:811
+#: errors.def:818
 msgid "authorization fail"
 msgstr ""
 
-#: errors.def:815
+#: errors.def:822
 msgid "job not found"
 msgstr ""
 
-#: errors.def:822
+#: errors.def:829
 msgid "schedule not found"
 msgstr ""
 
-#: errors.def:835
+#: errors.def:842
 msgid "persistence not found"
 msgstr ""
 
-#: errors.def:845
+#: errors.def:852
 msgid "maintenance not found"
 msgstr ""
 
-#: errors.def:855
+#: errors.def:862
 msgid "server not found"
 msgstr ""
 
-#: errors.def:865
+#: errors.def:872
 msgid "entry not found"
 msgstr ""
 
-#: errors.def:875
+#: errors.def:882
 msgid "pattern not found"
 msgstr ""
 
-#: errors.def:885
+#: errors.def:892
 msgid "mount not found"
 msgstr ""
 
-#: errors.def:900
+#: errors.def:907
 msgid "database"
 msgstr ""
 
-#: errors.def:904
+#: errors.def:911
 msgid "database already exists"
 msgstr ""
 
-#: errors.def:905
+#: errors.def:912
 msgid "database not found"
 msgstr ""
 
-#: errors.def:906
+#: errors.def:913
 msgid "database connection lost"
 msgstr ""
 
-#: errors.def:911
+#: errors.def:918
 msgid "insufficient database version"
 msgstr ""
 
-#: errors.def:915
+#: errors.def:922
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:919
+#: errors.def:926
 msgid "missing table"
 msgstr ""
 
-#: errors.def:926
+#: errors.def:933
 msgid "missing column"
 msgstr ""
 
-#: errors.def:933
+#: errors.def:940
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:940
+#: errors.def:947
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:947
+#: errors.def:954
 msgid "database bind fail"
 msgstr ""
 
-#: errors.def:954
+#: errors.def:961
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:958
+#: errors.def:965
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:959
+#: errors.def:966
 msgid "index not found"
 msgstr ""
 
-#: errors.def:960
+#: errors.def:967
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:964
+#: errors.def:971
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:971
+#: errors.def:978
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:975
+#: errors.def:982
 msgid "database busy"
 msgstr ""
 
-#: errors.def:976
+#: errors.def:983
 msgid "database operation interupted"
 msgstr ""
 
-#: errors.def:977
+#: errors.def:984
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:980
+#: errors.def:987
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:981
+#: errors.def:988
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:982
+#: errors.def:989
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:983
+#: errors.def:990
 msgid "instance is not a slave"
 msgstr ""

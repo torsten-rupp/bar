@@ -568,7 +568,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   SET_OPTION_STRING   ("pre-command",               jobOptions->slavePreProcessScript       );
   SET_OPTION_STRING   ("post-command",              jobOptions->slavePostProcessScript      );
 
-  SET_OPTION_BOOLEAN  ("storage-on-master",         jobOptions->storageOnMaster);
+  SET_OPTION_BOOLEAN  ("storage-on-master",         jobOptions->storageOnMasterFlag);
 
   SET_OPTION_STRING   ("ftp-login-name",            jobOptions->ftpServer.loginName         );
   SET_OPTION_PASSWORD ("ftp-password",              &jobOptions->ftpServer.password         );
@@ -580,6 +580,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   SET_OPTION_STRING   ("ssh-private-key",           Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
 
   SET_OPTION_INTEGER64("max-storage-size",          jobOptions->maxStorageSize);
+  SET_OPTION_BOOLEAN  ("test-created-archives",     jobOptions->testCreatedArchivesFlag);
 
   SET_OPTION_INTEGER64("volume-size",               jobOptions->volumeSize                  );
   SET_OPTION_BOOLEAN  ("ecc",                       jobOptions->errorCorrectionCodesFlag);
