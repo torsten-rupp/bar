@@ -183,7 +183,7 @@ void __AutoFree_remove(const char   *__fileName__,
       if (autoFreeNode->resource == resource)
       {
         // remove from list
-        autoFreeNode = List_removeAndFree(autoFreeList,autoFreeNode,CALLBACK_(NULL,NULL));
+        autoFreeNode = List_removeAndFree(autoFreeList,autoFreeNode);
         foundFlag = TRUE;
       }
       else

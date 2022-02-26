@@ -131,7 +131,7 @@ void StringList_done(StringList *stringList)
 
 StringList *StringList_new(void)
 {
-  return (StringList*)List_new();
+  return (StringList*)List_new(CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeStringNode,NULL));
 }
 
 StringList *StringList_duplicate(const StringList *stringList)

@@ -702,10 +702,16 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update status info
-    String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
-    restoreInfo->statusInfo.entry.doneSize  = 0LL;
-    restoreInfo->statusInfo.entry.totalSize = fragmentSize;
-    updateStatusInfo(restoreInfo,TRUE);
+    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
+      restoreInfo->statusInfo.entry.doneSize  = 0LL;
+      restoreInfo->statusInfo.entry.totalSize = fragmentSize;
+      updateStatusInfo(restoreInfo,TRUE);
+    }
+
+    // restore file
+    printInfo(1,"  Restore file      '%s'...",String_cString(destinationFileName));
 
     // check if file already exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -722,17 +728,13 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           {
             case RESTORE_ENTRY_MODE_STOP:
               // stop
-              printInfo(1,
-                        "  Restore file      '%s'...skipped (file exists)\n",
-                        String_cString(destinationFileName)
-                       );
+              printInfo(1,"stopped (file exists)\n");
               error = !restoreInfo->jobOptions->noStopOnErrorFlag
                         ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
                         : ERROR_NONE;
               Semaphore_unlock(&restoreInfo->namesDictionaryLock);
               AutoFree_cleanup(&autoFreeList);
               return error;
-              break;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
               prefixFileName  = String_new();
@@ -748,7 +750,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 String_set(prefixFileName,destinationFileName);
               }
               String_set(destinationFileName,prefixFileName);
-              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
               String_append(destinationFileName,postfixFileName);
               if (File_exists(destinationFileName))
               {
@@ -756,7 +757,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 do
                 {
                   String_set(destinationFileName,prefixFileName);
-                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                   String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
@@ -769,6 +769,12 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // nothing to do
               break;
+            case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+              // skip
+              printInfo(1,"skipped (file exists)\n");
+              Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+              AutoFree_cleanup(&autoFreeList);
+              return ERROR_NONE;
           }
         }
 
@@ -799,15 +805,13 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_STOP:
                 // stop
                 printInfo(1,
-                          "  Restore file      '%s'...skipped (file part %llu..%llu exists)\n",
-                          String_cString(destinationFileName),
+                          "stopped (file part %llu..%llu exists)\n",
                           fragmentOffset,
                           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                          );
                 Semaphore_unlock(&restoreInfo->fragmentListLock);
                 AutoFree_cleanup(&autoFreeList);
                 return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-                break;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
                 prefixFileName  = String_new();
@@ -823,7 +827,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                   String_set(prefixFileName,destinationFileName);
                 }
                 String_set(destinationFileName,prefixFileName);
-                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                 String_append(destinationFileName,postfixFileName);
                 if (File_exists(destinationFileName))
                 {
@@ -831,7 +834,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                   do
                   {
                     String_set(destinationFileName,prefixFileName);
-                    Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                     String_appendFormat(destinationFileName,"-%u",n);
                     String_append(destinationFileName,postfixFileName);
                     n++;
@@ -843,6 +845,17 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
                 // nothing to do
+                break;
+              case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+                // skip
+                printInfo(1,
+                          "skipped (file part %llu..%llu exists)\n",
+                          fragmentOffset,
+                          (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
+                         );
+                Semaphore_unlock(&restoreInfo->fragmentListLock);
+                AutoFree_cleanup(&autoFreeList);
+                return ERROR_NONE;
                 break;
             }
           }
@@ -859,9 +872,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         assert(fragmentNode != NULL);
       }
     }
-
-    // restore file
-    printInfo(1,"  Restore file      '%s'...",String_cString(destinationFileName));
 
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
@@ -998,8 +1008,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // close file
     if (!restoreInfo->storageFlags.dryRun)
     {
-      (void)File_close(&fileHandle);
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+      (void)File_close(&fileHandle);
     }
 
     // add fragment to file fragment list
@@ -1287,6 +1297,9 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       updateStatusInfo(restoreInfo,TRUE);
     }
 
+    // restore image
+    printInfo(1,"  Restore image     '%s'...",String_cString(destinationDeviceName));
+
     if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
     {
       // check if image fragment already exists
@@ -1304,7 +1317,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_STOP:
                 // stop
                 printInfo(1,
-                          "  Restore image     '%s'...skipped (image part %llu..%llu exists)\n",
+                          "stopped (image part %llu..%llu exists)\n",
                           String_cString(destinationDeviceName),
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
@@ -1312,7 +1325,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                 Semaphore_unlock(&restoreInfo->fragmentListLock);
                 AutoFree_cleanup(&autoFreeList);
                 return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-                break;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
                 prefixFileName  = String_new();
@@ -1342,6 +1354,16 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_OVERWRITE:
                 // nothing to do
                 break;
+              case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+                // skip
+                printInfo(1,
+                          "skipped (image part %llu..%llu exists)\n",
+                          blockOffset*(uint64)deviceInfo.blockSize,
+                          ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
+                         );
+                Semaphore_unlock(&restoreInfo->fragmentListLock);
+                AutoFree_cleanup(&autoFreeList);
+                return ERROR_NONE;
             }
           }
         }
@@ -1357,9 +1379,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         assert(fragmentNode != NULL);
       }
     }
-
-    // restore image
-    printInfo(1,"  Restore image     '%s'...",String_cString(destinationDeviceName));
 
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
@@ -1564,12 +1583,12 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       switch (type)
       {
         case DEVICE:
-          (void)Device_close(&deviceHandle);
           AUTOFREE_REMOVE(&autoFreeList,&deviceHandle);
+          (void)Device_close(&deviceHandle);
           break;
         case FILE:
-          (void)File_close(&fileHandle);
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+          (void)File_close(&fileHandle);
           break;
         default:
           #ifndef NDEBUG
@@ -1741,6 +1760,9 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       updateStatusInfo(restoreInfo,TRUE);
     }
 
+    // restore directory
+    printInfo(1,"  Restore directory '%s'...",String_cString(destinationFileName));
+
     // check if directory already exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -1756,10 +1778,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
           {
             case RESTORE_ENTRY_MODE_STOP:
               // stop
-              printInfo(1,
-                        "  Restore directory '%s'...skipped (file exists)\n",
-                        String_cString(destinationFileName)
-                       );
+              printInfo(1,"stopped (directory exists)\n");
               error = !restoreInfo->jobOptions->noStopOnErrorFlag
                         ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
                         : ERROR_NONE;
@@ -1782,7 +1801,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                 String_set(prefixFileName,destinationFileName);
               }
               String_set(destinationFileName,prefixFileName);
-              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
               String_append(destinationFileName,postfixFileName);
               if (File_exists(destinationFileName))
               {
@@ -1790,7 +1808,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                 do
                 {
                   String_set(destinationFileName,prefixFileName);
-                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                   String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
@@ -1803,6 +1820,12 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // nothing to do
               break;
+            case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+              // skip
+              printInfo(1,"skipped (directory exists)\n");
+              Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+              AutoFree_cleanup(&autoFreeList);
+              return ERROR_NONE;
           }
         }
 
@@ -1814,9 +1837,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                       );
       }
     }
-
-    // restore directory
-    printInfo(1,"  Restore directory '%s'...",String_cString(destinationFileName));
 
     // create directory
     if (!restoreInfo->storageFlags.dryRun)
@@ -2042,6 +2062,9 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       updateStatusInfo(restoreInfo,TRUE);
     }
 
+    // restore link
+    printInfo(1,"  Restore link      '%s'...",String_cString(destinationFileName));
+
     // check if link areadly exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -2058,7 +2081,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,
-                        "  Restore link      '%s'...skipped (file exists)\n",
+                        "stopped (link exists)\n",
                         String_cString(destinationFileName)
                        );
               error = !restoreInfo->jobOptions->noStopOnErrorFlag
@@ -2082,7 +2105,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                 String_set(prefixFileName,destinationFileName);
               }
               String_set(destinationFileName,prefixFileName);
-              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
               String_append(destinationFileName,postfixFileName);
               if (File_exists(destinationFileName))
               {
@@ -2090,7 +2112,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                 do
                 {
                   String_set(destinationFileName,prefixFileName);
-                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                   String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
@@ -2103,6 +2124,12 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // nothing to do
               break;
+            case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+              // skip
+              printInfo(1,"skipped (link exists)\n");
+              Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+              AutoFree_cleanup(&autoFreeList);
+              return ERROR_NONE;
           }
         }
 
@@ -2114,9 +2141,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                       );
       }
     }
-
-    // restore link
-    printInfo(1,"  Restore link      '%s'...",String_cString(destinationFileName));
 
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
@@ -2352,17 +2376,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                              restoreInfo->jobOptions->destination,
                              restoreInfo->jobOptions->directoryStripCount
                             );
-// TODO: check exists
-      SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        Dictionary_add(&restoreInfo->namesDictionary,
-                       String_cString(destinationFileName),
-                       String_length(destinationFileName),
-                       NULL,
-                       0
-                      );
-      }
-
       // update status info
       SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -2374,6 +2387,80 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 
       // restore hardlink
       printInfo(1,"  Restore hard link '%s'...",String_cString(destinationFileName));
+
+// TODO: check exists
+      SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        if (!Dictionary_contains(&restoreInfo->namesDictionary,
+                                 String_cString(destinationFileName),
+                                 String_length(destinationFileName)
+                                )
+           )
+        {
+          if (File_exists(destinationFileName))
+          {
+            switch (restoreInfo->jobOptions->restoreEntryMode)
+            {
+              case RESTORE_ENTRY_MODE_STOP:
+                // stop
+                printInfo(1,"stopped (hardlink exists)\n");
+                error = !restoreInfo->jobOptions->noStopOnErrorFlag
+                          ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                          : ERROR_NONE;
+                Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                AutoFree_cleanup(&autoFreeList);
+                return error;
+              case RESTORE_ENTRY_MODE_RENAME:
+                // rename new entry
+                prefixFileName  = String_new();
+                postfixFileName = String_new();
+                index = String_findLastChar(destinationFileName,STRING_END,'.');
+                if (index >= 0)
+                {
+                  String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                  String_sub(postfixFileName,destinationFileName,index,STRING_END);
+                }
+                else
+                {
+                  String_set(prefixFileName,destinationFileName);
+                }
+                String_set(destinationFileName,prefixFileName);
+                String_append(destinationFileName,postfixFileName);
+                if (File_exists(destinationFileName))
+                {
+                  n = 0;
+                  do
+                  {
+                    String_set(destinationFileName,prefixFileName);
+                    String_appendFormat(destinationFileName,"-%u",n);
+                    String_append(destinationFileName,postfixFileName);
+                    n++;
+                  }
+                  while (File_exists(destinationFileName));
+                }
+                String_delete(postfixFileName);
+                String_delete(prefixFileName);
+                break;
+              case RESTORE_ENTRY_MODE_OVERWRITE:
+                // nothing to do
+                break;
+              case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+                // skip
+                printInfo(1,"skipped (hardlink exists)\n");
+                Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                AutoFree_cleanup(&autoFreeList);
+                return ERROR_NONE;
+            }
+          }
+
+          Dictionary_add(&restoreInfo->namesDictionary,
+                         String_cString(destinationFileName),
+                         String_length(destinationFileName),
+                         NULL,
+                         0
+                        );
+        }
+      }
 
       // create parent directories if not existing
       if (!restoreInfo->storageFlags.dryRun)
@@ -2413,7 +2500,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         {
           case RESTORE_ENTRY_MODE_STOP:
             // stop
-            printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+            printInfo(1,"stopped (file exists)\n");
             AutoFree_cleanup(&autoFreeList);
             return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
             break;
@@ -2432,7 +2519,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               String_set(prefixFileName,destinationFileName);
             }
             String_set(destinationFileName,prefixFileName);
-            Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
             String_append(destinationFileName,postfixFileName);
             if (File_exists(destinationFileName))
             {
@@ -2440,7 +2526,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               do
               {
                 String_set(destinationFileName,prefixFileName);
-                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                 String_appendFormat(destinationFileName,"-%u",n);
                 String_append(destinationFileName,postfixFileName);
                 n++;
@@ -2453,6 +2538,11 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           case RESTORE_ENTRY_MODE_OVERWRITE:
             // nothing to do
             break;
+          case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+            // skip
+            printInfo(1,"skipped (hardlink exists)\n");
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_NONE;
         }
       }
 
@@ -2475,15 +2565,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 {
                   case RESTORE_ENTRY_MODE_STOP:
                     // stop
-                    printInfo(1,"skipped (file part %llu..%llu exists)\n",
-                              String_cString(destinationFileName),
+                    printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
                               fragmentOffset,
                               (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                              );
                     Semaphore_unlock(&restoreInfo->fragmentListLock);
                     AutoFree_cleanup(&autoFreeList);
                     return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-                    break;
                   case RESTORE_ENTRY_MODE_RENAME:
                     // rename new entry
                     prefixFileName  = String_new();
@@ -2499,7 +2587,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                       String_set(prefixFileName,destinationFileName);
                     }
                     String_set(destinationFileName,prefixFileName);
-                    Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                     String_append(destinationFileName,postfixFileName);
                     if (File_exists(destinationFileName))
                     {
@@ -2507,7 +2594,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                       do
                       {
                         String_set(destinationFileName,prefixFileName);
-                        Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                         String_appendFormat(destinationFileName,"-%u",n);
                         String_append(destinationFileName,postfixFileName);
                         n++;
@@ -2520,6 +2606,15 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                   case RESTORE_ENTRY_MODE_OVERWRITE:
                     // nothing to do
                     break;
+                  case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+                    // skip
+                    printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
+                              fragmentOffset,
+                              (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
+                             );
+                    Semaphore_unlock(&restoreInfo->fragmentListLock);
+                    AutoFree_cleanup(&autoFreeList);
+                    return ERROR_NONE;
                 }
               }
             }
@@ -2565,7 +2660,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
-            File_close(&fileHandle);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -2624,20 +2718,12 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
         if      (error != ERROR_NONE)
         {
-          if (!restoreInfo->storageFlags.dryRun)
-          {
-            (void)File_close(&fileHandle);
-          }
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
         else if ((restoreInfo->isAbortedFunction != NULL) && restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
         {
           printInfo(1,"ABORTED\n");
-          if (!restoreInfo->storageFlags.dryRun)
-          {
-            (void)File_close(&fileHandle);
-          }
           AutoFree_cleanup(&autoFreeList);
           return ERROR_ABORTED;
         }
@@ -2658,8 +2744,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         // close file
         if (!restoreInfo->storageFlags.dryRun)
         {
-          (void)File_close(&fileHandle);
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+          (void)File_close(&fileHandle);
         }
 
         // add fragment to file fragment list
@@ -2816,10 +2902,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           {
             case RESTORE_ENTRY_MODE_STOP:
               // stop
-              printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+              printInfo(1,"stopped (hardlink exists)\n");
               AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              break;
-              break;
+              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
               prefixFileName  = String_new();
@@ -2835,7 +2920,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 String_set(prefixFileName,destinationFileName);
               }
               String_set(destinationFileName,prefixFileName);
-              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
               String_append(destinationFileName,postfixFileName);
               if (File_exists(destinationFileName))
               {
@@ -2843,7 +2927,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 do
                 {
                   String_set(destinationFileName,prefixFileName);
-                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                   String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
@@ -2854,7 +2937,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               String_delete(prefixFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
+              // nothing to do
               break;
+            case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+              // skip
+              printInfo(1,"skipped (hardlink exists)\n");
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              return ERROR_NONE;
           }
         }
 
@@ -2897,11 +2986,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           printWarning("unexpected data at end of hard link entry '%S'",fileName);
         }
       }
-    }
-    else
-    {
-      // skip
-      printInfo(2,"  Restore hard link '%s'...skipped\n",String_cString(fileName));
     }
   }
   AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
@@ -3008,6 +3092,9 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       updateStatusInfo(restoreInfo,TRUE);
     }
 
+    // restore special entry
+    printInfo(1,"  Restore special   '%s'...",String_cString(destinationFileName));
+
     // check if special entry already exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -3017,10 +3104,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         {
           case RESTORE_ENTRY_MODE_STOP:
             // stop
-            printInfo(1,
-                      "  Restore special   '%s'...skipped (file exists)\n",
-                      String_cString(destinationFileName)
-                     );
+            printInfo(1,"stopped (special exists)\n");
             error = !restoreInfo->jobOptions->noStopOnErrorFlag
                       ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
                       : ERROR_NONE;
@@ -3043,7 +3127,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
               String_set(prefixFileName,destinationFileName);
             }
             String_set(destinationFileName,prefixFileName);
-            Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
             String_append(destinationFileName,postfixFileName);
             if (File_exists(destinationFileName))
             {
@@ -3051,7 +3134,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
               do
               {
                 String_set(destinationFileName,prefixFileName);
-                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
                 String_appendFormat(destinationFileName,"-%u",n);
                 String_append(destinationFileName,postfixFileName);
                 n++;
@@ -3064,6 +3146,12 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
           case RESTORE_ENTRY_MODE_OVERWRITE:
             // nothing to do
             break;
+          case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+            // skip
+            printInfo(1,"skipped (special exists)\n");
+            Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_NONE;
         }
 
         Dictionary_add(&restoreInfo->namesDictionary,
@@ -3074,9 +3162,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                       );
       }
     }
-
-    // restore special entry
-    printInfo(1,"  Restore special   '%s'...",String_cString(destinationFileName));
 
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)

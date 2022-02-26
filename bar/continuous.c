@@ -125,7 +125,7 @@ typedef struct
 } InitNotifyMsg;
 
 /***************************** Variables *******************************/
-LOCAL Errors            initFlag = FALSE;
+LOCAL bool              initFlag = FALSE;
 LOCAL DatabaseSpecifier *continuousDatabaseSpecifier;
 LOCAL DatabaseHandle    continuousDatabaseHandle;
 LOCAL Semaphore         notifyLock;                  // lock
@@ -967,7 +967,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
             && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_(NULL,NULL));
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode);
         }
         else
         {
@@ -1038,7 +1038,7 @@ LOCAL void purgeNotifies(const char *jobUUID, const char *scheduleUUID)
                )
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_(NULL,NULL));
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode);
         }
         else
         {
@@ -2107,7 +2107,6 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                           )
 {
   Errors error;
-  char   sqlString[256];
 
   assert(initFlag);
   assert(databaseStatementHandle != NULL);

@@ -1490,13 +1490,14 @@ bool String_toBoolean(ConstString convertString, ulong index, long *nextIndex, c
 String String_toString(String string, ConstString convertString, ulong index, long *nextIndex, const char *stringQuotes);
 
 /***********************************************************************\
-* Name   : String_getMatchingUnit
+* Name   : String_getMatchingUnit, String_getMatchingUnit64,
+*          String_getMatchingUnitDouble
 * Purpose: get matching unit for number
-* Input  : n               - number
-*          stringUnits     - string units (for integer, double)
-*          stringUnitCount - number of string units (for
+* Input  : n         - number
+*          units     - string units (for integer, double)
+*          unitCount - number of string units
 * Output : -
-* Return : string unit or NULL
+* Return : string unit
 * Notes  : -
 \***********************************************************************/
 

@@ -5609,8 +5609,8 @@ StringUnit String_getMatchingUnit(int n, const StringUnit units[], uint unitCoun
 {
   static const StringUnit NO_UNIT = {"",1LL};
 
-  StringUnit stringUnit;
-  uint i;
+  StringUnit unit;
+  uint       i;
 
   if (n != 0)
   {
@@ -5623,22 +5623,22 @@ StringUnit String_getMatchingUnit(int n, const StringUnit units[], uint unitCoun
     {
       i++;
     }
-    stringUnit = (i < unitCount) ? units[i] : NO_UNIT;
+    unit = (i < unitCount) ? units[i] : NO_UNIT;
   }
   else
   {
-    stringUnit = NO_UNIT;
+    unit = NO_UNIT;
   }
 
-  return stringUnit;
+  return unit;
 }
 
 StringUnit String_getMatchingUnit64(int64 n, const StringUnit units[], uint unitCount)
 {
   static const StringUnit NO_UNIT = {"",1LL};
 
-  StringUnit stringUnit;
-  uint i;
+  StringUnit unit;
+  uint       i;
 
   if (n != 0)
   {
@@ -5651,22 +5651,22 @@ StringUnit String_getMatchingUnit64(int64 n, const StringUnit units[], uint unit
     {
       i++;
     }
-    stringUnit = (i < unitCount) ? units[i] : NO_UNIT;
+    unit = (i < unitCount) ? units[i] : NO_UNIT;
   }
   else
   {
-    stringUnit = NO_UNIT;
+    unit = NO_UNIT;
   }
 
-  return stringUnit;
+  return unit;
 }
 
 StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint unitCount)
 {
   static const StringUnit NO_UNIT = {"",1LL};
 
-  StringUnit stringUnit;
-  uint i;
+  StringUnit unit;
+  uint       i;
 
   if (fabs(n) > DBL_EPSILON)
   {
@@ -5679,14 +5679,14 @@ StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint
     {
       i++;
     }
-    stringUnit = (i < unitCount) ? units[i] : NO_UNIT;
+    unit = (i < unitCount) ? units[i] : NO_UNIT;
   }
   else
   {
-    stringUnit = NO_UNIT;
+    unit = NO_UNIT;
   }
 
-  return stringUnit;
+  return unit;
 }
 
 double String_toDouble(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)

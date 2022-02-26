@@ -3415,6 +3415,90 @@ bool ConfigValue_getInteger64Value(int64                 *value,
   return getInteger64Value(value,string,units,NULL,NULL);
 }
 
+ConfigValueUnit ConfigValue_getMatchingUnit(int n, const ConfigValueUnit units[], uint unitCount)
+{
+  static const ConfigValueUnit NO_UNIT = {"",1LL};
+
+  ConfigValueUnit unit;
+  uint i;
+
+  if (n != 0)
+  {
+    i = 0;
+    while (   (i < unitCount)
+           && (   ((uint64)abs(n) < units[i].factor)
+               || (((uint64)abs(n) % units[i].factor) != 0LL)
+              )
+          )
+    {
+      i++;
+    }
+    unit = (i < unitCount) ? units[i] : NO_UNIT;
+  }
+  else
+  {
+    unit = NO_UNIT;
+  }
+
+  return unit;
+}
+
+ConfigValueUnit ConfigValue_getMatchingUnit64(int64 n, const ConfigValueUnit units[], uint unitCount)
+{
+  static const ConfigValueUnit NO_UNIT = {"",1LL};
+
+  ConfigValueUnit unit;
+  uint            i;
+
+  if (n != 0)
+  {
+    i = 0;
+    while (   (i < unitCount)
+           && (   ((uint64)llabs(n) < units[i].factor)
+               || (((uint64)llabs(n) % units[i].factor) != 0LL)
+              )
+          )
+    {
+      i++;
+    }
+    unit = (i < unitCount) ? units[i] : NO_UNIT;
+  }
+  else
+  {
+    unit = NO_UNIT;
+  }
+
+  return unit;
+}
+
+ConfigValueUnit ConfigValue_getMatchingUnitDouble(double n, const ConfigValueUnit units[], uint unitCount)
+{
+  static const ConfigValueUnit NO_UNIT = {"",1LL};
+
+  ConfigValueUnit unit;
+  uint            i;
+
+  if (fabs(n) > DBL_EPSILON)
+  {
+    i = 0;
+    while (   (i < unitCount)
+           && (   (fabs(n) < (double)units[i].factor)
+               || (fmod(fabs(n),(double)units[i].factor) > DBL_EPSILON)
+              )
+          )
+    {
+      i++;
+    }
+    unit = (i < unitCount) ? units[i] : NO_UNIT;
+  }
+  else
+  {
+    unit = NO_UNIT;
+  }
+
+  return unit;
+}
+
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
                             const ConfigValue      *configValue,
                             ConfigValueFormatModes mode,

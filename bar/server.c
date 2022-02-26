@@ -4634,6 +4634,7 @@ NULL,//                                                        scheduleTitle,
                                                            CALLBACK_(NULL,NULL),  // restoreHandleError
                                                            CALLBACK_(getCryptPasswordFromConfig,jobNode),
                                                            CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+// TODO: use isCommandAborted9)
                                                            CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
                                                            &logHandle
                                                           );
@@ -12608,7 +12609,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->job.options.scheduleList,scheduleNode,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
+    List_removeAndFree(&jobNode->job.options.scheduleList,scheduleNode);
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);
@@ -13115,10 +13116,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->job.options.persistenceList,
-                       persistenceNode,
-                       CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL)
-                      );
+    List_removeAndFree(&jobNode->job.options.persistenceList,persistenceNode);
 
 //TODO: remove
     // update "forever"-nodes
@@ -16991,7 +16989,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 *            type=ARCHIVES|ENTRIES
 *            destination=<name>
 *            directoryContent=yes|no
-*            restoreEntryMode=STOP|RENAME|OVERWRITE
+*            restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING
 *          Result:
 \***********************************************************************/
 
@@ -17077,6 +17075,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     else if (stringEquals("OVERWRITE",name))
     {
       (*restoreEntryMode) = RESTORE_ENTRY_MODE_OVERWRITE;
+      return TRUE;
+    }
+    else if (stringEquals("SKIP_EXISTING",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_SKIP_EXISTING;
       return TRUE;
     }
     else
@@ -17358,7 +17361,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
   if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING");
     return;
   }
 
@@ -19355,6 +19358,24 @@ SERVER_COMMANDS[] =
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : freeCommandInfo
+* Purpose: free command info
+* Input  : commandInfo - command info
+*          userData    - user data (ignored)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeCommandInfo(CommandInfoNode *commandInfoNode, void *userData)
+{
+  assert(commandInfoNode != NULL);
+
+  UNUSED_VARIABLE(commandInfoNode);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
 * Name   : freeCommand
 * Purpose: free command
 * Input  : command  - command
@@ -19477,6 +19498,7 @@ LOCAL bool getCommand(ClientInfo            *clientInfo,
     (*authorizationState   ) = command.authorizationState;
     (*id                   ) = command.id;
     StringMap_move(argumentMap,command.argumentMap);
+    StringMap_done(command.argumentMap);
 
     return TRUE;
   }
@@ -19570,7 +19592,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       // remove command info
       SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK_(NULL,NULL));
+        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
       }
     }
     else
@@ -19759,8 +19781,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   clientInfo->quitFlag              = FALSE;
 
-// TODO: free correct?
-  List_init(&clientInfo->commandInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCommand,NULL));
+  List_init(&clientInfo->commandInfoList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCommandInfo,NULL));
   if (!RingBuffer_init(&clientInfo->abortedCommandIds,sizeof(uint),MAX_ABORT_COMMAND_IDS))
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -19795,6 +19816,15 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
   clientInfo->quitFlag = TRUE;
+
+  // wait for commands
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    while (!List_isEmpty(&clientInfo->commandInfoList))
+    {
+      Semaphore_waitModified(&clientInfo->lock,WAIT_FOREVER);
+    }
+  }
 
   // abort all running master jobs
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -21070,10 +21100,7 @@ Errors Server_socket(void)
                 && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*US_PER_MS))
                )
             {
-              authorizationFailNode = List_removeAndFree(&authorizationFailList,
-                                                         authorizationFailNode,
-                                                         CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                                                        );
+              authorizationFailNode = List_removeAndFree(&authorizationFailList,authorizationFailNode);
             }
             else
             {
@@ -21104,10 +21131,7 @@ Errors Server_socket(void)
             }
 
             // remove oldest authorization failure from list
-            List_removeAndFree(&authorizationFailList,
-                               oldestAuthorizationFailNode,
-                               CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                              );
+            List_removeAndFree(&authorizationFailList,oldestAuthorizationFailNode);
           }
         }
       }

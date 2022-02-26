@@ -31,6 +31,7 @@
   * upgrade pcre 8.44
   * upgrade SQLite 3.34
   * upgrade binutils 2.35
+  * fix abort restore job if client connection is lost
   * BARControl: fixed display of entry progress: count
     done+error+skipped
   * BARControl: fixed closing tooltips

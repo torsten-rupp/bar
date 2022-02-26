@@ -439,10 +439,10 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Output : -
 * Return : -
 * Notes  : example
-*          List_removeAndFree(list,
-*                             node,
-*                             LAMBDA(void,(...),{ ... }),NULL
-*                            );
+*          List_init(list,
+*                    LAMBDA(void,(...),{ ... }),NULL
+*                    LAMBDA(void,(...),{ ... }),NULL
+*                   );
 \***********************************************************************/
 
 #define LAMBDA(functionReturnType,functionSignature,functionBody) \
@@ -480,10 +480,10 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Output : -
 * Return : -
 * Notes  : example
-*          List_removeAndFree(list,
-*                             node,
-*                             CALLBACK__INLINE(void,(...),{ ... },NULL)
-*                            );
+*          List_init(list,
+*                    CALLBACK__INLINE(void,(...),{ ... },NULL)
+*                    CALLBACK__INLINE(void,(...),{ ... },NULL)
+*                   );
 \***********************************************************************/
 
 #define CALLBACK_INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \

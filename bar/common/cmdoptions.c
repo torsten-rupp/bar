@@ -1953,10 +1953,31 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_ENUM:
           break;
         case CMD_OPTION_TYPE_SELECT:
-          n += 7; // =<name>
+          n += 2; // =<
+          if (commandLineOptions[i].selectOption.descriptionArgument != NULL)
+          {
+            n += strlen(commandLineOptions[i].selectOption.descriptionArgument);
+          }
+          else
+          {
+            n += 4; // name
+          }
+          n += 1; // >
           break;
         case CMD_OPTION_TYPE_SET:
-          n += 19; // =<name>[,<name>...]
+          n += 2; // =<
+          if (commandLineOptions[i].stringOption.descriptionArgument != NULL)
+          {
+            n += strlen(commandLineOptions[i].stringOption.descriptionArgument);
+            n += 3; // ,[<
+            n += strlen(commandLineOptions[i].stringOption.descriptionArgument);
+            n += 5; // >...]
+          }
+          else
+          {
+            n += 18; // name>[,<name>...]
+          }
+          n += 1; // >
           break;
         case CMD_OPTION_TYPE_CSTRING:
         case CMD_OPTION_TYPE_STRING:
@@ -2084,10 +2105,31 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_ENUM:
           break;
         case CMD_OPTION_TYPE_SELECT:
-          stringAppend(name,sizeof(name),"=<name>");
+          stringAppend(name,sizeof(name),"=<");
+          if (commandLineOptions[i].selectOption.descriptionArgument != NULL)
+          {
+            stringAppend(name,sizeof(name),commandLineOptions[i].selectOption.descriptionArgument);
+          }
+          else
+          {
+            stringAppend(name,sizeof(name),"name");
+          }
+          stringAppend(name,sizeof(name),">");
           break;
         case CMD_OPTION_TYPE_SET:
-          stringAppend(name,sizeof(name),"=<name>[,<name>...]");
+          stringAppend(name,sizeof(name),"=<");
+          if (commandLineOptions[i].setOption.descriptionArgument != NULL)
+          {
+            stringAppend(name,sizeof(name),commandLineOptions[i].setOption.descriptionArgument);
+            stringAppend(name,sizeof(name),"[,<");
+            stringAppend(name,sizeof(name),commandLineOptions[i].setOption.descriptionArgument);
+            stringAppend(name,sizeof(name),">...]");
+          }
+          else
+          {
+            stringAppend(name,sizeof(name),"name>[,<name>...]");
+          }
+          stringAppend(name,sizeof(name),">");
           break;
         case CMD_OPTION_TYPE_CSTRING:
         case CMD_OPTION_TYPE_STRING:
@@ -2177,9 +2219,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             if (commandLineOptions[i].defaultValue.i != 0)
             {
               fprintf(outputHandle,", default: ");
-              if (   (commandLineOptions[i].integerOption.descriptionArgument == NULL)
-                  || ((commandLineOptions[i].integerOption.min < commandLineOptions[i].defaultValue.i) && (commandLineOptions[i].defaultValue.i < commandLineOptions[i].integerOption.max))
-                 )
+              if ((commandLineOptions[i].integerOption.min < commandLineOptions[i].defaultValue.i) && (commandLineOptions[i].defaultValue.i < commandLineOptions[i].integerOption.max))
               {
                 unit = findIntegerUnitByValue(commandLineOptions[i].integerOption.units,commandLineOptions[i].defaultValue.i);
                 if (unit != NULL)
@@ -2193,7 +2233,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
               }
               else
               {
-                fprintf(outputHandle,"%s",commandLineOptions[i].integerOption.descriptionArgument);
+                fprintf(outputHandle,"%d",commandLineOptions[i].defaultValue.i);
               }
             }
             (void)fputc(')',outputHandle);
@@ -2203,9 +2243,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             if (commandLineOptions[i].defaultValue.i != 0)
             {
               fprintf(outputHandle," (default: ");
-              if (   (commandLineOptions[i].integerOption.descriptionArgument == NULL)
-                  || ((commandLineOptions[i].integerOption.min < commandLineOptions[i].defaultValue.i) && (commandLineOptions[i].defaultValue.i < commandLineOptions[i].integerOption.max))
-                 )
+              if ((commandLineOptions[i].integerOption.min < commandLineOptions[i].defaultValue.i) && (commandLineOptions[i].defaultValue.i < commandLineOptions[i].integerOption.max))
               {
                 unit = findIntegerUnitByValue(commandLineOptions[i].integerOption.units,commandLineOptions[i].defaultValue.i);
                 if (unit != NULL)
@@ -2219,7 +2257,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
               }
               else
               {
-                fprintf(outputHandle,"%s",commandLineOptions[i].integerOption.descriptionArgument);
+                fprintf(outputHandle,"%d",commandLineOptions[i].defaultValue.i);
               }
               (void)fputc(')',outputHandle);
             }
@@ -2243,9 +2281,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             if (commandLineOptions[i].defaultValue.l != 0LL)
             {
               fprintf(outputHandle,", default: ");
-              if (   (commandLineOptions[i].integer64Option.descriptionArgument == NULL)
-                  || ((commandLineOptions[i].integer64Option.min < commandLineOptions[i].defaultValue.l) && (commandLineOptions[i].defaultValue.l < commandLineOptions[i].integer64Option.max))
-                 )
+              if ((commandLineOptions[i].integer64Option.min < commandLineOptions[i].defaultValue.l) && (commandLineOptions[i].defaultValue.l < commandLineOptions[i].integer64Option.max))
               {
                 unit = findInteger64UnitByValue(commandLineOptions[i].integer64Option.units,commandLineOptions[i].defaultValue.l);
                 if (unit != NULL)
@@ -2259,7 +2295,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
               }
               else
               {
-                fprintf(outputHandle,"%s",commandLineOptions[i].integer64Option.descriptionArgument);
+                fprintf(outputHandle,"%"PRIi64,commandLineOptions[i].defaultValue.l);
               }
             }
             (void)fputc(')',outputHandle);
@@ -2269,9 +2305,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             if (commandLineOptions[i].defaultValue.l != 0LL)
             {
               fprintf(outputHandle," (default: ");
-              if (   (commandLineOptions[i].integer64Option.descriptionArgument == NULL)
-                  || ((commandLineOptions[i].integer64Option.min < commandLineOptions[i].defaultValue.l) && (commandLineOptions[i].defaultValue.l < commandLineOptions[i].integer64Option.max))
-                 )
+              if ((commandLineOptions[i].integer64Option.min < commandLineOptions[i].defaultValue.l) && (commandLineOptions[i].defaultValue.l < commandLineOptions[i].integer64Option.max))
               {
                 unit = findInteger64UnitByValue(commandLineOptions[i].integer64Option.units,commandLineOptions[i].defaultValue.l);
                 if (unit != NULL)
@@ -2285,7 +2319,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
               }
               else
               {
-                fprintf(outputHandle,"%s",commandLineOptions[i].integer64Option.descriptionArgument);
+                fprintf(outputHandle,"%"PRIi64,commandLineOptions[i].defaultValue.l);
               }
               (void)fputc(')',outputHandle);
             }

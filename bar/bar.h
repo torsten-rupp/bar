@@ -254,7 +254,7 @@ void printWarning(const char *text, ...);
 void printError(const char *text, ...);
 
 /***********************************************************************\
-* Name   : vprintInfo, pprintInfo, printInfo
+* Name   : pprintInfo, printInfo
 * Purpose: output info to console
 * Input  : verboseLevel - verbosity level
 *          prefix       - prefix text
@@ -266,9 +266,8 @@ void printError(const char *text, ...);
 * Notes  : -
 \***********************************************************************/
 
-//void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
-//void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
-//void printInfo(uint verboseLevel, const char *format, ...);
+void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
+void printInfo(uint verboseLevel, const char *format, ...);
 
 // ----------------------------------------------------------------------
 

@@ -1620,7 +1620,8 @@ Dprintf.dprintf("");
   {
     STOP,
     RENAME,
-    OVERWRITE
+    OVERWRITE,
+    SKIP_EXISTING
   };
 
   /** find index for insert of item in sorted storage item list
@@ -9617,6 +9618,7 @@ Dprintf.dprintf("");
         Widgets.setComboItems(widgetRestoreEntryMode,new Object[]{BARControl.tr("stop if exists"  ),RestoreEntryModes.STOP,
                                                                   BARControl.tr("rename if exists"),RestoreEntryModes.RENAME,
                                                                   BARControl.tr("overwrite"       ),RestoreEntryModes.OVERWRITE,
+                                                                  BARControl.tr("skip existing"   ),RestoreEntryModes.SKIP_EXISTING,
                                                                  }
                                               );
         Widgets.setSelectedComboItem(widgetRestoreEntryMode,RestoreEntryModes.STOP);
@@ -10098,7 +10100,7 @@ Dprintf.dprintf("");
                                              );
                 break;
             }
-final int storageCount[] = new int[0];
+            final int storageCount[] = new int[]{0};
             BARServer.executeCommand(command,
                                      0,  // debugLevel
                                      new Command.ResultHandler()
@@ -10114,7 +10116,7 @@ final int storageCount[] = new int[0];
                                          long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
                                          long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
 
-storageCount[0]++;
+                                         storageCount[0]++;
                                          switch (state)
                                          {
                                            case NONE:
@@ -10208,6 +10210,8 @@ storageCount[0]++;
           }
           catch (Throwable throwable)
           {
+Dprintf.dprintf("%s",throwable);
+throwable.printStackTrace();
             // internal error
             BARServer.disconnect();
             BARControl.internalError(throwable);

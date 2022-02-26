@@ -742,6 +742,43 @@ LOCAL void doneAll(void)
 }
 
 /***********************************************************************\
+* Name   : vprintInfo
+* Purpose: output info to console
+* Input  : verboseLevel - verbosity level
+*          prefix       - prefix text
+*          format       - format string (like printf)
+*          arguments    - arguments
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
+{
+  String line;
+
+  assert(format != NULL);
+
+  if (isPrintInfo(verboseLevel))
+  {
+    line = String_new();
+
+    // format line
+    if (prefix != NULL) String_appendCString(line,prefix);
+    String_appendVFormat(line,format,arguments);
+
+    // output
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      outputConsole(stdout,line);
+    }
+
+    String_delete(line);
+  }
+}
+
+/***********************************************************************\
 * Name   : outputConsole
 * Purpose: output string to console
 * Input  : file   - output stream (stdout, stderr)
@@ -1019,30 +1056,6 @@ void printError(const char *text, ...)
     UNUSED_VARIABLE(bytesWritten);
   }
   String_delete(line);
-}
-
-LOCAL void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
-{
-  String line;
-
-  assert(format != NULL);
-
-  if (isPrintInfo(verboseLevel))
-  {
-    line = String_new();
-
-    // format line
-    if (prefix != NULL) String_appendCString(line,prefix);
-    String_appendVFormat(line,format,arguments);
-
-    // output
-    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      outputConsole(stdout,line);
-    }
-
-    String_delete(line);
-  }
 }
 
 void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...)
@@ -1646,7 +1659,7 @@ Errors mountAll(const MountList *mountList)
           {
             (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
 
-            List_removeAndFree(&mountedList,mountedNode,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
+            List_removeAndFree(&mountedList,mountedNode);
           }
         }
 
@@ -1714,7 +1727,7 @@ void purgeMounts(bool forceFlag)
                         );
           }
         }
-        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
+        mountedNode = List_removeAndFree(&mountedList,mountedNode);
       }
       else
       {

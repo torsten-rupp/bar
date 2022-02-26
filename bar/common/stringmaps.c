@@ -139,6 +139,7 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb
   StringMapEntry *newEntries;
 
   assert(stringMap != NULL);
+  assert(stringMap->entries != NULL);
 
   hashIndex = calculateHash(name)%stringMap->size;
   n = 0;
@@ -280,6 +281,7 @@ LOCAL StringMapEntry *findStringMapEntry(const StringMap stringMap, const char *
   uint n;
 
   assert(stringMap != NULL);
+  assert(stringMap->entries != NULL);
 
   i = calculateHash(name)%stringMap->size;
   n = 0;
@@ -320,14 +322,14 @@ StringMap __StringMap_new(const char *__fileName__,
 
   // init
   stringMap->size    = STRINGMAP_START_SIZE;
-  stringMap->entries = malloc(sizeof(StringMapEntry)*STRINGMAP_START_SIZE);
+  stringMap->entries = (StringMapEntry*)malloc(sizeof(StringMapEntry)*STRINGMAP_START_SIZE);
   if (stringMap->entries == NULL)
   {
     free(stringMap);
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
       HALT_INSUFFICIENT_MEMORY();
     #else /* not HALT_ON_INSUFFICIENT_MEMORY */
-      return FALSE;
+      return NULL;
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
   for (i = 0; i < STRINGMAP_START_SIZE; i++)
@@ -353,6 +355,7 @@ StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, cons
   StringMap newStringMap;
 
   assert(stringMap != NULL);
+  assert(stringMap->entries != NULL);
 
   #ifdef NDEBUG
     newStringMap = StringMap_new();
@@ -375,7 +378,7 @@ StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, cons
 
 StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
 {
-  StringMapEntry *entries;
+  StringMapEntry *newEntries;
   uint           i;
 
   assert(stringMap != NULL);
@@ -384,20 +387,18 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   assert(fromStringMap->entries != NULL);
 
   // allocate new entries
-  entries = malloc(sizeof(StringMapEntry)*fromStringMap->size);
-  if (entries == NULL)
+  StringMap_clear(stringMap);
+  newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
+  if (newEntries == NULL)
   {
-    free(stringMap);
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
       HALT_INSUFFICIENT_MEMORY();
     #else /* not HALT_ON_INSUFFICIENT_MEMORY */
       return NULL;
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
-  StringMap_clear(stringMap);
-  free(stringMap->entries);
   stringMap->size    = fromStringMap->size;
-  stringMap->entries = entries;
+  stringMap->entries = newEntries;
 
   // copy entries
   for (i = 0; i < fromStringMap->size; i++)
@@ -444,7 +445,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
 
 StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
 {
-  StringMapEntry *entries;
+  StringMapEntry *newEntries;
   uint           i;
 
   assert(stringMap != NULL);
@@ -453,20 +454,18 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
   assert(fromStringMap->entries != NULL);
 
   // allocate new entries
-  entries = malloc(sizeof(StringMapEntry)*fromStringMap->size);
-  if (entries == NULL)
+  StringMap_clear(stringMap);
+  newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
+  if (newEntries == NULL)
   {
-    free(stringMap);
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
       HALT_INSUFFICIENT_MEMORY();
     #else /* not HALT_ON_INSUFFICIENT_MEMORY */
       return NULL;
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
-  StringMap_clear(stringMap);
-  free(stringMap->entries);
   stringMap->size    = fromStringMap->size;
-  stringMap->entries = entries;
+  stringMap->entries = newEntries;
 
   // move entries
   for (i = 0; i < fromStringMap->size; i++)
