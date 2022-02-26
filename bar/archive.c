@@ -12011,7 +12011,7 @@ NULL//                             password
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundHardLinkEntryFlag)                                                  return ERROR_NO_FILE_ENTRY;
-    else if (!foundHardLinkDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(StringList_first(archiveEntryInfo->hardLink.chunkHardLinkName.name,NULL)));
+    else if (!foundHardLinkDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(archiveEntryInfo->hardLink.chunkHardLinkName.name));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 

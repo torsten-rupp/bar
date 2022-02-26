@@ -125,7 +125,7 @@ typedef struct
 } InitNotifyMsg;
 
 /***************************** Variables *******************************/
-LOCAL Errors            initFlag = FALSE;
+LOCAL bool              initFlag = FALSE;
 LOCAL DatabaseSpecifier *continuousDatabaseSpecifier;
 LOCAL DatabaseHandle    continuousDatabaseHandle;
 LOCAL Semaphore         notifyLock;                  // lock
@@ -2107,7 +2107,6 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                           )
 {
   Errors error;
-  char   sqlString[256];
 
   assert(initFlag);
   assert(databaseStatementHandle != NULL);

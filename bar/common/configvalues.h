@@ -1450,6 +1450,22 @@ bool ConfigValue_getInteger64Value(int64                 *value,
                                   );
 
 /***********************************************************************\
+* Name   : ConfigValue_getMatchingUnit, ConfigValue_getMatchingUnit64,
+*          ConfigValue_getMatchingUnitDouble
+* Purpose: get matching unit for number
+* Input  : n         - number
+*          units     - config value units (for integer, double)
+*          unitCount - number of config value units
+* Output : -
+* Return : unit
+* Notes  : -
+\***********************************************************************/
+
+ConfigValueUnit ConfigValue_getMatchingUnit(int n, const ConfigValueUnit units[], uint unitCount);
+ConfigValueUnit ConfigValue_getMatchingUnit64(int64 n, const ConfigValueUnit units[], uint unitCount);
+ConfigValueUnit ConfigValue_getMatchingUnitDouble(double n, const ConfigValueUnit units[], uint unitCount);
+
+/***********************************************************************\
 * Name   : ConfigValue_formatInit
 * Purpose: initialize config valule format
 * Input  : configValue - config value definition

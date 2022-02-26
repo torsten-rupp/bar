@@ -4742,7 +4742,7 @@ LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char 
 
 LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
-  const StringUnit UNITS[] =
+  const ConfigValueUnit UNITS[] =
   {
     {"T",1024LL*1024LL*1024LL*1024LL},
     {"G",1024LL*1024LL*1024LL},
@@ -4778,7 +4778,7 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
     case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const BandWidthNode *bandWidthNode = (BandWidthNode*)(*formatUserData);
-        StringUnit          stringUnit;
+        ConfigValueUnit     unit;
         String              line           = (String)data;
 
         if (bandWidthNode != NULL)
@@ -4789,8 +4789,8 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
           }
           else
           {
-            stringUnit = String_getMatchingUnit(bandWidthNode->n,UNITS,SIZE_OF_ARRAY(UNITS));
-            String_appendFormat(line,"%lu%s",bandWidthNode->n/stringUnit.factor,stringUnit.name);
+            unit = ConfigValue_getMatchingUnit(bandWidthNode->n,UNITS,SIZE_OF_ARRAY(UNITS));
+            String_appendFormat(line,"%lu%s",bandWidthNode->n/unit.factor,unit.name);
           }
           String_appendChar(line,' ');
 

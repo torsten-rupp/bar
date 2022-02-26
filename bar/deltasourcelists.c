@@ -135,7 +135,7 @@ void DeltaSourceList_doneAll(void)
 {
   assert(deltaSourceList != NULL);
 
-  List_init(deltaSourceList,CALLBACK_(duplicateDeltaSourceNode,NULL),CALLBACK_(freeDeltaSourceNode,NULL));
+  List_init(deltaSourceList,CALLBACK_((ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL),CALLBACK_((ListNodeFreeFunction)freeDeltaSourceNode,NULL));
   Semaphore_init(&deltaSourceList->lock,SEMAPHORE_TYPE_BINARY);
 
   #ifdef NDEBUG

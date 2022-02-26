@@ -1124,9 +1124,9 @@ LOCAL void freeSlaveNode(SlaveNode *slaveNode, void *userData)
 Errors Job_initAll(void)
 {
   Semaphore_init(&slaveList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&slaveList,CALLBACK_(NULL,NULL),CALLBACK_(freeSlaveNode,NULL));
+  List_init(&slaveList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeSlaveNode,NULL));
   Semaphore_init(&jobList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&jobList,CALLBACK_(NULL,NULL),CALLBACK_(freeJobNode,NULL));
+  List_init(&jobList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobNode,NULL));
 
   return ERROR_NONE;
 }
@@ -2678,7 +2678,7 @@ void Job_initOptions(JobOptions *jobOptions)
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
                      CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
-                     CALLBACK_(Configuration_freeMountNode,NULL)
+                     CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
                     );
   PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
                             &globalOptions.compressExcludePatternList,
@@ -2690,8 +2690,8 @@ void Job_initOptions(JobOptions *jobOptions)
                                 NULL,  // fromDeltaSourceListFromNode
                                 NULL  // fromDeltaSourceListToNode
                                );
-  List_init(&jobOptions->scheduleList,CALLBACK_(NULL,NULL),CALLBACK_(freeScheduleNode,NULL));
-  List_init(&jobOptions->persistenceList,CALLBACK_(NULL,NULL),CALLBACK_(Job_freePersistenceNode,NULL));
+  List_init(&jobOptions->scheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_init(&jobOptions->persistenceList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
   jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
   jobOptions->archiveType                               = globalOptions.archiveType;
@@ -2788,8 +2788,8 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->mountList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_(Configuration_duplicateMountNode,NULL),
-                     CALLBACK_(Configuration_freeMountNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
+                     CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
                     );
   PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
                             &fromJobOptions->compressExcludePatternList,
@@ -2805,15 +2805,15 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->scheduleList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_(duplicateScheduleNode,NULL),
-                     CALLBACK_(freeScheduleNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)duplicateScheduleNode,NULL),
+                     CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL)
                     );
   List_initDuplicate(&jobOptions->persistenceList,
                      &fromJobOptions->persistenceList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_(Job_duplicatePersistenceNode,NULL),
-                     CALLBACK_(Job_freePersistenceNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Job_duplicatePersistenceNode,NULL),
+                     CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL)
                     );
   jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
@@ -2943,8 +2943,8 @@ void Job_duplicatePersistenceList(PersistenceList *persistenceList, const Persis
                      fromPersistenceList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_(Job_duplicatePersistenceNode,NULL),
-                     CALLBACK_(Job_freePersistenceNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Job_duplicatePersistenceNode,NULL),
+                     CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL)
                     );
 }
 
