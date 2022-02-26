@@ -7023,6 +7023,7 @@ Dprintf.dprintf("_");
                                                        BARControl.tr("rename if exists"),"rename",
                                                        BARControl.tr("append"          ),"append",
                                                        BARControl.tr("overwrite"       ),"overwrite",
+                                                       BARControl.tr("skip existing"   ),"skip-existing",
                                                       }
                                    );
               Widgets.layout(combo,0,1,TableLayoutData.W);

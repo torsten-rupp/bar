@@ -16989,7 +16989,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 *            type=ARCHIVES|ENTRIES
 *            destination=<name>
 *            directoryContent=yes|no
-*            restoreEntryMode=STOP|RENAME|OVERWRITE
+*            restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING
 *          Result:
 \***********************************************************************/
 
@@ -17075,6 +17075,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     else if (stringEquals("OVERWRITE",name))
     {
       (*restoreEntryMode) = RESTORE_ENTRY_MODE_OVERWRITE;
+      return TRUE;
+    }
+    else if (stringEquals("SKIP_EXISTING",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_SKIP_EXISTING;
       return TRUE;
     }
     else
@@ -17356,7 +17361,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
   if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING");
     return;
   }
 
