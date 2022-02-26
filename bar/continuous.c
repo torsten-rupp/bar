@@ -967,7 +967,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
             && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_(NULL,NULL));
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode);
         }
         else
         {
@@ -1038,7 +1038,7 @@ LOCAL void purgeNotifies(const char *jobUUID, const char *scheduleUUID)
                )
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_(NULL,NULL));
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode);
         }
         else
         {

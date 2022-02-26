@@ -430,7 +430,11 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
 /***********************************************************************\
 * Name   : List_init
 * Purpose: initialize list
-* Input  : list - list to initialize
+* Input  : list              - list to initialize
+*          duplicateFunction - node duplicate function
+*          duplicateUserData - node duplicate user data
+*          freeFunction      - node free function
+*          freeUserData      - node free user data
 * Output : -
 * Return : -
 * Notes  : -
@@ -461,8 +465,10 @@ void __List_init(const char                *__fileName__,
 *          fromList                        - from list
 *          fromListFromNode,fromListToNode - from/to node (could be
 *                                            NULL)
-*          listNodeDuplicateFunction       - node duplicate function
-*          listNodeDuplicateUserData       - node duplicate user data
+*          duplicateFunction               - node duplicate function
+*          duplicateUserData               - node duplicate user data
+*          freeFunction                    - node free function
+*          freeUserData                    - node free user data
 * Output : -
 * Return : -
 * Notes  : -
@@ -506,17 +512,28 @@ void List_done(void *list);
 /***********************************************************************\
 * Name   : List_new
 * Purpose: allocate new list
-* Input  : -
+* Input  : duplicateFunction - node duplicate function
+*          duplicateUserData - node duplicate user data
+*          freeFunction      - node free function
+*          freeUserData      - node free user data
 * Output : -
 * Return : list or NULL on insufficient memory
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-List *List_new(void);
+List *List_new(ListNodeDuplicateFunction duplicateFunction,
+               void                      *duplicateUserData,
+               ListNodeFreeFunction      freeFunction,
+               void                      *freeUserData
+              );
 #else /* not NDEBUG */
-List *__List_new(const char *fileName,
-                 ulong      lineNb
+List *__List_new(const char                *__fileName__,
+                 ulong                     __lineNb__,
+                 ListNodeDuplicateFunction duplicateFunction,
+                 void                      *duplicateUserData,
+                 ListNodeFreeFunction      freeFunction,
+                 void                      *freeUserData
                 );
 #endif /* NDEBUG */
 
@@ -528,6 +545,8 @@ List *__List_new(const char *fileName,
 *                                            NULL)
 *          duplicateFunction               - node duplicate function
 *          duplicateUserData               - node duplicate user data
+*          freeFunction                    - node free function
+*          freeUserData                    - node free user data
 * Output : -
 * Return : -
 * Notes  : -
@@ -741,19 +760,15 @@ void *List_remove(void *list,
 /***********************************************************************\
 * Name   : List_removeAndFree
 * Purpose: remove node from list and free
-* Input  : list                 - list
-*          node                 - node to remove
-*          listNodeFreeFunction - free function for single node or NULL
-*          listNodeFreeUserData - user data for free function
+* Input  : list - list
+*          node - node to remove
 * Output : -
 * Return : next node in list or NULL
 * Notes  : -
 \***********************************************************************/
 
-void *List_removeAndFree(void                 *list,
-                         void                 *node,
-                         ListNodeFreeFunction listNodeFreeFunction,
-                         void                 *listNodeFreeUserData
+void *List_removeAndFree(void *list,
+                         void *node
                         );
 
 /***********************************************************************\

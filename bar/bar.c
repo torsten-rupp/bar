@@ -1646,7 +1646,7 @@ Errors mountAll(const MountList *mountList)
           {
             (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
 
-            List_removeAndFree(&mountedList,mountedNode,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
+            List_removeAndFree(&mountedList,mountedNode);
           }
         }
 
@@ -1714,7 +1714,7 @@ void purgeMounts(bool forceFlag)
                         );
           }
         }
-        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
+        mountedNode = List_removeAndFree(&mountedList,mountedNode);
       }
       else
       {

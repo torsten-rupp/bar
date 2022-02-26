@@ -448,7 +448,7 @@ bool EntryList_remove(EntryList *entryList,
   entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
   if (entryNode != NULL)
   {
-    List_removeAndFree(entryList,entryNode,(ListNodeFreeFunction)freeEntryNode,NULL);
+    List_removeAndFree(entryList,entryNode);
     return TRUE;
   }
   else

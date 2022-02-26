@@ -302,7 +302,7 @@ bool PatternList_remove(PatternList *patternList,
   patternNode = (PatternNode*)LIST_FIND(patternList,patternNode,patternNode->id == id);
   if (patternNode != NULL)
   {
-    List_removeAndFree(patternList,patternNode,(ListNodeFreeFunction)freePatternNode,NULL);
+    List_removeAndFree(patternList,patternNode);
     return TRUE;
   }
   else

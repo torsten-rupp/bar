@@ -530,7 +530,7 @@ bool DeltaSourceList_remove(DeltaSourceList *deltaSourceList,
   deltaSourceNode = (DeltaSourceNode*)LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
   if (deltaSourceNode != NULL)
   {
-    List_removeAndFree(deltaSourceList,deltaSourceNode,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
+    List_removeAndFree(deltaSourceList,deltaSourceNode);
     return TRUE;
   }
   else

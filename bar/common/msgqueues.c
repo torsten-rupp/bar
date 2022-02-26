@@ -266,7 +266,7 @@ xxx
   msgQueue->modifiedFlag = FALSE;
   msgQueue->lockCount    = 0;
   msgQueue->endOfMsgFlag = FALSE;
-  List_init(&msgQueue->list,CALLBACK_(NULL,NULL),CALLBACK_(freeMsgNode,NULL));
+  List_init(&msgQueue->list,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMsgNode,NULL));
 
   return TRUE;
 }

@@ -1008,8 +1008,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // close file
     if (!restoreInfo->storageFlags.dryRun)
     {
-      (void)File_close(&fileHandle);
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+      (void)File_close(&fileHandle);
     }
 
     // add fragment to file fragment list
@@ -1583,12 +1583,12 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       switch (type)
       {
         case DEVICE:
-          (void)Device_close(&deviceHandle);
           AUTOFREE_REMOVE(&autoFreeList,&deviceHandle);
+          (void)Device_close(&deviceHandle);
           break;
         case FILE:
-          (void)File_close(&fileHandle);
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+          (void)File_close(&fileHandle);
           break;
         default:
           #ifndef NDEBUG
@@ -2660,7 +2660,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
-            File_close(&fileHandle);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -2719,20 +2718,12 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
         if      (error != ERROR_NONE)
         {
-          if (!restoreInfo->storageFlags.dryRun)
-          {
-            (void)File_close(&fileHandle);
-          }
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
         else if ((restoreInfo->isAbortedFunction != NULL) && restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
         {
           printInfo(1,"ABORTED\n");
-          if (!restoreInfo->storageFlags.dryRun)
-          {
-            (void)File_close(&fileHandle);
-          }
           AutoFree_cleanup(&autoFreeList);
           return ERROR_ABORTED;
         }
@@ -2753,8 +2744,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         // close file
         if (!restoreInfo->storageFlags.dryRun)
         {
-          (void)File_close(&fileHandle);
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
+          (void)File_close(&fileHandle);
         }
 
         // add fragment to file fragment list

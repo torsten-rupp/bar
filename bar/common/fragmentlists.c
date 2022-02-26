@@ -141,7 +141,7 @@ void __FragmentList_init(const char   *__fileName__,
 {
   assert(fragmentList != NULL);
 
-  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_(FragmentList_doneNode,NULL));
+  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)FragmentList_doneNode,NULL));
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);

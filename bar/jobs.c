@@ -2243,7 +2243,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
         else
         {
           // do not exists anymore => remove and delete job node
-          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK_((ListNodeFreeFunction)freeJobNode,NULL));
+          jobNode = List_removeAndFree(&jobList,jobNode);
 
           // notify about changes
           Job_listChanged();
@@ -2988,7 +2988,7 @@ SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
     Connector_disconnect(&slaveNode->connectorInfo);
   }
 
-  return List_removeAndFree(&slaveList,slaveNode,CALLBACK_((ListNodeFreeFunction)freeSlaveNode,NULL));
+  return List_removeAndFree(&slaveList,slaveNode);
 }
 
 ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
