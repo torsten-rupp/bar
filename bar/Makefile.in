@@ -689,7 +689,6 @@ all: $(TARGETS)
 
 # clean
 clean: \
-  testcode_clean \
   gcov_clean \
   test_clean
 	$(RMF) bar.tags
