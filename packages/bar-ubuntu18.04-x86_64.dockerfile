@@ -34,7 +34,7 @@ RUN apt-get -y install \
   less \
   lua5.3 \
   m4 \
-  mysql \
+  mysql-client \
   patch \
   pkg-config \
   postgresql \

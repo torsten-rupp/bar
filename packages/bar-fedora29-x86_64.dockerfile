@@ -22,7 +22,7 @@ RUN yum -y install \
   less \
   lua \
   m4 \
-  mysql \
+  mysql-client \
   patch \
   pkg-config \
   postgresql \
