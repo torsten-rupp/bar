@@ -59,6 +59,7 @@
 #define DEFAULT_JOBS_SUB_DIRECTORY                "jobs"
 #define DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY    ""
 #define DEFAULT_PAIRING_MASTER_FILE_NAME          "pairing"
+#define DEFAULT_PID_FILE_NAME                     "/run/bar.pid"
 
 #define DEFAULT_CD_DEVICE_NAME                    "/dev/cdrw"
 #define DEFAULT_DVD_DEVICE_NAME                   "/dev/dvd"

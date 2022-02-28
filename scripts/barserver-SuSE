@@ -21,7 +21,7 @@
 NAME=bar
 BAR_BIN=/usr/bin/$NAME
 BAR_CONFIG_FILENAME=/etc/bar/bar.cfg
-BAR_PID_FILENAME=/var/run/$NAME.pid
+BAR_PID_FILENAME=/run/$NAME.pid
 BAR_ARGS="--config $BAR_CONFIG_FILENAME --daemon --pid-file=$BAR_PID_FILENAME --verbose=0 --quiet"
 BAR_SCRIPT_FILENAME=/etc/init.d/barserver
 DESCRIPTION="barserver"

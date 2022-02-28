@@ -1661,7 +1661,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.logFormat                                       = DEFAULT_LOG_FORMAT;
   globalOptions.logPostCommand                                  = NULL;
 
-  globalOptions.pidFileName                                     = NULL;
+  globalOptions.pidFileName                                     = DEFAULT_PID_FILE_NAME;
 
   globalOptions.quietFlag                                       = FALSE;
   globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
