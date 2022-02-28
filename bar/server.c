@@ -8896,13 +8896,10 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
-  String         name;
-  const JobNode  *jobNode;
-  Errors         error;
-  String         noBackupFileName1,noBackupFileName2;
-  Errors         tmpError;
-  FileAttributes fileAttributes;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  String        name;
+  const JobNode *jobNode;
+  Errors        error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8999,13 +8996,10 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
-  String         name;
-  const JobNode  *jobNode;
-  Errors         error;
-  String         noBackupFileName1,noBackupFileName2;
-  Errors         tmpError;
-  FileAttributes fileAttributes;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  String        name;
+  const JobNode *jobNode;
+  Errors        error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
