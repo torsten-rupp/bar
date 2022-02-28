@@ -562,7 +562,10 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public ListDirectory()
   {
-    shortcutMap.put("/",newFileInstance("/"));
+    for (T root : getRoots())
+    {
+      shortcutMap.put(root.getName(),root);
+    }
   }
 
   /** get new file instance
@@ -581,12 +584,23 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
     return newFileInstance((String)null,name);
   }
 
-  /** get root file instance
-   * @return root file instance
+  /** get root file instances
+   * @return root file instances
    */
-  public T getRoot()
+  public ArrayList<T> getRoots()
   {
-    return newFileInstance("/");
+    ArrayList<T> roots = new ArrayList<T>();
+    roots.add(newFileInstance("/"));
+
+    return roots;
+  }
+
+  /** get default root file instance
+   * @return default root file instance
+   */
+  public T getDefaultRoot()
+  {
+    return getRoots().get(0);
   }
 
   /** get parent file instance
@@ -615,7 +629,10 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   public void getShortcuts(java.util.List<T> shortcutList)
   {
     shortcutList.clear();
-    shortcutMap.put("/",getRoot());
+    for (T root : getRoots())
+    {
+      shortcutMap.put(root.getName(),root);
+    }
     for (T shortcut : shortcutMap.values())
     {
       shortcutList.add(shortcut);
@@ -662,41 +679,47 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public abstract T getNext();
 
+  /** check if file is root entry
+   * @param file file to check
+   * @return true iff is root entry
+   */
+  public abstract boolean isRoot(T file);
+
   /** check if directory
    * @param file file to check
    * @return true if file is directory
    */
-  public boolean isDirectory(T file)
-  {
-    return file.isDirectory();
-  }
+  public abstract boolean isDirectory(T file);
 
   /** check if file
    * @param file file to check
    * @return true if file is file
    */
-  public boolean isFile(T file)
-  {
-    return file.isFile();
-  }
+  public abstract boolean isFile(T file);
 
   /** check if hidden
    * @param file file to check
    * @return true if file is hidden
    */
-  public boolean isHidden(T file)
-  {
-    return file.isHidden();
-  }
+  public abstract boolean isHidden(T file);
 
   /** check if exists
    * @param file file to check
    * @return true if file exists
    */
-  public boolean exists(T file)
-  {
-    return file.exists();
-  }
+  public abstract boolean exists(T file);
+
+  /** make directory
+   * @param directory directory to create
+   */
+  public abstract void mkdir(T directory)
+    throws IOException;
+
+  /** delete file or directory
+   * @param file file or directory to delete
+   */
+  public abstract void delete(T file)
+    throws IOException;
 }
 
 /** dialog
@@ -4156,7 +4179,7 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static <T extends File> String file(Shell                  parentShell,
+  public static <T extends File> String file(final Shell            parentShell,
                                              final FileDialogTypes  type,
                                              String                 title,
                                              T                      oldFile,
@@ -4319,9 +4342,9 @@ class Dialogs
       /** update file list
        * @param table table widget
        * @param path path
-       * @param name name or null
+       * @param selectName name to select or null
        */
-      public void updateFileList(Table table, T path, String name)
+      public void updateFileList(Table table, T path, String selectName)
       {
         if (!table.isDisposed())
         {
@@ -4369,12 +4392,12 @@ class Dialogs
               listDirectory.close();
 
               // select name
-              if (name != null)
+              if (selectName != null)
               {
                 int index = 0;
                 for (TableItem tableItem : table.getItems())
                 {
-                  if (((File)tableItem.getData()).getName().equals(name))
+                  if (((File)tableItem.getData()).getName().equals(selectName))
                   {
                     table.select(index);
                     break;
@@ -4389,6 +4412,15 @@ class Dialogs
             dialog.setCursor((Cursor)null);
           }
         }
+      }
+
+      /** update file list
+       * @param table table widget
+       * @param path path
+       */
+      public void updateFileList(Table table, T path)
+      {
+        updateFileList(table,path,(String)null);
       }
 
       /** set filter
@@ -4545,6 +4577,169 @@ class Dialogs
       (byte)0xbb,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x49,(byte)0x45,(byte)0x4e,(byte)0x44,
       (byte)0xae,(byte)0x42,(byte)0x60,(byte)0x82
     };
+    // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' folderNew.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
+    final byte[] IMAGE_FOLDER_NEW_DATA_ARRAY =
+    {
+      (byte)0x89,(byte)0x50,(byte)0x4e,(byte)0x47,(byte)0x0d,(byte)0x0a,(byte)0x1a,(byte)0x0a,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x0d,(byte)0x49,(byte)0x48,(byte)0x44,(byte)0x52,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x10,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x10,(byte)0x08,(byte)0x06,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x1f,(byte)0xf3,(byte)0xff,(byte)0x61,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x04,(byte)0x67,(byte)0x41,(byte)0x4d,(byte)0x41,(byte)0x00,(byte)0x00,(byte)0xaf,(byte)0xc8,
+      (byte)0x37,(byte)0x05,(byte)0x8a,(byte)0xe9,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x19,(byte)0x74,
+      (byte)0x45,(byte)0x58,(byte)0x74,(byte)0x53,(byte)0x6f,(byte)0x66,(byte)0x74,(byte)0x77,(byte)0x61,
+      (byte)0x72,(byte)0x65,(byte)0x00,(byte)0x41,(byte)0x64,(byte)0x6f,(byte)0x62,(byte)0x65,(byte)0x20,
+      (byte)0x49,(byte)0x6d,(byte)0x61,(byte)0x67,(byte)0x65,(byte)0x52,(byte)0x65,(byte)0x61,(byte)0x64,
+      (byte)0x79,(byte)0x71,(byte)0xc9,(byte)0x65,(byte)0x3c,(byte)0x00,(byte)0x00,(byte)0x02,(byte)0x2e,
+      (byte)0x49,(byte)0x44,(byte)0x41,(byte)0x54,(byte)0x18,(byte)0x19,(byte)0xa5,(byte)0xc1,(byte)0xcd,
+      (byte)0x8b,(byte)0x4d,(byte)0x61,(byte)0x00,(byte)0xc7,(byte)0xf1,(byte)0xef,(byte)0x73,(byte)0xe6,
+      (byte)0xcc,(byte)0x75,(byte)0x94,(byte)0x3b,(byte)0x44,(byte)0x26,(byte)0x6e,(byte)0x23,(byte)0xa1,
+      (byte)0xc9,(byte)0x0c,(byte)0x99,(byte)0x31,(byte)0x85,(byte)0x86,(byte)0x46,(byte)0x16,(byte)0xd8,
+      (byte)0x49,(byte)0xf9,(byte)0x0b,(byte)0xa4,(byte)0xac,(byte)0x18,(byte)0xa5,(byte)0x24,(byte)0x53,
+      (byte)0x4a,(byte)0x29,(byte)0x0b,(byte)0xc4,(byte)0x4e,(byte)0xc8,(byte)0xc6,(byte)0xca,(byte)0xc6,
+      (byte)0x4a,(byte)0x62,(byte)0x41,(byte)0x1a,(byte)0xd4,(byte)0x90,(byte)0x9d,(byte)0x77,(byte)0xc9,
+      (byte)0xe4,(byte)0x25,(byte)0x2f,(byte)0x83,(byte)0xe1,(byte)0xba,(byte)0xf7,(byte)0xdc,(byte)0x79,
+      (byte)0xbb,(byte)0xf7,(byte)0x9c,(byte)0xe7,(byte)0x79,(byte)0x7e,(byte)0xce,(byte)0x29,(byte)0x45,
+      (byte)0x36,(byte)0xd4,(byte)0x7c,(byte)0x3e,(byte)0x46,(byte)0x12,(byte)0xd3,(byte)0x11,(byte)0x30,
+      (byte)0x4d,(byte)0x01,(byte)0xd3,(byte)0x14,(byte)0x92,(byte)0x79,(byte)0x75,(byte)0x7d,(byte)0xed,
+      (byte)0xa3,(byte)0xa8,(byte)0x65,(byte)0xc5,(byte)0x0a,(byte)0x63,(byte)0x02,(byte)0x7e,(byte)0x13,
+      (byte)0x8d,(byte)0xb1,(byte)0xd7,(byte)0x1f,(byte)0x9c,(byte)0xad,(byte)0xae,(byte)0x07,(byte)0x1a,
+      (byte)0xfc,(byte)0xc9,(byte)0x90,(byte)0x9b,(byte)0x58,(byte)0xbe,(byte)0xed,(byte)0xa9,(byte)0x0d,
+      (byte)0xc9,(byte)0x18,(byte)0x05,(byte)0x1d,(byte)0x8b,(byte)0xfa,(byte)0x2e,(byte)0x36,(byte)0x1b,
+      (byte)0x63,(byte)0x40,(byte)0x64,(byte)0x04,(byte)0xc6,(byte)0x60,(byte)0xeb,(byte)0xdf,(byte)0x97,
+      (byte)0x7e,(byte)0x7d,(byte)0x74,(byte)0xf4,(byte)0x83,(byte)0x40,(byte)0xfc,(byte)0xd2,(byte)0x54,
+      (byte)0x68,(byte)0x91,(byte)0x5c,(byte)0x3a,(byte)0x3a,(byte)0xfe,(byte)0x79,(byte)0xf0,(byte)0x20,
+      (byte)0x70,(byte)0x39,(byte)0x24,(byte)0x67,(byte)0x55,(byte)0xc7,(byte)0x27,(byte)0x33,(byte)0x1a,
+      (byte)0x5f,(byte)0xce,(byte)0xe1,(byte)0x92,(byte)0x26,(byte)0x08,(byte)0x5a,(byte)0x30,(byte)0xa6,
+      (byte)0x48,(byte)0x54,(byte)0xda,(byte)0x4c,(byte)0x69,(byte)0xdd,(byte)0x89,(byte)0x02,(byte)0x12,
+      (byte)0xe0,(byte)0x41,(byte)0x1e,(byte)0x10,(byte)0x26,(byte)0x98,(byte)0xb5,(byte)0x60,(byte)0xf8,
+      (byte)0x6a,(byte)0xdf,(byte)0x11,(byte)0xe0,(byte)0x72,(byte)0x48,(byte)0x2e,(byte)0x35,(byte)0x81,
+      (byte)0x7c,(byte)0x82,(byte)0x4b,(byte)0x0a,(byte)0xc8,(byte)0x0b,(byte)0x3f,(byte)0xf5,(byte)0x9e,
+      (byte)0x74,(byte)0xe2,(byte)0x2b,(byte)0xe3,(byte)0xa3,(byte)0x77,(byte)0x68,(byte)0x8e,(byte)0x16,
+      (byte)0x82,(byte)0x52,(byte)0xf0,(byte)0x09,(byte)0x92,(byte)0x05,(byte)0x2c,(byte)0xc5,(byte)0x8e,
+      (byte)0x43,(byte)0x05,(byte)0xe4,(byte)0x17,(byte)0x93,(byte)0x09,(byte)0xc9,(byte)0x19,(byte)0x45,
+      (byte)0xde,(byte)0x4e,(byte)0x91,(byte)0x4c,(byte)0x82,(byte)0x92,(byte)0x09,(byte)0xd2,(byte)0xb1,
+      (byte)0x1a,(byte)0xc5,(byte)0x8e,(byte)0x9d,(byte)0x44,(byte)0xf3,(byte)0x3a,(byte)0x01,(byte)0x03,
+      (byte)0x08,(byte)0xf0,(byte)0x20,(byte)0x01,(byte)0xc2,(byte)0x84,(byte)0x73,(byte)0xc0,(byte)0x05,
+      (byte)0x21,(byte)0x99,(byte)0x90,(byte)0x5c,(byte)0x1a,(byte)0x10,(byte)0xce,(byte)0x6c,(byte)0x65,
+      (byte)0x4e,(byte)0xe7,(byte)0x6e,(byte)0xc0,(byte)0x83,(byte)0x84,(byte)0xf0,(byte)0xf8,(byte)0xe4,
+      (byte)0x13,(byte)0xb6,(byte)0x7a,(byte)0x0b,(byte)0xb9,(byte)0x18,(byte)0xd9,(byte)0x18,(byte)0xd9,
+      (byte)0x1a,(byte)0x72,(byte)0xe3,(byte)0x44,(byte)0x6d,(byte)0x87,(byte)0xa1,(byte)0x21,(byte)0x72,
+      (byte)0x21,(byte)0xb9,(byte)0x54,(byte)0x92,(byte)0xab,(byte)0xe3,(byte)0x27,(byte)0x9f,(byte)0x20,
+      (byte)0x17,(byte)0x23,(byte)0x37,(byte)0x86,(byte)0x6c,(byte)0x15,(byte)0x9f,(byte)0x56,(byte)0x90,
+      (byte)0x8b,(byte)0xc1,(byte)0x56,(byte)0x19,(byte)0x1c,(byte)0xae,(byte)0x70,(byte)0xf7,(byte)0x9d,
+      (byte)0x23,(byte)0x9e,(byte)0x9a,(byte)0x22,(byte)0xb5,(byte)0xfb,(byte)0xe9,(byte)0x09,(byte)0x5c,
+      (byte)0xd8,(byte)0x0e,(byte)0x84,(byte)0xe4,(byte)0x1a,(byte)0x48,(byte)0xde,(byte)0xe2,(byte)0xd3,
+      (byte)0x6f,(byte)0xc8,(byte)0xc6,(byte)0xc8,(byte)0xc5,(byte)0xc8,(byte)0x56,(byte)0x91,(byte)0x8d,
+      (byte)0x91,(byte)0xab,(byte)0x70,(byte)0xe3,(byte)0x65,(byte)0x85,(byte)0xa7,(byte)0xf5,(byte)0x22,
+      (byte)0x9b,(byte)0x36,(byte)0xae,(byte)0xa1,(byte)0x6d,(byte)0x6e,(byte)0x3b,(byte)0xb7,(byte)0x9f,
+      (byte)0x5f,(byte)0xe1,(byte)0xde,(byte)0xb3,(byte)0x91,(byte)0xf0,(byte)0x52,(byte)0x7f,(byte)0xe9,
+      (byte)0x54,(byte)0x40,(byte)0x2e,(byte)0x91,(byte)0x0c,(byte)0x0e,(byte)0xd9,(byte)0x1f,(byte)0xc8,
+      (byte)0x96,(byte)0x51,(byte)0xfa,(byte)0x1d,(byte)0xd9,(byte)0x32,(byte)0xb2,(byte)0x65,(byte)0x64,
+      (byte)0x2b,(byte)0x5c,(byte)0x7b,(byte)0x51,(byte)0x65,(byte)0x75,(byte)0x47,(byte)0x37,(byte)0x2e,
+      (byte)0x70,(byte)0x74,(byte)0x2f,(byte)0xdc,(byte)0x8a,(byte)0x33,(byte)0x29,(byte)0xbd,(byte)0xab,
+      (byte)0x36,(byte)0x90,(byte)0xd9,(byte)0x1b,(byte)0x90,(byte)0x51,(byte)0xe2,(byte)0x2b,(byte)0x76,
+      (byte)0xb2,(byte)0x1c,(byte)0xa7,(byte)0xe3,(byte)0x05,(byte)0x6f,(byte)0x27,(byte)0x8b,(byte)0xd8,
+      (byte)0xc6,(byte)0x7c,(byte)0x5c,(byte)0xd2,(byte)0x86,(byte)0x77,(byte)0xcb,(byte)0xf0,(byte)0x6e,
+      (byte)0x25,(byte)0xa3,(byte)0xb5,(byte)0x32,(byte)0xcd,(byte)0x66,(byte)0x16,(byte)0xdb,(byte)0x3b,
+      (byte)0xf7,(byte)0x91,(byte)0x3b,(byte)0xb0,(byte)0xf9,(byte)0x02,(byte)0xcb,(byte)0x5a,(byte)0xbb,
+      (byte)0xc8,(byte)0x44,(byte)0x21,(byte)0x19,(byte)0xd5,(byte)0x1b,(byte)0x27,(byte)0xdf,(byte)0x9c,
+      (byte)0xdf,(byte)0xb1,(byte)0x0e,(byte)0xb1,(byte)0x05,(byte)0x43,(byte)0x91,(byte)0xbf,(byte)0xd4,
+      (byte)0x6a,(byte)0x95,(byte)0xe8,(byte)0xf9,(byte)0xc8,(byte)0x7d,(byte)0x1e,(byte)0x8f,(byte)0x0c,
+      (byte)0x31,(byte)0xb0,(byte)0xf5,(byte)0x22,(byte)0xc7,(byte)0x6f,(byte)0xee,(byte)0x22,(byte)0x6a,
+      (byte)0x9a,(byte)0x41,(byte)0xa6,(byte)0x6e,(byte)0x24,(byte)0xf1,(byte)0x2f,(byte)0xbd,(byte)0xfd,
+      (byte)0xa5,(byte)0x63,(byte)0x6d,(byte)0x4b,(byte)0x66,(byte)0x1f,(byte)0xde,(byte)0xd0,(byte)0xd5,
+      (byte)0x47,(byte)0xfb,(byte)0x82,(byte)0x1e,(byte)0x86,(byte)0xbf,(byte)0x3c,(byte)0xe4,(byte)0xfe,
+      (byte)0x93,(byte)0x21,(byte)0x3e,(byte)0xbe,(byte)0x8d,(byte)0x4f,(byte)0x1b,(byte)0x49,(byte)0xfc,
+      (byte)0x8f,(byte)0xde,(byte)0xfe,(byte)0xd2,(byte)0x71,(byte)0x60,(byte)0x0f,(byte)0x50,(byte)0x04,
+      (byte)0xc6,(byte)0x80,(byte)0xb3,(byte)0x0f,(byte)0xce,(byte)0x8c,(byte)0x0c,(byte)0xfc,(byte)0x04,
+      (byte)0xff,(byte)0x73,(byte)0x2d,(byte)0xfb,(byte)0xb7,(byte)0xf0,(byte)0xeb,(byte)0x4d,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x49,(byte)0x45,(byte)0x4e,(byte)0x44,(byte)0xae,(byte)0x42,
+      (byte)0x60,(byte)0x82
+    };
+    // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' delete.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
+    final byte[] IMAGE_DELETE_DATA_ARRAY =
+    {
+      (byte)0x89,(byte)0x50,(byte)0x4e,(byte)0x47,(byte)0x0d,(byte)0x0a,(byte)0x1a,(byte)0x0a,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x0d,(byte)0x49,(byte)0x48,(byte)0x44,(byte)0x52,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x10,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x10,(byte)0x08,(byte)0x06,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x1f,(byte)0xf3,(byte)0xff,(byte)0x61,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x04,(byte)0x67,(byte)0x41,(byte)0x4d,(byte)0x41,(byte)0x00,(byte)0x00,(byte)0xaf,(byte)0xc8,
+      (byte)0x37,(byte)0x05,(byte)0x8a,(byte)0xe9,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x19,(byte)0x74,
+      (byte)0x45,(byte)0x58,(byte)0x74,(byte)0x53,(byte)0x6f,(byte)0x66,(byte)0x74,(byte)0x77,(byte)0x61,
+      (byte)0x72,(byte)0x65,(byte)0x00,(byte)0x41,(byte)0x64,(byte)0x6f,(byte)0x62,(byte)0x65,(byte)0x20,
+      (byte)0x49,(byte)0x6d,(byte)0x61,(byte)0x67,(byte)0x65,(byte)0x52,(byte)0x65,(byte)0x61,(byte)0x64,
+      (byte)0x79,(byte)0x71,(byte)0xc9,(byte)0x65,(byte)0x3c,(byte)0x00,(byte)0x00,(byte)0x02,(byte)0x5d,
+      (byte)0x49,(byte)0x44,(byte)0x41,(byte)0x54,(byte)0x38,(byte)0xcb,(byte)0xa5,(byte)0x93,(byte)0xfb,
+      (byte)0x4b,(byte)0x53,(byte)0x61,(byte)0x18,(byte)0xc7,(byte)0xfd,(byte)0x5b,(byte)0xb6,(byte)0x1f,
+      (byte)0xa2,(byte)0x04,(byte)0x89,(byte)0x6e,(byte)0x84,(byte)0x84,(byte)0x51,(byte)0x50,(byte)0x98,
+      (byte)0xf3,(byte)0x32,(byte)0x77,(byte)0xd6,(byte)0xda,(byte)0xdc,(byte)0xa6,(byte)0xce,(byte)0xb3,
+      (byte)0x4c,(byte)0x8f,(byte)0x5b,(byte)0x2c,(byte)0x62,(byte)0x69,(byte)0x8e,(byte)0x9d,(byte)0x61,
+      (byte)0x9a,(byte)0x41,(byte)0x8d,(byte)0xc5,(byte)0x5c,(byte)0xf8,(byte)0x43,(byte)0xa8,(byte)0xa5,
+      (byte)0x76,(byte)0xd5,(byte)0xca,(byte)0x5f,(byte)0x32,(byte)0x4d,(byte)0x6c,(byte)0x94,(byte)0x5a,
+      (byte)0x46,(byte)0x6a,(byte)0xd7,(byte)0xa1,(byte)0xe5,(byte)0xb1,(byte)0xf2,(byte)0xd2,(byte)0x4e,
+      (byte)0x4d,(byte)0x6a,(byte)0x6d,(byte)0x9e,(byte)0xb3,(byte)0x6b,(byte)0xca,(byte)0xb7,(byte)0xb9,
+      (byte)0x60,(byte)0x26,(byte)0x2e,(byte)0x23,(byte)0x7a,(byte)0xe1,(byte)0xfb,(byte)0xcb,(byte)0xcb,
+      (byte)0xfb,(byte)0xf9,(byte)0xbc,(byte)0x3c,(byte)0x0f,(byte)0xcf,(byte)0x93,(byte)0x02,(byte)0x20,
+      (byte)0xe5,(byte)0x7f,(byte)0xb2,(byte)0xe6,(byte)0x62,(byte)0x56,(byte)0xaf,(byte)0x17,(byte)0xce,
+      (byte)0x50,(byte)0x15,(byte)0xe6,(byte)0xf7,(byte)0x54,(byte)0x19,(byte)0x33,(byte)0xa5,(byte)0x25,
+      (byte)0xb9,(byte)0x49,(byte)0xad,(byte)0x86,(byte)0x7b,(byte)0x47,(byte)0xaa,(byte)0x99,(byte)0x71,
+      (byte)0x52,(byte)0x69,(byte)0x76,(byte)0x95,(byte)0xc8,(byte)0x85,(byte)0xeb,(byte)0x0a,(byte)0xe6,
+      (byte)0x74,(byte)0x7a,(byte)0xe2,(byte)0x23,(byte)0x45,(byte)0xb1,(byte)0xdf,(byte)0x1c,(byte)0x36,
+      (byte)0x84,(byte)0x07,(byte)0x9d,(byte)0x88,(byte)0xbc,(byte)0x19,(byte)0x45,(byte)0x64,(byte)0x64,
+      (byte)0x08,(byte)0xfc,(byte)0xdd,(byte)0x0e,(byte)0xcc,(byte)0x1a,(byte)0x4a,(byte)0xf1,(byte)0xaa,
+      (byte)0x90,(byte)0x60,(byte)0x9f,(byte)0xab,(byte)0xc5,(byte)0x44,(byte)0x52,(byte)0xc1,(byte)0x32,
+      (byte)0x3c,(byte)0x5d,(byte)0x4e,(byte)0xf1,(byte)0x0b,(byte)0xb7,(byte)0x3b,(byte)0xb0,(byte)0x34,
+      (byte)0xf5,(byte)0x16,(byte)0xd1,(byte)0xbe,(byte)0x3b,(byte)0x88,(byte)0xb6,(byte)0xdb,(byte)0x11,
+      (byte)0x6d,(byte)0x3e,(byte)0x87,(byte)0x1f,(byte)0x37,(byte)0x9b,(byte)0xb0,(byte)0x38,(byte)0xdc,
+      (byte)0x07,(byte)0x8f,(byte)0xc9,(byte)0x80,(byte)0x51,(byte)0x65,(byte)0x36,(byte)0xff,(byte)0x4c,
+      (byte)0x9e,(byte)0x49,(byte)0xac,(byte)0x12,(byte)0xcc,(byte)0xe8,(byte)0x74,(byte)0x82,(byte)0x18,
+      (byte)0xec,(byte)0xe6,(byte)0xae,(byte)0xb7,(byte)0x63,(byte)0x89,(byte)0x71,(byte)0x21,(byte)0x7a,
+      (byte)0xf1,(byte)0x0c,(byte)0x7c,(byte)0x76,(byte)0x0b,(byte)0xfc,(byte)0xb6,(byte)0x6a,(byte)0x84,
+      (byte)0x2f,(byte)0x58,(byte)0x10,(byte)0x69,(byte)0xa0,(byte)0x11,(byte)0xb6,(byte)0x9e,(byte)0x40,
+      (byte)0xf8,(byte)0xde,(byte)0x0d,(byte)0xcc,(byte)0x1d,(byte)0x25,(byte)0x31,(byte)0x7c,(byte)0x68,
+      (byte)0x9f,(byte)0xfb,(byte)0xb1,(byte)0x6c,(byte)0x8f,(byte)0x20,(byte)0x21,(byte)0x88,(byte)0xc1,
+      (byte)0xf4,(byte)0x7c,(byte)0xad,(byte)0x19,(byte)0x8b,(byte)0xae,(byte)0xb1,(byte)0xf8,(byte)0x8f,
+      (byte)0x21,(byte)0x07,(byte)0x0d,(byte)0xef,(byte)0x59,(byte)0x23,(byte)0x82,(byte)0x75,(byte)0xba,
+      (byte)0x55,(byte)0xe1,(byte)0x4e,(byte)0x92,(byte)0x08,(byte)0x77,(byte)0x5d,(byte)0xc1,(byte)0xcb,
+      (byte)0xbc,(byte)0x0c,(byte)0x0c,(byte)0x48,(byte)0x33,(byte)0xe8,(byte)0x84,(byte)0xe0,(byte)0x03,
+      (byte)0x75,(byte)0x84,(byte)0x09,(byte)0x74,(byte)0x5d,(byte)0x45,(byte)0xb4,(byte)0xb3,(byte)0x19,
+      (byte)0x3e,(byte)0x6b,(byte)0x25,(byte)0xbe,(byte)0x16,(byte)0x49,(byte)0x93,(byte)0x66,(byte)0xa1,
+      (byte)0x92,(byte)0x04,(byte)0x6f,(byte)0xab,(byte)0x81,(byte)0xc7,(byte)0x52,(byte)0x85,(byte)0x87,
+      (byte)0x44,(byte)0x3a,(byte)0x93,(byte)0x10,(byte)0x30,(byte)0xe5,(byte)0xda,(byte)0x60,(byte)0xe4,
+      (byte)0x7e,(byte)0x17,(byte)0xa2,(byte)0x0e,(byte)0x0b,(byte)0x7c,(byte)0xa7,(byte)0x0d,(byte)0xf8,
+      (byte)0xd3,(byte)0xf1,(byte)0x28,(byte)0x72,(byte)0xe0,(byte)0xa5,(byte)0x0a,(byte)0xe1,(byte)0x6f,
+      (byte)0x6e,(byte)0x84,(byte)0x33,(byte)0x6f,(byte)0x47,(byte)0x30,(byte)0x21,(byte)0x98,(byte)0x24,
+      (byte)0x8b,(byte)0x82,(byte)0xa1,(byte)0xce,(byte)0x56,(byte)0x84,(byte)0xeb,(byte)0x0d,(byte)0x08,
+      (byte)0x9e,(byte)0x2a,(byte)0x5b,(byte)0x57,(byte)0x30,(byte)0x5f,(byte)0xaa,(byte)0x82,(byte)0xbf,
+      (byte)0xa9,(byte)0x11,(byte)0xfd,(byte)0xe2,(byte)0x2d,(byte)0x2b,(byte)0x82,(byte)0x89,(byte)0x12,
+      (byte)0x15,(byte)0xe3,(byte)0xb5,(byte)0xd6,(byte)0x20,(byte)0x64,(byte)0xa7,(byte)0xc1,(byte)0x1d,
+      (byte)0x57,(byte)0xc7,(byte)0x1f,(byte)0x26,(byte)0x8d,(byte)0x32,(byte)0x0f,(byte)0xbe,(byte)0x5a,
+      (byte)0x13,(byte)0x66,(byte)0x4d,(byte)0x46,(byte)0xf4,(byte)0x89,(byte)0xd2,(byte)0x56,(byte)0x4a,
+      (byte)0x70,(byte)0x15,(byte)0xcb,(byte)0x69,(byte)0x46,(byte)0x26,(byte)0x42,(byte)0xb0,(byte)0xb3,
+      (byte)0x0d,(byte)0x3e,(byte)0xad,(byte)0x0c,(byte)0xde,(byte)0x52,(byte)0xc9,(byte)0x1a,(byte)0x98,
+      (byte)0x95,(byte)0x67,(byte)0x83,(byte)0x2d,(byte)0x90,(byte)0x20,(byte)0xd0,(byte)0x7e,(byte)0x09,
+      (byte)0x43,(byte)0xe2,(byte)0x6d,(byte)0xe8,(byte)0xcd,(byte)0xda,(byte)0xb4,(byte)0xd2,(byte)0xc4,
+      (byte)0xd7,(byte)0x45,(byte)0x52,(byte)0xc1,(byte)0x0b,(byte)0x0d,(byte)0xe1,(byte)0x9e,(byte)0xab,
+      (byte)0xd0,(byte)0x20,(byte)0x70,(byte)0xab,(byte)0x35,(byte)0xde,(byte)0xb0,(byte)0x79,(byte)0x95,
+      (byte)0xf8,(byte)0x17,(byte)0xa8,(byte)0xc8,(byte)0x05,(byte)0x2b,(byte)0x8b,(byte)0xc1,(byte)0x32,
+      (byte)0x31,(byte)0xf8,(byte)0xb6,(byte)0x16,(byte)0x8c,(byte)0x17,(byte)0x4b,(byte)0x97,(byte)0x61,
+      (byte)0x77,(byte)0xb7,(byte)0x68,(byte)0xa3,(byte)0x60,(byte)0xd5,(byte)0x20,(byte)0x8d,(byte)0x15,
+      (byte)0xe4,(byte)0x10,(byte)0x23,(byte)0x8a,(byte)0x03,(byte)0xfc,(byte)0xf4,(byte)0x61,(byte)0x15,
+      (byte)0x02,(byte)0xd7,(byte)0x5a,(byte)0xf1,(byte)0xbd,(byte)0x9e,(byte)0x86,(byte)0x87,(byte)0x54,
+      (byte)0xe2,(byte)0xb3,(byte)0x5a,(byte)0x01,(byte)0x6f,(byte)0x9d,(byte)0x19,(byte)0xfc,(byte)0xe5,
+      (byte)0x16,(byte)0x4c,(byte)0xa8,(byte)0xf3,(byte)0xd1,(byte)0x93,(byte)0x95,(byte)0xca,(byte)0xc7,
+      (byte)0x60,(byte)0x22,(byte)0xe9,(byte)0x28,(byte)0x3f,(byte)0x95,(byte)0xef,(byte)0x27,(byte)0x9e,
+      (byte)0x1c,(byte)0xdc,(byte)0xcb,(byte)0x8e,(byte)0x4a,(byte)0x76,(byte)0xe1,(byte)0x4b,(byte)0xb5,
+      (byte)0x11,(byte)0xde,(byte)0x86,(byte)0xf3,(byte)0xf1,(byte)0x7c,(byte)0xaa,(byte)0x3a,(byte)0x86,
+      (byte)0x47,(byte)0x39,(byte)0x5b,(byte)0x97,(byte)0x61,(byte)0xf6,(byte)0x77,(byte)0x38,(byte)0xe9,
+      (byte)0x32,(byte)0x0d,(byte)0x4a,(byte)0x77,(byte)0x0b,(byte)0x07,(byte)0xc4,(byte)0xe9,(byte)0x66,
+      (byte)0x27,(byte)0xb1,(byte)0x93,(byte)0x79,(byte)0x90,(byte)0xbf,(byte)0x9d,(byte)0xeb,(byte)0x17,
+      (byte)0x6d,(byte)0xe6,(byte)0x7a,(byte)0x73,(byte)0xd3,(byte)0x98,(byte)0x9e,(byte)0xec,(byte)0x54,
+      (byte)0x73,(byte)0x77,(byte)0xe6,(byte)0x06,(byte)0xe1,(byte)0x5f,(byte)0xb7,(byte)0xf1,(byte)0x5f,
+      (byte)0xf3,(byte)0x13,(byte)0x1d,(byte)0xd2,(byte)0xce,(byte)0xb9,(byte)0x49,(byte)0x72,(byte)0x1b,
+      (byte)0xfe,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x49,(byte)0x45,(byte)0x4e,(byte)0x44,
+      (byte)0xae,(byte)0x42,(byte)0x60,(byte)0x82
+    };
 
     String      result;
     Pane        pane;
@@ -4558,12 +4753,24 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      // load images
+      // init images
       final Image IMAGE_FOLDER_UP;
+      final Image IMAGE_FOLDER_NEW;
+      final Image IMAGE_DELETE;
       try
       {
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(IMAGE_FOLDER_UP_DATA_ARRAY);
+        ByteArrayInputStream inputStream;
+
+        inputStream = new ByteArrayInputStream(IMAGE_FOLDER_UP_DATA_ARRAY);
         IMAGE_FOLDER_UP = new Image(parentShell.getDisplay(),new ImageData(inputStream));
+        inputStream.close();
+
+        inputStream = new ByteArrayInputStream(IMAGE_FOLDER_NEW_DATA_ARRAY);
+        IMAGE_FOLDER_NEW = new Image(parentShell.getDisplay(),new ImageData(inputStream));
+        inputStream.close();
+
+        inputStream = new ByteArrayInputStream(IMAGE_DELETE_DATA_ARRAY);
+        IMAGE_DELETE = new Image(parentShell.getDisplay(),new ImageData(inputStream));
         inputStream.close();
       }
       catch (Exception exception)
@@ -4580,6 +4787,8 @@ class Dialogs
 
       final Text   widgetPath;
       final Button widgetFolderUp;
+      final Button widgetFolderNew;
+      final Button widgetDelete;
       final List   widgetShortcutList;
       final Table  widgetFileList;
       final Combo  widgetFilter;
@@ -4594,7 +4803,7 @@ class Dialogs
 
       // path
       composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0},2));
       composite.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.WE));
       {
         label = new Label(composite,SWT.NONE);
@@ -4605,8 +4814,19 @@ class Dialogs
         Widgets.layout(widgetPath,0,1,TableLayoutData.WE);
 
         widgetFolderUp = new Button(composite,SWT.PUSH);
+        widgetFolderUp.setToolTipText(Dialogs.tr("Goto parent folder."));
         widgetFolderUp.setImage(IMAGE_FOLDER_UP);
         Widgets.layout(widgetFolderUp,0,2,TableLayoutData.E);
+
+        widgetFolderNew = new Button(composite,SWT.PUSH);
+        widgetFolderNew.setToolTipText(Dialogs.tr("Create new folder."));
+        widgetFolderNew.setImage(IMAGE_FOLDER_NEW);
+        Widgets.layout(widgetFolderNew,0,3,TableLayoutData.E);
+
+        widgetDelete = new Button(composite,SWT.PUSH);
+        widgetDelete.setToolTipText(Dialogs.tr("Delete file or directory."));
+        widgetDelete.setImage(IMAGE_DELETE);
+        Widgets.layout(widgetDelete,0,4,TableLayoutData.E);
       }
       row1++;
 
@@ -4827,8 +5047,10 @@ class Dialogs
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
+          T file = (T)widgetPath.getData();
+
           updater.updateFileList(widgetFileList,
-                                 (T)widgetPath.getData(),
+                                 file,
                                  (widgetName != null) ? widgetName.getText() : null
                                 );
           Widgets.setFocus(widgetFilter);
@@ -4859,7 +5081,7 @@ class Dialogs
 
             // update list
             updater.updateFileList(widgetFileList,
-                                   (T)widgetPath.getData(),
+                                   parentFile,
                                    (widgetName != null) ? widgetName.getText() : null
                                   );
 
@@ -4872,6 +5094,101 @@ class Dialogs
           }
         }
       });
+      widgetFolderNew.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          T file = (T)widgetPath.getData();
+
+          String newSubDirectory = Dialogs.string(parentShell,
+                                                  Dialogs.tr("New folder"),
+                                                  Dialogs.tr("Path")+":",
+                                                  "",
+                                                  Dialogs.tr("Create")
+                                                 );
+          if (newSubDirectory != null)
+          {
+            try
+            {
+              T newDirectory = listDirectory.newFileInstance(widgetPath.getText(),newSubDirectory);
+
+              listDirectory.mkdir(newDirectory);
+
+              updater.updateFileList(widgetFileList,
+                                     file,
+                                     newSubDirectory
+                                    );
+            }
+            catch (Exception exception)
+            {
+              Dialogs.error(parentShell,
+                            Dialogs.tr("Cannot create new folder\n\n''{0}''\n\n(error: {1})!",
+                                       newSubDirectory,
+                                       exception.getMessage()
+                                      )
+                           );
+            }
+          }
+        }
+      });
+      widgetDelete.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          T   file  = (T)widgetPath.getData();
+          int index = widgetFileList.getSelectionIndex();
+
+          T deleteFile;
+          if (index >= 0)
+          {
+            TableItem tableItem    = widgetFileList.getItem(index);
+            T         selectedFile = (T)tableItem.getData();
+
+            deleteFile = listDirectory.newFileInstance(file.getAbsolutePath(),selectedFile.getName());
+          }
+          else
+          {
+            deleteFile = file;
+          }
+
+          if (Dialogs.confirm(parentShell,
+                              Dialogs.tr(deleteFile.isFile() ? "Delete file ''{0}''?" : "Delete directory ''{0}''?",
+                                         deleteFile.getAbsolutePath()
+                                        ),
+                              false
+                             )
+             )
+          {
+            try
+            {
+              listDirectory.delete(deleteFile);
+
+              updater.updateFileList(widgetFileList,
+                                     file
+                                    );
+            }
+            catch (Exception exception)
+            {
+              Dialogs.error(parentShell,
+                            Dialogs.tr("Cannot delete file\n\n''{0}''\n\n(error: {1})!",
+                                       deleteFile.getAbsolutePath(),
+                                       exception.getMessage()
+                                      )
+                           );
+            }
+          }
+        }
+      });
       widgetShortcutList.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -4881,6 +5198,7 @@ class Dialogs
           if (index >= 0)
           {
             T file = shortcutList.get(index);
+
             if      (listDirectory.isDirectory(file))
             {
               // set new path, clear name
@@ -5309,7 +5627,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getRoot();
+                  : listDirectory.getDefaultRoot();
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory);
   }
 
@@ -5356,7 +5674,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getRoot();
+                  : listDirectory.getDefaultRoot();
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,listDirectory);
   }
 
@@ -5399,7 +5717,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getRoot();
+                  : listDirectory.getDefaultRoot();
     return file(parentShell,type,title,oldFile,flags,listDirectory);
   }
 
@@ -5438,7 +5756,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getRoot();
+                  : listDirectory.getDefaultRoot();
     return file(parentShell,type,title,oldFile,listDirectory);
   }
 

@@ -1444,7 +1444,7 @@ public class BARControl
     }
   }
 
-  /** list remote directory
+  /** list local directory
    */
   public static ListDirectory<File> listDirectory = new ListDirectory<File>()
   {
@@ -1569,6 +1569,84 @@ public class BARControl
       }
 
       return file;
+    }
+
+    /** check if directory is root entry
+     * @param directory directory to check
+     * @return true iff is root entry
+     */
+    @Override
+    public boolean isRoot(File directory)
+    {
+      return directory.getAbsolutePath() == "/";
+    }
+
+    /** check if directory
+     * @param file file to check
+     * @return true if file is directory
+     */
+    @Override
+    public boolean isDirectory(File file)
+    {
+      return file.isDirectory();
+    }
+
+    /** check if file
+     * @param file file to check
+     * @return true if file is file
+     */
+    @Override
+    public boolean isFile(File file)
+    {
+      return file.isFile();
+    }
+
+    /** check if hidden
+     * @param file file to check
+     * @return true if file is hidden
+     */
+    @Override
+    public boolean isHidden(File file)
+    {
+      return file.isHidden();
+    }
+
+    /** check if exists
+     * @param file file to check
+     * @return true if file exists
+     */
+    @Override
+    public boolean exists(File file)
+    {
+      return file.exists();
+    }
+
+    /** make directory
+     * @param directory directory to create
+     * @return true if directory created
+     */
+    @Override
+    public void mkdir(File directory)
+      throws IOException
+    {
+      directory.mkdir();
+    }
+
+    /** delete file or directory
+     * @param file file or directory to delete
+     * @return true if file or directory deleted
+     */
+    @Override
+    public void delete(File file)
+      throws IOException
+    {
+      // do not delete root file
+      for (File root : getRoots())
+      {
+        if (root.compareTo(file) == 0) return;
+      }
+
+      file.delete();
     }
 
     private File files[];

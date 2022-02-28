@@ -7989,15 +7989,15 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 *            [jobUUID=<uuid>]
 *            name=<name>
 *          Result:
-*            fileType=FILE name=<absolute path> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=DIRECTORY name=<absolute pat> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
-*            fileType=LINK destinationFileType=<type> name=<absolute pat> dateTime=<time stamp> noDump=yes|no
-*            fileType=HARDLINK name=<absolute pat> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=DEVICE CHARACTER name=<absolute pat> dateTime=<time stamp> noDump=yes|no
-*            fileType=DEVICE BLOCK name=<absolute pat> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=FIFO name=<absolute pat> dateTime=<time stamp> noDump=yes|no
-*            fileType=SOCKET name=<absolute pat> dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<absolute pat> dateTime=<time stamp> noDump=yes|no
+*            fileType=FILE name=<absolute path> size=<n [bytes]> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=DIRECTORY name=<absolute pat> dateTime=<time stamp> hidden=<yes|no> noBackup=yes|no noDump=yes|no
+*            fileType=LINK destinationFileType=<type> name=<absolute pat> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=HARDLINK name=<absolute pat> size=<n [bytes]> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=DEVICE CHARACTER name=<absolute pat> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=DEVICE BLOCK name=<absolute pat> size=<n [bytes]> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=FIFO name=<absolute pat> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=SOCKET name=<absolute pat> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
+*            fileType=SPECIAL name=<absolute pat> dateTime=<time stamp> hidden=<yes|no> noDump=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -8080,10 +8080,11 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         {
           case FILE_TYPE_FILE:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
+                                "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" hidden=%y noDump=%y",
                                 name,
                                 fileInfo.size,
                                 fileInfo.timeModified,
+                                File_isHidden(name),
                                 File_hasAttributeNoDump(&fileInfo)
                                );
             break;
@@ -8091,9 +8092,10 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             // check if .nobackup exists
             noBackupExists = hasNoBackup(name);
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
+                                "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" hidden=%y noBackup=%y noDump=%y",
                                 name,
                                 fileInfo.timeModified,
+                                File_isHidden(name),
                                 noBackupExists,
                                 File_hasAttributeNoDump(&fileInfo)
                                );
@@ -8101,18 +8103,21 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
           case FILE_TYPE_LINK:
             destinationFileType = File_getRealType(name);
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" noDump=%y",
+                                "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" hidden=%y noDump=%y",
                                 File_fileTypeToString(destinationFileType,NULL),
                                 name,
                                 fileInfo.timeModified,
+                                File_isHidden(name),
                                 File_hasAttributeNoDump(&fileInfo)
                                );
             break;
           case FILE_TYPE_HARDLINK:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
+                                "fileType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" hidden=%y noDump=%y",
                                 name,
+                                fileInfo.size,
                                 fileInfo.timeModified,
+                                File_isHidden(name),
                                 File_hasAttributeNoDump(&fileInfo)
                                );
             break;
@@ -8121,42 +8126,47 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             {
               case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
                 ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
                 ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_SPECIAL_TYPE_FIFO:
                 ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
                 break;
               case FILE_SPECIAL_TYPE_SOCKET:
                 ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               default:
                 ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                    "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
@@ -8448,7 +8458,8 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get name, attribute
+  // get job UUID, name, attribute
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -8568,7 +8579,8 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get name, value
+  // get job UUID, name, value
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -8732,7 +8744,8 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get name, attribute
+  // get job UUID, name, attribute
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -8863,6 +8876,212 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
 
   // free resources
   String_delete(attribute);
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_fileMkdir
+* Purpose: create directory
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>|""
+*            name=<name>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
+  String         name;
+  const JobNode  *jobNode;
+  Errors         error;
+  String         noBackupFileName1,noBackupFileName2;
+  Errors         tmpError;
+  FileAttributes fileAttributes;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, name
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
+    return;
+  }
+
+//TODO: avoid long running lock
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    if (!String_isEmpty(jobUUID))
+    {
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(name);
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
+    }
+
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote create directory
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_DELETE name=%'S",
+                                           name
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // create directory
+      error = File_makeDirectory(name,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,TRUE);
+      if (error == ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"create directory '%S' fail",name);
+      }
+    }
+  }
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_fileDelete
+* Purpose: delete file
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>|""
+*            name=<name>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
+  String         name;
+  const JobNode  *jobNode;
+  Errors         error;
+  String         noBackupFileName1,noBackupFileName2;
+  Errors         tmpError;
+  FileAttributes fileAttributes;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, name
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
+    return;
+  }
+
+//TODO: avoid long running lock
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    if (!String_isEmpty(jobUUID))
+    {
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(name);
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
+    }
+
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote delete file/directory
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_DELETE name=%'S",
+                                           name
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // delete file/directory
+      error = File_delete(name,TRUE);
+      if (error == ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"delete file '%S' fail",name);
+      }
+    }
+  }
+
+  // free resources
   String_delete(name);
 }
 
@@ -19239,6 +19458,8 @@ SERVER_COMMANDS[] =
   { "FILE_ATTRIBUTE_GET",          serverCommand_fileAttributeGet,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "FILE_ATTRIBUTE_SET",          serverCommand_fileAttributeSet,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "FILE_ATTRIBUTE_CLEAR",        serverCommand_fileAttributeClear,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_MKDIR",                  serverCommand_fileMkdir,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_DELETE",                 serverCommand_fileDelete,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "DIRECTORY_INFO",              serverCommand_directoryInfo,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "TEST_SCRIPT",                 serverCommand_testScript,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
