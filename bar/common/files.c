@@ -3843,6 +3843,22 @@ bool File_isNetworkFileSystem(ConstString fileName)
   return File_isNetworkFileSystemCString(String_cString(fileName));
 }
 
+bool File_isHidden(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isHiddenCString(String_cString(fileName));
+}
+
+bool File_isHiddenCString(const char *fileName)
+{
+  assert(fileName != NULL);
+
+  return    !stringEquals(fileName,".")
+         && !stringEquals(fileName,"..")
+         && stringStartsWith(fileName,".");
+}
+
 bool File_isNetworkFileSystemCString(const char *fileName)
 {
   bool isNetworkFileSystem;

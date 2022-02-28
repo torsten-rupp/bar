@@ -1357,6 +1357,18 @@ bool File_isNetworkFileSystem(ConstString fileName);
 bool File_isNetworkFileSystemCString(const char *fileName);
 
 /***********************************************************************\
+* Name   : File_isHidden, File_isHiddenCString
+* Purpose: check if file or directory is hidden
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file/directory is hidden
+* Notes  : -
+\***********************************************************************/
+
+bool File_isHidden(ConstString fileName);
+bool File_isHiddenCString(const char *fileName);
+
+/***********************************************************************\
 * Name   : File_getInfo, File_getInfoCString
 * Purpose: get file info (type, time, permissions, owner, attributes)
 * Input  : fileInfo - file info variable
