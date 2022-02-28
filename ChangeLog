@@ -36,6 +36,8 @@
     done+error+skipped
   * BARControl: fixed closing tooltips
   * BARControl: fixed initial values for a new job
+  * BARControl: fixed goto parent directory in file
+    requester
 
 2020-09-27 0.21f
   * fixed auto-index of new archives

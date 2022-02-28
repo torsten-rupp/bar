@@ -3829,14 +3829,16 @@ throw new Error("NYI");
     private FileTypes fileType;
     private long      size;
     private long      dateTime;
+    private boolean   hiddenFlag;
 
     /** create remote file
      * @param absolutePath absolute path
      * @param fileType file type
      * @param size size [bytes]
      * @param dateTime last modified date/time
+     * @param hiddenFlag true iff hidden file
      */
-    public RemoteFile(String absolutePath, FileTypes fileType, long size, long dateTime)
+    public RemoteFile(String absolutePath, FileTypes fileType, long size, long dateTime, boolean hiddenFlag)
     {
       super(absolutePath);
       assert(   absolutePath.matches("^(?s)/.*")          // Unix
@@ -3847,6 +3849,18 @@ throw new Error("NYI");
       this.fileType     = fileType;
       this.size         = size;
       this.dateTime     = dateTime;
+      this.hiddenFlag   = hiddenFlag;
+    }
+
+    /** create remote file
+     * @param absolutePath absolute path
+     * @param fileType file type
+     * @param dateTime last modified date/time
+     * @param hiddenFlag true iff hidden file
+     */
+    public RemoteFile(String absolutePath, FileTypes fileType, long dateTime, boolean hiddenFlag)
+    {
+      this(absolutePath,fileType,0,dateTime,hiddenFlag);
     }
 
     /** create remote file
@@ -3856,7 +3870,17 @@ throw new Error("NYI");
      */
     public RemoteFile(String absolutePath, FileTypes fileType, long dateTime)
     {
-      this(absolutePath,fileType,0,dateTime);
+      this(absolutePath,fileType,dateTime,false);
+    }
+
+    /** create remote file
+     * @param absolutePath absolute path
+     * @param fileType file type
+     * @param hiddenFlag true iff hidden file
+     */
+    public RemoteFile(String absolutePath, FileTypes fileType, boolean hiddenFlag)
+    {
+      this(absolutePath,fileType,0,hiddenFlag);
     }
 
     /** create remote file
@@ -3865,7 +3889,17 @@ throw new Error("NYI");
      */
     public RemoteFile(String absolutePath, FileTypes fileType)
     {
-      this(absolutePath,fileType,0);
+      this(absolutePath,fileType,false);
+    }
+
+    /** create remote file
+     * @param absolutePath absolute path
+     * @param dateTime last modified date/time
+     * @param hiddenFlag true iff hidden file
+     */
+    public RemoteFile(String absolutePath, long dateTime, boolean hiddenFlag)
+    {
+      this(absolutePath,FileTypes.DIRECTORY,0,dateTime,hiddenFlag);
     }
 
     /** create remote file
@@ -3874,7 +3908,16 @@ throw new Error("NYI");
      */
     public RemoteFile(String absolutePath, long dateTime)
     {
-      this(absolutePath,FileTypes.DIRECTORY,0,dateTime);
+      this(absolutePath,FileTypes.DIRECTORY,dateTime,false);
+    }
+
+    /** create remote file
+     * @param absolutePath absolute path
+     * @param hiddenFlag true iff hidden file
+     */
+    public RemoteFile(String absolutePath, boolean hiddenFlag)
+    {
+      this(absolutePath,0,hiddenFlag);
     }
 
     /** create remote file
@@ -3882,7 +3925,7 @@ throw new Error("NYI");
      */
     public RemoteFile(String absolutePath)
     {
-      this(absolutePath,0);
+      this(absolutePath,false);
     }
 
     /** get absolute file
@@ -3913,9 +3956,13 @@ throw new Error("NYI");
       String path = absoluteFile.getPath();
 
       int i = path.lastIndexOf(BARServer.pathSeparator);
-      if (i >= 0)
+      if      (i >= 1)
       {
         return new RemoteFile(path.substring(0,i));
+      }
+      else if (i == 0)
+      {
+        return new RemoteFile(BARServer.pathSeparator);
       }
       else
       {
@@ -3965,16 +4012,7 @@ throw new Error("NYI");
     @Override
     public boolean isHidden()
     {
-      return getName().startsWith(".");
-    }
-
-    /** check if file exists
-     * @return always true
-     */
-    @Override
-    public boolean exists()
-    {
-      return true;
+      return hiddenFlag;
     }
 
     /** convert data to string
@@ -4011,9 +4049,10 @@ throw new Error("NYI");
     @Override
     public RemoteFile newFileInstance(String path, String name)
     {
-      FileTypes fileType = FileTypes.FILE;
-      long      size     = 0;
-      long      dateTime = 0;
+      FileTypes fileType   = FileTypes.FILE;
+      long      size       = 0;
+      long      dateTime   = 0;
+      boolean   hiddenFlag = false;
 
       // get name
       if (path != null)
@@ -4047,14 +4086,19 @@ throw new Error("NYI");
           default:
             break;
         }
-        dateTime = valueMap.getLong("dateTime");
+        dateTime   = valueMap.getLong   ("dateTime");
+        hiddenFlag = valueMap.getBoolean("hidden");
       }
-      catch (Exception exception)
+      catch (IOException exception)
+      {
+        // ignored
+      }
+      catch (BARException exception)
       {
         // ignored
       }
 
-      return new RemoteFile(name,fileType,size,dateTime);
+      return new RemoteFile(name,fileType,size,dateTime,hiddenFlag);
     }
 
     /** get parent file instance
@@ -4168,59 +4212,46 @@ throw new Error("NYI");
 
                                        try
                                        {
-                                         FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
+                                         FileTypes fileType   = valueMap.getEnum   ("fileType",FileTypes.class);
+                                         String    name       = valueMap.getString ("name"                    );
+                                         long      dateTime   = valueMap.getLong   ("dateTime"                );
+                                         boolean   hiddenFlag = valueMap.getBoolean("hidden",  false          );
+                                         boolean   noDumpFlag = valueMap.getBoolean("noDump",  false          );
                                          switch (fileType)
                                          {
                                            case FILE:
                                              {
-                                               String  name         = valueMap.getString ("name"         );
-                                               long    size         = valueMap.getLong   ("size"         );
-                                               long    dateTime     = valueMap.getLong   ("dateTime"     );
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
-                                               file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
+                                               long size = valueMap.getLong("size");
+
+                                               file = new RemoteFile(name,FileTypes.FILE,size,dateTime,hiddenFlag);
                                              }
                                              break;
                                            case DIRECTORY:
                                              {
-                                               String  name         = valueMap.getString ("name"          );
-                                               long    dateTime     = valueMap.getLong   ("dateTime"      );
                                                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
 
-                                               file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
+                                               file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime,hiddenFlag);
                                              }
                                              break;
                                            case LINK:
                                              {
-                                               String  name         = valueMap.getString ("name"    );
-                                               FileTypes destinationFileType = valueMap.getEnum("destinationFileType",FileTypes.class);
-                                               long    dateTime     = valueMap.getLong   ("dateTime");
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+                                               FileTypes destinationFileType = valueMap.getEnum   ("destinationFileType",FileTypes.class);
 
 //                                               file = new RemoteFile(name,FileTypes.LINK,dateTime);
-                                               file = new RemoteFile(name,destinationFileType,dateTime);
+                                               file = new RemoteFile(name,destinationFileType,dateTime,hiddenFlag);
                                              }
                                              break;
                                            case HARDLINK:
                                              {
-                                               String  name         = valueMap.getString ("name"    );
-                                               long    size         = valueMap.getLong   ("size"    );
-                                               long    dateTime     = valueMap.getLong   ("dateTime");
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+                                               long size = valueMap.getLong("size");
 
-                                               file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
+                                               file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime,hiddenFlag);
                                              }
                                              break;
                                            case SPECIAL:
                                              {
-                                               String  name         = valueMap.getString ("name"          );
-                                               long    size         = valueMap.getLong   ("size",    0L   );
-                                               long    dateTime     = valueMap.getLong   ("dateTime"      );
-                                               boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                                               file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
+                                               file = new RemoteFile(name,FileTypes.SPECIAL,dateTime,hiddenFlag);
                                              }
                                              break;
                                          }
@@ -4240,7 +4271,12 @@ throw new Error("NYI");
           iterator = fileList.listIterator();
           return true;
         }
-        catch (Exception exception)
+        catch (IOException exception)
+        {
+          iterator = null;
+          return false;
+        }
+        catch (BARException exception)
         {
           iterator = null;
           return false;
@@ -4263,6 +4299,105 @@ throw new Error("NYI");
     public RemoteFile getNext()
     {
       return iterator.hasNext() ? iterator.next() : null;
+    }
+
+    /** check if file is root entry
+     * @param file file check
+     * @return true iff is root entry
+     */
+    @Override
+    public boolean isRoot(RemoteFile file)
+    {
+// TODO:
+      return file.getAbsolutePath() == BARServer.pathSeparator;
+    }
+
+    /** check if directory
+     * @param file file to check
+     * @return true if file is directory
+     */
+    @Override
+    public boolean isDirectory(RemoteFile file)
+    {
+      return file.isDirectory();
+    }
+
+    /** check if file
+     * @param file file to check
+     * @return true if file is file
+     */
+    @Override
+    public boolean isFile(RemoteFile file)
+    {
+      return file.isFile();
+    }
+
+    /** check if hidden
+     * @param file file to check
+     * @return true if file is hidden
+     */
+    @Override
+    public boolean isHidden(RemoteFile file)
+    {
+      return file.isHidden();
+    }
+
+    /** check if exists
+     * @param file file to check
+     * @return true if file exists
+     */
+    @Override
+    public boolean exists(RemoteFile file)
+    {
+      return file.exists();
+    }
+
+    /** make directory
+     * @param directory directory to create
+     */
+    @Override
+    public void mkdir(RemoteFile directory)
+      throws IOException
+    {
+      try
+      {
+        BARServer.executeCommand(StringParser.format("FILE_MKDIR name=%'S",
+                                                     directory.getAbsolutePath()
+                                                    ),
+                                 0  // debugLevel
+                                );
+      }
+      catch (BARException exception)
+      {
+        throw new IOException(exception);
+      }
+    }
+
+    /** delete file or directory
+     * @param file file or directory to delete
+     */
+    @Override
+    public void delete(RemoteFile file)
+      throws IOException
+    {
+      // do not delete root file
+      for (RemoteFile root : getRoots())
+      {
+        if (root.compareTo(file) == 0) return;
+      }
+
+      try
+      {
+        BARServer.executeCommand(StringParser.format("FILE_DELETE name=%'S",
+                                                     file.getAbsolutePath()
+                                                    ),
+                                 0  // debugLevel
+                                );
+      }
+      catch (BARException exception)
+      {
+        throw new IOException(exception);
+      }
     }
 
     private ArrayList<RemoteFile> fileList = new ArrayList<RemoteFile>();
