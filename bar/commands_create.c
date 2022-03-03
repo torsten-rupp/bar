@@ -174,7 +174,7 @@ typedef struct
 {
   IndexId      uuidId;
   IndexId      entityId;
-  ArchiveTypes archiveType;
+//  ArchiveTypes archiveType;
   IndexId      storageId;
   String       fileName;                                          // intermediate archive file name
   uint64       fileSize;                                          // intermediate archive size [bytes]
@@ -4105,6 +4105,7 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
                                        );
     if (error == ERROR_NONE)
     {
+//fprintf(stderr,"%s:%d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
       switch (archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_NONE:
@@ -4216,18 +4217,15 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
           }
           break;
         case ARCHIVE_ENTRY_TYPE_META:
-          // just skip
+          error = Archive_skipNextEntry(&archiveHandle);
           break;
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-          // just skip
+          error = Archive_skipNextEntry(&archiveHandle);
           break;
         case ARCHIVE_ENTRY_TYPE_UNKNOWN:
           error = ERROR_UNKNOWN_CHUNK;
           break; /* not reached */
       }
-
-      // skip entry
-      error = Archive_skipNextEntry(&archiveHandle);
     }
   }
 
@@ -4238,6 +4236,85 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
 }
 
 /***********************************************************************\
+* Name   : archiveTest
+* Purpose: call back for simpel archive test
+* Input  : storageInfo          - storage info
+*          uuidId               - index UUID id
+*          jobUUID              - job UUID
+*          scheduleUUID         - schedule UUID
+*          entityId             - index entity id
+*          storageId            - index storage id
+*          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
+*                                 for single part
+*          intermediateFileName - intermediate archive file name
+*          intermediateFileSize - intermediate archive size [bytes]
+*          userData             - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors archiveTest(StorageInfo  *storageInfo,
+                         ConstString  jobUUID,
+                         ConstString  scheduleUUID,
+                         int          partNumber,
+                         ConstString  intermediateFileName,
+                         uint64       intermediateFileSize,
+                         void         *userData
+                        )
+{
+  CreateInfo    *createInfo = (CreateInfo*)userData;
+  Errors        error;
+  String        archiveName;
+
+  assert(storageInfo != NULL);
+  assert(!String_isEmpty(intermediateFileName));
+  assert(createInfo != NULL);
+
+  UNUSED_VARIABLE(jobUUID);
+  UNUSED_VARIABLE(scheduleUUID);
+
+  // test archive
+  if (storageInfo->jobOptions->testCreatedArchivesFlag)
+  {
+    // get archive file name
+    archiveName = String_new();
+    error = formatArchiveFileName(archiveName,
+                                  storageInfo->storageSpecifier.archiveName,
+                                  EXPAND_MACRO_MODE_STRING,
+                                  createInfo->archiveType,
+                                  createInfo->scheduleTitle,
+                                  createInfo->scheduleCustomText,
+                                  createInfo->createdDateTime,
+                                  partNumber
+                                 );
+    if (error != ERROR_NONE)
+    {
+      String_delete(archiveName);
+      return error;
+    }
+    DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
+
+    #ifndef NDEBUG
+      printInfo(1,"Test '%s'...",String_cString(intermediateFileName));
+    #else /* not NDEBUG */
+      printInfo(1,"Test '%s'...",String_cString(archiveName));
+    #endif /* NDEBUG */
+
+    error = simpleTestArchive(storageInfo,intermediateFileName);
+    if (error != ERROR_NONE)
+    {
+      printInfo(0,"FAIL!\n");
+      String_delete(archiveName);
+      return error;
+    }
+    printInfo(1,"OK (%"PRIu64" bytes)\n",intermediateFileSize);
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : archiveStore
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
@@ -4245,7 +4322,6 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
 *          jobUUID              - job UUID
 *          scheduleUUID         - schedule UUID
 *          entityId             - index entity id
-*          archiveType          - archive type
 *          storageId            - index storage id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
 *                                 for single part
@@ -4262,7 +4338,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
                           IndexId      entityId,
-                          ArchiveTypes archiveType,
                           IndexId      storageId,
                           int          partNumber,
                           ConstString  intermediateFileName,
@@ -4272,7 +4347,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
   Errors        error;
-  FileInfo      fileInfo;
   String        archiveName;
   StorageMsg    storageMsg;
 
@@ -4282,31 +4356,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
-
-// TODO: create separate test callback
-  // test archive
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-#if 0
-  if (storageInfo->jobOptions->testCreatedArchivesFlag)
-  {
-    error = simpleTestArchive(storageInfo,intermediateFileName);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-#else
-#ifndef NDEBUG
-if (globalOptions.debug.createArchiveErrors > 0) return ERROR_UNKNOWN;
-#endif
-#endif
-
-  // get file info
-  error = File_getInfo(&fileInfo,intermediateFileName);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
   // get archive file name
   archiveName = String_new();
@@ -4330,12 +4379,12 @@ if (globalOptions.debug.createArchiveErrors > 0) return ERROR_UNKNOWN;
   // send to storage thread
   storageMsg.uuidId      = uuidId;
   storageMsg.entityId    = entityId;
-  storageMsg.archiveType = archiveType;
+//  storageMsg.archiveType = archiveType;
   storageMsg.storageId   = storageId;
   storageMsg.fileName    = String_duplicate(intermediateFileName);
   storageMsg.fileSize    = intermediateFileSize;
   storageMsg.archiveName = archiveName;
-  storageInfoIncrement(createInfo,fileInfo.size);
+  storageInfoIncrement(createInfo,intermediateFileSize);
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
@@ -4347,7 +4396,7 @@ if (globalOptions.debug.createArchiveErrors > 0) return ERROR_UNKNOWN;
   // update status info
   STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
-    createInfo->statusInfo.storage.totalSize += fileInfo.size;
+    createInfo->statusInfo.storage.totalSize += intermediateFileSize;
   }
 
   return ERROR_NONE;
@@ -4915,7 +4964,7 @@ NULL, // masterIO
           {
             logMessage(logHandle,
                        LOG_TYPE_STORAGE,
-                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)",
+                       "Purging storage '%s', %.1f%s (%"PRIu64" bytes) fail (error: %s)",
                        String_cString(oldestStorageName),
                        BYTES_SHORT(oldestSize),
                        BYTES_UNIT(oldestSize),
@@ -4932,7 +4981,7 @@ NULL, // masterIO
         {
           logMessage(logHandle,
                      LOG_TYPE_STORAGE,
-                     "Purging storage index #%llu fail (error: %s)",
+                     "Purging storage index #%"PRIu64" fail (error: %s)",
                      oldestStorageId,
                      Error_getText(error)
                     );
@@ -4945,7 +4994,7 @@ NULL, // masterIO
         Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes",
+                   "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %"PRIu64" bytes",
                    BYTES_SHORT(maxStorageSize),
                    BYTES_UNIT(maxStorageSize),
                    String_cString(oldestStorageName),
@@ -5135,7 +5184,7 @@ NULL, // masterIO
           {
             logMessage(logHandle,
                        LOG_TYPE_STORAGE,
-                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)",
+                       "Purging storage '%s', %.1f%s (%"PRIu64" bytes) fail (error: %s)",
                        String_cString(oldestStorageName),
                        BYTES_SHORT(oldestSize),
                        BYTES_UNIT(oldestSize),
@@ -5152,7 +5201,7 @@ NULL, // masterIO
         {
           logMessage(logHandle,
                      LOG_TYPE_STORAGE,
-                     "Purging storage index #%llu fail (error: %s)",
+                     "Purging storage index #%"PRIu64" fail (error: %s)",
                      oldestStorageId,
                      Error_getText(error)
                     );
@@ -5165,7 +5214,7 @@ NULL, // masterIO
         Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes",
+                   "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %"PRIu64" bytes",
                    BYTES_SHORT(maxStorageSize),
                    BYTES_UNIT(maxStorageSize),
                    String_cString(oldestStorageName),
@@ -5832,10 +5881,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // done
-      printInfo(1,"OK (%llu bytes)\n",storageSize);
+      printInfo(1,"OK (%"PRIu64" bytes)\n",storageSize);
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
-                 "%s '%s' (%llu bytes)",
+                 "%s '%s' (%"PRIu64" bytes)",
                  appendFlag ? "Appended to" : "Stored",
                  String_cString(printableStorageName),
                  storageSize
@@ -6538,14 +6587,14 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
     if (!createInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%llu bytes%s%s)\n",
+      printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
                 fragmentSize,
                 s1,
                 s2
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added file '%s' (%llu bytes%s%s)",
+                 "Added file '%s' (%"PRIu64" bytes%s%s)",
                  String_cString(fileName),
                  fragmentSize,
                  s1,
@@ -6554,7 +6603,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
     else
     {
-      printInfo(1,"OK (%llu bytes%s%s, dry-run)\n",
+      printInfo(1,"OK (%"PRIu64" bytes%s%s, dry-run)\n",
                 fragmentSize,
                 s1,
                 s2
@@ -6572,7 +6621,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       }
     }
 
-    printInfo(1,"OK (%llu bytes, not stored)\n",
+    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
               fragmentSize
              );
   }
@@ -6669,7 +6718,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   if (deviceInfo->blockSize > bufferSize)
   {
     printInfo(1,"FAIL\n");
-    printError("Device block size %llu on '%s' is too big (max: %llu)",
+    printError("Device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")",
                deviceInfo->blockSize,
                String_cString(deviceName),
                bufferSize
@@ -6991,7 +7040,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     // output result
     if (!createInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%s, %llu bytes%s%s)\n",
+      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 s1,
@@ -6999,7 +7048,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added image '%s' (%s, %llu bytes%s%s)",
+                 "Added image '%s' (%s, %"PRIu64" bytes%s%s)",
                  String_cString(deviceName),
                  (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
@@ -7009,7 +7058,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
     else
     {
-      printInfo(1,"OK (%s, %llu bytes%s%s, dry-run)\n",
+      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s, dry-run)\n",
                 fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 s1,
@@ -7028,7 +7077,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
     }
 
-    printInfo(1,"OK (%s, %llu bytes, not stored)\n",
+    printInfo(1,"OK (%s, %"PRIu64" bytes, not stored)\n",
               fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
               fragmentSize
              );
@@ -7810,14 +7859,14 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // output result
     if (!createInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%llu bytes%s%s)\n",
+      printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
                 fragmentSize,
                 s1,
                 s2
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added hardlink '%s' (%llu bytes%s%s)",
+                 "Added hardlink '%s' (%"PRIu64" bytes%s%s)",
                  String_cString(StringList_first(fileNameList,NULL)),
                  fragmentSize,
                  s1,
@@ -7826,7 +7875,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
     else
     {
-      printInfo(1,"OK (%llu bytes%s%s, dry-run)\n",
+      printInfo(1,"OK (%"PRIu64" bytes%s%s, dry-run)\n",
                 fragmentSize,
                 s1,
                 s2
@@ -7844,7 +7893,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       }
     }
 
-    printInfo(1,"OK (%llu bytes, not stored)\n",
+    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
               fragmentSize
              );
   }
@@ -8587,6 +8636,7 @@ Errors Command_create(ServerIO                     *masterIO,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(archiveGetSize,&createInfo),
+                         CALLBACK_(archiveTest,&createInfo),
                          CALLBACK_(archiveStore,&createInfo),
                          CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle
@@ -8829,21 +8879,21 @@ Errors Command_create(ServerIO                     *masterIO,
   if (createInfo.failError == ERROR_NONE)
   {
     printInfo(1,
-              "%lu entries/%.1lf%s (%llu bytes) included\n",
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
               createInfo.statusInfo.done.count,
               BYTES_SHORT(createInfo.statusInfo.done.size),
               BYTES_UNIT(createInfo.statusInfo.done.size),
               createInfo.statusInfo.done.size
              );
     printInfo(2,
-              "%lu entries/%.1lf%s (%llu bytes) skipped\n",
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) skipped\n",
               createInfo.statusInfo.skipped.count,
               BYTES_SHORT(createInfo.statusInfo.skipped.size),
               BYTES_UNIT(createInfo.statusInfo.skipped.size),
               createInfo.statusInfo.skipped.size
              );
     printInfo(2,
-              "%lu entries/%.1lf%s (%llu bytes) with errors\n",
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) with errors\n",
               createInfo.statusInfo.error.count,
               BYTES_SHORT(createInfo.statusInfo.error.size),
               BYTES_UNIT(createInfo.statusInfo.error.size),
@@ -8851,7 +8901,7 @@ Errors Command_create(ServerIO                     *masterIO,
              );
     logMessage(logHandle,
                LOG_TYPE_ALWAYS,
-               "%lu entries/%.1lf%s (%llu bytes) included, %lu entries skipped, %lu entries with errors",
+               "%lu entries/%.1lf%s (%"PRIu64" bytes) included, %lu entries skipped, %lu entries with errors",
                createInfo.statusInfo.done.count,
                BYTES_SHORT(createInfo.statusInfo.done.size),
                BYTES_UNIT(createInfo.statusInfo.done.size),

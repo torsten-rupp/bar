@@ -2123,6 +2123,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
 CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&convertInfo),
+                         CALLBACK_(NULL,NULL),  // archiveTestFunction
                          CALLBACK_(archiveStore,convertInfo),
                          CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
                          convertInfo->logHandle
