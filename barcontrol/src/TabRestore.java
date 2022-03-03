@@ -9404,6 +9404,7 @@ Dprintf.dprintf("");
       long              totalEntrySize,totalEntryContentSize;
       String            restoreToDirectory;
       boolean           directoryContent;
+      boolean           sparse;
       boolean           skipVerifySignatures;
       RestoreEntryModes restoreEntryMode;
 
@@ -9416,6 +9417,7 @@ Dprintf.dprintf("");
         this.totalEntryContentSize = 0L;
         this.restoreToDirectory    = null;
         this.directoryContent      = false;
+        this.sparse                = false;
         this.skipVerifySignatures  = false;
         this.restoreEntryMode      = RestoreEntryModes.STOP;
       }
@@ -9444,6 +9446,7 @@ Dprintf.dprintf("");
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetDirectoryContent;
+    final Button widgetSparse;
     final Button widgetSkipVerifySignatures;
     final Combo  widgetRestoreEntryMode;
     final Button widgetRestore;
@@ -9603,13 +9606,17 @@ Dprintf.dprintf("");
         }
       });
 
+      widgetSparse = Widgets.newCheckbox(composite,BARControl.tr("Sparse files/hardlinks"),Settings.hasNormalRole());
+      widgetSparse.setToolTipText(BARControl.tr("Restore as sparse files/hardlinks."));
+      Widgets.layout(widgetSparse,5,0,TableLayoutData.W,0,2);
+
       widgetSkipVerifySignatures = Widgets.newCheckbox(composite,BARControl.tr("Skip verify signatures"),Settings.hasExpertRole());
       widgetSkipVerifySignatures.setToolTipText(BARControl.tr("Enable this checkbox when verification of signatures should be skipped."));
-      Widgets.layout(widgetSkipVerifySignatures,5,0,TableLayoutData.W,0,2);
+      Widgets.layout(widgetSkipVerifySignatures,6,0,TableLayoutData.W,0,2);
 
       subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
-      Widgets.layout(subComposite,6,0,TableLayoutData.WE,0,2);
+      Widgets.layout(subComposite,7,0,TableLayoutData.WE,0,2);
       {
         label = Widgets.newLabel(subComposite,BARControl.tr("Entry mode")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
@@ -9647,6 +9654,7 @@ Dprintf.dprintf("");
 
           data.restoreToDirectory   = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
           data.directoryContent     = widgetDirectoryContent.getSelection();
+          data.sparse               = widgetSparse.getSelection();
           data.skipVerifySignatures = widgetSkipVerifySignatures.getSelection();
           data.restoreEntryMode     = Widgets.getSelectedComboItem(widgetRestoreEntryMode,RestoreEntryModes.STOP);
 
@@ -10039,6 +10047,7 @@ Dprintf.dprintf("");
                                             indexIdSet,
                                             data.restoreToDirectory,
                                             data.directoryContent,
+                                            data.sparse,
                                             data.skipVerifySignatures,
                                             data.restoreEntryMode
                                            )
@@ -10047,6 +10056,7 @@ Dprintf.dprintf("");
                         IndexIdSet        indexIdSet,
                         String            restoreToDirectory,
                         Boolean           directoryContent,
+                        Boolean           sparse,
                         Boolean           skipVerifySignatures,
                         RestoreEntryModes restoreEntryMode
                        )
@@ -10085,16 +10095,18 @@ Dprintf.dprintf("");
             switch (restoreType)
             {
               case ARCHIVES:
-                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S skipVerifySignatures=%y restoreEntryMode=%s",
+                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S sparse=%y skipVerifySignatures=%y restoreEntryMode=%s",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
+                                              sparse,
                                               skipVerifySignatures,
                                               restoreEntryMode.toString()
                                              );
                 break;
               case ENTRIES:
-                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y skipVerifySignatures=%y restoreEntryMode=%s",
+                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y sparse=%y skipVerifySignatures=%y restoreEntryMode=%s",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
                                               directoryContent,
+                                              sparse,
                                               skipVerifySignatures,
                                               restoreEntryMode.toString()
                                              );

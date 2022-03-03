@@ -4103,7 +4103,6 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
                                         NULL,  // offset,
                                         ARCHIVE_FLAG_NONE
                                        );
-fprintf(stderr,"%s:%d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
     if (error == ERROR_NONE)
     {
       switch (archiveEntryType)
@@ -4231,10 +4230,9 @@ fprintf(stderr,"%s:%d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType
       error = Archive_skipNextEntry(&archiveHandle);
     }
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   // close archive
-  Archive_close(&archiveHandle);
+  (void)Archive_close(&archiveHandle);
 
   return error;
 }
@@ -4285,7 +4283,10 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
 
+// TODO: create separate test callback
   // test archive
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+#if 0
   if (storageInfo->jobOptions->testCreatedArchivesFlag)
   {
     error = simpleTestArchive(storageInfo,intermediateFileName);
@@ -4294,6 +4295,11 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
       return error;
     }
   }
+#else
+#ifndef NDEBUG
+if (globalOptions.debug.createArchiveErrors > 0) return ERROR_UNKNOWN;
+#endif
+#endif
 
   // get file info
   error = File_getInfo(&fileInfo,intermediateFileName);

@@ -89,9 +89,10 @@ typedef enum
 } FileModes;
 
 // additional file open flags
-#define FILE_STREAM        (1 << 16)
-#define FILE_OPEN_NO_CACHE (1 << 17)
-#define FILE_OPEN_NO_ATIME (1 << 18)
+#define FILE_SPARSE        (1 << 16)
+#define FILE_STREAM        (1 << 17)
+#define FILE_OPEN_NO_CACHE (1 << 18)
+#define FILE_OPEN_NO_ATIME (1 << 19)
 
 // special file descriptors
 #define FILE_DESCRIPTOR_STDIN  STDIN_FILENO

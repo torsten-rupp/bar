@@ -645,6 +645,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   String                    prefixFileName,postfixFileName;
   uint                      n;
 //            FileInfo                      localFileInfo;
+  FileModes                 fileMode;
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
@@ -767,7 +768,15 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               String_delete(prefixFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
-              // nothing to do
+              // truncate to 0-file
+              error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
+              if (error != ERROR_NONE)
+              {
+                Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                AutoFree_cleanup(&autoFreeList);
+                return error;
+              }
+              (void)File_close(&fileHandle);
               break;
             case RESTORE_ENTRY_MODE_SKIP_EXISTING:
               // skip
@@ -906,7 +915,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
       // open file
-      error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
+      fileMode = FILE_OPEN_WRITE;
+      if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
+      error = File_open(&fileHandle,destinationFileName,fileMode);
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
@@ -918,6 +929,22 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         return error;
       }
       AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
+
+      // set file length for sparse files
+      if (restoreInfo->jobOptions->sparseFlag)
+      {
+        error = File_truncate(&fileHandle,fileInfo.size);
+        if (error != ERROR_NONE)
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot create/write to file '%s' (error: %s)",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+      }
 
       // seek to fragment position
       error = File_seek(&fileHandle,fragmentOffset);
@@ -1229,6 +1256,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     UNKNOWN
   }                type;
   DeviceHandle     deviceHandle;
+  FileModes        fileMode;
   FileHandle       fileHandle;
   uint64           block;
   ulong            bufferBlockCount;
@@ -1352,7 +1380,18 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                 String_delete(prefixFileName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
-                // nothing to do
+                if (!File_isDevice(destinationDeviceName))
+                {
+                  // truncate to 0-file
+                  error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_CREATE);
+                  if (error != ERROR_NONE)
+                  {
+                    Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                    AutoFree_cleanup(&autoFreeList);
+                    return error;
+                  }
+                  (void)File_close(&fileHandle);
+                }
                 break;
               case RESTORE_ENTRY_MODE_SKIP_EXISTING:
                 // skip
@@ -1431,17 +1470,35 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         (void)File_setOwner(destinationDeviceName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
         // open file
-        error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_WRITE);
+        fileMode = FILE_OPEN_WRITE;
+        if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
+        error = File_open(&fileHandle,destinationDeviceName,fileMode);
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot open to file '%s' (error: %s)",
+          printError("Cannot create/write to file '%s' (error: %s)",
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
         }
         type = FILE;
         AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
+
+        // set file length for sparse files
+        if (restoreInfo->jobOptions->sparseFlag)
+        {
+          error = File_truncate(&fileHandle,deviceInfo.size);
+          if (error != ERROR_NONE)
+          {
+            printInfo(1,"FAIL!\n");
+            printError("Cannot create/write to file '%s' (error: %s)",
+                       String_cString(destinationDeviceName),
+                       Error_getText(error)
+                      );
+            AutoFree_cleanup(&autoFreeList);
+            return error;
+          }
+        }
       }
       if (error != ERROR_NONE)
       {
@@ -2318,6 +2375,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   uint                      n;
   const StringNode          *stringNode;
   String                    fileName;
+  FileModes                 fileMode;
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
@@ -2442,7 +2500,15 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 String_delete(prefixFileName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
-                // nothing to do
+                // truncate to 0-file
+                error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
+                if (error != ERROR_NONE)
+                {
+                  Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                  AutoFree_cleanup(&autoFreeList);
+                  return error;
+                }
+                (void)File_close(&fileHandle);
                 break;
               case RESTORE_ENTRY_MODE_SKIP_EXISTING:
                 // skip
@@ -2638,7 +2704,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
           // open file
-          error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
+          fileMode = FILE_OPEN_WRITE;
+          if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
+          error = File_open(&fileHandle,destinationFileName,fileMode);
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
@@ -2650,6 +2718,22 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             return error;
           }
           AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
+
+          // set file length for sparse files
+          if (restoreInfo->jobOptions->sparseFlag)
+          {
+            error = File_truncate(&fileHandle,fileInfo.size);
+            if (error != ERROR_NONE)
+            {
+              printInfo(1,"FAIL!\n");
+              printError("Cannot create/write to file '%s' (error: %s)",
+                         String_cString(destinationFileName),
+                         Error_getText(error)
+                        );
+              AutoFree_cleanup(&autoFreeList);
+              return error;
+            }
+          }
 
           // seek to fragment position
           error = File_seek(&fileHandle,fragmentOffset);
