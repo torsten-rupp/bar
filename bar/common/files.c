@@ -410,7 +410,7 @@ LOCAL void fileCheckValid(const char       *fileName,
   pthread_mutex_unlock(&debugFileLock);
 
   // Note: real file index may be different, because of buffer in stream object
-  // assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+  // assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
 }
 #endif /* NDEBUG */
 
@@ -461,14 +461,14 @@ LOCAL Errors initFileHandle(const char *__fileName__,
         return getLastError(ERROR_CODE_CREATE_FILE,fileName);
       }
 
-      // truncate and seek to start
+      // seek to start and truncate
       if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        if (FTRUNCATE(fileDescriptor,0) != 0)
+        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
         {
           return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
-        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        if (FTRUNCATE(fileDescriptor,0) != 0)
         {
           return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
@@ -573,8 +573,8 @@ LOCAL Errors initFileHandle(const char *__fileName__,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  fileHandle->name = String_newCString(fileName);;
-  fileHandle->mode = fileMode;
+  fileHandle->name        = String_newCString(fileName);;
+  fileHandle->mode        = fileMode;
   #ifndef NDEBUG
     fileHandle->deleteOnCloseFlag = FALSE;
   #endif /* not NDEBUG */
@@ -2077,7 +2077,7 @@ Errors __File_openCString(const char *__fileName__,
       if (error != ERROR_NONE)
       {
         #ifndef HAVE_O_NOATIME
-          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+          if (IS_SET(fileHandle->mode,FILE_OPEN_NO_ATIME))
           {
             (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
           }
@@ -2262,13 +2262,14 @@ Errors __File_close(const char *__fileName__,
   error = ERROR_NONE;
 
   // free caches if requested
-  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  if (IS_SET(fileHandle->mode,FILE_OPEN_NO_CACHE))
   {
     (void)File_dropCaches(fileHandle,0LL,0LL,FALSE);
   }
 
+  // restore access time if no-atime is not not supported
   #ifndef HAVE_O_NOATIME
-    if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+    if (IS_SET(fileHandle->mode,FILE_OPEN_NO_ATIME))
     {
       if (!setAccessTime(fileHandle->handle,&fileHandle->atime))
       {
@@ -2277,15 +2278,18 @@ Errors __File_close(const char *__fileName__,
     }
   #endif /* not HAVE_O_NOATIME */
 
-  // done stream
-  #ifdef NDEBUG
-    error = doneFileHandle(fileHandle);
-  #else /* not NDEBUG */
-    error = doneFileHandle(__fileName__,
-                           __lineNb__,
-                           fileHandle
-                          );
-  #endif /* NDEBUG */
+  // close file
+  if (error == ERROR_NONE)
+  {
+    #ifdef NDEBUG
+      error = doneFileHandle(fileHandle);
+    #else /* not NDEBUG */
+      error = doneFileHandle(__fileName__,
+                             __lineNb__,
+                             fileHandle
+                            );
+    #endif /* NDEBUG */
+  }
 
   return error;
 }
@@ -2326,7 +2330,7 @@ Errors File_read(FileHandle *fileHandle,
   {
     // read as much data as possible
 //TODO: not valid
-//    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+//    assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     n = fread(buffer,1,bufferSize,fileHandle->file);
     if ((n <= 0) && (ferror(fileHandle->file) != 0))
     {
@@ -2334,7 +2338,7 @@ Errors File_read(FileHandle *fileHandle,
     }
     fileHandle->index += (uint64)n;
 //TODO: not valid when file changed in the meantime
-//    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+//    assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     (*bytesRead) = n;
   }
   else
@@ -2365,7 +2369,7 @@ Errors File_read(FileHandle *fileHandle,
   }
 
   // free caches if requested
-  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  if (IS_SET(fileHandle->mode,FILE_OPEN_NO_CACHE))
   {
     (void)File_dropCaches(fileHandle,0LL,fileHandle->index,FALSE);
   }
@@ -2378,17 +2382,56 @@ Errors File_write(FileHandle *fileHandle,
                   ulong      bufferLength
                  )
 {
-  ssize_t n;
+  ssize_t    n;
+  const byte *data;
+  ssize_t    m;
+
 
   FILE_CHECK_VALID(fileHandle);
   assert(buffer != NULL);
 
-  n = fwrite(buffer,1,bufferLength,fileHandle->file);
+  if (IS_SET(fileHandle->mode,FILE_SPARSE))
+  {
+    // write sparse data
+    n    = 0;
+    data = (const byte*)buffer;
+    while (n < (ssize_t)bufferLength)
+    {
+      // seek over 0-bytes
+      m = 0;
+      while (((n+m) < (ssize_t)bufferLength) && (data[n+m] == 0))
+      {
+        m++;
+      }
+      if (FSEEK(fileHandle->file,(off_t)fileHandle->index+n+m,SEEK_SET) == -1)
+      {
+        break;
+      }
+      n += m;
+
+      // write non-0-bytes
+      m = 0;
+      while (((n+m) < (ssize_t)bufferLength) && (data[n+m] != 0))
+      {
+        m++;
+      }
+      if (fwrite(&data[n],1,m,fileHandle->file) != m)
+      {
+        break;
+      }
+      n += m;
+    }
+  }
+  else
+  {
+    // write all data
+    n = fwrite(buffer,1,bufferLength,fileHandle->file);
+  }
   if (n > 0)
   {
     fileHandle->index += (uint64)n;
     // Note: real file index may be different, because of buffer in stream object
-    // assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+    // assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   }
   if (n != (ssize_t)bufferLength)
@@ -2397,7 +2440,7 @@ Errors File_write(FileHandle *fileHandle,
   }
 
   // free caches if requested
-  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  if (IS_SET(fileHandle->mode,FILE_OPEN_NO_CACHE))
   {
     (void)File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
   }
@@ -2424,7 +2467,7 @@ Errors File_readLine(FileHandle *fileHandle,
       {
         fileHandle->index += 1LL;
 //TODO: not valid when file changed in the meantime
-//        assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+//        assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
         if (((char)ch != '\n') && ((char)ch != '\r'))
         {
           String_appendChar(line,ch);
@@ -2446,12 +2489,12 @@ Errors File_readLine(FileHandle *fileHandle,
       {
         fileHandle->index += 1LL;
 //TODO: not valid when file changed in the meantime
-//        assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+//        assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
         if (ch != '\n')
         {
           fileHandle->index -= 1LL;
 //TODO: not valid when file changed in the meantime
-//          assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+//          assert(IS_SET(fileHandle->mode,FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
           ungetc(ch,fileHandle->file);
         }
       }
@@ -2584,11 +2627,11 @@ Errors File_transfer(FileHandle *fileHandle,
   }
 
   // free caches if requested
-  if ((fromFileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  if (IS_SET(fromFileHandle->mode,FILE_OPEN_NO_CACHE))
   {
     (void)File_dropCaches(fromFileHandle,0LL,fromFileHandle->index,TRUE);
   }
-  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  if (IS_SET(fileHandle->mode,FILE_OPEN_NO_CACHE))
   {
     (void)File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
   }
@@ -2720,25 +2763,22 @@ Errors File_truncate(FileHandle *fileHandle,
 {
   FILE_CHECK_VALID(fileHandle);
 
-  if (size < fileHandle->size)
+  (void)fflush(fileHandle->file);
+  if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
   {
-    (void)fflush(fileHandle->file);
-    if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
+    return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+  }
+  if (fileHandle->index > size)
+  {
+    if (FSEEK(fileHandle->file,(off_t)size,SEEK_SET) == -1)
     {
       return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
     }
-    if (fileHandle->index > size)
-    {
-      if (FSEEK(fileHandle->file,(off_t)size,SEEK_SET) == -1)
-      {
-        return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
-      }
-      fileHandle->index = size;
+    fileHandle->index = size;
 //TODO: not valid when file changed in the meantime
 //      assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
-    }
-    fileHandle->size = size;
   }
+  fileHandle->size = size;
 
   return ERROR_NONE;
 }

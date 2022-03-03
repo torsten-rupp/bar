@@ -1822,6 +1822,7 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.archiveFileMode                                 = ARCHIVE_FILE_MODE_STOP;
   globalOptions.restoreEntryMode                                = RESTORE_ENTRY_MODE_STOP;
+  globalOptions.sparseFlag                                      = FALSE;
 
   globalOptions.testCreatedArchivesFlag                         = FALSE;
 
@@ -7537,6 +7538,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_SELECT       ("restore-entry-mode",                0,  1,2,globalOptions.restoreEntryMode,                      COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode","mode"                                                ),
   // Note: shortcut for --restore-entry-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-files",                   0,  0,2,&globalOptions.restoreEntryMode,                     cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
+  CMD_OPTION_BOOLEAN      ("sparse",                            0,  1,2,globalOptions.sparseFlag,                                                                                         "create sparse files"                                                      ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",                 0,  1,2,globalOptions.waitFirstVolumeFlag,                                                                                "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                      0  ,1,2,globalOptions.noSignatureFlag,                                                                                    "do not create signatures"                                                 ),
   CMD_OPTION_BOOLEAN      ("skip-verify-signatures",            0,  0,2,globalOptions.skipVerifySignaturesFlag,                                                                           "do not verify signatures of archives"                                     ),
@@ -8010,6 +8012,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",               &globalOptions.noFragmentsCheckFlag,-1,                        "yes|no"),
   CONFIG_VALUE_SELECT            ("archive-file-mode",                &globalOptions.archiveFileMode,-1,                             CONFIG_VALUE_ARCHIVE_FILE_MODES,"<mode>"),
   CONFIG_VALUE_SELECT            ("restore-entry-mode",               &globalOptions.restoreEntryMode,-1,                            CONFIG_VALUE_RESTORE_ENTRY_MODES,"<mode>"),
+  CONFIG_VALUE_BOOLEAN           ("sparse",                           &globalOptions.sparseFlag,-1,                                  "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("wait-first-volume",                &globalOptions.waitFirstVolumeFlag,-1,                         "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-signature",                     &globalOptions.noSignatureFlag,-1,                             "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &globalOptions.skipVerifySignaturesFlag,-1,                    "yes|no"),

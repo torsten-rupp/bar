@@ -795,6 +795,7 @@ TEST_FILE_NAMES_SIMPLE = \
   random512k.dat \
   zero-random512k.dat \
   zero.dat \
+  sparse.dat \
   readonly.dat \
   readonly512k.dat \
   unreadable.dat \
@@ -3039,6 +3040,10 @@ data/zero-random512k.dat:
 data/zero.dat:
 	$(INSTALL) -d $(@D)
 	$(RMF) $0; touch $@
+data/sparse.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k seek=0   count=64 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k seek=128 count=64 2>/dev/null
 data/readonly.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World >$@; $(CHMOD) 440 $@
@@ -3316,6 +3321,7 @@ test_file_operations_base: \
           -x gmon.out \
           data restore/data
 ifeq ($(PLATFORM),LINUX)
+	test `$(FIND) restore/data/sparse.dat -printf %k` = 192
 	$(READLINK) restore/data/link.dat 2>/dev/null $(LOG)
 	test `$(STAT) --format "%a" restore/data/file400.dat 2>/dev/null` = "400" $(LOG)
 	test `$(STAT) --format "%a" restore/data/file640.dat 2>/dev/null` = "640" $(LOG)
@@ -3325,6 +3331,8 @@ ifeq ($(PLATFORM),LINUX)
 	test `$(STAT) --format "%h" restore/data/hardlink1.dat 2>/dev/null` -eq 3 $(LOG)
 	test `$(STAT) --format "%h" restore/data/hardlink2.dat 2>/dev/null` -eq 3 $(LOG)
 endif
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) -\# data/sparse.dat --destination restore --overwrite-files --sparse $(LOG))
+	test `$(FIND) restore/data/sparse.dat -printf %k` = 128
 ifeq ($(PLATFORM),WINDOWS)
 endif
 	@$(call functionDoneTestFiles)
@@ -3463,7 +3471,8 @@ test_file_operations_destroyed: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
 	@#
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,1,1,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 --debug-create-archive-errors=1) $(LOG))
+#TODO: --debug-create-archive-errors=1000
+	$(call functionTestCheckExitcode,1,1,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 --debug-create-archive-errors=1000) $(LOG))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 

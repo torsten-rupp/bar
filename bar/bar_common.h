@@ -945,6 +945,7 @@ typedef struct
 
   ArchiveFileModes            archiveFileMode;                // archive files write mode
   RestoreEntryModes           restoreEntryMode;               // overwrite existing entry mode on restore
+  bool                        sparseFlag;                     // TRUE to create sparse files
 
   bool                        testCreatedArchivesFlag;        // TRUE to simple test archives after creation
 

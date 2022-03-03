@@ -1232,6 +1232,7 @@ run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1242,6 +1243,7 @@ rund runserverd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar-debug@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1252,6 +1254,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1265,6 +1268,7 @@ run_slave runserver_slave: bar@EXEEXT@
 	touch /tmp/pairing
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
@@ -1278,6 +1282,7 @@ rund_slave runserverd_slave: bar-debug@EXEEXT@
 	touch /tmp/pairing
 	nice ./bar-debug@EXEEXT@ --daemon -D \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
@@ -1290,6 +1295,7 @@ run_en runserver_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1300,6 +1306,7 @@ run_de runserver_de: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1310,6 +1317,7 @@ run_jp runserver_jp: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1322,6 +1330,7 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1336,6 +1345,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	$(INSTALL) -d jobs
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1350,6 +1360,7 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
 	$(INSTALL) -d jobs
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE2) --index-database=$(SERVER_DATABASE2) --index-database-keep-time=365days \
           --jobs-directory=jobs2 \
           --incremental-data-directory=/tmp \
@@ -1364,6 +1375,7 @@ rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(INSTALL) -d jobs
 	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1378,6 +1390,7 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(INSTALL) -d jobs
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1392,6 +1405,7 @@ rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 	$(INSTALL) -d jobs
 	./bar-gcov@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1406,6 +1420,7 @@ rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem
 	$(INSTALL) -d jobs
 	./bar-gprof@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1420,6 +1435,7 @@ rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-ce
 	$(INSTALL) -d jobs
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1434,6 +1450,7 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
 	$(INSTALL) -d jobs
 	$(VALGRIND) --tool=callgrind $(CALLGRIND_FLAGS) ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1448,6 +1465,7 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
 rundevd_wine:
 	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=C:/tmp \
@@ -1459,6 +1477,7 @@ rundevd_wine:
 rundevd_slave_wine:
 	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=C:/tmp \
@@ -1472,6 +1491,7 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
 	touch /tmp/pairing
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
@@ -1488,6 +1508,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
 	touch /tmp/pairing
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
@@ -1504,6 +1525,7 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	touch /tmp/pairing
 	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
@@ -1520,6 +1542,7 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
 	touch /tmp/pairing
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
+          --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
@@ -1535,6 +1558,7 @@ rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1547,6 +1571,7 @@ rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1559,6 +1584,7 @@ rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1571,6 +1597,7 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
@@ -1583,6 +1610,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
+          --pid-file=/tmp/bar.pid \
           --index-database=intermediate/index.db \
           --jobs-directory=intermediate/jobs \
           --incremental-data-directory=/tmp \

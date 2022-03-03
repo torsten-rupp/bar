@@ -803,7 +803,7 @@ LOCAL_INLINE bool isServerRunning(void)
 #endif
 
 /***********************************************************************\
-* Name   : getClientInfo
+* Name   : getClientInfoString
 * Purpose: get client info string
 * Input  : clientInfo - client info
 *          buffer     - info string variable
@@ -813,7 +813,7 @@ LOCAL_INLINE bool isServerRunning(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint bufferSize)
+LOCAL const char *getClientInfoString(ClientInfo *clientInfo, char *buffer, uint bufferSize)
 {
   assert(clientInfo != NULL);
   assert(buffer != NULL);
@@ -5486,7 +5486,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Authorization of client %s fail - invalid password",
-                   getClientInfo(clientInfo,s,sizeof(s))
+                   getClientInfoString(clientInfo,s,sizeof(s))
                   );
         error = ERROR_INVALID_PASSWORD_;
       }
@@ -5534,7 +5534,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_ALWAYS,
                        "Authorization of %s fail (error: %s)",
-                       getClientInfo(clientInfo,s,sizeof(s)),
+                       getClientInfoString(clientInfo,s,sizeof(s)),
                        Error_getText(error)
                       );
           }
@@ -5581,7 +5581,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                    "Authorization of master %s fail (error: %s)",
-                   getClientInfo(clientInfo,s,sizeof(s)),
+                   getClientInfoString(clientInfo,s,sizeof(s)),
                    Error_getText(error)
                   );
       }
@@ -5593,7 +5593,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Authorization of master %s fail (error: %s)",
-                 getClientInfo(clientInfo,s,sizeof(s)),
+                 getClientInfoString(clientInfo,s,sizeof(s)),
                  Error_getText(error)
                 );
     }
@@ -5614,7 +5614,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"authorization failure");
 //TODO: remove/replace
-printInfo(1,"Client authorization failure %s: %s \n",getClientInfo(clientInfo,s,sizeof(s)),Error_getText(error));
+printInfo(1,"Client authorization failure %s: %s \n",getClientInfoString(clientInfo,s,sizeof(s)),Error_getText(error));
     }
   }
 
@@ -7458,7 +7458,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Pause by %s for %dmin: %s",
-               getClientInfo(clientInfo,s,sizeof(s)),
+               getClientInfoString(clientInfo,s,sizeof(s)),
                pauseTime/60,
                String_cString(modeMask)
               );
@@ -7576,7 +7576,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Suspended by %s",
-               getClientInfo(clientInfo,s,sizeof(s))
+               getClientInfoString(clientInfo,s,sizeof(s))
               );
   }
 
@@ -7652,7 +7652,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Continued by %s",
-               getClientInfo(clientInfo,s,sizeof(s))
+               getClientInfoString(clientInfo,s,sizeof(s))
               );
   }
 
@@ -7699,7 +7699,7 @@ LOCAL void serverCommand_maintenance(ClientInfo *clientInfo, IndexHandle *indexH
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Set intermediate maintenance time by %s for %dmin",
-               getClientInfo(clientInfo,s,sizeof(s)),
+               getClientInfoString(clientInfo,s,sizeof(s)),
                maintenanceTime/60
               );
   }
@@ -9869,7 +9869,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
                   archiveType,
                   storageFlags,
                   Misc_getCurrentDateTime(),
-                  getClientInfo(clientInfo,s,sizeof(s))
+                  getClientInfoString(clientInfo,s,sizeof(s))
                  );
     }
   }
@@ -9927,7 +9927,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     if (Job_isActive(jobNode->jobState))
     {
       Job_abort(jobNode);
-      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,s,sizeof(s)));
+      String_setCString(jobNode->abortedByInfo,getClientInfoString(clientInfo,s,sizeof(s)));
     }
   }
 
@@ -13823,7 +13823,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
                   scheduleNode->archiveType,
                   scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
                   executeScheduleDateTime,
-                  getClientInfo(clientInfo,s,sizeof(s))
+                  getClientInfoString(clientInfo,s,sizeof(s))
                  );
     }
   }
@@ -17202,6 +17202,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 *            type=ARCHIVES|ENTRIES
 *            destination=<name>
 *            directoryContent=yes|no
+*            sparse=yes|no
+*            skipSignatures=yes|no
 *            restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING
 *          Result:
 \***********************************************************************/
@@ -17546,9 +17548,12 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   Types              type;
   bool               directoryContentFlag;
+  bool               sparseFlag;
+  bool               skipVerifySignaturesFlag;
   String             storageName;
   IndexId            entryId;
   String             entryName;
+  JobOptions         jobOptions;
   StringList         storageNameList;
   EntryList          includeEntryList;
   IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
@@ -17572,6 +17577,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
+  StringMap_getBool(argumentMap,"sparse",&sparseFlag,FALSE);
+  StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
   if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING");
@@ -17581,6 +17588,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // init variables
   storageName = String_new();
   entryName   = String_new();
+  Job_duplicateOptions(&jobOptions,&clientInfo->jobOptions);
 
   // get storage/entry list
   error = ERROR_NONE;
@@ -17747,6 +17755,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   {
     EntryList_done(&includeEntryList);
     StringList_done(&storageNameList);
+    Job_doneOptions(&jobOptions);
     String_delete(entryName);
     String_delete(storageName);
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
@@ -17754,7 +17763,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   // restore
-  getClientInfo(clientInfo,byName,sizeof(byName));
+  getClientInfoString(clientInfo,byName,sizeof(byName));
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
              "Start restore by %s: %d archives/%d entries",
@@ -17762,6 +17771,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
              List_count(&storageNameList),
              List_count(&includeEntryList)
             );
+  jobOptions.sparseFlag               = sparseFlag;
+  jobOptions.skipVerifySignaturesFlag = skipVerifySignaturesFlag;
   restoreCommandInfo.clientInfo  = clientInfo;
   restoreCommandInfo.id          = id;
   restoreCommandInfo.skipAllFlag = FALSE;
@@ -17769,7 +17780,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   error = Command_restore(&storageNameList,
                           &includeEntryList,
                           NULL,  // excludePatternList
-                          &clientInfo->jobOptions,
+                          &jobOptions,
                           STORAGE_FLAGS_NONE,
                           CALLBACK_(restoreUpdateStatusInfo,&restoreCommandInfo),
                           CALLBACK_(restoreHandleError,&restoreCommandInfo),
@@ -17799,6 +17810,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // free resources
   EntryList_done(&includeEntryList);
   StringList_done(&storageNameList);
+  Job_doneOptions(&jobOptions);
   String_delete(entryName);
   String_delete(storageName);
 }
@@ -20264,7 +20276,7 @@ LOCAL void purgeNetworkClient(ClientList *clientList)
     {
       // remove and disconnect client
       List_remove(clientList,clientNode);
-      getClientInfo(&clientNode->clientInfo,s,sizeof(s));
+      getClientInfoString(&clientNode->clientInfo,s,sizeof(s));
       deleteClient(clientNode);
 
       printInfo(1,"Disconnected inactive client %s\n",s);
@@ -21034,7 +21046,7 @@ Errors Server_socket(void)
                   {
                     printInfo(1,
                               "Connected %s (delayed %us)\n",
-                              getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
+                              getClientInfoString(&clientNode->clientInfo,s,sizeof(s)),
                               clientWaitRestTime
                              );
                   }
@@ -21042,7 +21054,7 @@ Errors Server_socket(void)
                   {
                     printInfo(1,
                               "Connected %s\n",
-                              getClientInfo(&clientNode->clientInfo,s,sizeof(s))
+                              getClientInfoString(&clientNode->clientInfo,s,sizeof(s))
                              );
                   }
                 }
@@ -21128,7 +21140,7 @@ Errors Server_socket(void)
                 {
                   printInfo(1,
                             "Connected %s (TLS/SSL, delayed %us)\n",
-                            getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
+                            getClientInfoString(&clientNode->clientInfo,s,sizeof(s)),
                             clientWaitRestTime
                            );
                 }
@@ -21136,7 +21148,7 @@ Errors Server_socket(void)
                 {
                   printInfo(1,
                             "Connected %s (TLS/SSL)\n",
-                            getClientInfo(&clientNode->clientInfo,s,sizeof(s))
+                            getClientInfoString(&clientNode->clientInfo,s,sizeof(s))
                            );
                 }
               }
@@ -21208,7 +21220,7 @@ Errors Server_socket(void)
                       incrementAuthorizationFail(disconnectClientNode);
                       break;
                   }
-                  getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s));
+                  getClientInfoString(&disconnectClientNode->clientInfo,s,sizeof(s));
 
                   // done client and free resources
                   deleteClient(disconnectClientNode);
@@ -21240,7 +21252,7 @@ Errors Server_socket(void)
                     incrementAuthorizationFail(disconnectClientNode);
                     break;
                 }
-                getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s));
+                getClientInfoString(&disconnectClientNode->clientInfo,s,sizeof(s));
 
                 // done client and free resources
                 deleteClient(disconnectClientNode);
@@ -21282,7 +21294,7 @@ Errors Server_socket(void)
               // increment authorization failure
               incrementAuthorizationFail(disconnectClientNode);
 
-              getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s));
+              getClientInfoString(&disconnectClientNode->clientInfo,s,sizeof(s));
 
               // done client and free resources
               deleteClient(disconnectClientNode);
