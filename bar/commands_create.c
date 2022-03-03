@@ -4296,7 +4296,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     }
   }
 #else
+#ifndef NDEBUG
 if (globalOptions.debug.createArchiveErrors > 0) return ERROR_UNKNOWN;
+#endif
 #endif
 
   // get file info

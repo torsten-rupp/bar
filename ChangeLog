@@ -1,4 +1,4 @@
-2020-11-30 0.22
+2022-03-xx 0.22
   * added option --save-configuration: format and
     save configuration file
   * added support for external index database engines
@@ -6,6 +6,9 @@
   * use threads pools for client connections+worker
     threads
   * added option --test-created-archives
+  * added option --sparse
+  * added begin/end time for continous schedules
+  * place pid file into /run by default
   * fixed reading cryption keys via config file
   * fixed CD/DVD/BD blank command: use
     "dvd+rw-format -force" to create medium in
@@ -32,12 +35,16 @@
   * upgrade SQLite 3.34
   * upgrade binutils 2.35
   * fix abort restore job if client connection is lost
+  * renamed bar-sqlite3 to bar-index and support MariaDB
+    and PostgreSQL
   * BARControl: fixed display of entry progress: count
     done+error+skipped
   * BARControl: fixed closing tooltips
   * BARControl: fixed initial values for a new job
   * BARControl: fixed goto parent directory in file
     requester
+  * BARControl: added create directory/delete file in
+    file requester
 
 2020-09-27 0.21f
   * fixed auto-index of new archives
