@@ -378,7 +378,8 @@ const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n);
 *          scheduleCustomText - schedule custom text
 *          jobName            - job name
 *          jobState           - job state
-*          storageFlags       - storage flags; see STORAGE_FLAG_...
+*          noStorage          - TRUE to skip create storages
+*          dryRun             - TRUE for dry-run only
 *          message            - message
 * Output : -
 * Return : -
@@ -391,7 +392,8 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText,
                     ConstString      jobName,
                     JobStates        jobState,
-                    StorageFlags     storageFlags,
+                    bool             noStorage,
+                    bool             dryRun,
                     ConstString      message
                    );
 

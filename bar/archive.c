@@ -2968,8 +2968,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 
       if (   (archiveHandle->indexHandle != NULL)
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
-          && !archiveHandle->storageInfo->storageFlags.noStorage
-          && !archiveHandle->storageInfo->storageFlags.dryRun
+          && !archiveHandle->storageInfo->jobOptions->noStorage
+          && !archiveHandle->storageInfo->jobOptions->dryRun
          )
       {
         // create storage index
@@ -3111,6 +3111,9 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
       }
     }
 
+    // get size
+    (*archiveSize) = Archive_getSize(archiveHandle);
+
     // close file
     (void)File_close(&archiveHandle->create.tmpFileHandle);
 
@@ -3125,7 +3128,6 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
       (*partNumber) = archiveHandle->partNumber;
       archiveHandle->partNumber++;
     }
-    (*archiveSize) = Archive_getSize(archiveHandle);
   }
 
   return ERROR_NONE;
@@ -3155,6 +3157,24 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
 
   assert(archiveHandle != NULL);
 
+  // call-back to test archive
+  if (archiveHandle->archiveTestFunction != NULL)
+  {
+    error = archiveHandle->archiveTestFunction(archiveHandle->storageInfo,
+                                                archiveHandle->jobUUID,
+                                                archiveHandle->scheduleUUID,
+                                                partNumber,
+                                                intermediateFileName,
+                                                archiveSize,
+                                                archiveHandle->archiveTestUserData
+                                               );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    DEBUG_TESTCODE() { return DEBUG_TESTCODE_ERROR(); }
+  }
+
   // call-back to store archive
   if (archiveHandle->archiveStoreFunction != NULL)
   {
@@ -3163,7 +3183,6 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
                                                 archiveHandle->jobUUID,
                                                 archiveHandle->scheduleUUID,
                                                 archiveHandle->entityId,
-                                                archiveHandle->archiveType,
                                                 storageId,
                                                 partNumber,
                                                 intermediateFileName,
@@ -3235,8 +3254,10 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     // split needed -> close created archive file
     if (archiveHandle->create.openFlag)
     {
-      // close archive file
+      // init variables
       intermediateFileName = String_new();
+
+      // close archive file
       error = closeArchiveFile(archiveHandle,
                                &storageId,
                                intermediateFileName,
@@ -3274,9 +3295,12 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
                               );
       if (error != ERROR_NONE)
       {
+        (void)File_delete(intermediateFileName,FALSE);
         String_delete(intermediateFileName);
         return error;
       }
+
+      // free resources
       String_delete(intermediateFileName);
     }
   }
@@ -3619,12 +3643,16 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
+        // init variables
+        intermediateFileName = String_new();
+
         // write file header (if not already written)
         if (!archiveEntryInfo->file.headerWrittenFlag)
         {
           error = writeFileChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -3642,6 +3670,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                     );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -3661,6 +3690,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                 );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -3670,6 +3700,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -3680,6 +3711,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -3700,6 +3732,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                     );
             if (error != ERROR_NONE)
             {
+              String_delete(intermediateFileName);
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
               return error;
             }
@@ -3715,12 +3748,14 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Compress_flush(&archiveEntryInfo->file.byteCompressInfo);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -3730,6 +3765,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -3738,18 +3774,21 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -3761,6 +3800,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -3771,11 +3811,12 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  );
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
 
-        // store into index database
+        // add to index database
         if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
         {
           // add file entry
@@ -3793,13 +3834,13 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                               );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
         }
 
         // close archive
-        intermediateFileName = String_new();
         error = closeArchiveFile(archiveEntryInfo->archiveHandle,
                                  &storageId,
                                  intermediateFileName,
@@ -3859,9 +3900,12 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = storeArchiveFile(archiveEntryInfo->archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
         if (error != ERROR_NONE)
         {
+          (void)File_delete(intermediateFileName,FALSE);
           String_delete(intermediateFileName);
           return error;
         }
+
+        // free resources
         String_delete(intermediateFileName);
       }
       else
@@ -4235,12 +4279,16 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
+        // init variables
+        intermediateFileName = String_new();
+
         // write image header (if not already written)
         if (!archiveEntryInfo->image.headerWrittenFlag)
         {
           error = writeImageChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4257,6 +4305,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                     );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4276,6 +4325,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                 );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4285,6 +4335,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4295,6 +4346,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           error = flushImageDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4315,6 +4367,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                     );
             if (error != ERROR_NONE)
             {
+              String_delete(intermediateFileName);
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
               return error;
             }
@@ -4330,12 +4383,14 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Compress_flush(&archiveEntryInfo->image.byteCompressInfo);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = flushImageDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4346,6 +4401,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4354,18 +4410,21 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = Chunk_close(&archiveEntryInfo->image.chunkImage.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4377,6 +4436,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4387,6 +4447,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  );
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4405,13 +4466,13 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
         }
 
         // close archive
-        intermediateFileName = String_new();
         error = closeArchiveFile(archiveEntryInfo->archiveHandle,
                                  &storageId,
                                  intermediateFileName,
@@ -4471,9 +4532,12 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = storeArchiveFile(archiveEntryInfo->archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
         if (error != ERROR_NONE)
         {
+          (void)File_delete(intermediateFileName,FALSE);
           String_delete(intermediateFileName);
           return error;
         }
+
+        // free resources
         String_delete(intermediateFileName);
       }
       else
@@ -4889,12 +4953,16 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
+        // init variables
+        intermediateFileName = String_new();
+
         // write hardlink header (if not already written)
         if (!archiveEntryInfo->hardLink.headerWrittenFlag)
         {
           error = writeHardLinkChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4911,6 +4979,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                     );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4930,6 +4999,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  );
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4939,6 +5009,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4949,6 +5020,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           error = flushHardLinkDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
@@ -4969,6 +5041,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                     );
             if (error != ERROR_NONE)
             {
+              String_delete(intermediateFileName);
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
               return error;
             }
@@ -4984,12 +5057,14 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Compress_flush(&archiveEntryInfo->hardLink.byteCompressInfo);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = flushHardLinkDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -4999,6 +5074,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -5007,18 +5083,21 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
         error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLink.info);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -5030,6 +5109,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -5040,6 +5120,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  );
         if (error != ERROR_NONE)
         {
+          String_delete(intermediateFileName);
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
@@ -5066,13 +5147,13 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           }
           if (error != ERROR_NONE)
           {
+            String_delete(intermediateFileName);
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
         }
 
         // close archive
-        intermediateFileName = String_new();
         error = closeArchiveFile(archiveEntryInfo->archiveHandle,
                                  &storageId,
                                  intermediateFileName,
@@ -5132,9 +5213,12 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         error = storeArchiveFile(archiveEntryInfo->archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
         if (error != ERROR_NONE)
         {
+          (void)File_delete(intermediateFileName,FALSE);
           String_delete(intermediateFileName);
           return error;
         }
+
+        // free resources
         String_delete(intermediateFileName);
       }
       else
@@ -5537,16 +5621,18 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
+                        bool                    dryRun,
                         uint64                  createdDateTime,
                         bool                    createMeta,
                         const Password          *password,
-                        StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
                         void                    *archiveDoneUserData,
                         ArchiveGetSizeFunction  archiveGetSizeFunction,
                         void                    *archiveGetSizeUserData,
+                        ArchiveTestFunction     archiveTestFunction,
+                        void                    *archiveTestUserData,
                         ArchiveStoreFunction    archiveStoreFunction,
                         void                    *archiveStoreUserData,
                         GetNamePasswordFunction getNamePasswordFunction,
@@ -5567,16 +5653,18 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
+                          bool                    dryRun,
                           uint64                  createdDateTime,
                           bool                    createMeta,
                           const Password          *password,
-                          StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
                           void                    *archiveDoneUserData,
                           ArchiveGetSizeFunction  archiveGetSizeFunction,
                           void                    *archiveGetSizeUserData,
+                          ArchiveTestFunction     archiveTestFunction,
+                          void                    *archiveTestUserData,
                           ArchiveStoreFunction    archiveStoreFunction,
                           void                    *archiveStoreUserData,
                           GetNamePasswordFunction getNamePasswordFunction,
@@ -5619,9 +5707,9 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
+  archiveHandle->dryRun                  = dryRun;
   archiveHandle->createdDateTime         = createdDateTime;
   archiveHandle->createMeta              = createMeta;
-  archiveHandle->storageFlags            = storageFlags;
 
   archiveHandle->archiveInitFunction     = archiveInitFunction;
   archiveHandle->archiveInitUserData     = archiveInitUserData;
@@ -5629,6 +5717,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveDoneUserData     = archiveDoneUserData;
   archiveHandle->archiveGetSizeFunction  = archiveGetSizeFunction;
   archiveHandle->archiveGetSizeUserData  = archiveGetSizeUserData;
+  archiveHandle->archiveTestFunction     = archiveTestFunction;
+  archiveHandle->archiveTestUserData     = archiveTestUserData;
   archiveHandle->archiveStoreFunction    = archiveStoreFunction;
   archiveHandle->archiveStoreUserData    = archiveStoreUserData;
   archiveHandle->getNamePasswordFunction = getNamePasswordFunction;
@@ -5894,12 +5984,13 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
-  archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
   archiveHandle->archiveDoneFunction     = NULL;
   archiveHandle->archiveDoneUserData     = NULL;
+  archiveHandle->archiveTestFunction     = NULL;
+  archiveHandle->archiveTestUserData     = NULL;
   archiveHandle->archiveStoreFunction    = NULL;
   archiveHandle->archiveStoreUserData    = NULL;
   archiveHandle->getNamePasswordFunction = getNamePasswordFunction;
@@ -6041,7 +6132,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
-  archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -6204,6 +6294,7 @@ UNUSED_VARIABLE(storageInfo);
                             );
     if (error != ERROR_NONE)
     {
+      (void)File_delete(intermediateFileName,FALSE);
       if (result == ERROR_NONE) result = error;
     }
   }
@@ -7520,7 +7611,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: directory entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -7760,7 +7851,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: link entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -8447,7 +8538,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: special entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -8654,7 +8745,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: meta entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -12699,7 +12790,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
@@ -12844,7 +12935,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
@@ -12990,7 +13081,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
@@ -13032,7 +13123,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
@@ -13077,7 +13168,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             StringNode *stringNode;
             String     fileName;
 
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
@@ -13226,7 +13317,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
@@ -13270,7 +13361,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_META:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
@@ -13546,7 +13637,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(elementSize > 0);
 
-  if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+  if (!archiveEntryInfo->archiveHandle->dryRun)
   {
     p            = (const byte*)buffer;
     writtenLength = 0L;
@@ -14394,7 +14485,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO->getSize != NULL);
 
   size = 0LL;
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     switch (archiveHandle->mode)
     {

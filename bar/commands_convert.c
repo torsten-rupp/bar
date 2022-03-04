@@ -85,9 +85,8 @@ typedef struct
 // storage message, send from convert threads -> storage thread
 typedef struct
 {
-  ArchiveTypes archiveType;
-  String       fileName;                                      // intermediate archive file name
-  uint64       fileSize;                                      // intermediate archive size [bytes]
+  String intermediateFileName;                                // intermediate archive file name
+  uint64 intermediateFileSize;                                // intermediate archive size [bytes]
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -136,7 +135,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(storageMsg->fileName);
+  String_delete(storageMsg->intermediateFileName);
 }
 
 /***********************************************************************\
@@ -239,7 +238,6 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 *          jobUUID              - job UUID id
 *          scheduleUUID         - schedule UUID id
 *          entityId             - index entity id
-*          archiveType          - archive type
 *          storageId            - index storage id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
 *                                 for single part
@@ -256,7 +254,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
                           IndexId      entityId,
-                          ArchiveTypes archiveType,
                           IndexId      storageId,
                           int          partNumber,
                           ConstString  intermediateFileName,
@@ -290,9 +287,8 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   }
 
   // send to storage thread
-  storageMsg.archiveType = archiveType;
-  storageMsg.fileName    = String_duplicate(intermediateFileName);
-  storageMsg.fileSize    = intermediateFileSize;
+  storageMsg.intermediateFileName = String_duplicate(intermediateFileName);
+  storageMsg.intermediateFileSize = intermediateFileSize;
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
   if (!MsgQueue_put(&convertInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
@@ -380,17 +376,17 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
-                   File_delete(storageMsg.fileName,FALSE);
+                   File_delete(storageMsg.intermediateFileName,FALSE);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
 
     // get file info
-    error = File_getInfo(&fileInfo,storageMsg.fileName);
+    error = File_getInfo(&fileInfo,storageMsg.intermediateFileName);
     if (error != ERROR_NONE)
     {
       printError("Cannot get information for file '%s' (error: %s)!",
-                 String_cString(storageMsg.fileName),
+                 String_cString(storageMsg.intermediateFileName),
                  Error_getText(error)
                 );
       convertInfo->failError = error;
@@ -405,16 +401,16 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
     // open file to store
     #ifndef NDEBUG
-      printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
+      printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.intermediateFileName),String_cString(printableStorageName));
     #else /* not NDEBUG */
       printInfo(1,"Store '%s'...",String_cString(printableStorageName));
     #endif /* NDEBUG */
-    error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
+    error = File_open(&fileHandle,storageMsg.intermediateFileName,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
       printError("Cannot open file '%s' (error: %s)!",
-                 String_cString(storageMsg.fileName),
+                 String_cString(storageMsg.intermediateFileName),
                  Error_getText(error)
                 );
       convertInfo->failError = error;
@@ -647,11 +643,11 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     printInfo(1,"OK\n");
 
     // delete temporary storage file
-    error = File_delete(storageMsg.fileName,FALSE);
+    error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot delete file '%s' (error: %s)!",
-                   String_cString(storageMsg.fileName),
+                   String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
     }
@@ -666,11 +662,11 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   while (MsgQueue_get(&convertInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
   {
     // delete temporary storage file
-    error = File_delete(storageMsg.fileName,FALSE);
+    error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot delete file '%s' (error: %s)!",
-                   String_cString(storageMsg.fileName),
+                   String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
     }
@@ -2000,7 +1996,6 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                        convertInfo->newJobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       STORAGE_FLAGS_NONE,
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(NULL,NULL),  // getPassword
                        CALLBACK_(NULL,NULL),  // requestVolume
@@ -2116,13 +2111,14 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 //TODO
                          NULL,  // deltaSourceList,
                          sourceArchiveHandle.archiveType,
+                         FALSE, // dryRun
                          Misc_getCurrentDateTime(),
                          FALSE,  // createMeta
                          &globalOptions.cryptNewPassword,
-                         STORAGE_FLAGS_NONE,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
-CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&convertInfo),
+                         CALLBACK_(NULL,NULL),  // archiveGetSizeFunction
+                         CALLBACK_(NULL,NULL),  // archiveTestFunction
                          CALLBACK_(archiveStore,convertInfo),
                          CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
                          convertInfo->logHandle

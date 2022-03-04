@@ -62,7 +62,6 @@ typedef struct
   const EntryList                 *includeEntryList;                    // list of included entries
   const PatternList               *excludePatternList;                  // list of exclude patterns
   JobOptions                      *jobOptions;
-  StorageFlags                    storageFlags;
 
   LogHandle                       *logHandle;                           // log handle
 
@@ -142,7 +141,6 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
 *          jobOptions                 - job options
-*          storageFlags               - storage flags
 *          storageNameCustomText      - storage name custome text or NULL
 *          updateStatusInfoFunction   - status info function call-back
 *                                       (can be NULL)
@@ -166,7 +164,6 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            const EntryList                 *includeEntryList,
                            const PatternList               *excludePatternList,
                            JobOptions                      *jobOptions,
-                           StorageFlags                    storageFlags,
                            RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                            void                            *updateStatusInfoUserData,
                            RestoreHandleErrorFunction      handleErrorFunction,
@@ -187,7 +184,6 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->includeEntryList                     = includeEntryList;
   restoreInfo->excludePatternList                   = excludePatternList;
   restoreInfo->jobOptions                           = jobOptions;
-  restoreInfo->storageFlags                         = storageFlags;
 
   restoreInfo->logHandle                            = logHandle;
 
@@ -883,7 +879,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // create parent directories if not existing
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
       if (error != ERROR_NONE)
@@ -908,7 +904,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       // temporary change owern+permission for writing (ignore errors)
       (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
@@ -985,7 +981,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                   );
         break;
       }
-      if (!restoreInfo->storageFlags.dryRun)
+      if (!restoreInfo->jobOptions->dryRun)
       {
         error = File_write(&fileHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
@@ -1024,7 +1020,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 #ifndef WERROR
 #warning required? wrong?
 #endif
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       if (File_getSize(&fileHandle) > fileInfo.size)
       {
@@ -1033,7 +1029,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // close file
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
       (void)File_close(&fileHandle);
@@ -1063,7 +1059,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       if (isComplete)
       {
@@ -1167,7 +1163,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
     }
@@ -1420,7 +1416,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     // create parent directories if not existing
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = createParentDirectory(restoreInfo,destinationDeviceName,deviceInfo.userId,deviceInfo.groupId);
       if (error != ERROR_NONE)
@@ -1446,7 +1442,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     type = UNKNOWN;
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       if (File_isDevice(destinationDeviceName))
       {
@@ -1571,7 +1567,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         break;
       }
 
-      if (!restoreInfo->storageFlags.dryRun)
+      if (!restoreInfo->jobOptions->dryRun)
       {
         // write data to device
         switch (type)
@@ -1635,7 +1631,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     printInfo(2,"    \b\b\b\b");
 
     // close device/file
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       switch (type)
       {
@@ -1694,7 +1690,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
     }
@@ -1896,7 +1892,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     }
 
     // create directory
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = File_makeDirectory(destinationFileName,
                                  FILE_DEFAULT_USER_ID,
@@ -1916,7 +1912,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       // set file time, file permission
       error = File_setInfo(&fileInfo,destinationFileName);
@@ -1998,7 +1994,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK\n");
     }
@@ -2200,7 +2196,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     }
 
     // create parent directories if not existing
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
       if (error != ERROR_NONE)
@@ -2226,7 +2222,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     }
 
     // create link
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = File_makeLink(destinationFileName,fileName);
       if (error != ERROR_NONE)
@@ -2242,7 +2238,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       // set file time, file permissions
       error = File_setInfo(&fileInfo,destinationFileName);
@@ -2299,7 +2295,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK\n");
     }
@@ -2529,7 +2525,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       }
 
       // create parent directories if not existing
-      if (!restoreInfo->storageFlags.dryRun)
+      if (!restoreInfo->jobOptions->dryRun)
       {
         error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
         if (error != ERROR_NONE)
@@ -2697,7 +2693,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           // temporary change owern+permission for writing (ignore errors)
           (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
@@ -2775,7 +2771,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                       );
             break;
           }
-          if (!restoreInfo->storageFlags.dryRun)
+          if (!restoreInfo->jobOptions->dryRun)
           {
             error = File_write(&fileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
@@ -2817,7 +2813,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 #ifndef WERROR
 #warning required? wrong?
 #endif
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           if (File_getSize(&fileHandle) > fileInfo.size)
           {
@@ -2826,7 +2822,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // close file
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
           (void)File_close(&fileHandle);
@@ -2856,7 +2852,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           if (isComplete)
           {
@@ -2960,7 +2956,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // output result
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
         }
@@ -3032,7 +3028,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // create hard link
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           error = File_makeHardLink(destinationFileName,hardLinkFileName);
           if (error != ERROR_NONE)
@@ -3048,7 +3044,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // output result
-        if (!restoreInfo->storageFlags.dryRun)
+        if (!restoreInfo->jobOptions->dryRun)
         {
           printInfo(1,"OK\n");
         }
@@ -3248,7 +3244,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     }
 
     // create parent directories if not existing
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
       if (error != ERROR_NONE)
@@ -3274,7 +3270,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     }
 
     // create special device
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       error = File_makeSpecial(destinationFileName,
                                fileInfo.specialType,
@@ -3293,7 +3289,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       // set file time, file permissions
       error = File_setInfo(&fileInfo,destinationFileName);
@@ -3350,7 +3346,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     }
 
     // output result
-    if (!restoreInfo->storageFlags.dryRun)
+    if (!restoreInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK\n");
     }
@@ -3622,7 +3618,6 @@ NULL, // masterIO
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       STORAGE_FLAGS_NONE,
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        CALLBACK_(NULL,NULL), // requestVolume
@@ -3882,7 +3877,6 @@ Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
                        JobOptions                      *jobOptions,
-                       StorageFlags                    storageFlags,
                        RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
@@ -3920,7 +3914,6 @@ Errors Command_restore(const StringList                *storageNameList,
                   includeEntryList,
                   excludePatternList,
                   jobOptions,
-                  storageFlags,
                   CALLBACK_(updateStatusInfoFunction,updateStatusInfoUserData),
                   CALLBACK_(handleErrorFunction,handleErrorUserData),
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
@@ -4049,7 +4042,7 @@ Errors Command_restore(const StringList                *storageNameList,
 
         if (fragmentNode->userData != NULL)
         {
-          if (!storageFlags.dryRun)
+          if (!jobOptions->dryRun)
           {
             // set file time, file permission of incomplete entries
             error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);

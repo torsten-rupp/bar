@@ -590,6 +590,7 @@ LOCAL ScheduleNode *newScheduleNode(ConstString scheduleUUID)
   scheduleNode->minKeep                   = 0;
   scheduleNode->maxKeep                   = 0;
   scheduleNode->maxAge                    = AGE_FOREVER;
+  scheduleNode->testCreatedArchives       = FALSE;
   scheduleNode->noStorage                 = FALSE;
   scheduleNode->enabled                   = FALSE;
 
@@ -1939,9 +1940,11 @@ fprintf(stderr,"%s:%d: no schedule found\n",__FILE__,__LINE__);
           {
             Job_trigger(jobNode,
                         scheduleNode->uuid,
-                        scheduleNode->customText,
                         scheduleNode->archiveType,
-                        scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
+                        scheduleNode->customText,
+                        scheduleNode->testCreatedArchives,
+                        scheduleNode->noStorage,
+                        FALSE,  // dryRun
                         executeScheduleDateTime,
                         "scheduler"
                        );
@@ -2219,7 +2222,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                (jobNode != NULL) ? &jobNode->job.options : NULL,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               STORAGE_FLAGS_NONE,
                                CALLBACK_(NULL,NULL),  // updateStatusInfo
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
@@ -2237,7 +2239,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                  (jobNode != NULL) ? &jobNode->job.options : NULL,
                                  &globalOptions.indexDatabaseMaxBandWidthList,
                                  SERVER_CONNECTION_PRIORITY_HIGH,
-                                 STORAGE_FLAGS_NONE,
                                  CALLBACK_(NULL,NULL),  // updateStatusInfo
                                  CALLBACK_(NULL,NULL),  // getNamePassword
                                  CALLBACK_(NULL,NULL),  // requestVolume
@@ -2256,7 +2257,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                (jobNode != NULL) ? &jobNode->job.options : NULL,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               STORAGE_FLAGS_NONE,
                                CALLBACK_(NULL,NULL),  // updateStatusInfo
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
@@ -3466,7 +3466,6 @@ LOCAL void updateIndexThreadCode(void)
                                &jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_LOW,
-                               STORAGE_FLAGS_NONE,
                                CALLBACK_(NULL,NULL),  // updateStatusInfo
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
@@ -4257,14 +4256,13 @@ LOCAL void jobThreadCode(void)
   String           directory;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
-  String           scheduleCustomText;
+  String           customText;
   String           byName;
   ConnectorInfo    *connectorInfo;
   AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
   StringMap        resultMap;
   JobNode          *jobNode;
   ArchiveTypes     archiveType;
-  StorageFlags     storageFlags;
   uint64           startDateTime;
   JobOptions       jobOptions;
   LogHandle        logHandle;
@@ -4286,7 +4284,7 @@ LOCAL void jobThreadCode(void)
   directory          = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  scheduleCustomText = String_new();
+  customText         = String_new();
   byName             = String_new();
   connectorInfo      = NULL;
   initAggregateInfo(&jobAggregateInfo);
@@ -4298,7 +4296,6 @@ LOCAL void jobThreadCode(void)
   }
   jobNode       = NULL;
   archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
-  storageFlags  = STORAGE_FLAGS_NONE;
   startDateTime = 0LL;
 
   while (!isQuit())
@@ -4356,11 +4353,14 @@ LOCAL void jobThreadCode(void)
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);
-      String_set(scheduleCustomText,jobNode->scheduleCustomText);
-      archiveType   = jobNode->archiveType;
-      startDateTime = jobNode->startDateTime;
-      storageFlags  = jobNode->storageFlags;
+      archiveType         = jobNode->archiveType;
+      String_set(customText,jobNode->customText);
+      startDateTime       = jobNode->startDateTime;
       String_set(byName,jobNode->byName);
+
+      jobOptions.testCreatedArchivesFlag = jobNode->testCreatedArchives;
+      jobOptions.noStorage               = jobNode->noStorage;
+      jobOptions.dryRun                  = jobNode->dryRun;
 
       // get and lock connector (if remote job)
       connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
@@ -4384,17 +4384,17 @@ LOCAL void jobThreadCode(void)
     {
       String_appendFormat(s," on '%S'",jobNode->job.slaveHost.name);
     }
-    if (storageFlags.noStorage || storageFlags.dryRun)
+    if (jobOptions.noStorage || jobOptions.dryRun)
     {
       String_appendCString(s," (");
       n = 0;
-      if (storageFlags.noStorage)
+      if (jobOptions.noStorage)
       {
         if (n > 0) String_appendCString(s,", ");
         String_appendCString(s,"no-storage");
         n++;
       }
-      if (storageFlags.dryRun)
+      if (jobOptions.dryRun)
       {
         if (n > 0) String_appendCString(s,", ");
         String_appendCString(s,"dry-run");
@@ -4603,14 +4603,13 @@ LOCAL void jobThreadCode(void)
                                                           String_cString(scheduleUUID),
 //TODO:
 NULL,//                                                        scheduleTitle,
-                                                          String_cString(scheduleCustomText),
+                                                          archiveType,
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
+                                                          String_cString(customText),
                                                           &jobOptions,
-                                                          archiveType,
                                                           startDateTime,
-                                                          storageFlags,
                                                           CALLBACK_(getCryptPasswordFromConfig,jobNode),
                                                           CALLBACK_(updateStatusInfo,jobNode),
                                                           CALLBACK_(storageRequestVolume,jobNode),
@@ -4629,7 +4628,6 @@ NULL,//                                                        scheduleTitle,
                                                            &includeEntryList,
                                                            &excludePatternList,
                                                            &jobOptions,
-                                                           storageFlags,
                                                            CALLBACK_(restoreUpdateStatusInfo,jobNode),
                                                            CALLBACK_(NULL,NULL),  // restoreHandleError
                                                            CALLBACK_(getCryptPasswordFromConfig,jobNode),
@@ -4679,8 +4677,7 @@ NULL,//                                                        scheduleTitle,
         // init storage
         jobNode->runningInfo.error = Connector_initStorage(connectorInfo,
                                                            jobNode->job.storageName,
-                                                           &jobNode->job.options,
-                                                           storageFlags
+                                                           &jobNode->job.options
                                                           );
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
@@ -4696,7 +4693,6 @@ NULL,//                                                        scheduleTitle,
                                                         archiveType,
                                                         NULL,  // scheduleTitle,
                                                         NULL,  // scheduleCustomText,
-                                                        storageFlags,
                                                         CALLBACK_(getCryptPasswordFromConfig,jobNode),
                                                         CALLBACK_(updateStatusInfo,jobNode),
                                                         CALLBACK_(storageRequestVolume,jobNode)
@@ -4718,15 +4714,15 @@ NULL,//                                                        scheduleTitle,
       {
         TEXT_MACROS_INIT(textMacros)
         {
-          TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-          TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-          TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-          TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-          TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-          TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
-          TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
-          TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
+          TEXT_MACRO_X_STRING ("%name",     jobName,                                                               NULL);
+          TEXT_MACRO_X_STRING ("%archive",  storageName,                                                           NULL);
+          TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                              NULL);
+          TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                         NULL);
+          TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
+          TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                          NULL);
+          TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
+          TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                             NULL);
+          TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                             NULL);
         }
         error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                 executeStartDateTime,
@@ -4756,7 +4752,7 @@ NULL,//                                                        scheduleTitle,
     }
 
     // store final compress ratio: 100%-totalSum/totalCompressedSum
-    jobNode->statusInfo.compressionRatio = (!storageFlags.dryRun && (jobNode->statusInfo.total.size > 0))
+    jobNode->statusInfo.compressionRatio = (!jobOptions.dryRun && (jobNode->statusInfo.total.size > 0))
                                              ? 100.0-(jobNode->statusInfo.storage.totalSize*100.0)/jobNode->statusInfo.total.size
                                              : 0.0;
 
@@ -4952,10 +4948,11 @@ NULL,//                                                        scheduleTitle,
         logPostProcess(&logHandle,
                        &jobNode->job.options,
                        archiveType,
-                       scheduleCustomText,
+                       customText,
                        jobName,
                        jobNode->jobState,
-                       jobNode->storageFlags,
+                       jobNode->noStorage,
+                       jobNode->dryRun,
                        jobNode->statusInfo.message
                       );
     }
@@ -5014,7 +5011,7 @@ NULL,//                                                        scheduleTitle,
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
 
-      if (!storageFlags.dryRun)
+      if (!jobOptions.dryRun)
       {
         // store schedule info
         Job_writeScheduleInfo(jobNode,archiveType,executeEndDateTime);
@@ -5027,7 +5024,7 @@ NULL,//                                                        scheduleTitle,
   doneAggregateInfo(&scheduleAggregateInfo);
   doneAggregateInfo(&jobAggregateInfo);
   String_delete(byName);
-  String_delete(scheduleCustomText);
+  String_delete(customText);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   String_delete(directory);
@@ -9678,7 +9675,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
-                          Job_getStateText(jobNode->jobState,jobNode->storageFlags),
+                          Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                           jobNode->job.slaveHost.name,
                           jobNode->job.slaveHost.port,
                           jobNode->job.slaveHost.forceTLS,
@@ -9803,8 +9800,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *            [scheduleUUID=<text>]
-*            [scheduleCustomText=<text>]
+*            [customText=<text>]
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [testCreatedArchives=yes|no]
 *            [noStorage=yes|no]
 *            [dryRun=yes|no]
 *          Result:
@@ -9814,10 +9812,11 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       scheduleCustomText;
+  String       customText;
   ArchiveTypes archiveType;
-  StorageFlags storageFlags;
-  bool         flag;
+  bool         testCreatedArchives;
+  bool         noStorage;
+  bool         dryRun;
   JobNode      *jobNode;
   char         s[256];
 
@@ -9833,19 +9832,17 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
-  scheduleCustomText = String_new();
-  StringMap_getString(argumentMap,"scheduleCustomText",scheduleCustomText,NULL);
+  customText = String_new();
+  StringMap_getString(argumentMap,"customText",customText,NULL);
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
-    String_delete(scheduleCustomText);
+    String_delete(customText);
     return;
   }
-  storageFlags = STORAGE_FLAGS_NONE;
-  StringMap_getBool(argumentMap,"noStorage",&flag,FALSE);
-  if (flag) storageFlags.noStorage = TRUE;
-  StringMap_getBool(argumentMap,"dryRun",&flag,FALSE);
-  if (flag) storageFlags.dryRun = TRUE;
+  StringMap_getBool(argumentMap,"testCreatedArchives",&testCreatedArchives,FALSE);
+  StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE);
+  StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -9854,7 +9851,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      String_delete(scheduleCustomText);
+      String_delete(customText);
       Job_listUnlock();
       return;
     }
@@ -9865,9 +9862,11 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
       // trigger job
       Job_trigger(jobNode,
                   scheduleUUID,
-                  scheduleCustomText,
                   archiveType,
-                  storageFlags,
+                  customText,
+                  testCreatedArchives,
+                  noStorage,
+                  dryRun,
                   Misc_getCurrentDateTime(),
                   getClientInfoString(clientInfo,s,sizeof(s))
                  );
@@ -9877,7 +9876,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(scheduleCustomText);
+  String_delete(customText);
 }
 
 /***********************************************************************\
@@ -10496,7 +10495,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "state=%s errorCode=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
-                        Job_getStateText(jobNode->jobState,jobNode->storageFlags),
+                        Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                         Error_getCode(jobNode->runningInfo.error),
                         Error_getData(jobNode->runningInfo.error),
                         jobNode->statusInfo.done.count,
@@ -12271,6 +12270,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 *            customText=<text> \
 *            beginTime=<hour>|*:<minute>|* \
 *            endTime=<hour>|*:<minute>|* \
+*            testCreatedArchives=yes|no \
 *            noStorage=yes|no \
 *            enabled=yes|no \
 *            totalEntities=<n>|0 \
@@ -12414,7 +12414,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
         // send schedule info
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "jobUUID=%S scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S beginTime=%S endTime=%S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                            "jobUUID=%S scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S beginTime=%S endTime=%S testCreatedArchives=%y noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                             jobNode->job.uuid,
                             scheduleNode->uuid,
                             (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType) : "*",
@@ -12425,6 +12425,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                             scheduleNode->customText,
                             beginTime,
                             endTime,
+                            scheduleNode->testCreatedArchives,
                             scheduleNode->noStorage,
                             scheduleNode->enabled,
                             scheduleNode->lastExecutedDateTime,
@@ -12504,6 +12505,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 *            customText=<text>
 *            beginTime=<hour>|*:<minute>|*
 *            endTime=<hour>|*:<minute>|*
+*            testCreatedArchives=yes|no
 *            noStorage=yes|no
 *            enabled=yes|no
 *          Result:
@@ -12522,6 +12524,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   uint         interval;
   String       customText;
   String       beginTime,endTime;
+  bool         testCreatedArchives;
   bool         noStorage;
   bool         enabled;
   ScheduleNode *scheduleNode;
@@ -12601,6 +12604,18 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
+  if (!StringMap_getBool(argumentMap,"testCreatedArchives",&testCreatedArchives,FALSE))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"testCreatedArchives=yes|no");
     String_delete(endTime);
     String_delete(beginTime);
     String_delete(customText);
@@ -12715,11 +12730,12 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
-  scheduleNode->noStorage   = noStorage;
-  scheduleNode->enabled     = enabled;
-  scheduleNode->minKeep     = 0;
-  scheduleNode->maxKeep     = 0;
-  scheduleNode->maxAge      = 0;
+  scheduleNode->testCreatedArchives = testCreatedArchives;
+  scheduleNode->noStorage           = noStorage;
+  scheduleNode->enabled             = enabled;
+  scheduleNode->minKeep             = 0;
+  scheduleNode->maxKeep             = 0;
+  scheduleNode->maxAge              = 0;
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -13819,9 +13835,11 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     {
       Job_trigger(jobNode,
                   scheduleNode->uuid,
-                  scheduleNode->customText,
                   scheduleNode->archiveType,
-                  scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
+                  scheduleNode->customText,
+                  scheduleNode->testCreatedArchives,
+                  scheduleNode->noStorage,
+                  FALSE,  // dryRun
                   executeScheduleDateTime,
                   getClientInfoString(clientInfo,s,sizeof(s))
                  );
@@ -14431,7 +14449,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       STORAGE_FLAGS_NONE,
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(NULL,NULL),  // getNamePassword
                        CALLBACK_(NULL,NULL),  // requestVolume
@@ -17781,7 +17798,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           &includeEntryList,
                           NULL,  // excludePatternList
                           &jobOptions,
-                          STORAGE_FLAGS_NONE,
                           CALLBACK_(restoreUpdateStatusInfo,&restoreCommandInfo),
                           CALLBACK_(restoreHandleError,&restoreCommandInfo),
                           CALLBACK_(getNamePassword,&restoreCommandInfo),
@@ -18011,7 +18027,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                        &jobOptions,
                        &globalOptions.indexDatabaseMaxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_LOW,
-                       STORAGE_FLAGS_NONE,
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(NULL,NULL),  // getNamePassword
                        CALLBACK_(NULL,NULL),  // requestVolume

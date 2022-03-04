@@ -54,16 +54,15 @@
 *          scheduleUUID                 - unique schedule id to store or
 *                                         NULL
 *          scheduleTitle                - schedule title
-*          scheduleCustomText           - schedule custome text or NULL
-*          storageName                  - storage name
-*          includeEntryList             - include entry list
-*          excludePatternList           - exclude pattern list
-*          jobOptions                   - job options
 *          archiveType                  - archive type; see
 *                                         ArchiveTypes (normal/full/
 *                                         incremental)
+*          storageName                  - storage name
+*          includeEntryList             - include entry list
+*          excludePatternList           - exclude pattern list
+*          customText                   - custome text or NULL
+*          jobOptions                   - job options
 *          createdDateTime              - date/time of created [s]
-*          storageFlags                 - storage flags
 *          getNamePasswordFunction      - get password callback (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
@@ -94,14 +93,13 @@ Errors Command_create(ServerIO                     *masterIO,
                       const char                   *jobUUID,
                       const char                   *scheduleUUID,
                       const char                   *scheduleTitle,
-                      const char                   *scheduleCustomText,
+                      ArchiveTypes                 archiveType,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
+                      const char                   *customText,
                       JobOptions                   *jobOptions,
-                      ArchiveTypes                 archiveType,
                       uint64                       createdDateTime,
-                      StorageFlags                 storageFlags,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
                       StatusInfoFunction           statusInfoFunction,

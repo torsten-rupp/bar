@@ -182,6 +182,31 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
                                        );
 
 /***********************************************************************\
+* Name   : ArchiveTestFunction
+* Purpose: call back for simple test archive
+* Input  : storageInfo          - storage info
+*          jobUUID              - job UUID or NULL
+*          scheduleUUID         - schedule UUID or NULL
+*          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
+*                                 for single part
+*          intermediateFileName - intermediate archive file name
+*          intermediateFileSize - intermediate archive size [bytes]
+*          userData             - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveTestFunction)(StorageInfo  *storageInfo,
+                                     ConstString  jobUUID,
+                                     ConstString  scheduleUUID,
+                                     int          partNumber,
+                                     ConstString  intermediateFileName,
+                                     uint64       intermediateFileSize,
+                                     void         *userData
+                                    );
+
+/***********************************************************************\
 * Name   : ArchiveStoreFunction
 * Purpose: call back to store archive
 * Input  : storageInfo          - storage info
@@ -189,7 +214,6 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 *          jobUUID              - job UUID or NULL
 *          scheduleUUID         - schedule UUID or NULL
 *          entityId             - entity index id
-*          archiveType          - archive type
 *          storageId            - storage index id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
 *                                 for single part
@@ -206,7 +230,6 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
                                       ConstString  jobUUID,
                                       ConstString  scheduleUUID,
                                       IndexId      entityId,
-                                      ArchiveTypes archiveType,
                                       IndexId      storageId,
                                       int          partNumber,
                                       ConstString  intermediateFileName,
@@ -237,9 +260,9 @@ typedef struct
 
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
+  bool                     dryRun;                                     // TRUE for dry-run only
   uint64                   createdDateTime;
   bool                     createMeta;                                 // TRUE to create meta chunks
-  StorageFlags             storageFlags;                               // storage flags
 
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
   void                     *archiveInitUserData;                       // user data for call back to initialize archive file
@@ -247,6 +270,8 @@ typedef struct
   void                     *archiveDoneUserData;                       // user data for call back to deinitialize archive file
   ArchiveGetSizeFunction   archiveGetSizeFunction;                     // call back to get archive size
   void                     *archiveGetSizeUserData;                    // user data for call back to get archive size
+  ArchiveTestFunction      archiveTestFunction;                        // call back to test archive file
+  void                     *archiveTestUserData;                       // user data for test archive file
   ArchiveStoreFunction     archiveStoreFunction;                       // call back to store data info archive file
   void                     *archiveStoreUserData;                      // user data for call back to store data info archive file
   GetNamePasswordFunction  getNamePasswordFunction;                    // call back to get crypt password
@@ -677,16 +702,18 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
+                        bool                    dryRun,
                         uint64                  createdDateTime,
                         bool                    createMeta,
                         const Password          *password,
-                        StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
                         void                    *archiveDoneUserData,
                         ArchiveGetSizeFunction  archiveGetSizeFunction,
                         void                    *archiveGetSizeUserData,
+                        ArchiveTestFunction     archiveTestFunction,
+                        void                    *archiveTestUserData,
                         ArchiveStoreFunction    archiveStoreFunction,
                         void                    *archiveStoreUserData,
                         GetNamePasswordFunction getNamePasswordFunction,
@@ -707,16 +734,18 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
+                          bool                    dryRun,
                           uint64                  createdDateTime,
                           bool                    createMeta,
                           const Password          *password,
-                          StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
                           void                    *archiveDoneUserData,
                           ArchiveGetSizeFunction  archiveGetSizeFunction,
                           void                    *archiveGetSizeUserData,
+                          ArchiveTestFunction     archiveTestFunction,
+                          void                    *archiveTestUserData,
                           ArchiveStoreFunction    archiveStoreFunction,
                           void                    *archiveStoreUserData,
                           GetNamePasswordFunction getNamePasswordFunction,

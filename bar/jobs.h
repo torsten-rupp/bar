@@ -85,12 +85,12 @@ struct JobOptions
 
   uint64                      fragmentSize;                  // fragment size [bytes]
   uint64                      maxStorageSize;                // max. storage size [bytes]
-  bool                        testCreatedArchivesFlag;       // TRUE to test archives after creation
 
   uint64                      volumeSize;                    // volume size or 0LL for default [bytes]
 
   String                      comment;                       // comment
 
+  bool                        testCreatedArchivesFlag;       // TRUE to test archives after creation
   bool                        skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                        forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                        ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
@@ -106,10 +106,12 @@ struct JobOptions
   bool                        noIndexDatabaseFlag;           // TRUE for do not store index database for archives
   bool                        forceVerifySignaturesFlag;     // TRUE to force verify signatures of archives
   bool                        skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
+  bool                        noStorage;                     // TRUE to skip create storages
   bool                        noSignatureFlag;               // TRUE for not appending signatures
   bool                        noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                        noStopOnErrorFlag;             // TRUE for not stopping immediately on error
   bool                        noStopOnAttributeErrorFlag;    // TRUE for not stopping immediately on attribute error
+  bool                        dryRun;                        // TRUE for dry-run only
 };
 
 // job type
@@ -198,10 +200,12 @@ typedef struct JobNode
 
   StatusInfo          statusInfo;
 
-  String              scheduleUUID;                     // current schedule UUID or empty
-  String              scheduleCustomText;               // schedule custom text or empty
+  String              scheduleUUID;                     // schedule UUID or empty
   ArchiveTypes        archiveType;                      // archive type to create
-  StorageFlags        storageFlags;                     // storage flags; see STORAGE_FLAG_...
+  String              customText;                       // custom text or empty
+  bool                testCreatedArchives;              // TRUE to test created archives
+  bool                noStorage;                        // TRUE to skip create storages
+  bool                dryRun;                           // TRUE for dry-run only
   uint64              startDateTime;                    // start date/time [s]
   String              byName;                           // state changed by name
 
@@ -1134,14 +1138,15 @@ bool Job_isSomeRunning(void);
 /***********************************************************************\
 * Name   : Job_getStateText
 * Purpose: get text for job state
-* Input  : jobState     - job state
-*          storageFlags - storage flags; see STORAGE_FLAG_...
+* Input  : jobState  - job state
+*          noStorage - TRUE to skip create storages
+*          dryRun    - TRUE for dry-run only
 * Output : -
 * Return : text
 * Notes  : -
 \***********************************************************************/
 
-const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags);
+const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun);
 
 /***********************************************************************\
 * Name   : Job_find
@@ -1380,13 +1385,15 @@ INLINE void Job_setModified(JobNode *jobNode)
 /***********************************************************************\
 * Name   : Job_trigger
 * Purpose: trogger job run
-* Input  : jobNode            - job node
-*          scheduleUUID       - schedule UUID or NULL
-*          scheduleCustomText - schedule custom text or NULL
-*          archiveType        - archive type to create
-*          storageFlags       - storage flags; see STORAGE_FLAG_...
-*          startDateTime      - date/time of start [s]
-*          byName             - by name or NULL
+* Input  : jobNode             - job node
+*          scheduleUUID        - schedule UUID or NULL
+*          scheduleCustomText  - schedule custom text or NULL
+*          archiveType         - archive type to create
+*          testCreatedArchives - TRUE for test created archives
+*          noStorage           - TRUE for skip create storages
+*          dryRun              - TRUE for dry-run only
+*          startDateTime       - date/time of start [s]
+*          byName              - by name or NULL
 * Output : -
 * Return : -
 * Notes  : -
@@ -1394,9 +1401,11 @@ INLINE void Job_setModified(JobNode *jobNode)
 
 void Job_trigger(JobNode      *jobNode,
                  ConstString  scheduleUUID,
-                 ConstString  scheduleCustomText,
                  ArchiveTypes archiveType,
-                 StorageFlags storageFlags,
+                 ConstString  customText,
+                 bool         testCreatedArchives,
+                 bool         noStorage,
+                 bool         dryRun,
                  uint64       startDateTime,
                  const char   *byName
                 );

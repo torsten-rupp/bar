@@ -3536,8 +3536,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
-                             JobOptions    *jobOptions,
-                             StorageFlags  storageFlags
+                             JobOptions    *jobOptions
                             )
 {
   String           printableStorageName;
@@ -3576,7 +3575,6 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       storageFlags,
 //TODO
 CALLBACK_(NULL,NULL),//                       CALLBACK_(updateStorageStatusInfo,connectorInfo),
 CALLBACK_(NULL,NULL),//                       CALLBACK_(getPasswordFunction,getPasswordUserData),
@@ -3692,7 +3690,6 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ArchiveTypes                 archiveType,
                         ConstString                  scheduleTitle,
                         ConstString                  scheduleCustomText,
-                        StorageFlags                 storageFlags,
                         GetNamePasswordFunction      getNamePasswordFunction,
                         void                         *getNamePasswordUserData,
                         StatusInfoFunction           statusInfoFunction,
@@ -3802,8 +3799,8 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText
                                    Archive_archiveTypeToString(archiveType),
-                                   storageFlags.dryRun,
-                                   storageFlags.noStorage
+                                   jobOptions->dryRun,
+                                   jobOptions->noStorage
                                   );
   if (error != ERROR_NONE)
   {

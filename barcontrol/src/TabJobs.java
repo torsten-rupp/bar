@@ -1053,11 +1053,13 @@ public class TabJobs
     int          hour,minute;
     ArchiveTypes archiveType;
     int          interval;
-    String       customText;
     int          beginHour,beginMinute;
     int          endHour,endMinute;
+    String       customText;
+    boolean      testCreatedArchives;
     boolean      noStorage;
     boolean      enabled;
+
     long         lastExecutedDateTime;
     long         totalEntities,totalEntryCount,totalEntrySize;
 
@@ -1072,6 +1074,7 @@ public class TabJobs
      * @param archiveType archive type string
      * @param interval continuous interval [min]
      * @param customText custom text
+     * @param testCreatedArchives true to test created archives
      * @param noStorage true to skip storage
      * @param enabled true iff enabled
      * @param lastExecutedDateTime date/time of last execution
@@ -1088,11 +1091,12 @@ public class TabJobs
                  int          minute,
                  ArchiveTypes archiveType,
                  int          interval,
-                 String       customText,
                  int          beginHour,
                  int          beginMinute,
                  int          endHour,
                  int          endMinute,
+                 String       customText,
+                 boolean      testCreatedArchives,
                  boolean      noStorage,
                  boolean      enabled,
                  long         lastExecutedDateTime,
@@ -1110,11 +1114,12 @@ public class TabJobs
       this.minute               = minute;
       this.archiveType          = archiveType;
       this.interval             = interval;
-      this.customText           = customText;
       this.beginHour            = beginHour;
       this.beginMinute          = beginMinute;
       this.endHour              = endHour;
       this.endMinute            = endMinute;
+      this.customText           = customText;
+      this.testCreatedArchives  = testCreatedArchives;
       this.noStorage            = noStorage;
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
@@ -1136,11 +1141,12 @@ public class TabJobs
            ScheduleData.ANY,
            ArchiveTypes.NORMAL,
            0,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
+           ScheduleData.ANY,
            "",
-           ScheduleData.ANY,
-           ScheduleData.ANY,
-           ScheduleData.ANY,
-           ScheduleData.ANY,
+           false,
            false,
            true,
            0,
@@ -1156,7 +1162,9 @@ public class TabJobs
      * @param time time string (<hour>:<minute>)
      * @param archiveType archive type string
      * @param interval continuous interval [min]
+     * @param beginTime,endTime continous begin/end time
      * @param customText custom text
+     * @param testCreatedArchives true to test created archives
      * @param noStorage true to skip storage
      * @param enabled true iff enabled
      * @param lastExecutedDateTime date/time of last execution
@@ -1170,9 +1178,10 @@ public class TabJobs
                  String       time,
                  ArchiveTypes archiveType,
                  int          interval,
-                 String       customText,
                  String       beginTime,
                  String       endTime,
+                 String       customText,
+                 boolean      testCreatedArchives,
                  boolean      noStorage,
                  boolean      enabled,
                  long         lastExecutedDateTime,
@@ -1187,9 +1196,10 @@ public class TabJobs
       setTime(time);
       this.archiveType          = archiveType;
       this.interval             = interval;
-      this.customText           = customText;
       setBeginTime(beginTime);
       setEndTime(endTime);
+      this.customText           = customText;
+      this.testCreatedArchives  = testCreatedArchives;
       this.noStorage            = noStorage;
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
@@ -1212,11 +1222,12 @@ public class TabJobs
                               minute,
                               archiveType,
                               interval,
-                              customText,
                               beginHour,
                               beginMinute,
                               endHour,
                               endMinute,
+                              customText,
+                              testCreatedArchives,
                               noStorage,
                               enabled,
                               lastExecutedDateTime,
@@ -1723,9 +1734,11 @@ public class TabJobs
       WEEKDAY,
       TIME,
       ARCHIVE_TYPE,
-      CUSTOM_TEXT,
       BEGIN_TIME,
       END_TIME,
+      CUSTOM_TEXT,
+      TEST_CREATED_ARCHIVES,
+      NO_STORAGE,
       ENABLED
     };
 
@@ -1741,9 +1754,9 @@ public class TabJobs
       else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAY;
       else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TIME;
       else if (table.getColumn(3) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
-      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.BEGIN_TIME;
-      else if (table.getColumn(6) == sortColumn) sortMode = SortModes.END_TIME;
+      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.BEGIN_TIME;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.END_TIME;
+      else if (table.getColumn(6) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
       else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ENABLED;
       else                                       sortMode = SortModes.DATE;
     }
@@ -1759,9 +1772,9 @@ public class TabJobs
       else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAY;
       else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TIME;
       else if (table.getColumn(3) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
-      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.BEGIN_TIME;
-      else if (table.getColumn(6) == sortColumn) sortMode = SortModes.END_TIME;
+      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.BEGIN_TIME;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.END_TIME;
+      else if (table.getColumn(6) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
       else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ENABLED;
       else                                       sortMode = SortModes.DATE;
     }
@@ -1848,9 +1861,6 @@ public class TabJobs
         case ARCHIVE_TYPE:
           result = scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
           break;
-        case CUSTOM_TEXT:
-          result = scheduleData1.customText.compareTo(scheduleData2.customText);
-          break;
         case BEGIN_TIME:
           String beginTime1 = scheduleData1.getBeginTime();
           String beginTime2 = scheduleData2.getBeginTime();
@@ -1862,6 +1872,9 @@ public class TabJobs
           String endTime2 = scheduleData2.getEndTime();
 
           result = endTime1.compareTo(endTime2);
+          break;
+        case CUSTOM_TEXT:
+          result = scheduleData1.customText.compareTo(scheduleData2.customText);
           break;
         case ENABLED:
           if      (scheduleData1.enabled && !scheduleData2.enabled) result = -1;
@@ -2401,8 +2414,7 @@ public class TabJobs
   private WidgetVariable  cryptPasswordMode         = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
   private WidgetVariable  cryptPassword             = new WidgetVariable<String> ("crypt-password","");
   private WidgetVariable  incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
-  private WidgetVariable  testCreatedArchives       = new WidgetVariable<Boolean>("test-created-archives",false);
-  private WidgetVariable  storageOnMasterFlag           = new WidgetVariable<Boolean>("storage-on-master",true);
+  private WidgetVariable  storageOnMasterFlag       = new WidgetVariable<Boolean>("storage-on-master",true);
   private WidgetVariable  storageType               = new WidgetVariable<String> ("storage-type",
                                                                                   new String[]{"filesystem",
                                                                                                "ftp",
@@ -4310,14 +4322,24 @@ public class TabJobs
         subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
         Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
         {
+          Listener mountListColumnResizeListener = new Listener()
+          {
+            public void handleEvent(Event event)
+            {
+              Settings.mountTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetMountTable));
+            }
+          };
+
           widgetMountTable = Widgets.newTable(subTab);
           widgetMountTable.setToolTipText(BARControl.tr("List of devices to mount, right-click for context menu."));
           Widgets.layout(widgetMountTable,0,0,TableLayoutData.NSWE);
           tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),  SWT.LEFT,600,true);
           tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+          tableColumn.addListener(SWT.Resize,mountListColumnResizeListener);
           tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Device"),SWT.LEFT,100,true);
           tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-          Widgets.setTableColumnWidth(widgetMountTable,Settings.mountListColumns.width);
+          tableColumn.addListener(SWT.Resize,mountListColumnResizeListener);
+          Widgets.setTableColumnWidth(widgetMountTable,Settings.mountTableColumns.width);
 
           widgetMountTable.addMouseListener(new MouseListener()
           {
@@ -6611,47 +6633,11 @@ public class TabJobs
           });
         }
 
-        label = Widgets.newLabel(tab,BARControl.tr("Options")+":",Settings.hasExpertRole());
-        Widgets.layout(label,10,0,TableLayoutData.W);
-        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
-        composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-        Widgets.layout(composite,10,1,TableLayoutData.WE);
-        {
-          button = Widgets.newCheckbox(composite,BARControl.tr("Test created archives"));
-          button.setToolTipText(BARControl.tr("Test created archives."));
-          Widgets.layout(button,0,0,TableLayoutData.W);
-          button.addSelectionListener(new SelectionListener()
-          {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-Dprintf.dprintf("_");
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-
-              try
-              {
-                testCreatedArchives.set(checkedFlag);
-                BARServer.setJobOption(selectedJobData.uuid,testCreatedArchives);
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(button,testCreatedArchives));
-        }
-
         // destination
         label = Widgets.newLabel(tab,BARControl.tr("Destination")+":");
-        Widgets.layout(label,11,0,TableLayoutData.W);
+        Widgets.layout(label,10,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,11,1,TableLayoutData.WE);
+        Widgets.layout(composite,10,1,TableLayoutData.WE);
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Storage destination type:\n"+
@@ -6852,7 +6838,7 @@ Dprintf.dprintf("_");
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
-        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -7065,7 +7051,7 @@ Dprintf.dprintf("_");
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -7404,7 +7390,7 @@ Dprintf.dprintf("_");
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -8074,7 +8060,7 @@ Dprintf.dprintf("_");
         // destination WebDAV
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -8744,7 +8730,7 @@ Dprintf.dprintf("_");
         // destination cd/dvd/bd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,12,1,TableLayoutData.WE);
+        Widgets.layout(composite,11,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -9159,7 +9145,7 @@ Dprintf.dprintf("_");
         // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,12,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
@@ -9887,22 +9873,39 @@ Dprintf.dprintf("_");
             Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
           }
         };
+        Listener scheduleListColumnResizeListener = new Listener()
+        {
+          public void handleEvent(Event event)
+          {
+            Settings.scheduleTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetScheduleTable));
+          }
+        };
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,120,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week days"),   SWT.LEFT,250,true );
         Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT,100,true );
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Begin"),       SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,5,BARControl.tr("Begin"),       SWT.LEFT,100,false);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,5,BARControl.tr("End"),         SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,6,BARControl.tr("End"),         SWT.LEFT,100,false);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,6,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        Widgets.setTableColumnWidth(widgetScheduleTable,Settings.scheduleListColumns.width);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,7,BARControl.tr("Test"),        SWT.LEFT,100,false);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn.addListener(SWT.Resize,scheduleListColumnResizeListener);
+        Widgets.setTableColumnWidth(widgetScheduleTable,Settings.scheduleTableColumns.width);
 
         widgetScheduleTable.addSelectionListener(new SelectionListener()
         {
@@ -10345,6 +10348,7 @@ TODO: implement delete entity
               }
               else if (treeItem.getData() instanceof EntityIndexData)
               {
+// TODO: hide tooltop correct?
                 showEntityIndexToolTip((EntityIndexData)treeItem.getData(),point.x,point.y);
               }
             }
@@ -10872,7 +10876,6 @@ TODO: implement delete entity
         cryptPasswordMode.set(BARServer.getStringJobOption(jobData.uuid,"crypt-password-mode"));
         BARServer.getJobOption(jobData.uuid,cryptPassword);
         BARServer.getJobOption(jobData.uuid,incrementalListFileName);
-        BARServer.getJobOption(jobData.uuid,testCreatedArchives);
         archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
         BARServer.getJobOption(jobData.uuid,storageOnMasterFlag);
         BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
@@ -15445,9 +15448,10 @@ throw new Error("NYI");
                                      ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
                                      int          interval             = valueMap.getInt    ("interval",0                    );
                                      String       customText           = valueMap.getString ("customText"                    );
-                                     boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
                                      String       beginTime            = valueMap.getString ("beginTime"                     );
                                      String       endTime              = valueMap.getString ("endTime"                       );
+                                     boolean      testCreatedArchives  = valueMap.getBoolean("testCreatedArchives"           );
+                                     boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
                                      boolean      enabled              = valueMap.getBoolean("enabled"                       );
                                      long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
                                      long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
@@ -15462,15 +15466,16 @@ throw new Error("NYI");
                                        scheduleData.setTime(time);
                                        scheduleData.archiveType          = archiveType;
                                        scheduleData.interval             = interval;
-                                       scheduleData.customText           = customText;
                                        scheduleData.setBeginTime(beginTime);
                                        scheduleData.setEndTime(endTime);
+                                       scheduleData.customText           = customText;
+                                       scheduleData.testCreatedArchives  = testCreatedArchives;
+                                       scheduleData.noStorage            = noStorage;
+                                       scheduleData.enabled              = enabled;
                                        scheduleData.lastExecutedDateTime = lastExecutedDateTime;
                                        scheduleData.totalEntities        = totalEntities;
                                        scheduleData.totalEntryCount      = totalEntryCount;
                                        scheduleData.totalEntrySize       = totalEntrySize;
-                                       scheduleData.noStorage            = noStorage;
-                                       scheduleData.enabled              = enabled;
                                      }
                                      else
                                      {
@@ -15480,9 +15485,10 @@ throw new Error("NYI");
                                                                         time,
                                                                         archiveType,
                                                                         interval,
-                                                                        customText,
                                                                         beginTime,
                                                                         endTime,
+                                                                        customText,
+                                                                        testCreatedArchives,
                                                                         noStorage,
                                                                         enabled,
                                                                         lastExecutedDateTime,
@@ -15535,9 +15541,10 @@ throw new Error("NYI");
                                           scheduleData.getWeekDays(),
                                           scheduleData.getTime(),
                                           scheduleData.archiveType.getText(),
-                                          scheduleData.customText,
                                           scheduleData.getBeginTime(),
                                           scheduleData.getEndTime()
+                                          scheduleData.customText,
+                                          scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
                                          );
                   tableItem.setChecked(scheduleData.enabled);
 
@@ -15554,9 +15561,10 @@ throw new Error("NYI");
                                                       scheduleData.getWeekDays(),
                                                       scheduleData.getTime(),
                                                       scheduleData.archiveType.toString(),
-                                                      scheduleData.customText,
                                                       scheduleData.getBeginTime(),
                                                       scheduleData.getEndTime()
+                                                      scheduleData.customText,
+                                                      scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
                                                      );
                   tableItem.setChecked(scheduleData.enabled);
                   tableItem.setData(scheduleData);
@@ -15569,9 +15577,10 @@ throw new Error("NYI");
                                                                     scheduleData.getWeekDays(),
                                                                     scheduleData.getTime(),
                                                                     scheduleData.archiveType.toString(),
-                                                                    scheduleData.customText,
                                                                     scheduleData.getBeginTime(),
-                                                                    scheduleData.getEndTime()
+                                                                    scheduleData.getEndTime(),
+                                                                    scheduleData.customText,
+                                                                    scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
                                                                    );
                 tableItem.setChecked(scheduleData.enabled);
 
@@ -15619,6 +15628,7 @@ throw new Error("NYI");
     final Combo    widgetInterval;
     final Combo    widgetBeginHour,widgetBeginMinute,widgetEndHour,widgetEndMinute;
     final Text     widgetCustomText;
+    final Button   widgetTestCreatedArchives;
     final Button   widgetNoStorage;
     final Button   widgetEnabled;
     final Button   widgetSave;
@@ -15834,13 +15844,18 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,6,1,TableLayoutData.WE);
       {
+        widgetTestCreatedArchives = Widgets.newCheckbox(subComposite,BARControl.tr("test created archives"));
+        widgetTestCreatedArchives.setToolTipText(BARControl.tr("Test created archives."));
+        Widgets.layout(widgetTestCreatedArchives,0,0,TableLayoutData.W);
+        widgetTestCreatedArchives.setSelection(scheduleData.testCreatedArchives);
+
         widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("do no create storages"),Settings.hasExpertRole());
         widgetNoStorage.setToolTipText(BARControl.tr("Do not create storage files. Only update incremental data."));
-        Widgets.layout(widgetNoStorage,0,0,TableLayoutData.W);
+        Widgets.layout(widgetNoStorage,0,1,TableLayoutData.W);
         widgetNoStorage.setSelection(scheduleData.noStorage);
 
         widgetEnabled = Widgets.newCheckbox(subComposite,BARControl.tr("enabled"));
-        Widgets.layout(widgetEnabled,0,1,TableLayoutData.W);
+        Widgets.layout(widgetEnabled,0,2,TableLayoutData.W);
         widgetEnabled.setSelection(scheduleData.enabled);
       }
     }
@@ -15916,12 +15931,13 @@ throw new Error("NYI");
                                  widgetWeekDays[ScheduleData.SUN].getSelection()
                                 );
         scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
-        scheduleData.interval   = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
-        scheduleData.customText = widgetCustomText.getText();
+        scheduleData.interval            = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
         scheduleData.setBeginTime(widgetBeginHour.getText(),widgetBeginMinute.getText());
         scheduleData.setEndTime(widgetEndHour.getText(),widgetEndMinute.getText());
-        scheduleData.noStorage  = widgetNoStorage.getSelection();
-        scheduleData.enabled    = widgetEnabled.getSelection();
+        scheduleData.customText          = widgetCustomText.getText();
+        scheduleData.testCreatedArchives = widgetTestCreatedArchives.getSelection();
+        scheduleData.noStorage           = widgetNoStorage.getSelection();
+        scheduleData.enabled             = widgetEnabled.getSelection();
 
         if ((scheduleData.archiveType != ArchiveTypes.CONTINUOUS) && (scheduleData.minute == ScheduleData.ANY))
         {
@@ -15965,16 +15981,17 @@ throw new Error("NYI");
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S beginTime=%s endTime=%s noStorage=%y enabled=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d beginTime=%s endTime=%s customText=%S testCreatedArchives=%y noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
                                                        scheduleData.getDate(),
                                                        scheduleData.weekDaysToString(),
                                                        scheduleData.getTime(),
                                                        scheduleData.archiveType.toString(),
                                                        scheduleData.interval,
-                                                       scheduleData.customText,
                                                        scheduleData.getBeginTime(),
                                                        scheduleData.getEndTime(),
+                                                       scheduleData.customText,
+                                                       scheduleData.testCreatedArchives,
                                                        scheduleData.noStorage,
                                                        scheduleData.enabled
                                                       ),
@@ -16001,7 +16018,10 @@ throw new Error("NYI");
                                                             scheduleData.getWeekDays(),
                                                             scheduleData.getTime(),
                                                             scheduleData.archiveType.toString(),
-                                                            scheduleData.customText
+                                                            scheduleData.getBeginTime(),
+                                                            scheduleData.getEndTime(),
+                                                            scheduleData.customText,
+                                                            scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
                                                            );
         tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(scheduleData);
@@ -16033,6 +16053,7 @@ throw new Error("NYI");
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"begin",scheduleData.getBeginTime());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"end",scheduleData.getEndTime());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"text",scheduleData.customText);
+            BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"test-created-archives",scheduleData.testCreatedArchives);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
@@ -16042,9 +16063,10 @@ throw new Error("NYI");
                                     scheduleData.getWeekDays(),
                                     scheduleData.getTime(),
                                     scheduleData.archiveType.getText(),
-                                    scheduleData.customText,
                                     scheduleData.getBeginTime(),
-                                    scheduleData.getEndTime()
+                                    scheduleData.getEndTime(),
+                                    scheduleData.customText,
+                                    scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
                                    );
             tableItem.setChecked(scheduleData.enabled);
           }
@@ -16080,15 +16102,16 @@ throw new Error("NYI");
           try
           {
             ValueMap valueMap = new ValueMap();
-            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S beginTime=%s endTime=%s noStorage=%y enabled=%y",
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s beginTime=%s endTime=%s customText=%S testCreatedArchive=%y noStorage=%y enabled=%y",
                                                          selectedJobData.uuid,
                                                          newScheduleData.getDate(),
                                                          newScheduleData.getWeekDays(),
                                                          newScheduleData.getTime(),
                                                          newScheduleData.archiveType.toString(),
-                                                         newScheduleData.customText,
                                                          scheduleData.getBeginTime(),
                                                          scheduleData.getEndTime(),
+                                                         newScheduleData.customText,
+                                                         newScheduleData.testCreatedArchives,
                                                          newScheduleData.noStorage,
                                                          newScheduleData.enabled
                                                         ),
@@ -16115,7 +16138,10 @@ throw new Error("NYI");
                                                                  newScheduleData.getWeekDays(),
                                                                  newScheduleData.getTime(),
                                                                  newScheduleData.archiveType.toString(),
-                                                                 newScheduleData.customText
+                                                                 newScheduleData.getBeginTime(),
+                                                                 newScheduleData.getEndTime(),
+                                                                 newScheduleData.customText,
+                                                                 newScheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
                                                                 );
           newTableItem.setChecked(newScheduleData.enabled);
           newTableItem.setData(newScheduleData);

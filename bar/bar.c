@@ -1324,7 +1324,8 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText,
                     ConstString      jobName,
                     JobStates        jobState,
-                    StorageFlags     storageFlags,
+                    bool             noStorage,
+                    bool             dryRun,
                     ConstString      message
                    )
 {
@@ -1364,7 +1365,7 @@ void logPostProcess(LogHandle        *logHandle,
           TEXT_MACRO_X_CSTRING("%type",   Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_STRING);
           TEXT_MACRO_X_CSTRING("%T",      Archive_archiveTypeToShortString(archiveType), ".");
           TEXT_MACRO_X_STRING ("%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%state",  Job_getStateText(jobState,storageFlags),           NULL);
+          TEXT_MACRO_X_CSTRING("%state",  Job_getStateText(jobState,noStorage,dryRun),       NULL);
           TEXT_MACRO_X_STRING ("%message",String_cString(message),NULL);
         }
 //TODO: macro expanded 2x!
@@ -3083,13 +3084,11 @@ LOCAL Errors runJob(ConstString jobUUIDName)
 {
   const JobNode *jobNode;
   ArchiveTypes  archiveType;
-  StorageFlags  storageFlags;
   JobOptions    jobOptions;
   Errors        error;
 
   // get job to execute
-  archiveType  = ARCHIVE_TYPE_NONE;
-  storageFlags = STORAGE_FLAGS_NONE;
+  archiveType = ARCHIVE_TYPE_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
   {
     // find job by name or UUID
@@ -3109,9 +3108,11 @@ LOCAL Errors runJob(ConstString jobUUIDName)
     String_set(globalOptions.storageName,jobNode->job.storageName);
     EntryList_copy(&globalOptions.includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
     PatternList_copy(&globalOptions.excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
-    archiveType  = jobNode->archiveType;
-    storageFlags = jobNode->storageFlags;
     Job_duplicateOptions(&jobOptions,&jobNode->job.options);
+    archiveType  = jobNode->archiveType;
+    jobOptions.testCreatedArchivesFlag = jobNode->testCreatedArchives;
+    jobOptions.noStorage               = jobNode->noStorage;
+    jobOptions.dryRun                  = jobNode->dryRun;
   }
 
   // start job execution
@@ -3128,14 +3129,13 @@ LOCAL Errors runJob(ConstString jobUUIDName)
                            NULL,  // schedule UUID
                          #endif
                          NULL,  // scheduleTitle
-                         NULL,  // scheduleCustomText
+                         archiveType,
                          globalOptions.storageName,
                          &globalOptions.includeEntryList,
                          &globalOptions.excludePatternList,
+                         NULL,  // scheduleCustomText
                          &jobOptions,
-                         archiveType,
                          Misc_getCurrentDateTime(),
-                         storageFlags,
                          CALLBACK_(getCryptPasswordFromConsole,NULL),
                          CALLBACK_(NULL,NULL),  // createStatusInfoFunction
                          CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
@@ -3345,14 +3345,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  #endif
                                  String_cString(scheduleUUID),
                                  NULL, // scheduleTitle
-                                 NULL, // scheduleCustomText
+                                 globalOptions.archiveType,
                                  globalOptions.storageName,
                                  &globalOptions.includeEntryList,
                                  &globalOptions.excludePatternList,
+                                 NULL, // customText
                                  &jobOptions,
-                                 globalOptions.archiveType,
                                  Misc_getCurrentDateTime(),
-                                 globalOptions.storageFlags,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  CALLBACK_(NULL,NULL),  // createStatusInfo
                                  CALLBACK_(NULL,NULL),  // storageRequestVolume
@@ -3501,7 +3500,6 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &globalOptions.includeEntryList,
                                     &globalOptions.excludePatternList,
                                     &jobOptions,
-                                    globalOptions.storageFlags,
                                     CALLBACK_(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK_(NULL,NULL),  // restoreError callback
                                     CALLBACK_(getCryptPasswordFromConsole,NULL),
@@ -3755,7 +3753,6 @@ LOCAL Errors runDebug(void)
                          &jobOptions,
                          &globalOptions.indexDatabaseMaxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_LOW,
-                         STORAGE_FLAGS_NONE,
                          CALLBACK_(NULL,NULL),  // updateStatusInfo
                          CALLBACK_(NULL,NULL),  // getNamePassword
                          CALLBACK_(NULL,NULL),  // requestVolume
@@ -4008,7 +4005,6 @@ LOCAL Errors runDebug(void)
                          &jobOptions,
                          &globalOptions.indexDatabaseMaxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_LOW,
-                         STORAGE_FLAGS_NONE,
                          CALLBACK_(NULL,NULL),  // updateStatusInfo
                          CALLBACK_(NULL,NULL),  // getNamePassword
                          CALLBACK_(NULL,NULL),  // requestVolume
