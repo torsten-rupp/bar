@@ -411,6 +411,7 @@ typedef struct ScheduleNode
   uint               interval;                                // continuous interval [min]
   String             customText;                              // custom text
   ScheduleTime       beginTime,endTime;                       // begin/end time
+  bool               testCreatedArchives;                     // TRUE for simple test created archives
   bool               noStorage;                               // TRUE to skip storage, only create incremental data
   bool               enabled;                                 // TRUE iff enabled
 
@@ -706,15 +707,6 @@ typedef struct
   Semaphore lock;
 } MaintenanceList;
 
-// storage flags
-typedef struct
-{
-  bool noStorage : 1;
-  bool dryRun : 1;
-} StorageFlags;
-extern const StorageFlags STORAGE_FLAGS_NONE;
-extern const StorageFlags STORAGE_FLAGS_NO_STORAGE;
-
 // template expand handle
 typedef struct
 {
@@ -785,8 +777,6 @@ typedef struct
 
   MaintenanceList             maintenanceList;                // maintenance list
 
-  StorageFlags                storageFlags;
-
   bool                        metaInfoFlag;                   // TRUE iff meta info should be print
   bool                        groupFlag;                      // TRUE iff entries in list should be grouped
   bool                        allFlag;                        // TRUE iff all entries should be listed/restored
@@ -807,10 +797,12 @@ typedef struct
   bool                        noIndexDatabaseFlag;            // TRUE for do not store index database for archives
   bool                        forceVerifySignaturesFlag;      // TRUE to force verify signatures of archives
   bool                        skipVerifySignaturesFlag;       // TRUE to not verify signatures of archives
+  bool                        noStorage;                      // TRUE to skip create storages
   bool                        noSignatureFlag;                // TRUE for not appending signatures
   bool                        noBAROnMediumFlag;              // TRUE for not storing BAR on medium
   bool                        noStopOnErrorFlag;              // TRUE for not stopping immediately on error
   bool                        noStopOnAttributeErrorFlag;     // TRUE for not stopping immediately on attribute error
+  bool                        dryRun;                         // TRUE for dry-run only
 
   bool                        quietFlag;                      // TRUE iff suppress any output
   long                        verboseLevel;                   /* verbosity level

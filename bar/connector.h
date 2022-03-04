@@ -236,7 +236,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo);
 * Input  : connectorInfo - connector info
 *          storageName   - storage name
 *          jobOptions    - job options
-*          storageFlags  - storage flags
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -244,8 +243,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo);
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
-                             JobOptions    *jobOptions,
-                             StorageFlags  storageFlags
+                             JobOptions    *jobOptions
                             );
 
 /***********************************************************************\
@@ -310,9 +308,7 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 *          jobOptions                   - job options
 *          archiveType                  - archive type to create
 *          scheduleTitle                - schedule title
-*          scheduleCustomText           - schedule custom text
-*          storageFlags                 - storage flags; see
-*                                         STROAGE_FLAG_...
+*          customText                   - custom text
 *          getNamePasswordFunction      - get password call back (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
@@ -340,8 +336,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         const JobOptions             *jobOptions,
                         ArchiveTypes                 archiveType,
                         ConstString                  scheduleTitle,
-                        ConstString                  scheduleCustomText,
-                        StorageFlags                 storageFlags,
+                        ConstString                  customText,
                         GetNamePasswordFunction      getNamePasswordFunction,
                         void                         *getNamePasswordUserData,
                         StatusInfoFunction           statusInfoFunction,

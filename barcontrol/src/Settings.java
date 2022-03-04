@@ -430,14 +430,14 @@ public class Settings
   @SettingComment(text={"BARControl configuration",""})
 
   // program settings
-  @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class, name="job-list-column-order")
+  @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class, name="job-table-column-order")
   public static SettingUtils.SimpleStringArray jobListColumnOrder              = new SettingUtils.SimpleStringArray();
-  @SettingValue(type=SettingValueAdapterWidthArray.class, name="job-list-columns")
-  public static ColumnSizes                    jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
-  @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
-  public static ColumnSizes                    mountListColumns                = new ColumnSizes(600,100);
-  @SettingValue(type=SettingValueAdapterWidthArray.class, name="schedule-list-columns")
-  public static ColumnSizes                    scheduleListColumns             = new ColumnSizes(120,250,100,100,90);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="job-table-columns")
+  public static ColumnSizes                    jobTableColumns                 = new ColumnSizes(110,130,90,90,80,80,100,150,120);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="mount-table-columns")
+  public static ColumnSizes                    mountTableColumns               = new ColumnSizes(600,100);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="schedule-table-columns")
+  public static ColumnSizes                    scheduleTableColumns            = new ColumnSizes(120,250,100,100,90);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
   public static ColumnSizes                    persistenceTreeColumns          = new ColumnSizes(100,90,90,90,140,90,120);
 

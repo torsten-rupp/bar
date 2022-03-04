@@ -2384,7 +2384,7 @@ Errors File_write(FileHandle *fileHandle,
 {
   ssize_t    n;
   const byte *data;
-  ssize_t    m;
+  size_t     m;
 
 
   FILE_CHECK_VALID(fileHandle);
@@ -2399,7 +2399,7 @@ Errors File_write(FileHandle *fileHandle,
     {
       // seek over 0-bytes
       m = 0;
-      while (((n+m) < (ssize_t)bufferLength) && (data[n+m] == 0))
+      while (((n+m) < (size_t)bufferLength) && (data[n+m] == 0))
       {
         m++;
       }
@@ -2407,11 +2407,11 @@ Errors File_write(FileHandle *fileHandle,
       {
         break;
       }
-      n += m;
+      n += (ssize_t)m;
 
       // write non-0-bytes
       m = 0;
-      while (((n+m) < (ssize_t)bufferLength) && (data[n+m] != 0))
+      while (((n+m) < (size_t)bufferLength) && (data[n+m] != 0))
       {
         m++;
       }
@@ -2419,7 +2419,7 @@ Errors File_write(FileHandle *fileHandle,
       {
         break;
       }
-      n += m;
+      n += (ssize_t)m;
     }
   }
   else

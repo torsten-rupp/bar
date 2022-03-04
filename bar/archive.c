@@ -2968,8 +2968,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 
       if (   (archiveHandle->indexHandle != NULL)
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
-          && !archiveHandle->storageInfo->storageFlags.noStorage
-          && !archiveHandle->storageInfo->storageFlags.dryRun
+          && !archiveHandle->storageInfo->jobOptions->noStorage
+          && !archiveHandle->storageInfo->jobOptions->dryRun
          )
       {
         // create storage index
@@ -5621,10 +5621,10 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
+                        bool                    dryRun,
                         uint64                  createdDateTime,
                         bool                    createMeta,
                         const Password          *password,
-                        StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -5653,10 +5653,10 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
+                          bool                    dryRun,
                           uint64                  createdDateTime,
                           bool                    createMeta,
                           const Password          *password,
-                          StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -5707,9 +5707,9 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
+  archiveHandle->dryRun                  = dryRun;
   archiveHandle->createdDateTime         = createdDateTime;
   archiveHandle->createMeta              = createMeta;
-  archiveHandle->storageFlags            = storageFlags;
 
   archiveHandle->archiveInitFunction     = archiveInitFunction;
   archiveHandle->archiveInitUserData     = archiveInitUserData;
@@ -5984,7 +5984,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
-  archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -6133,7 +6132,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
-  archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -7613,7 +7611,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: directory entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -7853,7 +7851,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: link entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -8540,7 +8538,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: special entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -8747,7 +8745,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     // lock archive (Note: meta entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -12792,7 +12790,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
@@ -12937,7 +12935,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
@@ -13083,7 +13081,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
@@ -13125,7 +13123,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
@@ -13170,7 +13168,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             StringNode *stringNode;
             String     fileName;
 
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
@@ -13319,7 +13317,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
@@ -13363,7 +13361,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_META:
           {
-            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+            if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
@@ -13639,7 +13637,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(elementSize > 0);
 
-  if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
+  if (!archiveEntryInfo->archiveHandle->dryRun)
   {
     p            = (const byte*)buffer;
     writtenLength = 0L;
@@ -14487,7 +14485,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO->getSize != NULL);
 
   size = 0LL;
-  if (!archiveHandle->storageFlags.dryRun)
+  if (!archiveHandle->dryRun)
   {
     switch (archiveHandle->mode)
     {

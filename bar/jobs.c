@@ -1037,14 +1037,13 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   jobOptions->restoreEntryMode           = RESTORE_ENTRY_MODE_STOP;
   jobOptions->sparseFlag                 = FALSE;
 
-  jobOptions->testCreatedArchivesFlag    = FALSE;
-
   jobOptions->errorCorrectionCodesFlag   = FALSE;
   jobOptions->alwaysCreateImageFlag      = FALSE;
   jobOptions->blankFlag                  = FALSE;
   jobOptions->waitFirstVolumeFlag        = FALSE;
   jobOptions->rawImagesFlag              = FALSE;
 
+  jobOptions->testCreatedArchivesFlag    = FALSE;
   jobOptions->skipUnreadableFlag         = FALSE;
   jobOptions->forceDeltaCompressionFlag  = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag  = FALSE;
@@ -1053,11 +1052,13 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   jobOptions->noIndexDatabaseFlag        = FALSE;
   jobOptions->forceVerifySignaturesFlag  = FALSE;
   jobOptions->skipVerifySignaturesFlag   = FALSE;
+  jobOptions->noStorage                  = FALSE;
   jobOptions->noSignatureFlag            = FALSE;
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag          = FALSE;
   jobOptions->noStopOnErrorFlag          = FALSE;
   jobOptions->noStopOnAttributeErrorFlag = FALSE;
+  jobOptions->dryRun                     = FALSE;
 }
 
 /***********************************************************************\
@@ -1088,7 +1089,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   String_delete(jobNode->abortedByInfo);
 
-  String_delete(jobNode->scheduleCustomText);
+  String_delete(jobNode->customText);
   String_delete(jobNode->scheduleUUID);
 
   doneStatusInfo(&jobNode->statusInfo);
@@ -1252,10 +1253,12 @@ JobNode *Job_new(JobTypes    jobType,
 
   initStatusInfo(&jobNode->statusInfo);
 
-  jobNode->scheduleUUID                     = String_new();
-  jobNode->scheduleCustomText               = String_new();
   jobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
-  jobNode->storageFlags                     = STORAGE_FLAGS_NONE;
+  jobNode->scheduleUUID                     = String_new();
+  jobNode->customText                       = String_new();
+  jobNode->testCreatedArchives              = FALSE;
+  jobNode->noStorage                        = FALSE;
+  jobNode->dryRun                           = FALSE;
   jobNode->byName                           = String_new();
 
   jobNode->requestedAbortFlag               = FALSE;
@@ -1325,10 +1328,12 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   initStatusInfo(&newJobNode->statusInfo);
 
-  newJobNode->scheduleUUID                     = String_new();
-  newJobNode->scheduleCustomText               = String_new();
   newJobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
-  newJobNode->storageFlags                     = STORAGE_FLAGS_NONE;
+  newJobNode->scheduleUUID                     = String_new();
+  newJobNode->customText                       = String_new();
+  newJobNode->testCreatedArchives              = FALSE;
+  newJobNode->noStorage                        = FALSE;
+  newJobNode->dryRun                           = FALSE;
   newJobNode->byName                           = String_new();
 
   newJobNode->requestedAbortFlag               = FALSE;
@@ -1400,7 +1405,7 @@ bool Job_isSomeRunning(void)
   return runningFlag;
 }
 
-const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags)
+const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
 {
   const char *stateText;
 
@@ -1414,11 +1419,11 @@ const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags)
       stateText = "WAITING";
       break;
     case JOB_STATE_RUNNING:
-      if      (storageFlags.noStorage)
+      if      (noStorage)
       {
         stateText = "NO_STORAGE";
       }
-      else if (storageFlags.dryRun)
+      else if (dryRun)
       {
         stateText = "DRY_RUNNING";
       }
@@ -2516,9 +2521,11 @@ void Job_writeAllModified(void)
 
 void Job_trigger(JobNode      *jobNode,
                  ConstString  scheduleUUID,
-                 ConstString  scheduleCustomText,
                  ArchiveTypes archiveType,
-                 StorageFlags storageFlags,
+                 ConstString  customText,
+                 bool         testCreatedArchives,
+                 bool         noStorage,
+                 bool         dryRun,
                  uint64       startDateTime,
                  const char   *byName
                 )
@@ -2529,12 +2536,15 @@ void Job_trigger(JobNode      *jobNode,
   // set job state
   jobNode->jobState              = JOB_STATE_WAITING;
   String_set(jobNode->scheduleUUID,scheduleUUID);
-  String_set(jobNode->scheduleCustomText,scheduleCustomText);
   jobNode->archiveType           = archiveType;
-  jobNode->storageFlags          = storageFlags;
+  String_set(jobNode->customText,customText);
+  jobNode->testCreatedArchives   = testCreatedArchives;
+  jobNode->noStorage             = noStorage;
+  jobNode->dryRun                = dryRun;
   jobNode->startDateTime         = startDateTime;
   String_setCString(jobNode->byName,byName);
 
+  // reset running info
   jobNode->requestedAbortFlag    = FALSE;
   String_clear(jobNode->abortedByInfo);
   jobNode->requestedVolumeNumber = 0;
@@ -2566,11 +2576,9 @@ void Job_end(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // clear schedule
+  // clear job state
   String_clear(jobNode->scheduleUUID);
-  String_clear(jobNode->scheduleCustomText);
-
-  // set state
+  String_clear(jobNode->customText);
   if      (jobNode->requestedAbortFlag)
   {
     jobNode->jobState = JOB_STATE_ABORTED;
@@ -2757,11 +2765,13 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->noIndexDatabaseFlag                       = globalOptions.noIndexDatabaseFlag;
   jobOptions->forceVerifySignaturesFlag                 = globalOptions.forceVerifySignaturesFlag;
   jobOptions->skipVerifySignaturesFlag                  = globalOptions.skipVerifySignaturesFlag;
+  jobOptions->noStorage                                 = globalOptions.noStorage;
   jobOptions->noSignatureFlag                           = globalOptions.noSignatureFlag;
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag                         = globalOptions.noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                         = globalOptions.noStopOnErrorFlag;
   jobOptions->noStopOnAttributeErrorFlag                = globalOptions.noStopOnAttributeErrorFlag;
+  jobOptions->dryRun                                    = globalOptions.dryRun;
 
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
@@ -2884,11 +2894,13 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->noIndexDatabaseFlag                       = fromJobOptions->noIndexDatabaseFlag;
   jobOptions->forceVerifySignaturesFlag                 = fromJobOptions->forceVerifySignaturesFlag;
   jobOptions->skipVerifySignaturesFlag                  = fromJobOptions->skipVerifySignaturesFlag;
+  jobOptions->noStorage                                 = fromJobOptions->noStorage;
   jobOptions->noSignatureFlag                           = fromJobOptions->noSignatureFlag;
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag                         = fromJobOptions->noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                         = fromJobOptions->noStopOnErrorFlag;
   jobOptions->noStopOnAttributeErrorFlag                = fromJobOptions->noStopOnAttributeErrorFlag;
+  jobOptions->dryRun                                    = fromJobOptions->dryRun;
 
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }

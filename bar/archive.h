@@ -260,9 +260,9 @@ typedef struct
 
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
+  bool                     dryRun;                                     // TRUE for dry-run only
   uint64                   createdDateTime;
   bool                     createMeta;                                 // TRUE to create meta chunks
-  StorageFlags             storageFlags;                               // storage flags
 
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
   void                     *archiveInitUserData;                       // user data for call back to initialize archive file
@@ -702,10 +702,10 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
+                        bool                    dryRun,
                         uint64                  createdDateTime,
                         bool                    createMeta,
                         const Password          *password,
-                        StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -734,10 +734,10 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
+                          bool                    dryRun,
                           uint64                  createdDateTime,
                           bool                    createMeta,
                           const Password          *password,
-                          StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,

@@ -55,9 +55,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-const StorageFlags            STORAGE_FLAGS_NONE       = { .noStorage=FALSE, .dryRun=FALSE };
-const StorageFlags            STORAGE_FLAGS_NO_STORAGE = { .noStorage=TRUE, .dryRun=FALSE };
-
 /* file data buffer size */
 #define BUFFER_SIZE           (64*1024)
 
@@ -1881,7 +1878,6 @@ uint Storage_getServerSettings(Server                 *server,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
                       ServerConnectionPriorities      serverConnectionPriority,
-                      StorageFlags                    storageFlags,
                       StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                       void                            *storageUpdateStatusInfoUserData,
                       GetNamePasswordFunction         getNamePasswordFunction,
@@ -1903,7 +1899,6 @@ uint Storage_getServerSettings(Server                 *server,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
                         ServerConnectionPriorities      serverConnectionPriority,
-                        StorageFlags                    storageFlags,
                         StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                         void                            *storageUpdateStatusInfoUserData,
                         GetNamePasswordFunction         getNamePasswordFunction,
@@ -1935,7 +1930,6 @@ uint Storage_getServerSettings(Server                 *server,
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
   storageInfo->jobOptions                = jobOptions;
   storageInfo->masterIO                  = masterIO;
-  storageInfo->storageFlags              = storageFlags;
   storageInfo->logHandle                 = logHandle;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
   storageInfo->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
@@ -4143,7 +4137,6 @@ NULL, // masterIO
                        jobOptions,
                        maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       STORAGE_FLAGS_NONE,
                        CALLBACK_(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),

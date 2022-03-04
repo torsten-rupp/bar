@@ -1637,10 +1637,12 @@ LOCAL void initGlobalOptions(void)
   globalOptions.noIndexDatabaseFlag                             = FALSE;
   globalOptions.forceVerifySignaturesFlag                       = FALSE;
   globalOptions.skipVerifySignaturesFlag                        = FALSE;
+  globalOptions.noStorage                                       = FALSE;
   globalOptions.noSignatureFlag                                 = FALSE;
   globalOptions.noBAROnMediumFlag                               = FALSE;
   globalOptions.noStopOnErrorFlag                               = FALSE;
   globalOptions.noStopOnAttributeErrorFlag                      = FALSE;
+  globalOptions.dryRun                                          = FALSE;
 
   globalOptions.jobUUIDOrName                                   = String_new();
 
@@ -2528,56 +2530,6 @@ LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variabl
   {
     (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_STOP;
   }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParseStorageFlagNoStorage
-* Purpose: command line option call back for storage flag no-storage
-* Input  : -
-* Output : -
-* Return : TRUE iff parsed, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParseStorageFlagNoStorage(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(value);
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  ((StorageFlags*)variable)->noStorage = TRUE;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParseStorageFlagDryRun
-* Purpose: command line option call back for storage flag no-storage
-* Input  : -
-* Output : -
-* Return : TRUE iff parsed, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParseStorageFlagDryRun(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(value);
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  ((StorageFlags*)variable)->dryRun = TRUE;
 
   return TRUE;
 }
@@ -7547,8 +7499,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",                  0,  1,2,globalOptions.noStopOnErrorFlag,                                                                                  "do not immediately stop on error"                                         ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-attribute-error",        0,  1,2,globalOptions.noStopOnAttributeErrorFlag,                                                                         "do not immediately stop on attribute error"                               ),
 
-  CMD_OPTION_SPECIAL      ("no-storage",                        0,  1,2,&globalOptions.storageFlags,                         cmdOptionParseStorageFlagNoStorage,NULL,0,                   "do not store archives (skip storage, index database",""                   ),
-  CMD_OPTION_SPECIAL      ("dry-run",                           0,  1,2,&globalOptions.storageFlags,                         cmdOptionParseStorageFlagDryRun,NULL,0,                      "do dry-run (skip storage/restore, incremental data, index database)",""   ),
+  CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
+  CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,globalOptions.dryRun,                                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                          0,6,                                                         "increment/set verbosity level"                                            ),
@@ -8166,9 +8118,10 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
     CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ,"<text>"),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage,                          "yes|no"),
     CONFIG_STRUCT_VALUE_SPECIAL   ("begin",                     ScheduleNode,beginTime,                          configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("end",                       ScheduleNode,endTime,                            configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("test-created-archives",     ScheduleNode,testCreatedArchives,                "yes|no"),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage,                          "yes|no"),
     CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled,                            "yes|no"),
 
     // deprecated

@@ -94,14 +94,13 @@ typedef struct
   IndexHandle                 *indexHandle;
   const char                  *jobUUID;                             // unique job id to store or NULL
   const char                  *scheduleUUID;                        // unique schedule id to store or NULL
+  ArchiveTypes                archiveType;                          // archive type to create
   const char                  *scheduleTitle;                       // schedule title or NULL
-  const char                  *scheduleCustomText;                  // schedule custom text or NULL
+  const char                  *customText;                          // custom text or NULL
   const EntryList             *includeEntryList;                    // list of included entries
   const PatternList           *excludePatternList;                  // list of exclude patterns
   JobOptions                  *jobOptions;
-  ArchiveTypes                archiveType;                          // archive type to create
   uint64                      createdDateTime;                      // date/time of created [s]
-  StorageFlags                storageFlags;                         // storage flags; see STORAGE_FLAGS_...
 
   LogHandle                   *logHandle;                           // log handle
 
@@ -176,8 +175,8 @@ typedef struct
   IndexId      entityId;
 //  ArchiveTypes archiveType;
   IndexId      storageId;
-  String       fileName;                                          // intermediate archive file name
-  uint64       fileSize;                                          // intermediate archive size [bytes]
+  String       intermediateFileName;                              // intermediate archive file name
+  uint64       intermediateFileSize;                              // intermediate archive size [bytes]
   String       archiveName;                                       // destination archive name
 } StorageMsg;
 
@@ -246,7 +245,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(storageMsg->archiveName);
-  String_delete(storageMsg->fileName);
+  String_delete(storageMsg->intermediateFileName);
 }
 
 /***********************************************************************\
@@ -257,12 +256,12 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          jobUUID                    - unique job id to store or NULL
 *          scheduleUUID               - unique schedule id to store or NULL
 *          scheduleTitle              - schedule title
-*          scheduleCustomText         - schedule custome text or NULL
-*          includeEntryList           - include entry list
-*          excludePatternList         - exclude pattern list
-*          jobOptions                 - job options
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
+*          includeEntryList           - include entry list
+*          excludePatternList         - exclude pattern list
+*          customText                 - custome text or NULL
+*          jobOptions                 - job options
 *          createdDateTime            - date/time of created [s]
 *          storageFlags               - storage flags; see STORAGE_FLAGS_...
 *          isPauseCreateFunction      - is pause check callback (can
@@ -287,13 +286,12 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           const char         *jobUUID,
                           const char         *scheduleUUID,
                           const char         *scheduleTitle,
-                          const char         *scheduleCustomText,
+                          ArchiveTypes       archiveType,
                           const EntryList    *includeEntryList,
                           const PatternList  *excludePatternList,
+                          const char         *customText,
                           JobOptions         *jobOptions,
-                          ArchiveTypes       archiveType,
                           uint64             createdDateTime,
-                          StorageFlags       storageFlags,
                           IsPauseFunction    isPauseCreateFunction,
                           void               *isPauseCreateUserData,
                           StatusInfoFunction statusInfoFunction,
@@ -311,11 +309,11 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
   createInfo->scheduleUUID                         = scheduleUUID;
   createInfo->includeEntryList                     = includeEntryList;
   createInfo->excludePatternList                   = excludePatternList;
-  createInfo->jobOptions                           = jobOptions;
+  createInfo->customText                           = customText;
+// TODO: needed?
   createInfo->scheduleTitle                        = scheduleTitle;
-  createInfo->scheduleCustomText                   = scheduleCustomText;
+  createInfo->jobOptions                           = jobOptions;
   createInfo->createdDateTime                      = createdDateTime;
-  createInfo->storageFlags                         = storageFlags;
 
   createInfo->logHandle                            = logHandle;
 
@@ -2744,7 +2742,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                           ENTRY_TYPE_FILE,
                                           name,
                                           &fileInfo,
-                                          !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                          !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                          );
                   }
                   else
@@ -2851,7 +2849,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                   ENTRY_TYPE_FILE,
                                                   &data.hardLinkInfo->nameList,
                                                   &data.hardLinkInfo->fileInfo,
-                                                  !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                  !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                  );
 
                         // clear entry
@@ -3090,7 +3088,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                 ENTRY_TYPE_FILE,
                                                 name,
                                                 &fileInfo,
-                                                !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                );
                         }
                         break;
@@ -3252,7 +3250,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                             ENTRY_TYPE_FILE,
                                                             fileName,
                                                             &fileInfo,
-                                                            !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                            !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                            );
                                     }
                                     break;
@@ -3327,7 +3325,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                                ENTRY_TYPE_IMAGE,
                                                                name,
                                                                &deviceInfo,
-                                                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                               !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                               );
                                       }
                                     }
@@ -3375,7 +3373,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                                       ENTRY_TYPE_FILE,
                                                                       &data.hardLinkInfo->nameList,
                                                                       &data.hardLinkInfo->fileInfo,
-                                                                      !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                                      !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                                      );
 
                                             // clear entry
@@ -3482,7 +3480,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                              ENTRY_TYPE_IMAGE,
                                                              fileName,
                                                              &deviceInfo,
-                                                             !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                             !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                             );
                                     }
                                     break;
@@ -3614,7 +3612,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                    ENTRY_TYPE_IMAGE,
                                                    name,
                                                    &deviceInfo,
-                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                   !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                   );
                           }
                         }
@@ -3677,7 +3675,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                         ENTRY_TYPE_FILE,
                                                         &data.hardLinkInfo->nameList,
                                                         &data.hardLinkInfo->fileInfo,
-                                                        !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                        !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                        );
 
                               // clear entry
@@ -3800,7 +3798,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                    ENTRY_TYPE_IMAGE,
                                                    name,
                                                    &deviceInfo,
-                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                   !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                                                   );
                           }
                         }
@@ -3898,7 +3896,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                               ENTRY_TYPE_FILE,
                               &data.hardLinkInfo->nameList,
                               &data.hardLinkInfo->fileInfo,
-                              !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                              !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
                              );
   }
   Dictionary_doneIterator(&dictionaryIterator);
@@ -4032,7 +4030,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
                                 EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
-                                createInfo->scheduleCustomText,
+                                createInfo->customText,
                                 createInfo->createdDateTime,
                                 partNumber
                                );
@@ -4263,9 +4261,9 @@ LOCAL Errors archiveTest(StorageInfo  *storageInfo,
                          void         *userData
                         )
 {
-  CreateInfo    *createInfo = (CreateInfo*)userData;
-  Errors        error;
-  String        archiveName;
+  CreateInfo *createInfo = (CreateInfo*)userData;
+  Errors     error;
+  String     archiveName;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
@@ -4284,7 +4282,7 @@ LOCAL Errors archiveTest(StorageInfo  *storageInfo,
                                   EXPAND_MACRO_MODE_STRING,
                                   createInfo->archiveType,
                                   createInfo->scheduleTitle,
-                                  createInfo->scheduleCustomText,
+                                  createInfo->customText,
                                   createInfo->createdDateTime,
                                   partNumber
                                  );
@@ -4308,7 +4306,14 @@ LOCAL Errors archiveTest(StorageInfo  *storageInfo,
       String_delete(archiveName);
       return error;
     }
+
     printInfo(1,"OK (%"PRIu64" bytes)\n",intermediateFileSize);
+    logMessage(createInfo->logHandle,
+               LOG_TYPE_STORAGE,
+               "Tested '%s' (%"PRIu64" bytes)",
+               String_cString(archiveName),
+               intermediateFileSize
+              );
   }
 
   return ERROR_NONE;
@@ -4345,10 +4350,10 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           void         *userData
                          )
 {
-  CreateInfo    *createInfo = (CreateInfo*)userData;
-  Errors        error;
-  String        archiveName;
-  StorageMsg    storageMsg;
+  CreateInfo *createInfo = (CreateInfo*)userData;
+  Errors     error;
+  String     archiveName;
+  StorageMsg storageMsg;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
@@ -4364,7 +4369,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                                 EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
-                                createInfo->scheduleCustomText,
+                                createInfo->customText,
                                 createInfo->createdDateTime,
                                 partNumber
                                );
@@ -4381,8 +4386,8 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   storageMsg.entityId    = entityId;
 //  storageMsg.archiveType = archiveType;
   storageMsg.storageId   = storageId;
-  storageMsg.fileName    = String_duplicate(intermediateFileName);
-  storageMsg.fileSize    = intermediateFileSize;
+  storageMsg.intermediateFileName = String_duplicate(intermediateFileName);
+  storageMsg.intermediateFileSize = intermediateFileSize;
   storageMsg.archiveName = archiveName;
   storageInfoIncrement(createInfo,intermediateFileSize);
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
@@ -4473,7 +4478,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
-                             STORAGE_FLAGS_NONE,
                              CALLBACK_(NULL,NULL),  // updateStatusInfo
                              CALLBACK_(NULL,NULL),  // getNamePassword
                              CALLBACK_(NULL,NULL),  // requestVolume
@@ -4491,7 +4495,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               STORAGE_FLAGS_NONE,
                                CALLBACK_(NULL,NULL),  // updateStatusInfo
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
@@ -4510,7 +4513,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
-                             STORAGE_FLAGS_NONE,
                              CALLBACK_(NULL,NULL),  // updateStatusInfo
                              CALLBACK_(NULL,NULL),  // getNamePassword
                              CALLBACK_(NULL,NULL),  // requestVolume
@@ -4942,7 +4944,6 @@ NULL, // masterIO
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               STORAGE_FLAGS_NONE,
                                CALLBACK_(NULL,NULL),  // updateStatusInfo
                                CALLBACK_(NULL,NULL),  // getPassword
                                CALLBACK_(NULL,NULL),  // requestVolume
@@ -5162,7 +5163,6 @@ NULL, // masterIO
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               STORAGE_FLAGS_NONE,
                                CALLBACK_(NULL,NULL),  // updateStatusInfo
                                CALLBACK_(NULL,NULL),  // getPassword
                                CALLBACK_(NULL,NULL),  // requestVolume
@@ -5296,7 +5296,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // initial storage pre-processing
   if (   (createInfo->failError == ERROR_NONE)
-      && !createInfo->storageFlags.dryRun
+      && !createInfo->jobOptions->dryRun
      )
   {
     // pause
@@ -5341,8 +5341,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
-                   storageInfoDecrement(createInfo,storageMsg.fileSize);
-                   File_delete(storageMsg.fileName,FALSE);
+                   storageInfoDecrement(createInfo,storageMsg.intermediateFileSize);
+                   File_delete(storageMsg.intermediateFileName,FALSE);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -5352,16 +5352,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       break;
     }
 
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       // get file info
-      error = File_getInfo(&fileInfo,storageMsg.fileName);
+      error = File_getInfo(&fileInfo,storageMsg.intermediateFileName);
       if (error != ERROR_NONE)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         printError("Cannot get information for file '%s' (error: %s)",
-                   String_cString(storageMsg.fileName),
+                   String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
 
@@ -5427,7 +5427,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
       // check storage size, purge old archives
-      if (!createInfo->storageFlags.dryRun && (createInfo->jobOptions->maxStorageSize > 0LL))
+      if (!createInfo->jobOptions->dryRun && (createInfo->jobOptions->maxStorageSize > 0LL))
       {
         // purge archives by max. job storage size
         purgeStorageByJobUUID(createInfo->indexHandle,
@@ -5456,18 +5456,18 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       // open file to store
       #ifndef NDEBUG
-        printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
+        printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.intermediateFileName),String_cString(printableStorageName));
       #else /* not NDEBUG */
         printInfo(1,"Store '%s'...",String_cString(printableStorageName));
       #endif /* NDEBUG */
-      error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
+      error = File_open(&fileHandle,storageMsg.intermediateFileName,FILE_OPEN_READ);
       if (error != ERROR_NONE)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         printInfo(0,"FAIL!\n");
         printError("Cannot open file '%s' (error: %s)!",
-                   String_cString(storageMsg.fileName),
+                   String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
 
@@ -5906,11 +5906,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
       // delete temporary storage file
-      error = File_delete(storageMsg.fileName,FALSE);
+      error = File_delete(storageMsg.intermediateFileName,FALSE);
       if (error != ERROR_NONE)
       {
         printWarning("Cannot delete file '%s' (error: %s)!",
-                     String_cString(storageMsg.fileName),
+                     String_cString(storageMsg.intermediateFileName),
                      Error_getText(error)
                     );
       }
@@ -5919,7 +5919,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       StringList_append(&createInfo->storageFileList,storageMsg.archiveName);
 
       // update storage info
-      storageInfoDecrement(createInfo,storageMsg.fileSize);
+      storageInfoDecrement(createInfo,storageMsg.intermediateFileSize);
 
     }
 
@@ -5936,11 +5936,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (!INDEX_ID_IS_NONE(storageMsg.storageId)) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
 
     // delete temporary storage file
-    error = File_delete(storageMsg.fileName,FALSE);
+    error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot delete file '%s' (error: %s)!",
-                   String_cString(storageMsg.fileName),
+                   String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
     }
@@ -5951,7 +5951,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // final storage post-processing
   if (   (createInfo->failError == ERROR_NONE)
-      && !createInfo->storageFlags.dryRun
+      && !createInfo->jobOptions->dryRun
      )
   {
     // pause
@@ -5987,7 +5987,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     EXPAND_MACRO_MODE_PATTERN,
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
-                                    createInfo->scheduleCustomText,
+                                    createInfo->customText,
                                     createInfo->createdDateTime,
                                     ARCHIVE_PART_NUMBER_NONE
                                    );
@@ -6349,7 +6349,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   // init fragment
   fragmentInit(createInfo,fileName,fileInfo->size,fragmentCount);
 
-  if (!createInfo->storageFlags.noStorage)
+  if (!createInfo->jobOptions->noStorage)
   {
     offset       = 0LL;
     size         = 0LL;
@@ -6446,7 +6446,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                 }
                 createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
-                createInfo->statusInfo.compressionRatio = (!createInfo->storageFlags.dryRun && (createInfo->statusInfo.done.size > 0))
+                createInfo->statusInfo.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->statusInfo.done.size > 0))
                                                             ? 100.0-(archiveSize*100.0)/createInfo->statusInfo.done.size
                                                             : 0.0;
               }
@@ -6585,7 +6585,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
     }
 
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
                 fragmentSize,
@@ -6785,7 +6785,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   // init fragment
   fragmentInit(createInfo,deviceName,deviceInfo->size,fragmentCount);
 
-  if (!createInfo->storageFlags.noStorage)
+  if (!createInfo->jobOptions->noStorage)
   {
     blockOffset  = 0LL;
     blockCount   = 0LL;
@@ -6902,7 +6902,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
             }
             createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo->blockSize;
             createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
-            createInfo->statusInfo.compressionRatio = (!createInfo->storageFlags.dryRun && (createInfo->statusInfo.done.size > 0))
+            createInfo->statusInfo.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->statusInfo.done.size > 0))
                                                         ? 100.0-(archiveSize*100.0)/createInfo->statusInfo.done.size
                                                         : 0.0;
           }
@@ -7038,7 +7038,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // output result
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s, %"PRIu64" bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
@@ -7188,7 +7188,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     }
   }
 
-  if (!createInfo->storageFlags.noStorage)
+  if (!createInfo->jobOptions->noStorage)
   {
     // new directory
     archiveEntryName = getArchiveEntryName(String_new(),directoryName);
@@ -7230,7 +7230,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     }
 
     // output result
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -7347,7 +7347,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     }
   }
 
-  if (!createInfo->storageFlags.noStorage)
+  if (!createInfo->jobOptions->noStorage)
   {
     // read link
     fileName = String_new();
@@ -7433,7 +7433,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     }
 
     // output result
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -7621,7 +7621,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // init fragment
   fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo->size,fragmentCount);
 
-  if (!createInfo->storageFlags.noStorage)
+  if (!createInfo->jobOptions->noStorage)
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -7718,7 +7718,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 }
                 createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
-                createInfo->statusInfo.compressionRatio = (!createInfo->storageFlags.dryRun && (createInfo->statusInfo.done.size > 0))
+                createInfo->statusInfo.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->statusInfo.done.size > 0))
                                                             ? 100.0-(createInfo->statusInfo.archiveSize *100.0)/createInfo->statusInfo.done.size
                                                             : 0.0;
               }
@@ -7857,7 +7857,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // output result
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
                 fragmentSize,
@@ -8014,7 +8014,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     }
   }
 
-  if (!createInfo->storageFlags.noStorage)
+  if (!createInfo->jobOptions->noStorage)
   {
     // new special
     archiveEntryName = getArchiveEntryName(String_new(),fileName);
@@ -8050,7 +8050,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     }
 
     // output result
-    if (!createInfo->storageFlags.dryRun)
+    if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -8314,14 +8314,13 @@ Errors Command_create(ServerIO                     *masterIO,
                       const char                   *jobUUID,
                       const char                   *scheduleUUID,
                       const char                   *scheduleTitle,
-                      const char                   *scheduleCustomText,
+                      ArchiveTypes                 archiveType,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
+                      const char                   *customText,
                       JobOptions                   *jobOptions,
-                      ArchiveTypes                 archiveType,
                       uint64                       createdDateTime,
-                      StorageFlags                 storageFlags,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
                       StatusInfoFunction           statusInfoFunction,
@@ -8408,13 +8407,12 @@ Errors Command_create(ServerIO                     *masterIO,
                  jobUUID,
                  scheduleUUID,
                  scheduleTitle,
-                 scheduleCustomText,
+                 archiveType,
                  includeEntryList,
                  excludePatternList,
+                 customText,
                  jobOptions,
-                 archiveType,
                  createdDateTime,
-                 storageFlags,
                  CALLBACK_(isPauseCreateFunction,isPauseCreateUserData),
                  CALLBACK_(statusInfoFunction,statusInfoUserData),
                  CALLBACK_(isAbortedFunction,isAbortedUserData),
@@ -8445,7 +8443,6 @@ Errors Command_create(ServerIO                     *masterIO,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       storageFlags,
                        CALLBACK_(updateStorageStatusInfo,&createInfo),
                        CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                        CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
@@ -8627,12 +8624,12 @@ Errors Command_create(ServerIO                     *masterIO,
                          entityId,
                          jobUUID,
                          scheduleUUID,
-                         &createInfo.jobOptions->deltaSourceList,
+                         &jobOptions->deltaSourceList,
                          archiveType,
+                         jobOptions->dryRun,
                          createdDateTime,
                          TRUE,  // createMeta
                          NULL,  // cryptPassword
-                         storageFlags,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(archiveGetSize,&createInfo),
@@ -8777,7 +8774,7 @@ Errors Command_create(ServerIO                     *masterIO,
     (void)Index_unlockEntity(indexHandle,entityId);
 
     if (   (createInfo.failError == ERROR_NONE)
-        && !createInfo.storageFlags.dryRun
+        && !createInfo.jobOptions->dryRun
         && !isAborted(&createInfo)
        )
     {
@@ -8804,7 +8801,7 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // write incremental list
   if (   (createInfo.failError == ERROR_NONE)
-      && !createInfo.storageFlags.dryRun
+      && !createInfo.jobOptions->dryRun
       && !isAborted(&createInfo)
       && createInfo.storeIncrementalFileInfoFlag
      )

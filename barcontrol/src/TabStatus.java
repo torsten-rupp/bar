@@ -670,44 +670,65 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-        Settings.jobListColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetJobTable));
+        Settings.jobTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetJobTable));
       }
     };
     tableColumn = Widgets.addTableColumn(widgetJobTable,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Slave"),         SWT.LEFT, 130,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for host."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,3,BARControl.tr("Type"),          SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,4,BARControl.tr("Part size"),     SWT.RIGHT, 80,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for part size."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,5,BARControl.tr("Compress"),      SWT.LEFT,  80,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for used compress algorithm."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,6,BARControl.tr("Crypt"),         SWT.LEFT, 100,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for used encryption algorithm."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,7,BARControl.tr("Last executed"), SWT.LEFT, 150,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for last date/time job was executed."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,8,BARControl.tr("Estimated time"),SWT.LEFT, 120,false);
     tableColumn.setToolTipText(BARControl.tr("Click to sort for estimated rest time to execute job."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    Widgets.setTableColumnWidth(widgetJobTable,Settings.jobListColumns.width);
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
+    Widgets.setTableColumnWidth(widgetJobTable,Settings.jobTableColumns.width);
     widgetJobTable.setColumnOrder(Settings.jobListColumnOrder.getMap(COLUMN_NAMES));
-    for (TableColumn tableColumn_ : widgetJobTable.getColumns())
-    {
-      tableColumn_.setMoveable(true);
-      tableColumn_.addListener(SWT.Move,jobListColumnMoveListener);
-      tableColumn_.addListener(SWT.Resize,jobListColumnResizeListener);
-    }
 
     widgetJobTableHeaderMenu = Widgets.newPopupMenu(shell);
     {

@@ -219,7 +219,6 @@ typedef struct
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
   ServerIO                        *masterIO;
-  StorageFlags                    storageFlags;              // storage flags; see STORAGE_FLAG_...
 
   LogHandle                       *logHandle;                // log handle
 
@@ -1112,7 +1111,6 @@ Errors Storage_prepare(const String     storageName,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
                       ServerConnectionPriorities      serverConnectionPriority,
-                      StorageFlags                    storageFlags,
                       StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                       void                            *storageUpdateStatusInfoUserData,
                       GetNamePasswordFunction         getNamePasswordFunction,
@@ -1134,7 +1132,6 @@ Errors Storage_prepare(const String     storageName,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
                         ServerConnectionPriorities      serverConnectionPriority,
-                        StorageFlags                    storageFlags,
                         StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                         void                            *storageUpdateStatusInfoUserData,
                         GetNamePasswordFunction         getNamePasswordFunction,

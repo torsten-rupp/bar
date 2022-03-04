@@ -202,7 +202,6 @@ NULL, // masterIO
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       STORAGE_FLAGS_NONE,
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(NULL,NULL),  // getPassword
                        CALLBACK_(NULL,NULL),  // requestVolume
