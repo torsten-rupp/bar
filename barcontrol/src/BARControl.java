@@ -3737,7 +3737,7 @@ if (false) {
       JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
       if (jobData != null)
       {
-        Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,jobData);
+        Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,jobData.uuid);
       }
     }
 
