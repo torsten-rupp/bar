@@ -50,10 +50,13 @@ ERROR INVALID_PATTERN
 // --- network ----------------------------------------------------------
 ERROR NO_HOST_NAME                     TR("no host name given")
 ERROR HOST_NOT_FOUND
-  stringSet(errorText,sizeof(errorText),TR("host not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),"host '%s' not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("host not found"));
   }
 
 ERROR BIND_FAIL
