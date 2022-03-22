@@ -118,7 +118,7 @@ class WidgetVariable<T>
 //Dprintf.dprintf("modified");
   private final String   name;
   private final Class    type;
-  private final String[] values;     // possible values or null
+  private final Object[] values;     // possible values or null
   private T              value;      // value
 
   /** get widget variable instance
@@ -132,27 +132,27 @@ class WidgetVariable<T>
 
     if      (object instanceof Boolean)
     {
-      widgetVariable = new WidgetVariable<Boolean>((Boolean)object,name);
+      widgetVariable = new WidgetVariable<Boolean>(name,(Boolean)object);
     }
     else if (object instanceof Long)
     {
-      widgetVariable = new WidgetVariable<Long>((Long)object,name);
+      widgetVariable = new WidgetVariable<Long>(name,(Long)object);
     }
     else if (object instanceof Double)
     {
-      widgetVariable = new WidgetVariable<Double>((Double)object,name);
+      widgetVariable = new WidgetVariable<Double>(name,(Double)object);
     }
     else if (object instanceof String)
     {
-      widgetVariable = new WidgetVariable<String>((String)object,name);
+      widgetVariable = new WidgetVariable<String>(name,(String)object);
     }
     else if (object instanceof Enum)
     {
-      widgetVariable = new WidgetVariable<Enum>((Enum)object,name);
+      widgetVariable = new WidgetVariable<Enum>(name,(Enum)object);
     }
     else
     {
-      widgetVariable = new WidgetVariable<Object>(object,name);
+      widgetVariable = new WidgetVariable<Object>(name,object);
     }
 
     return widgetVariable;
@@ -169,14 +169,14 @@ class WidgetVariable<T>
 
   /** create widget variable
    * @param name name
-   * @param value value
    * @param values values
+   * @param value value
    */
-  WidgetVariable(String name, T value, Object values)
+  WidgetVariable(String name, T[] values, T value)
   {
     this.name   = name;
     this.type   = value.getClass();
-    this.values = null;
+    this.values = values;
     this.value  = value;
   }
 
@@ -186,16 +186,16 @@ class WidgetVariable<T>
    */
   WidgetVariable(String name, T value)
   {
-    this(name,value,(Object)null);
+    this(name,(T[])null,value);
   }
 
   /** create widget variable
    * @param value value
    * @param values values
    */
-  WidgetVariable(T value, Object values)
+  WidgetVariable(T[] values, T value)
   {
-    this((String)null,value,values);
+    this((String)null,values,value);
   }
 
   /** create widget variable
@@ -203,32 +203,7 @@ class WidgetVariable<T>
    */
   WidgetVariable(T value)
   {
-    this(value,(Object)null);
-  }
-
-  /** create widget variable
-   * @param name name
-   * @param value value
-   * @param values values
-   */
-  WidgetVariable(String name, String[] values, T value)
-  {
-    this.name   = name;
-    this.type   = String.class;
-    this.values = values;
-    this.value  = value;
-  }
-
-  /** create widget variable
-   * @param value value
-   * @param values values
-   */
-  WidgetVariable(String[] values, T value)
-  {
-    this.name   = (String)null;
-    this.type   = String.class;
-    this.values = values;
-    this.value  = value;
+    this((String)null,(T[])null,value);
   }
 
   /** create widget variable
@@ -279,6 +254,9 @@ class WidgetVariable<T>
   {
     this((String)null,d);
   }
+
+  /** create widget variable (String)
+   */
   WidgetVariable()
   {
     this.name   = null;
@@ -372,9 +350,19 @@ class WidgetVariable<T>
    */
   String getString()
   {
-    assert (type == String.class) || (type == Enum.class): "invalid type "+type.toString();
+    assert (type == String.class) || type.isEnum() || (type == Enum.class): "invalid type "+type.toString();
 
-    return (String)value;
+    return value.toString();
+  }
+
+  /** get double value
+   * @return value
+   */
+  T getEnum()
+  {
+    assert type.isEnum() || (type == Enum.class): "invalid type "+type.toString();
+
+    return (T)value;
   }
 
   /** set boolean value
@@ -457,7 +445,7 @@ class WidgetVariable<T>
   {
     boolean changedFlag = false;
 
-    assert (type == String.class) || (type == Enum.class): "invalid type "+type.toString();
+    assert (type == String.class) || type.isEnum() || (type == Enum.class): "invalid type "+type.toString();
 
     if      (type == String.class)
     {
@@ -466,7 +454,7 @@ class WidgetVariable<T>
       this.value = (T)new String(value);
       Widgets.modified(this);
     }
-    else if (type == Enum.class)
+    else if (type.isEnum() || (type == Enum.class))
     {
       for (Object v : values)
       {
@@ -476,6 +464,7 @@ class WidgetVariable<T>
 
           this.value = (T)new String(value);
           Widgets.modified(this);
+          break;
         }
       }
     }
@@ -490,13 +479,13 @@ class WidgetVariable<T>
   public boolean equals(String value)
   {
     String s;
-    if      (type == Boolean.class) s = ((Boolean)this.value).toString();
-    else if (type == Integer.class) s = ((Integer)this.value).toString();
-    else if (type == Long.class   ) s = ((Long   )this.value).toString();
-    else if (type == Double.class ) s = ((Double )this.value).toString();
-    else if (type == String.class ) s = (String)this.value;
-    else if (type == Enum.class   ) s = (String)this.value;
-    else                            s = (this.value != null) ? this.value.toString() : "";
+    if      (type == Boolean.class              ) s = ((Boolean)this.value).toString();
+    else if (type == Integer.class              ) s = ((Integer)this.value).toString();
+    else if (type == Long.class                 ) s = ((Long   )this.value).toString();
+    else if (type == Double.class               ) s = ((Double )this.value).toString();
+    else if (type == String.class               ) s = (String)this.value;
+    else if (type.isEnum() || type == Enum.class) s = (String)this.value;
+    else                                          s = (this.value != null) ? this.value.toString() : "";
 
     return (s != null) ? s.equals(value) : (value == null);
   }
@@ -525,81 +514,54 @@ class WidgetModifyListener
 {
   private Widget           widget;
   private WidgetVariable[] variables;
+  private Widget           modifyWidget;
 
   // cached text for widget
   private String cachedText = "";
 
-  /** create widget listener
+  /** create widget modify listener
    */
   WidgetModifyListener()
   {
-    this.widget    = null;
-    this.variables = null;
+    this.widget       = null;
+    this.variables    = null;
+    this.modifyWidget = null;
   }
 
-  /** create widget listener
-   * @param widget widget
-   * @param variable widget variable
-   */
-  WidgetModifyListener(Widget widget, WidgetVariable variable)
-  {
-    this(widget,new WidgetVariable[]{variable});
-  }
-
-  /** create widget listener
-   * @param widget widget
-   * @param variable widget variable
+  /** create widget modify listener
+   * @param widget widget to notify about modification
+   * @param variable modified widget variables
    */
   WidgetModifyListener(Widget widget, WidgetVariable... variables)
   {
-    this.widget    = widget;
-    this.variables = variables;
-  }
-
-  /** create widget listener
-   * @param widget widget
-   * @param object object
-   */
-  WidgetModifyListener(Widget widget, Object object)
-  {
-    WidgetVariable widgetVariable;
-    if      (object instanceof Boolean)
-    {
-      widgetVariable = new WidgetVariable<Boolean>((Boolean)object);
-    }
-    else if (object instanceof Integer)
-    {
-      widgetVariable = new WidgetVariable<Integer>((Integer)object);
-    }
-    else if (object instanceof Long)
-    {
-      widgetVariable = new WidgetVariable<Long>((Long)object);
-    }
-    else if (object instanceof Double)
-    {
-      widgetVariable = new WidgetVariable<Double>((Double)object);
-    }
-    else if (object instanceof String)
-    {
-      widgetVariable = new WidgetVariable<String>((String)object);
-    }
-    else if (object instanceof Enum)
-    {
-      widgetVariable = new WidgetVariable<Enum>((Enum)object);
-    }
-    else
-    {
-      widgetVariable = new WidgetVariable<Object>(object);
-    }
-
     this.widget       = widget;
-    this.variables    = new WidgetVariable[1];
-    this.variables[0] = WidgetVariable.getInstance(object);
+    this.variables    = variables;
+    this.modifyWidget = null;
   }
 
-  /** create widget listener
-   * @param widget widget
-   * @param objects objects
+  /** create widget modify listener
+   * @param control control
+   * @param modifyWidget modified widget
+   */
+  WidgetModifyListener(final Control control, final Widget modifyWidget)
+  {
+    this.widget       = control;
+    this.variables    = null;
+    this.modifyWidget = modifyWidget;
+
+    modifyWidget.addListener(SWT.Modify,new Listener()
+    {
+      @Override
+      public void handleEvent(Event event)
+      {
+        modified(control,modifyWidget);
+      }
+    });
+  }
+
+  /** create widget modify listener
+   * @param widget widget to notify about modification
+   * @param objects modified objects
    */
   WidgetModifyListener(Widget widget, Object... objects)
   {
@@ -609,19 +571,18 @@ class WidgetModifyListener
     {
       this.variables[i] = WidgetVariable.getInstance(objects[i]);
     }
+    this.modifyWidget = null;
   }
 
-  /** create widget listener
-   * @param widget widget
-   * @param variable widget variable
+  /** create widget modify listener
+   * @param widget widget to notify about modification
    */
   WidgetModifyListener(Widget widget)
   {
     this(widget,(WidgetVariable[])null);
   }
 
-  /** create widget listener
-   * @param widget widget
+  /** create widget modify listener
    * @param variable widget variable
    */
   WidgetModifyListener(WidgetVariable variable)
@@ -629,8 +590,7 @@ class WidgetModifyListener
     this((Widget)null,new WidgetVariable[]{variable});
   }
 
-  /** create widget listener
-   * @param widget widget
+  /** create widget modify listener
    * @param variable widget variable
    */
   WidgetModifyListener(WidgetVariable... variables)
@@ -655,15 +615,15 @@ class WidgetModifyListener
     this.variables = new WidgetVariable[]{variable};
   }
 
-  /** compare variables
-   * @param otherWidgetVariable variable object
-   * @return true iff equal variable object is equal to some variable
+  /** check if variable is watched
+   * @param otherVariable variable object
+   * @return true iff variable is watched by this widget modify listener
    */
-  public boolean equals(WidgetVariable otherVariable)
+  public boolean watches(WidgetVariable otherVariable)
   {
-    for (WidgetVariable variable : variables)
+    if (variables != null)
     {
-      if (variable != null)
+      for (WidgetVariable variable : variables)
       {
         if (variable == otherVariable) return true;
       }
@@ -672,15 +632,15 @@ class WidgetModifyListener
     return false;
   }
 
-  /** compare variables
-   * @param object variable object
-   * @return true iff equal variable object is equal to some variable
+  /** check if object is watched
+   * @param object object
+   * @return true iff object is watched by this widget modify listener
    */
-  public boolean equals(Object object)
+  public boolean watches(Object object)
   {
-    for (WidgetVariable variable : variables)
+    if (variables != null)
     {
-      if (variable != null)
+      for (WidgetVariable variable : variables)
       {
         if (variable.get() == object) return true;
       }
@@ -701,7 +661,7 @@ class WidgetModifyListener
    * @param widget widget widget to set
    * @param variable variable
    */
-  public void modified(final Widget widget, final WidgetVariable variable)
+  final public void modified(final Widget widget, final WidgetVariable variable)
   {
     if ((widget != null) && (!widget.isDisposed()))
     {
@@ -712,7 +672,7 @@ class WidgetModifyListener
         {
           try
           {
-            if      (widget instanceof Label)
+            if           (widget instanceof Label)
             {
               Label widgetLabel = (Label)widget;
 
@@ -786,32 +746,35 @@ class WidgetModifyListener
               String text = getString(variable);
               if (text == null)
               {
-                if      (variable.getType() == Boolean.class) text = Boolean.toString(variable.getBoolean());
-                else if (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
-                else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
-                else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
-                else if (variable.getType() == String.class ) text = variable.getString();
-                else if (variable.getType() == Enum.class   ) text = variable.getString();
+                if      (variable.getType() == Boolean.class    ) text = Boolean.toString(variable.getBoolean());
+                else if (variable.getType() == Integer.class    ) text = Integer.toString(variable.getInteger());
+                else if (variable.getType() == Long.class       ) text = Long.toString(variable.getLong());
+                else if (variable.getType() == Double.class     ) text = Double.toString(variable.getDouble());
+                else if (   (variable.getType() == String.class)
+                         || variable.getType().isEnum()
+                         || (variable.getType() == Enum.class)  ) text = variable.getString();
               }
               if ((text != null) && !text.equals(cachedText))
               {
-                ArrayList<Object> dataArray = (ArrayList<Object>)widgetCombo.getData();
+                ArrayList<Object> dataArray   = (ArrayList<Object>)widgetCombo.getData();
+                int               selectIndex = -1;
                 if (dataArray != null)
                 {
                   for (int i = 0; i < dataArray.size(); i++)
                   {
-                    if (dataArray.get(i).equals(text))
+                    if (dataArray.get(i).toString().equals(text))
                     {
                       // Fix layout: save current bounds and restore after pack()
                       Rectangle bounds = widgetCombo.getBounds();
                       widgetCombo.select(i);
                       widgetCombo.pack();
                       widgetCombo.setBounds(bounds);
+                      selectIndex = i;
                       break;
                     }
                   }
                 }
-                else
+                if (selectIndex == -1)
                 {
                   // Fix layout: save current bounds and restore after pack()
                   Rectangle bounds = widgetCombo.getBounds();
@@ -910,11 +873,19 @@ class WidgetModifyListener
             }
             else if (widget instanceof MenuItem)
             {
-              MenuItem widgetMenuItem = (MenuItem)widget;
+              // nothing to do
+            }
+            else if (widget instanceof org.eclipse.swt.widgets.List)
+            {
+              // nothing to do
             }
             else if (widget instanceof Table)
             {
-              Table widgetTable = (Table)widget;
+              // nothing to do
+            }
+            else if (widget instanceof Composite)
+            {
+              // nothing to do
             }
             else
             {
@@ -930,91 +901,11 @@ class WidgetModifyListener
     }
   }
 
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param control control to notify about modified variable
-   * @param variable variable
-   */
-  void modified(Control control, WidgetVariable variable)
-  {
-    modified((Widget)control,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param button button to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(Button button, WidgetVariable variable)
-  {
-    modified((Widget)button,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param combo combo to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(Combo combo, WidgetVariable variable)
-  {
-    modified((Widget)combo,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param text text to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(Text text, WidgetVariable variable)
-  {
-    modified((Widget)text,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param styledtext styled text to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(StyledText styledtext, WidgetVariable variable)
-  {
-    modified((Widget)styledtext,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param menuItem menu item to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(MenuItem menuItem, WidgetVariable variable)
-  {
-    modified((Widget)menuItem,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param table table to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(Table table, WidgetVariable variable)
-  {
-    modified((Widget)table,variable);
-  }
-
-  /** modified handler
-   * Note: required because it can be overwritten by specific handler
-   * @param tree tree to notify about modified variable
-   * @param variable variable
-   */
-  public void modified(Tree tree, WidgetVariable variable)
-  {
-    modified((Widget)tree,variable);
-  }
-
   /** set text or selection for widget according to value of variable
-   * @param widget widget to notify about modified variable
+   * @param widget widget widget to notify about modified variable
    * @param variables variables
    */
-  public void modified(Widget widget, WidgetVariable[] variables)
+  final public void modified(Widget widget, WidgetVariable[] variables)
   {
     if (!widget.isDisposed())
     {
@@ -1025,23 +916,40 @@ class WidgetModifyListener
     }
   }
 
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param control control widget to notify about modified variable
+   * @param variable variable
+   */
+  void modified(Control control, WidgetVariable variable)
+  {
+    modified((Widget)control,variable);
+  }
+
   /** set text or selection for widget according to value of variable
-   * @param control control to notify about modified variable
+   * @param control control widget to notify about modified variable
    * @param variables variables
    */
   public void modified(Control control, WidgetVariable[] variables)
   {
-    if (!control.isDisposed())
+    for (WidgetVariable variable : variables)
     {
-      for (WidgetVariable variable : variables)
-      {
-        modified(control,variable);
-      }
+      modified(control,variable);
     }
   }
 
-  /** set text or selection for widget according to value of variable
-   * @param button button to notify about modified variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param button button widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Button button, WidgetVariable variable)
+  {
+    modified((Widget)button,variable);
+  }
+
+  /** modified handler
+   * @param button button widget to notify about modified variable
    * @param variables variables
    */
   public void modified(Button button, WidgetVariable[] variables)
@@ -1049,58 +957,158 @@ class WidgetModifyListener
     modified((Control)button,variables);
   }
 
-  /** set text or selection for widget according to value of variable
-   * @param combo combo to notify about modified variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param combo combo widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Combo combo, WidgetVariable variable)
+  {
+    modified((Control)combo,variable);
+  }
+
+  /** modified handler
+   * @param combo combo widget to notify about modified variable
    * @param variables variables
    */
   public void modified(Combo combo, WidgetVariable[] variables)
   {
-    modified((Control)combo,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(combo,variable);
+    }
   }
 
-  /** set text or selection for widget according to value of variable
-   * @param text text to notify about modified variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param text text widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Text text, WidgetVariable variable)
+  {
+    modified((Control)text,variable);
+  }
+
+  /** modified handler
+   * @param text text widget to notify about modified variable
    * @param variables variables
    */
   public void modified(Text text, WidgetVariable[] variables)
   {
-    modified((Control)text,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(text,variable);
+    }
   }
 
-  /** set text or selection for widget according to value of variable
-   * @param styledText styled text to notify about modified variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param styledtext styled text widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(StyledText styledtext, WidgetVariable variable)
+  {
+    modified((Control)styledtext,variable);
+  }
+
+  /** modified handler
+   * @param styledText styled text widget to notify about modified variable
    * @param variables variables
    */
   public void modified(StyledText styledText, WidgetVariable[] variables)
   {
-    modified((Control)styledText,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(styledText,variable);
+    }
   }
 
-  /** set text or selection for widget according to value of variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param spinner spinner widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Spinner spinner, WidgetVariable variable)
+  {
+    modified((Control)spinner,variable);
+  }
+
+  /** modified handler
+   * @param spinner spinner widget to notify about modified variable
+   * @param variables variables
+   */
+  public void modified(Spinner spinner, WidgetVariable[] variables)
+  {
+    for (WidgetVariable variable : variables)
+    {
+      modified(spinner,variable);
+    }
+  }
+
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param menuItem menu item widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(MenuItem menuItem, WidgetVariable variable)
+  {
+    modified((Widget)menuItem,variable);
+  }
+
+  /** modified handler
    * @param menuItem menu item to notify about modified variable
    * @param variables variables
    */
   public void modified(MenuItem menuItem, WidgetVariable[] variables)
   {
-    modified((Widget)menuItem,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(menuItem,variable);
+    }
   }
 
-  /** set text or selection for widget according to value of variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param table table widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Table table, WidgetVariable variable)
+  {
+    modified((Control)table,variable);
+  }
+
+  /** modified handler
    * @param table table to notify about modified variable
    * @param variables variables
    */
   public void modified(Table table, WidgetVariable[] variables)
   {
-    modified((Widget)table,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(table,variable);
+    }
   }
 
-  /** set text or selection for widget according to value of variable
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param tree tree widget to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Tree tree, WidgetVariable variable)
+  {
+    modified((Control)tree,variable);
+  }
+
+  /** modified handler
    * @param tree tree to notify about modified variable
    * @param variables variables
    */
   public void modified(Tree tree, WidgetVariable[] variables)
   {
-    modified((Widget)tree,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(tree,variable);
+    }
   }
 
   /** notify modify variable
@@ -1123,187 +1131,347 @@ class WidgetModifyListener
    */
   public void modified(WidgetVariable[] variables)
   {
-    if (widget instanceof Control)
+    for (WidgetVariable variable : variables)
     {
-      modified((Control)widget,variables);
-    }
-    else
-    {
-      modified(widget,variables);
+      modified(variable);
     }
   }
 
-  /** notify modify variable
-   * @param widget widget modified
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
    */
-  public void modified(Widget widget)
+  public void modified(Control control, Widget modifyWidget)
   {
-    modified(widget,variables);
+    if (!modifyWidget.isDisposed())
+    {
+      if      (modifyWidget instanceof Label)
+      {
+        modified(control,(Label)modifyWidget);
+      }
+      else if (modifyWidget instanceof Button)
+      {
+        modified(control,(Button)modifyWidget);
+      }
+      else if (modifyWidget instanceof Combo)
+      {
+        modified(control,(Combo)modifyWidget);
+      }
+      else if (modifyWidget instanceof Text)
+      {
+        modified(control,(Text)modifyWidget);
+      }
+      else if (modifyWidget instanceof StyledText)
+      {
+        modified(control,(StyledText)modifyWidget);
+      }
+      else if (modifyWidget instanceof MenuItem)
+      {
+        modified(control,(MenuItem)modifyWidget);
+      }
+      else if (modifyWidget instanceof Table)
+      {
+        modified(control,(Table)modifyWidget);
+      }
+      else if (modifyWidget instanceof Tree)
+      {
+        modified(control,(Tree)modifyWidget);
+      }
+      else if (modifyWidget instanceof Control)
+      {
+        modified(control,(Control)modifyWidget);
+      }
+      else
+      {
+        modified(control,modifyWidget);
+      }
+    }
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param control control modified
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Control modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Button modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Combo modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Text modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, StyledText modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Spinner modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, MenuItem modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, org.eclipse.swt.widgets.List modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Table modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
+   * @param modifyWidget modified widget
+   */
+  public void modified(Control control, Tree modifyWidget)
+  {
+    modified(control);
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param control control widget
    */
   public void modified(Control control)
   {
-    modified(control,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param label label modified
+  /** call when modified
+   * Note: may be overriden
+   * @param button button widget
    */
-  public void modified(Label label)
+  public void modified(Button control)
   {
-    modified(label,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param button button modified
-   */
-  public void modified(Button button)
-  {
-    modified(button,variables);
-  }
-
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param combo combo modified
+  /** call when modified
+   * Note: may be overriden
+   * @param combo combo widget
    */
   public void modified(Combo combo)
   {
-    modified(combo,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param text text modified
+  /** call when modified
+   * Note: may be overriden
+   * @param text text widget
    */
-  public void modified(Text text)
+  public void modified(Text control)
   {
-    modified(text,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param styledText styled text modified
+  /** call when modified
+   * Note: may be overriden
+   * @param styledText style text widget
    */
   public void modified(StyledText styledText)
   {
-    modified(styledText,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param menuItem menu item modified
+  /** call when modified
+   * Note: may be overriden
+   * @param spinner spinner widget
+   */
+  public void modified(Spinner spinner)
+  {
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param menuItem menut item
    */
   public void modified(MenuItem menuItem)
   {
-    modified(menuItem,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param table table modified
+  /** call when modified
+   * Note: may be overriden
+   * @param list list widget
+   */
+  public void modified(org.eclipse.swt.widgets.List list)
+  {
+  }
+
+  /** call when modified
+   * Note: may be overriden
+   * @param table table widget
    */
   public void modified(Table table)
   {
-    modified(table,variables);
   }
 
-  /** notify modify variable
-   * Note: required because it can be overwritten by specific handler
-   * @param tree tree modified
+  /** call when modified
+   * Note: may be overriden
+   * @param tree tree widget
    */
   public void modified(Tree tree)
   {
-    modified(tree,variables);
   }
 
   /** notify modify variable
    */
-  public void modified()
+  final public void modified()
   {
-    if (widget != null)
+    if (variables != null)
     {
-      if (!widget.isDisposed())
+      if (widget != null)
       {
-        Display display = widget.getDisplay();
-
         // call widget modified method
-        if (!display.isDisposed())
+        if (!widget.isDisposed())
         {
-          display.syncExec(new Runnable()
+          Display display = widget.getDisplay();
+          if (!display.isDisposed())
           {
-            @Override
-            public void run()
+            display.syncExec(new Runnable()
             {
-              try
+              @Override
+              public void run()
               {
-                if (!widget.isDisposed())
+                try
                 {
-                  if      (widget instanceof Label)
+                  if (!widget.isDisposed())
                   {
-                    modified((Label)widget);
-                  }
-                  else if (widget instanceof Button)
-                  {
-                    modified((Button)widget);
-                  }
-                  else if (widget instanceof Combo)
-                  {
-                    modified((Combo)widget);
-                  }
-                  else if (widget instanceof Text)
-                  {
-                    modified((Text)widget);
-                  }
-                  else if (widget instanceof StyledText)
-                  {
-                    modified((StyledText)widget);
-                  }
-                  else if (widget instanceof MenuItem)
-                  {
-                    modified((MenuItem)widget);
-                  }
-                  else if (widget instanceof Table)
-                  {
-                    modified((Table)widget);
-                  }
-                  else if (widget instanceof Tree)
-                  {
-                    modified((Tree)widget);
-                  }
-                  else if (widget instanceof Control)
-                  {
-                    modified((Control)widget);
-                  }
-                  else
-                  {
-                    modified(widget);
+                    if      (widget instanceof Label)
+                    {
+                      modified((Label)widget,variables);
+                    }
+                    else if (widget instanceof Button)
+                    {
+                      modified((Button)widget,variables);
+                    }
+                    else if (widget instanceof Combo)
+                    {
+                      modified((Combo)widget,variables);
+                    }
+                    else if (widget instanceof Text)
+                    {
+                      modified((Text)widget,variables);
+                    }
+                    else if (widget instanceof StyledText)
+                    {
+                      modified((StyledText)widget,variables);
+                    }
+                    else if (widget instanceof MenuItem)
+                    {
+                      modified((MenuItem)widget,variables);
+                    }
+                    else if (widget instanceof Table)
+                    {
+                      modified((Table)widget,variables);
+                    }
+                    else if (widget instanceof Tree)
+                    {
+                      modified((Tree)widget,variables);
+                    }
+                    else if (widget instanceof Control)
+                    {
+                      modified((Control)widget,variables);
+                    }
+                    else
+                    {
+                      modified(widget,variables);
+                    }
                   }
                 }
+                catch (Throwable throwable)
+                {
+                  throw new Error(throwable);
+                }
               }
-              catch (Throwable throwable)
-              {
-                throw new Error(throwable);
-              }
-            }
-          });
+            });
+          }
+        }
+      }
+      else
+      {
+        // call parse method
+        for (WidgetVariable variable : variables)
+        {
+          if (variable != null)
+          {
+            parse(variable.getString());
+          }
         }
       }
     }
-    else
+    if (modifyWidget != null)
     {
-      // call parse method
-      for (WidgetVariable variable : variables)
+      // call widget modified method
+      Display display = widget.getDisplay();
+      if (!display.isDisposed())
       {
-        if (variable != null)
+        display.syncExec(new Runnable()
         {
-          parse(variable.getString());
-        }
+          @Override
+          public void run()
+          {
+            if (!widget.isDisposed())
+            {
+              modified((Control)widget,modifyWidget);
+            }
+          }
+        });
       }
     }
   }
@@ -1319,9 +1487,18 @@ class WidgetModifyListener
   /** get string of variable
    * @param variable widget variable
    */
-  String getString(WidgetVariable variable)
+  public String getString(WidgetVariable variable)
   {
     return null;
+  }
+
+  /** convert to string
+   * @return string
+   */
+  @Override
+  public String toString()
+  {
+    return "WidgetModifyListener {"+widget+", "+variables+"}";
   }
 }
 
@@ -13170,6 +13347,7 @@ Dprintf.dprintf("");
   public static void addModifyListener(WidgetModifyListener widgetModifyListener)
   {
     widgetModifyListenerHashSet.add(widgetModifyListener);
+// TODO: move to constructpr?
     widgetModifyListener.modified();
   }
 
@@ -13188,7 +13366,7 @@ Dprintf.dprintf("");
   {
     for (WidgetModifyListener widgetModifyListener : widgetModifyListenerHashSet)
     {
-      if (widgetModifyListener.equals(widgetVariable))
+      if (widgetModifyListener.watches(widgetVariable))
       {
         widgetModifyListener.modified();
       }
@@ -13202,7 +13380,7 @@ Dprintf.dprintf("");
   {
     for (WidgetModifyListener widgetModifyListener : widgetModifyListenerHashSet)
     {
-      if (widgetModifyListener.equals(object))
+      if (widgetModifyListener.watches(object))
       {
         widgetModifyListener.modified();
       }
