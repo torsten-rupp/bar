@@ -1961,7 +1961,7 @@ LOCAL bool parseString(const char *string,
           case 's':
             // get and copy data
             value.s = va_arg(arguments,char*);
-            assert(formatToken.width > 0);
+            assert((value.s == NULL) || (formatToken.width > 0));
 
             i = 0L;
             if (index < length)
