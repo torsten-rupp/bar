@@ -889,7 +889,7 @@ public class TabJobs
     }
 
     /** clone entry data object
-     * @return clone of object
+     * @return cloned object
      */
     public EntryData clone()
     {
@@ -982,7 +982,7 @@ public class TabJobs
     }
 
     /** clone mount data
-     * @return clone of object
+     * @return cloned object
      */
     public MountData clone()
     {
@@ -1209,7 +1209,7 @@ public class TabJobs
     }
 
     /** clone schedule data
-     * @return clone of object
+     * @return cloned object
      */
     public ScheduleData clone()
     {
@@ -1780,7 +1780,7 @@ public class TabJobs
     }
 
     /** compare schedule data
-     * @param scheduleData1, scheduleData2 tree data to compare
+     * @param scheduleData1, scheduleData2 data to compare
      * @return -1 iff scheduleData1 < scheduleData2,
                 0 iff scheduleData1 = scheduleData2,
                 1 iff scheduleData1 > scheduleData2
@@ -1790,8 +1790,8 @@ public class TabJobs
     {
       EnumSet<SortModes> sortModeSet = EnumSet.allOf(SortModes.class);
 
-      // primiary sort key
-      int result = compare(scheduleData1,scheduleData2,sortMode);
+      // primary sort key
+      int result = compare(sortMode,scheduleData1,scheduleData2);
       sortModeSet.remove(sortMode);
 
       // other sort keys
@@ -1799,10 +1799,9 @@ public class TabJobs
       {
         if (result == 0)
         {
-          result = compare(scheduleData1,scheduleData2,nextSortMode);
-          sortModeSet.remove(nextSortMode);
+          result = compare(nextSortMode,scheduleData1,scheduleData2);
         }
-        else
+        if (result != 0)
         {
           break;
         }
@@ -1829,13 +1828,13 @@ public class TabJobs
     }
 
     /** compare schedule data
-     * @param scheduleData1, scheduleData2 tree data to compare
      * @param sortMode sort mode
+     * @param scheduleData1, scheduleData2 data to compare
      * @return -1 iff scheduleData1 < scheduleData2,
                 0 iff scheduleData1 = scheduleData2,
                 1 iff scheduleData1 > scheduleData2
      */
-    private int compare(ScheduleData scheduleData1, ScheduleData scheduleData2, SortModes sortMode)
+    private int compare(SortModes sortMode, ScheduleData scheduleData1, ScheduleData scheduleData2)
     {
       int result = 0;
 
@@ -1897,6 +1896,7 @@ public class TabJobs
     ArchiveTypes archiveType;
     int          minKeep,maxKeep;
     int          maxAge;
+    URIParts     moveTo;
 
     /** create persistence data
      * @param id id or 0
@@ -1904,12 +1904,14 @@ public class TabJobs
      * @param minKeep min. number of archives to keep
      * @param maxKeep max. number of archives to keep
      * @param maxAge max. age to keep archives [days]
+     * @param moveTo move-to URI or "
      */
     PersistenceData(int          id,
                     ArchiveTypes archiveType,
                     int          minKeep,
                     int          maxKeep,
-                    int          maxAge
+                    int          maxAge,
+                    URIParts     moveTo
                    )
     {
       this.id          = id;
@@ -1917,6 +1919,26 @@ public class TabJobs
       this.minKeep     = minKeep;
       this.maxKeep     = maxKeep;
       this.maxAge      = maxAge;
+      this.moveTo      = moveTo;
+    }
+
+    /** create persistence data
+     * @param id id or 0
+     * @param archiveType archive type string
+     * @param minKeep min. number of archives to keep
+     * @param maxKeep max. number of archives to keep
+     * @param maxAge max. age to keep archives [days]
+     * @param moveTo move-to URI or ""
+     */
+    PersistenceData(int          id,
+                    ArchiveTypes archiveType,
+                    int          minKeep,
+                    int          maxKeep,
+                    int          maxAge,
+                    String       moveTo
+                   )
+    {
+      this(id,archiveType,minKeep,maxKeep,maxAge,new URIParts(moveTo));
     }
 
     /** create persistence data
@@ -1924,32 +1946,52 @@ public class TabJobs
      * @param minKeep min. number of archives to keep
      * @param maxKeep max. number of archives to keep
      * @param maxAge max. age to keep archives [days]
+     * @param moveTo move-to URI
      */
     PersistenceData(ArchiveTypes archiveType,
                     int          minKeep,
                     int          maxKeep,
-                    int          maxAge
+                    int          maxAge,
+                    URIParts     moveTo
                    )
     {
-      this(0,archiveType,minKeep,maxKeep,maxAge);
+      this(0,archiveType,minKeep,maxKeep,maxAge,moveTo);
+    }
+
+    /** create persistence data
+     * @param archiveType archive type string
+     * @param minKeep min. number of archives to keep
+     * @param maxKeep max. number of archives to keep
+     * @param maxAge max. age to keep archives [days]
+     * @param moveTo move-to URI or ""
+     */
+    PersistenceData(ArchiveTypes archiveType,
+                    int          minKeep,
+                    int          maxKeep,
+                    int          maxAge,
+                    String       moveTo
+                   )
+    {
+      this(archiveType,minKeep,maxKeep,maxAge,new URIParts(moveTo));
     }
 
     /** create persistence data
      */
     PersistenceData()
     {
-      this(ArchiveTypes.NORMAL,0,Keep.ALL,Age.FOREVER);
+      this(ArchiveTypes.NORMAL,0,Keep.ALL,Age.FOREVER,"");
     }
 
     /** clone persistence data object
-     * @return clone of object
+     * @return cloned object
      */
     public PersistenceData clone()
     {
       return new PersistenceData(archiveType,
                                  minKeep,
                                  maxKeep,
-                                 maxAge
+                                 maxAge,
+                                 (URIParts)moveTo.clone()
                                 );
     }
 
@@ -1985,8 +2027,8 @@ public class TabJobs
       return minKeep;
     }
 
-    /** get max. number of archives to keep
-     * @return max. number of archives to keep
+    /** set max. number of archives to keep
+     * @param maxKeep max. number of archives to keep
      */
     void setMaxKeep(int maxKeep)
     {
@@ -2001,12 +2043,28 @@ public class TabJobs
       return maxAge;
     }
 
-    /** get max. age to keep archives
-     * @return number of days to keep archives
+    /** set max. age to keep archives
+     * @param maxAge max. number of days to keep archives
      */
-    void getMaxAge(int maxAge)
+    void setMaxAge(int maxAge)
     {
       this.maxAge = maxAge;
+    }
+
+    /** get move-to URI
+     * @return move-to URI
+     */
+    URIParts getMoveTo()
+    {
+      return moveTo;
+    }
+
+    /** set move-to URI
+     * @param moveTo move-to URI
+     */
+    void setMoveTo(URIParts moveTo)
+    {
+      this.moveTo = moveTo;
     }
 
     /** check if index data equals
@@ -2106,13 +2164,44 @@ public class TabJobs
     }
 
     /** compare persistence data
-     * @param persistenceData1, persistenceData2 tree data to compare
+     * @param persistenceData1, persistenceData2 data to compare
      * @return -1 iff persistenceData1 < persistenceData2,
                 0 iff persistenceData1 = persistenceData2,
                 1 iff persistenceData1 > persistenceData2
      */
     @Override
     public int compare(PersistenceData persistenceData1, PersistenceData persistenceData2)
+    {
+      EnumSet<SortModes> sortModeSet = EnumSet.allOf(SortModes.class);
+
+      // primary sort key
+      int result = compare(sortMode,persistenceData1,persistenceData2);
+      sortModeSet.remove(sortMode);
+
+      // other sort keys
+      for (SortModes nextSortMode : sortModeSet)
+      {
+        if (result == 0)
+        {
+          result = compare(nextSortMode,persistenceData1,persistenceData2);
+        }
+        if (result != 0)
+        {
+          break;
+        }
+      }
+
+      return result;
+    }
+
+    /** compare persistence data
+     * @param sortMode sort mode
+     * @param persistenceData1, persistenceData2 data to compare
+     * @return -1 iff persistenceData1 < persistenceData2,
+                0 iff persistenceData1 = persistenceData2,
+                1 iff persistenceData1 > persistenceData2
+     */
+    private int compare(SortModes sortMode, PersistenceData persistenceData1, PersistenceData persistenceData2)
     {
       int result = 0;
 
@@ -2147,8 +2236,6 @@ public class TabJobs
           }
           else if (persistenceData1.maxAge != Age.FOREVER) result = -1;
           else if (persistenceData2.maxAge != Age.FOREVER) result =  1;
-          break;
-        default:
           break;
       }
 
@@ -2415,19 +2502,19 @@ public class TabJobs
   private WidgetVariable  cryptPassword             = new WidgetVariable<String> ("crypt-password","");
   private WidgetVariable  incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
   private WidgetVariable  storageOnMasterFlag       = new WidgetVariable<Boolean>("storage-on-master",true);
-  private WidgetVariable  storageType               = new WidgetVariable<String> ("storage-type",
-                                                                                  new String[]{"filesystem",
-                                                                                               "ftp",
-                                                                                               "scp",
-                                                                                               "sftp",
-                                                                                               "webdav",
-                                                                                               "webdavs",
-                                                                                               "cd",
-                                                                                               "dvd",
-                                                                                               "bd",
-                                                                                               "device"
-                                                                                              },
-                                                                                  "filesystem"
+  private WidgetVariable  storageType               = new WidgetVariable<Enum>   ("storage-type",
+                                                                                  new StorageTypes[]{StorageTypes.FILESYSTEM,
+                                                                                                     StorageTypes.FTP,
+                                                                                                     StorageTypes.SCP,
+                                                                                                     StorageTypes.SFTP,
+                                                                                                     StorageTypes.WEBDAV,
+                                                                                                     StorageTypes.WEBDAVS,
+                                                                                                     StorageTypes.CD,
+                                                                                                     StorageTypes.DVD,
+                                                                                                     StorageTypes.BD,
+                                                                                                     StorageTypes.DEVICE
+                                                                                                  },
+                                                                                  StorageTypes.FILESYSTEM
                                                                                  );
   private WidgetVariable  storageHostName           = new WidgetVariable<String> ("");
   private WidgetVariable  storageHostPort           = new WidgetVariable<Integer>("",0);
@@ -2435,7 +2522,16 @@ public class TabJobs
   private WidgetVariable  storageLoginPassword      = new WidgetVariable<String> ("","");
   private WidgetVariable  storageDeviceName         = new WidgetVariable<String> ("","");
   private WidgetVariable  storageFileName           = new WidgetVariable<String> ("","");
-  private WidgetVariable  archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","rename","overwrite","append"},"stop");
+  private WidgetVariable  archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",
+                                                                                  new String[]
+                                                                                  {
+                                                                                    "stop",
+                                                                                    "rename",
+                                                                                    "append",
+                                                                                    "overwrite"
+                                                                                  },
+                                                                                  "stop"
+                                                                                 );
   private WidgetVariable  sshPublicKeyFileName      = new WidgetVariable<String> ("ssh-public-key","");
   private WidgetVariable  sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
   private WidgetVariable  maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
@@ -2470,7 +2566,7 @@ public class TabJobs
    * @param parentTabFolder parent tab folder
    * @param accelerator keyboard shortcut to select tab
    */
-  TabJobs(TabFolder parentTabFolder, int accelerator)
+  TabJobs(final TabFolder parentTabFolder, int accelerator)
   {
     TabFolder   tabFolder;
     Composite   tab,subTab;
@@ -4638,9 +4734,9 @@ public class TabJobs
                 BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
 
                 if (   changedFlag
-                    && (   storageType.equals("cd")
-                        || storageType.equals("dvd")
-                        || storageType.equals("bd")
+                    && (   (storageType.getEnum() == StorageTypes.CD )
+                        || (storageType.getEnum() == StorageTypes.DVD)
+                        || (storageType.getEnum() == StorageTypes.BD )
                        )
                    )
                 {
@@ -4816,6 +4912,7 @@ public class TabJobs
           });
           Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSize)
           {
+            @Override
             public String getString(WidgetVariable variable)
             {
               return Units.formatByteSize(variable.getLong());
@@ -4909,110 +5006,6 @@ public class TabJobs
           label = Widgets.newLabel(composite,BARControl.tr("Byte")+":");
           Widgets.layout(label,0,1,TableLayoutData.NONE);
 
-/*
-          combo = Widgets.newOptionMenu(composite);
-          combo.setToolTipText(BARControl.tr("Byte compression method to use."));
-          combo.setVisibleItemCount(20);
-          Widgets.setComboItems(combo,
-                                new String[]{" ",     "none",
-                                             "zip0",  "zip0",
-                                             "zip1",  "zip1",
-                                             "zip2",  "zip2",
-                                             "zip3",  "zip3",
-                                             "zip4",  "zip4",
-                                             "zip5",  "zip5",
-                                             "zip6",  "zip6",
-                                             "zip7",  "zip7",
-                                             "zip8",  "zip8",
-                                             "zip9",  "zip9",
-                                             "bzip1", "bzip1",
-                                             "bzip2", "bzip2",
-                                             "bzip3", "bzip3",
-                                             "bzip4", "bzip4",
-                                             "bzip5", "bzip5",
-                                             "bzip6", "bzip6",
-                                             "bzip7", "bzip7",
-                                             "bzip8", "bzip8",
-                                             "bzip9", "bzip9",
-                                             "lzma1", "lzma1",
-                                             "lzma2", "lzma2",
-                                             "lzma3", "lzma3",
-                                             "lzma4", "lzma4",
-                                             "lzma5", "lzma5",
-                                             "lzma6", "lzma6",
-                                             "lzma7", "lzma7",
-                                             "lzma8", "lzma8",
-                                             "lzma9", "lzma9",
-                                             "lzo1",  "lzo1",
-                                             "lzo2",  "lzo2",
-                                             "lzo3",  "lzo3",
-                                             "lzo4",  "lzo4",
-                                             "lzo5",  "lzo5",
-                                             "lz4-0", "lz4-0",
-                                             "lz4-1", "lz4-1",
-                                             "lz4-2", "lz4-2",
-                                             "lz4-3", "lz4-3",
-                                             "lz4-4", "lz4-4",
-                                             "lz4-5", "lz4-5",
-                                             "lz4-6", "lz4-6",
-                                             "lz4-7", "lz4-7",
-                                             "lz4-8", "lz4-8",
-                                             "lz4-9", "lz4-9",
-                                             "lz4-10","lz4-10",
-                                             "lz4-11","lz4-11",
-                                             "lz4-12","lz4-12",
-                                             "lz4-13","lz4-13",
-                                             "lz4-14","lz4-14",
-                                             "lz4-15","lz4-15",
-                                             "lz4-16","lz4-16",
-                                             "zstd0", "zstd0",
-                                             "zstd1", "zstd1",
-                                             "zstd2", "zstd2",
-                                             "zstd3", "zstd3",
-                                             "zstd4", "zstd4",
-                                             "zstd5", "zstd5",
-                                             "zstd6", "zstd6",
-                                             "zstd7", "zstd7",
-                                             "zstd8", "zstd8",
-                                             "zstd9", "zstd9",
-                                             "zstd10","zstd10",
-                                             "zstd11","zstd11",
-                                             "zstd12","zstd12",
-                                             "zstd13","zstd13",
-                                             "zstd14","zstd14",
-                                             "zstd15","zstd15",
-                                             "zstd16","zstd16",
-                                             "zstd17","zstd17",
-                                             "zstd18","zstd18",
-                                             "zstd19","zstd19"
-                                            }
-                               );
-          Widgets.layout(combo,0,2,TableLayoutData.W);
-          combo.addSelectionListener(new SelectionListener()
-          {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Combo  widget = (Combo)selectionEvent.widget;
-              String string = Widgets.getSelectedComboItem(widget);
-
-              try
-              {
-                byteCompressAlgorithm.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
-*/
           widgetByteCompressAlgorithmType = Widgets.newOptionMenu(composite);
           widgetByteCompressAlgorithmType.setToolTipText(BARControl.tr("Byte compression method to use."));
           Widgets.setComboItems(widgetByteCompressAlgorithmType,new String[]{" ",   "none",
@@ -6126,6 +6119,7 @@ public class TabJobs
           });
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptPassword)
           {
+            @Override
             public void modified(Text text, WidgetVariable[] variables)
             {
               super.modified(text,variables);
@@ -6228,6 +6222,7 @@ public class TabJobs
           });
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptPassword)
           {
+            @Override
             public void modified(Text text, WidgetVariable[] variables)
             {
               super.modified(text,variables);
@@ -6446,6 +6441,22 @@ public class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,storageFileName));
+          Widgets.addModifyListener(new WidgetModifyListener(text,storageFileName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+// TODO: ignore?
+                // ignored
+              }
+            }
+          });
 
           button = Widgets.newButton(composite,IMAGE_EDIT);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -6462,8 +6473,12 @@ public class TabJobs
               {
                 try
                 {
-                  storageFileNameEdit();
-                  BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                  String fileName = fileNameEdit(storageFileName.getString());
+                  if (fileName != null)
+                  {
+                    storageFileName.set(fileName);
+                    BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+                  }
                 }
                 catch (Exception exception)
                 {
@@ -6637,7 +6652,8 @@ public class TabJobs
         label = Widgets.newLabel(tab,BARControl.tr("Destination")+":");
         Widgets.layout(label,10,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,10,1,TableLayoutData.WE);
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,10,1,TableLayoutData.W);
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Storage destination type:\n"+
@@ -6654,16 +6670,16 @@ public class TabJobs
                                             )
                               );
           Widgets.setComboItems(combo,
-                                new String[]{BARControl.tr("file system"),"filesystem",
-                                                           "ftp",         "ftp",
-                                                           "scp",         "scp",
-                                                           "sftp",        "sftp",
-                                                           "webdav",      "webdav",
-                                                           "webdavs",     "webdavs",
-                                                           "CD",          "cd",
-                                                           "DVD",         "dvd",
-                                                           "BD",          "bd",
-                                             BARControl.tr("device"),     "device"
+                                new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
+                                                           "ftp",         StorageTypes.FTP,
+                                                           "scp",         StorageTypes.SCP,
+                                                           "sftp",        StorageTypes.SFTP,
+                                                           "webdav",      StorageTypes.WEBDAV,
+                                                           "webdavs",     StorageTypes.WEBDAVS,
+                                                           "CD",          StorageTypes.CD,
+                                                           "DVD",         StorageTypes.DVD,
+                                                           "BD",          StorageTypes.BD,
+                                             BARControl.tr("device"),     StorageTypes.DEVICE
                                             }
                           );
           Widgets.layout(combo,0,0,TableLayoutData.W);
@@ -6676,15 +6692,14 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Combo  widget = (Combo)selectionEvent.widget;
-              String string = Widgets.getSelectedComboItem(widget);
+              Combo        widget = (Combo)selectionEvent.widget;
+              StorageTypes type   = Widgets.getSelectedComboItem(widget);
 
               try
               {
-                storageType.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
-
-                if      (string.equals("cd"))
+                switch (type)
+                {
+                  case CD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
                       && (volumeSize.getLong() <= 0)
@@ -6714,7 +6729,7 @@ public class TabJobs
                                    );
                   }
                 }
-                else if (string.equals("dvd"))
+                  case DVD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
                       && (volumeSize.getLong() <= 0)
@@ -6748,7 +6763,7 @@ public class TabJobs
                                    );
                   }
                 }
-                else if (string.equals("bd"))
+                  case BD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
                       && (volumeSize.getLong() <= 0)
@@ -6781,6 +6796,10 @@ public class TabJobs
                                    );
                   }
                 }
+                }
+
+                storageType.set(type);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
               {
@@ -6836,17 +6855,62 @@ public class TabJobs
         }
 
         // destination file system
-        composite = Widgets.newComposite(tab,SWT.BORDER);
+        BARWidgets.File file = new BARWidgets.File(tab,
+EnumSet.allOf(BARWidgets.WidgetTypes.class),
+                                                   maxStorageSize,
+                                                   archiveFileMode
+                                                  );
+        Widgets.layout(file,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(file.maxStorageSize,maxStorageSize)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,maxStorageSize);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+
+            @Override
+            public String getString(WidgetVariable variable)
+            {
+              return (variable.getLong() > 0) ? Units.formatByteSize(variable.getLong()) : "";
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(file.archiveFileMode,archiveFileMode)
+          {
+            @Override
+            public void modified(Combo combo, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(file,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,variable.getEnum() == StorageTypes.FILESYSTEM);
+            }
+          });
+        }
+/*
+        composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
         Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
-        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
-        {
-          @Override
-          public void modified(Control control, WidgetVariable variable)
-          {
-            Widgets.setVisible(control,variable.equals("filesystem"));
-          }
-        });
         Widgets.setVisible(composite,false);
         {
           composite = Widgets.newComposite(composite,SWT.NONE);
@@ -6861,8 +6925,8 @@ public class TabJobs
               Widgets.layout(label,0,0,TableLayoutData.W);
 
               combo = Widgets.newCombo(subComposite);
-              combo.setToolTipText(BARControl.tr("Size limit for one storage file part."));
-              combo.setItems(new String[]{"0","32M","64M","128M","140M","256M","280M","512M","620M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
+              combo.setToolTipText(BARControl.tr("Storage size limit."));
+              combo.setItems(new String[]{"0","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
               combo.setData("showedErrorDialog",false);
               Widgets.layout(combo,0,1,TableLayoutData.W);
               combo.addModifyListener(new ModifyListener()
@@ -6986,6 +7050,7 @@ public class TabJobs
               });
               Widgets.addModifyListener(new WidgetModifyListener(combo,maxStorageSize)
               {
+                @Override
                 public String getString(WidgetVariable variable)
                 {
                   return Units.formatByteSize(variable.getLong());
@@ -7039,27 +7104,106 @@ public class TabJobs
               Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
               {
                 @Override
-                public void modified(Widget widget, WidgetVariable variable)
+                public void modified(Combo combo, WidgetVariable variable)
                 {
-                  Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+                  Widgets.setSelectedComboItem(combo,variable.getString());
                 }
               });
             }
           }
         }
-
-        // destination ftp
-        composite = Widgets.newComposite(tab,SWT.BORDER);
-        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
           public void modified(Control control, WidgetVariable variable)
           {
-            Widgets.setVisible(control,variable.equals("ftp"));
+            Widgets.setVisible(control,variable.getEnum() == StorageTypes.FILESYSTEM);
           }
         });
+/**/
+
+        // destination ftp
+        BARWidgets.FTP ftp = new BARWidgets.FTP(tab,
+                                                storageHostName,
+                                                storageLoginName,
+                                                storageLoginPassword,
+                                                archiveFileMode
+                                               );
+        Widgets.layout(ftp,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(ftp.hostName,storageHostName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(ftp.loginName,storageLoginName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(ftp.loginPassword,storageLoginPassword)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(ftp.archiveFileMode,archiveFileMode)
+          {
+            @Override
+            public void modified(Combo combo, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(ftp,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,variable.getEnum() == StorageTypes.FTP);
+            }
+          });
+        }
+/*
+        composite = Widgets.newComposite(tab);
+        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.setVisible(composite,false);
         {
           label = Widgets.newLabel(composite,BARControl.tr("Server"));
@@ -7135,7 +7279,7 @@ public class TabJobs
 
           label = Widgets.newLabel(composite,BARControl.tr("Login"));
           Widgets.layout(label,1,0,TableLayoutData.W);
-          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
@@ -7271,7 +7415,7 @@ public class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginPassword));
           }
 
-/*
+
           label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
           composite = Widgets.newComposite(composite,SWT.NONE);
@@ -7338,7 +7482,6 @@ public class TabJobs
             widgetFTPMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetFTPMaxBandWidth,0,2,TableLayoutData.W);
           }
-*/
 
           label = Widgets.newLabel(composite,BARControl.tr("Archive file mode")+":");
           Widgets.layout(label,4,0,TableLayoutData.W);
@@ -7379,31 +7522,161 @@ public class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
             {
               @Override
-              public void modified(Widget widget, WidgetVariable variable)
+              public void modified(Combo combo, WidgetVariable variable)
               {
-                Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+                Widgets.setSelectedComboItem(combo,variable.getString());
               }
             });
           }
         }
-
-        // destination scp/sftp
-        composite = Widgets.newComposite(tab,SWT.BORDER);
-        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
           public void modified(Control control, WidgetVariable variable)
           {
-            Widgets.setVisible(control,variable.equals("scp") || variable.equals("sftp"));
+            Widgets.setVisible(control,variable.getEnum() == StorageTypes.FTP);
           }
         });
+/**/
+
+        // destination scp/sftp
+        BARWidgets.SFTP sftp = new BARWidgets.SFTP(tab,
+                                                   storageHostName,
+                                                   storageHostPort,
+                                                   storageLoginName,
+                                                   storageLoginPassword,
+                                                   sshPublicKeyFileName,
+                                                   sshPrivateKeyFileName,
+                                                   archiveFileMode
+                                                  );
+        Widgets.layout(sftp,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.hostName,storageHostName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.hostPort,storageHostPort)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.loginName,storageLoginName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.loginPassword,storageLoginPassword)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.publicKey,sshPublicKeyFileName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.privateKey,sshPrivateKeyFileName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp.archiveFileMode,archiveFileMode)
+          {
+            @Override
+            public void modified(Combo combo, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(sftp,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,
+                                    (variable.getEnum() == StorageTypes.SCP)
+                                 || (variable.getEnum() == StorageTypes.SFTP)
+                                );
+            }
+          });
+        }
+/*
+        composite = Widgets.newComposite(tab);
+        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.setVisible(composite,false);
         {
           label = Widgets.newLabel(composite,BARControl.tr("Server"));
           Widgets.layout(label,0,0,TableLayoutData.W);
-          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
@@ -7568,7 +7841,7 @@ public class TabJobs
 
           label = Widgets.newLabel(composite,BARControl.tr("Login"));
           Widgets.layout(label,1,0,TableLayoutData.W);
-          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
@@ -7931,7 +8204,6 @@ public class TabJobs
             });
           }
 
-/*
           label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
           Widgets.layout(label,3,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -8007,7 +8279,6 @@ public class TabJobs
             widgetSCPSFTPMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetSCPSFTPMaxBandWidth,0,2,TableLayoutData.W);
           }
-*/
 
           label = Widgets.newLabel(composite,BARControl.tr("Archive file mode")+":");
           Widgets.layout(label,4,0,TableLayoutData.W);
@@ -8049,31 +8320,163 @@ public class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
             {
               @Override
-              public void modified(Widget widget, WidgetVariable variable)
+              public void modified(Combo combo, WidgetVariable variable)
               {
-                Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+                Widgets.setSelectedComboItem(combo,variable.getString());
               }
             });
           }
         }
-
-        // destination WebDAV
-        composite = Widgets.newComposite(tab,SWT.BORDER);
-        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
           public void modified(Control control, WidgetVariable variable)
           {
-            Widgets.setVisible(control,variable.equals("webdav") || variable.equals("webdavs"));
+            Widgets.setVisible(control,   (variable.getEnum() == StorageTypes.SCP )
+                                       || (variable.getEnum() == StorageTypes.SFTP)
+                              );
           }
         });
+/**/
+
+        // destination WebDAV
+        BARWidgets.WebDAV webdav = new BARWidgets.WebDAV(tab,
+                                                         storageHostName,
+                                                         storageHostPort,
+                                                         storageLoginName,
+                                                         storageLoginPassword,
+                                                         sshPublicKeyFileName,
+                                                         sshPrivateKeyFileName,
+                                                         archiveFileMode
+                                                        );
+        Widgets.layout(webdav,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.hostName,storageHostName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.hostPort,storageHostPort)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.loginName,storageLoginName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.loginPassword,storageLoginPassword)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.publicKey,sshPublicKeyFileName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.privateKey,sshPrivateKeyFileName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav.archiveFileMode,archiveFileMode)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(webdav,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,
+                                    (variable.getEnum() == StorageTypes.WEBDAV)
+                                 || (variable.getEnum() == StorageTypes.WEBDAVS)
+                                );
+            }
+          });
+        }
+/*
+        composite = Widgets.newComposite(tab);
+        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.setVisible(composite,false);
         {
           label = Widgets.newLabel(composite,BARControl.tr("Server"));
           Widgets.layout(label,0,0,TableLayoutData.W);
-          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
@@ -8238,7 +8641,7 @@ public class TabJobs
 
           label = Widgets.newLabel(composite,BARControl.tr("Login"));
           Widgets.layout(label,1,0,TableLayoutData.W);
-          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
@@ -8677,7 +9080,6 @@ public class TabJobs
             widgetWebdavMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetWebdavMaxBandWidth,0,2,TableLayoutData.W);
           }
-*/
 
           label = Widgets.newLabel(composite,BARControl.tr("Archive file mode")+":");
           Widgets.layout(label,4,0,TableLayoutData.W);
@@ -8719,26 +9121,118 @@ public class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
             {
               @Override
-              public void modified(Widget widget, WidgetVariable variable)
+              public void modified(Combo combo, WidgetVariable variable)
               {
-                Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+                Widgets.setSelectedComboItem(combo,variable.getString());
               }
             });
           }
         }
+/**/
 
         // destination cd/dvd/bd
-        composite = Widgets.newComposite(tab,SWT.BORDER);
+        BARWidgets.Optical optical = new BARWidgets.Optical(tab,
+                                                            storageDeviceName,
+                                                            volumeSize,
+                                                            ecc,
+                                                            blank,
+                                                            waitFirstVolume,
+                                                            archivePartSizeFlag,
+                                                            archivePartSize
+                                                           );
+        Widgets.layout(optical,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(optical.deviceName,storageDeviceName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(optical.volumeSize,volumeSize)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,volumeSize);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(optical.ecc,ecc)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,ecc);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(optical.blank,blank)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,blank);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(optical.waitFirstVolume,waitFirstVolume)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,waitFirstVolume);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(optical,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,   (variable.getEnum() == StorageTypes.CD )
+                                         || (variable.getEnum() == StorageTypes.DVD)
+                                         || (variable.getEnum() == StorageTypes.BD )
+                                );
+            }
+          });
+        }
+/*
+        composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,11,1,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
-        {
-          @Override
-          public void modified(Control control, WidgetVariable variable)
-          {
-            Widgets.setVisible(control,variable.equals("cd") || variable.equals("dvd") || variable.equals("bd"));
-          }
-        });
         Widgets.setVisible(composite,false);
         {
           final String CD_DVD_BD_INFO = BARControl.tr("When writing to a CD/DVD/BD with error-correction codes enabled\n"+
@@ -9028,6 +9522,7 @@ public class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(combo,volumeSize)
             {
+              @Override
               public String getString(WidgetVariable variable)
               {
                 return Units.formatByteSize(variable.getLong());
@@ -9141,19 +9636,70 @@ public class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(button,waitFirstVolume));
           }
         }
-
-        // destination device
-        composite = Widgets.newComposite(tab,SWT.BORDER);
-        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           @Override
           public void modified(Control control, WidgetVariable variable)
           {
-            Widgets.setVisible(control,variable.equals("device"));
+            Widgets.setVisible(control,   (variable.getEnum() == StorageTypes.CD )
+                                       || (variable.getEnum() == StorageTypes.DVD)
+                                       || (variable.getEnum() == StorageTypes.BD )
+                              );
           }
         });
+/**/
+
+        // destination device
+        BARWidgets.Device device = new BARWidgets.Device(tab,
+                                                         storageDeviceName,
+                                                         volumeSize
+                                                        );
+        Widgets.layout(device,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(device.deviceName,storageDeviceName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(device.volumeSize,volumeSize)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,volumeSize);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(device,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,variable.getEnum() == StorageTypes.DEVICE);
+            }
+          });
+        }
+
+/*
+        composite = Widgets.newComposite(tab);
+        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.setVisible(composite,false);
         {
           label = Widgets.newLabel(composite,BARControl.tr("Device")+":");
@@ -9389,6 +9935,7 @@ public class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(combo,volumeSize)
             {
+              @Override
               public String getString(WidgetVariable variable)
               {
                 return Units.formatByteSize(variable.getLong());
@@ -9399,20 +9946,30 @@ public class TabJobs
             Widgets.layout(label,0,1,TableLayoutData.W);
           }
         }
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
+        {
+          @Override
+          public void modified(Control control, WidgetVariable variable)
+          {
+            Widgets.setVisible(control,variable.getEnum() == StorageTypes.DEVICE);
+          }
+        });
+/**/
       }
       Widgets.addModifyListener(new WidgetModifyListener(archiveName)
       {
+        @Override
         public void parse(String value)
         {
-          ArchiveNameParts archiveNameParts = new ArchiveNameParts(value);
+          URIParts uriParts = new URIParts(value);
 
-          storageType.set         (archiveNameParts.type.toString());
-          storageLoginName.set    (archiveNameParts.loginName      );
-          storageLoginPassword.set(archiveNameParts.loginPassword  );
-          storageHostName.set     (archiveNameParts.hostName       );
-          storageHostPort.set     (archiveNameParts.hostPort       );
-          storageDeviceName.set   (archiveNameParts.deviceName     );
-          storageFileName.set     (archiveNameParts.fileName       );
+          storageType.set         (uriParts.type         );
+          storageLoginName.set    (uriParts.loginName    );
+          storageLoginPassword.set(uriParts.loginPassword);
+          storageHostName.set     (uriParts.hostName     );
+          storageHostPort.set     (uriParts.hostPort     );
+          storageDeviceName.set   (uriParts.deviceName   );
+          storageFileName.set     (uriParts.fileName     );
         }
       });
 
@@ -10877,6 +11434,8 @@ TODO: implement delete entity
         BARServer.getJobOption(jobData.uuid,cryptPassword);
         BARServer.getJobOption(jobData.uuid,incrementalListFileName);
         archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
+// TODO:
+//        BARServer.getStringJobOption(jobData.uuid,archiveFileMode);
         BARServer.getJobOption(jobData.uuid,storageOnMasterFlag);
         BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
         BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
@@ -10896,9 +11455,7 @@ TODO: implement delete entity
         BARServer.getJobOption(jobData.uuid,postCommand);
         BARServer.getJobOption(jobData.uuid,slavePreCommand);
         BARServer.getJobOption(jobData.uuid,slavePostCommand);
-//        maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
         maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
-        BARServer.getJobOption(jobData.uuid,maxStorageSize);
         BARServer.getJobOption(jobData.uuid,comment);
 
         display.syncExec(new Runnable()
@@ -11484,16 +12041,16 @@ throw new Error("NYI");
    */
   private String getArchiveName()
   {
-    ArchiveNameParts archiveNameParts = new ArchiveNameParts(StorageTypes.parse(storageType.getString()),
-                                                             storageLoginName.getString(),
-                                                             storageLoginPassword.getString(),
-                                                             storageHostName.getString(),
-                                                             storageHostPort.getInteger(),
-                                                             storageDeviceName.getString(),
-                                                             storageFileName.getString()
-                                                            );
+    URIParts uriParts = new URIParts((StorageTypes)storageType.getEnum(),
+                                     storageHostName.getString(),
+                                     storageHostPort.getInteger(),
+                                     storageLoginName.getString(),
+                                     storageLoginPassword.getString(),
+                                     storageDeviceName.getString(),
+                                     storageFileName.getString()
+                                    );
 
-    return archiveNameParts.getName();
+    return uriParts.getURI();
   }
 
   //-----------------------------------------------------------------------
@@ -15281,9 +15838,11 @@ throw new Error("NYI");
     }
   };
 
-  /** edit storage file name
+  /** edit file name with macros
+   * @oaram fileName file name to edit
+   * @return new file name or null
    */
-  private void storageFileNameEdit()
+  private String fileNameEdit(String fileName)
   {
     Composite composite;
     Label     label;
@@ -15301,7 +15860,7 @@ throw new Error("NYI");
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
-    storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
+    storageFileNameEditor = new StorageFileNameEditor(composite,fileName);
 
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -15337,12 +15896,11 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        storageFileName.set(storageFileNameEditor.getFileName());
-        Dialogs.close(dialog,true);
+        Dialogs.close(dialog,storageFileNameEditor.getFileName());
       }
     });
 
-    Dialogs.run(dialog);
+    return (String)Dialogs.run(dialog);
   }
 
   //-----------------------------------------------------------------------
@@ -16263,6 +16821,7 @@ throw new Error("NYI");
                                    int          maxAge          = (!valueMap.getString("maxAge","*").equals("*"))
                                                                     ? valueMap.getInt("maxAge")
                                                                     : Age.FOREVER;
+                                   String       moveTo          = valueMap.getString ("moveTo",                        ""                  );
                                    long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L                  );
                                    long         totalSize       = valueMap.getLong   ("size"                                               );
                                    long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L                  );
@@ -16307,7 +16866,8 @@ throw new Error("NYI");
                                                                                            archiveType,
                                                                                            minKeep,
                                                                                            maxKeep,
-                                                                                           maxAge
+                                                                                           maxAge,
+                                                                                           moveTo
                                                                                           );
 
                                      TreeItem treeItem = Widgets.updateInsertTreeItem(widgetPersistenceTree,
@@ -16345,18 +16905,27 @@ throw new Error("NYI");
     Composite composite;
     Label     label;
     Button    button;
-    Composite subComposite;
+    Composite subComposite,subSubComposite,subSubSubComposite;
+    Text      text;
+    Combo     combo;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
-    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
-    final Combo    widgetMinKeep,widgetMaxKeep;
-    final Combo    widgetMaxAge;
+    final Button            widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
+    final Combo             widgetMinKeep,widgetMaxKeep;
+    final Combo             widgetMaxAge;
+    final Text              widgetMoveToDirectory;
+    final Combo             widgetMoveToType;
+    final BARWidgets.File   widgetMoveToFile;
+    final BARWidgets.FTP    widgetMoveToFTP;
+    final BARWidgets.SFTP   widgetMoveToSFTP;
+    final BARWidgets.WebDAV widgetMoveToWebDAV;
+
     final Button   widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
+    composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,1.0},new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
@@ -16367,28 +16936,28 @@ throw new Error("NYI");
       {
         widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
         widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
-        Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
         widgetTypeNormal.setSelection(persistenceData.archiveType == ArchiveTypes.NORMAL);
+        Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
 
         widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
         widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
-        Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
         widgetTypeFull.setSelection(persistenceData.archiveType == ArchiveTypes.FULL);
+        Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
 
         widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
         widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
-        Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
         widgetTypeIncremental.setSelection(persistenceData.archiveType == ArchiveTypes.INCREMENTAL);
+        Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
 
         widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
         widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
-        Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
         widgetTypeDifferential.setSelection(persistenceData.archiveType == ArchiveTypes.DIFFERENTIAL);
+        Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
 
         widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
         widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
-        Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
         widgetTypeContinuous.setSelection(persistenceData.archiveType == ArchiveTypes.CONTINUOUS);
+        Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Keep")+":",Settings.hasNormalRole());
@@ -16466,6 +17035,182 @@ throw new Error("NYI");
         Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(persistenceData.maxAge));
         Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
       }
+
+      // move to directory
+      label = Widgets.newLabel(composite,BARControl.tr("Move to")+":");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0}));
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      {
+        widgetMoveToDirectory = Widgets.newText(subComposite);
+        widgetMoveToDirectory.setToolTipText(BARControl.tr("Name of directory to move storages to. Several macros are supported. Click on button to the right to open storage file name editor."));
+        widgetMoveToDirectory.setText(persistenceData.moveTo.fileName);
+        Widgets.layout(widgetMoveToDirectory,0,0,TableLayoutData.WE);
+
+        button = Widgets.newButton(subComposite,IMAGE_EDIT);
+        Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              try
+              {
+                String fileName = fileNameEdit(widgetMoveToDirectory.getText());
+                if (fileName != null)
+                {
+                  widgetMoveToDirectory.setText(fileName);
+                }
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          }
+        });
+
+        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        button.setToolTipText(BARControl.tr("Select remote directory. CTRL+click to select local directory."));
+        Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              String directory = Dialogs.directory(shell,
+                                                   BARControl.tr("Select storage directory"),
+                                                   BARControl.tr("Move to"),
+                                                   widgetMoveToDirectory.getText()
+                                                  );
+              if (directory != null)
+              {
+                widgetMoveToDirectory.setText(directory);
+              }
+            }
+          }
+        });
+      }
+
+      // destination
+      label = Widgets.newLabel(composite,BARControl.tr("Destination")+":");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(composite);
+      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
+      {
+        widgetMoveToType = Widgets.newOptionMenu(subComposite);
+        widgetMoveToType.setToolTipText(BARControl.tr("Storage destination type:\n"+
+                                           "  into file system\n"+
+                                           "  on FTP server\n"+
+                                           "  on SSH server with scp (secure copy)\n"+
+                                           "  on SSH server with sftp (secure FTP)\n"+
+                                           "  on WebDAV server\n"+
+                                           "  on WebDAV secure server\n"
+                                          )
+                            );
+        Widgets.setComboItems(widgetMoveToType,
+                              new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
+                                                         "ftp",         StorageTypes.FTP,
+                                                         "scp",         StorageTypes.SCP,
+                                                         "sftp",        StorageTypes.SFTP,
+                                                         "webdav",      StorageTypes.WEBDAV,
+                                                         "webdavs",     StorageTypes.WEBDAVS
+                                          }
+                        );
+        Widgets.setSelectedComboItem(widgetMoveToType,persistenceData.moveTo.type);
+        Widgets.layout(widgetMoveToType,0,0,TableLayoutData.W);
+      }
+
+      // destination file system
+      widgetMoveToFile = new BARWidgets.File(composite);
+      Widgets.layout(widgetMoveToFile,4,1,TableLayoutData.WE|TableLayoutData.N);
+      {
+      }
+      Widgets.addModifyListener(new WidgetModifyListener(widgetMoveToFile,widgetMoveToType)
+      {
+        @Override
+        public void modified(Control control, Combo combo)
+        {
+          Widgets.setVisible(control,Widgets.getSelectedComboItem(combo) == StorageTypes.FILESYSTEM);
+          dialog.pack();
+        }
+      });
+
+      // destination ftp
+      widgetMoveToFTP = new BARWidgets.FTP(composite);
+      Widgets.layout(widgetMoveToFTP,4,1,TableLayoutData.WE|TableLayoutData.N);
+      {
+        widgetMoveToFTP.hostName.setText(persistenceData.moveTo.hostName);
+        widgetMoveToFTP.loginName.setText(persistenceData.moveTo.loginName);
+        widgetMoveToFTP.loginPassword.setText(persistenceData.moveTo.loginPassword);
+      }
+      Widgets.addModifyListener(new WidgetModifyListener(widgetMoveToFTP,widgetMoveToType)
+      {
+        @Override
+        public void modified(Control control, Combo combo)
+        {
+          Widgets.setVisible(control,Widgets.getSelectedComboItem(combo) == StorageTypes.FTP);
+          dialog.pack();
+        }
+      });
+
+      // destination scp/sftp
+      widgetMoveToSFTP = new BARWidgets.SFTP(composite);
+      Widgets.layout(widgetMoveToSFTP,4,1,TableLayoutData.WE|TableLayoutData.N);
+      {
+        widgetMoveToSFTP.hostName.setText(persistenceData.moveTo.hostName);
+        widgetMoveToSFTP.hostPort.setSelection(persistenceData.moveTo.hostPort);
+        widgetMoveToSFTP.loginName.setText(persistenceData.moveTo.loginName);
+        widgetMoveToSFTP.loginPassword.setText(persistenceData.moveTo.loginPassword);
+      }
+      Widgets.addModifyListener(new WidgetModifyListener(widgetMoveToSFTP,widgetMoveToType)
+      {
+        @Override
+        public void modified(Control control, Combo combo)
+        {
+          Widgets.setVisible(control,
+                                Widgets.getSelectedComboItem(combo) == StorageTypes.SCP
+                             || Widgets.getSelectedComboItem(combo) == StorageTypes.SFTP
+                            );
+          dialog.pack();
+        }
+      });
+
+      // destination WebDAV
+      widgetMoveToWebDAV = new BARWidgets.WebDAV(composite);
+      Widgets.layout(widgetMoveToWebDAV,4,1,TableLayoutData.WE|TableLayoutData.N);
+      {
+        widgetMoveToSFTP.hostName.setText(persistenceData.moveTo.hostName);
+        widgetMoveToSFTP.hostPort.setSelection(persistenceData.moveTo.hostPort);
+        widgetMoveToSFTP.loginName.setText(persistenceData.moveTo.loginName);
+        widgetMoveToSFTP.loginPassword.setText(persistenceData.moveTo.loginPassword);
+      }
+      Widgets.addModifyListener(new WidgetModifyListener(widgetMoveToWebDAV,widgetMoveToType)
+      {
+        @Override
+        public void modified(Control control, Combo combo)
+        {
+          Widgets.setVisible(control,
+                                Widgets.getSelectedComboItem(combo) == StorageTypes.WEBDAV
+                             || Widgets.getSelectedComboItem(combo) == StorageTypes.WEBDAVS
+                            );
+          dialog.pack();
+        }
+      });
     }
 
     // buttons
@@ -16527,6 +17272,35 @@ throw new Error("NYI");
         persistenceData.maxKeep = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
         persistenceData.maxAge  = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
 
+
+        persistenceData.moveTo.type     = Widgets.getSelectedComboItem(widgetMoveToType,StorageTypes.FILESYSTEM);
+        persistenceData.moveTo.fileName = widgetMoveToDirectory.getText();
+        switch (Widgets.getSelectedComboItem(widgetMoveToType,StorageTypes.FILESYSTEM))
+        {
+          case FILESYSTEM:
+            break;
+          case FTP:
+            persistenceData.moveTo.hostName      = widgetMoveToFTP.hostName.getText();
+            persistenceData.moveTo.loginName     = widgetMoveToFTP.loginName.getText();
+            persistenceData.moveTo.loginPassword = widgetMoveToFTP.loginPassword.getText();
+            break;
+          case SCP:
+          case SFTP:
+            persistenceData.moveTo.hostName      = widgetMoveToSFTP.hostName.getText();
+            persistenceData.moveTo.hostPort      = widgetMoveToSFTP.hostPort.getSelection();
+            persistenceData.moveTo.loginName     = widgetMoveToSFTP.loginName.getText();
+            persistenceData.moveTo.loginPassword = widgetMoveToSFTP.loginPassword.getText();
+            break;
+          case WEBDAV:
+          case WEBDAVS:
+            persistenceData.moveTo.hostName      = widgetMoveToWebDAV.hostName.getText();
+            persistenceData.moveTo.hostPort      = widgetMoveToWebDAV.hostPort.getSelection();
+            persistenceData.moveTo.loginName     = widgetMoveToWebDAV.loginName.getText();
+            persistenceData.moveTo.loginPassword = widgetMoveToWebDAV.loginPassword.getText();
+            break;
+        }
+Dprintf.dprintf("persistenceData.moveTo=%s",persistenceData.moveTo);
+
         Dialogs.close(dialog,true);
       }
     });
@@ -16545,12 +17319,13 @@ throw new Error("NYI");
       try
       {
         ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%s maxKeep=%s maxAge=%s",
+        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_ADD jobUUID=%s archiveType=%s minKeep=%s maxKeep=%s maxAge=%s moveTo=%'s",
                                                      selectedJobData.uuid,
                                                      persistenceData.archiveType.toString(),
                                                      (persistenceData.minKeep != Keep.ALL) ? persistenceData.minKeep : "*",
                                                      (persistenceData.maxKeep != Keep.ALL) ? persistenceData.maxKeep : "*",
-                                                     (persistenceData.maxAge != Age.FOREVER) ? persistenceData.maxAge : "*"
+                                                     (persistenceData.maxAge != Age.FOREVER) ? persistenceData.maxAge : "*",
+                                                     persistenceData.moveTo.getURI()
                                                     ),
                                  0,  // debugLevel
                                  valueMap
@@ -16581,13 +17356,14 @@ throw new Error("NYI");
       // update persistence list
       try
       {
-        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%s maxKeep=%s maxAge=%s",
+        BARServer.executeCommand(StringParser.format("PERSISTENCE_LIST_UPDATE jobUUID=%s id=%d archiveType=%s minKeep=%s maxKeep=%s maxAge=%s moveTo=%'s",
                                                      selectedJobData.uuid,
                                                      persistenceData.id,
                                                      persistenceData.archiveType.toString(),
                                                      (persistenceData.minKeep != Keep.ALL) ? persistenceData.minKeep : "*",
                                                      (persistenceData.maxKeep != Keep.ALL) ? persistenceData.maxKeep : "*",
-                                                     (persistenceData.maxAge != Age.FOREVER) ? persistenceData.maxAge : "*"
+                                                     (persistenceData.maxAge != Age.FOREVER) ? persistenceData.maxAge : "*",
+                                                     persistenceData.moveTo.getURI()
                                                     ),
                                  0  // debugLevel
                                 );

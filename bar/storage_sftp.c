@@ -1582,6 +1582,92 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   return error;
 }
 
+LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
+                                       ConstString       directoryName
+                                      )
+{
+  Errors       error;
+  #ifdef HAVE_SSH2
+    SocketHandle socketHandle;
+    LIBSSH2_SFTP *sftp;
+  #endif /* HAVE_SSH2 */
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
+  assert(!String_isEmpty(directoryName));
+
+  error = ERROR_UNKNOWN;
+  #ifdef HAVE_SSH2
+    error = Network_connect(&socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->sftp.publicKey.data,
+                            storageInfo->sftp.publicKey.length,
+                            storageInfo->sftp.privateKey.data,
+                            storageInfo->sftp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                           );
+    if (error == ERROR_NONE)
+    {
+      libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+
+      // init session
+      sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
+      if (sftp != NULL)
+      {
+        // delete file
+        if (libssh2_sftp_mkdir(sftp,
+                               String_cString(directoryName),
+                               0755
+                              ) == 0
+           )
+        {
+          error = ERROR_NONE;
+        }
+        else
+        {
+           char *sshErrorText;
+
+           libssh2_session_last_error(Network_getSSHSession(&socketHandle),&sshErrorText,NULL,0);
+           error = ERRORX_(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&socketHandle)),
+                           "%s",
+                           sshErrorText
+                          );
+        }
+        libssh2_sftp_shutdown(sftp);
+      }
+      else
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(&socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(SSH,
+                        libssh2_session_last_errno(Network_getSSHSession(&socketHandle)),
+                        "%s",
+                        sshErrorText
+                       );
+        Network_disconnect(&socketHandle);
+      }
+      Network_disconnect(&socketHandle);
+    }
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
 LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                                 ConstString       archiveName
                                )

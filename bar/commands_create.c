@@ -1359,192 +1359,6 @@ LOCAL void appendSpecialToEntryList(MsgQueue         *entryMsgQueue,
 }
 
 /***********************************************************************\
-* Name   : formatArchiveFileName
-* Purpose: get archive file name
-* Input  : fileName           - file name variable
-*          templateFileName   - template file name
-*          expandMacroMode    - expand macro mode; see
-*                               EXPAND_MACRO_MODE_*
-*          archiveType        - archive type; see ARCHIVE_TYPE_*
-*          scheduleTitle      - schedule title or NULL
-*          scheduleCustomText - schedule custom text or NULL
-*          dateTime           - date/time
-*          partNumber         - part number (>=0 for parts,
-*                               ARCHIVE_PART_NUMBER_NONE for single
-*                               part archive)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors formatArchiveFileName(String           fileName,
-                                   ConstString      templateFileName,
-                                   ExpandMacroModes expandMacroMode,
-                                   ArchiveTypes     archiveType,
-                                   const char       *scheduleTitle,
-                                   const char       *scheduleCustomText,
-                                   uint64           dateTime,
-                                   int              partNumber
-                                  )
-{
-  StaticString   (uuid,MISC_UUID_STRING_LENGTH);
-  bool           partNumberFlag;
-  TemplateHandle templateHandle;
-  TextMacros     (textMacros,5);
-  ulong          i,j;
-  char           buffer[256];
-  ulong          divisor;
-  ulong          n;
-  uint           z;
-  int            d;
-
-  assert(fileName != NULL);
-  assert(templateFileName != NULL);
-
-  // init variables
-  Misc_getUUID(uuid);
-
-  // init template
-  templateInit(&templateHandle,
-               String_cString(templateFileName),
-               expandMacroMode,
-               dateTime
-              );
-
-  // expand template
-  TEXT_MACROS_INIT(textMacros)
-  {
-    TEXT_MACRO_X_CSTRING("%type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%T",    Archive_archiveTypeToShortString(archiveType),".");
-    TEXT_MACRO_X_STRING ("%uuid", uuid,TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%title",(scheduleTitle != NULL) ? scheduleTitle : "",TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%text", (scheduleCustomText != NULL) ? scheduleCustomText : "",TEXT_MACRO_PATTERN_CSTRING);
-  }
-  templateMacros(&templateHandle,
-                 textMacros.data,
-                 textMacros.count
-                );
-
-  // done template
-  if (templateDone(&templateHandle,fileName) == NULL)
-  {
-    return ERROR_EXPAND_TEMPLATE;
-  }
-
-  // expand part number
-  partNumberFlag = FALSE;
-  i = 0L;
-  while (i < String_length(fileName))
-  {
-    switch (String_index(fileName,i))
-    {
-      case '%':
-        if ((i+1) < String_length(fileName))
-        {
-          switch (String_index(fileName,i+1))
-          {
-            case '%':
-              // keep %%
-              i += 2L;
-              break;
-            case '#':
-              // %# -> #
-              String_remove(fileName,i,1);
-              i += 1L;
-              break;
-          }
-        }
-        else
-        {
-          // keep % at end of string
-          i += 1L;
-        }
-        break;
-      case '#':
-        // #...#
-        switch (expandMacroMode)
-        {
-          case EXPAND_MACRO_MODE_STRING:
-            if (partNumber != ARCHIVE_PART_NUMBER_NONE)
-            {
-              // find #...# and get max. divisor for part number
-              divisor = 1L;
-              j = i+1L;
-              while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
-              {
-                j++;
-                if (divisor < 1000000000L) divisor*=10;
-              }
-              if ((ulong)partNumber >= (divisor*10L))
-              {
-                return ERROR_INSUFFICIENT_SPLIT_NUMBERS;
-              }
-
-              // replace #...# by part number
-              n = partNumber;
-              z = 0;
-              while (divisor > 0L)
-              {
-                d = n/divisor; n = n%divisor; divisor = divisor/10;
-                if (z < sizeof(buffer)-1)
-                {
-                  buffer[z] = '0'+d; z++;
-                }
-              }
-              buffer[z] = '\0';
-              String_replaceCString(fileName,i,j-i,buffer);
-              i = j;
-
-              partNumberFlag = TRUE;
-            }
-            else
-            {
-              i += 1L;
-            }
-            break;
-          case EXPAND_MACRO_MODE_PATTERN:
-            // replace by "."
-            String_replaceChar(fileName,i,1,'.');
-            i += 1L;
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-            #endif /* NDEBUG */
-        }
-        break;
-      default:
-        i += 1L;
-        break;
-    }
-  }
-
-  // append part number if multipart mode and there is no part number in format string
-  if ((partNumber != ARCHIVE_PART_NUMBER_NONE) && !partNumberFlag)
-  {
-    switch (expandMacroMode)
-    {
-      case EXPAND_MACRO_MODE_STRING:
-        String_appendFormat(fileName,".%06d",partNumber);
-        break;
-      case EXPAND_MACRO_MODE_PATTERN:
-        String_appendCString(fileName,"......");
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-        #endif /* NDEBUG */
-    }
-  }
-
-  // free resources
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : getIncrementalFileNameFromStorage
 * Purpose: get incremental file name from storage
 * Input  : fileName         - file name variable
@@ -4023,17 +3837,17 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
 
   archiveSize = 0LL;
 
-  // get archive file name
+  // get archive file name (expand macros)
   archiveName = String_new();
-  error = formatArchiveFileName(archiveName,
-                                storageInfo->storageSpecifier.archiveName,
-                                EXPAND_MACRO_MODE_STRING,
-                                createInfo->archiveType,
-                                createInfo->scheduleTitle,
-                                createInfo->customText,
-                                createInfo->createdDateTime,
-                                partNumber
-                               );
+  error = Archive_formatName(archiveName,
+                             storageInfo->storageSpecifier.archiveName,
+                             EXPAND_MACRO_MODE_STRING,
+                             createInfo->archiveType,
+                             createInfo->scheduleTitle,
+                             createInfo->customText,
+                             createInfo->createdDateTime,
+                             partNumber
+                            );
   if (error != ERROR_NONE)
   {
     String_delete(archiveName);
@@ -4275,17 +4089,17 @@ LOCAL Errors archiveTest(StorageInfo  *storageInfo,
   // test archive
   if (storageInfo->jobOptions->testCreatedArchivesFlag)
   {
-    // get archive file name
+    // get archive file name (expand macros)
     archiveName = String_new();
-    error = formatArchiveFileName(archiveName,
-                                  storageInfo->storageSpecifier.archiveName,
-                                  EXPAND_MACRO_MODE_STRING,
-                                  createInfo->archiveType,
-                                  createInfo->scheduleTitle,
-                                  createInfo->customText,
-                                  createInfo->createdDateTime,
-                                  partNumber
-                                 );
+    error = Archive_formatName(archiveName,
+                               storageInfo->storageSpecifier.archiveName,
+                               EXPAND_MACRO_MODE_STRING,
+                               createInfo->archiveType,
+                               createInfo->scheduleTitle,
+                               createInfo->customText,
+                               createInfo->createdDateTime,
+                               partNumber
+                              );
     if (error != ERROR_NONE)
     {
       String_delete(archiveName);
@@ -4362,17 +4176,17 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
 
-  // get archive file name
+  // get archive file name (expand macros)
   archiveName = String_new();
-  error = formatArchiveFileName(archiveName,
-                                storageInfo->storageSpecifier.archiveName,
-                                EXPAND_MACRO_MODE_STRING,
-                                createInfo->archiveType,
-                                createInfo->scheduleTitle,
-                                createInfo->customText,
-                                createInfo->createdDateTime,
-                                partNumber
-                               );
+  error = Archive_formatName(archiveName,
+                             storageInfo->storageSpecifier.archiveName,
+                             EXPAND_MACRO_MODE_STRING,
+                             createInfo->archiveType,
+                             createInfo->scheduleTitle,
+                             createInfo->customText,
+                             createInfo->createdDateTime,
+                             partNumber
+                            );
   if (error != ERROR_NONE)
   {
     (void)File_delete(intermediateFileName,FALSE);
@@ -4382,13 +4196,12 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // send to storage thread
-  storageMsg.uuidId      = uuidId;
-  storageMsg.entityId    = entityId;
-//  storageMsg.archiveType = archiveType;
-  storageMsg.storageId   = storageId;
+  storageMsg.uuidId               = uuidId;
+  storageMsg.entityId             = entityId;
+  storageMsg.storageId            = storageId;
   storageMsg.intermediateFileName = String_duplicate(intermediateFileName);
   storageMsg.intermediateFileSize = intermediateFileSize;
-  storageMsg.archiveName = archiveName;
+  storageMsg.archiveName          = archiveName;
   storageInfoIncrement(createInfo,intermediateFileSize);
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
@@ -5544,7 +5357,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
 
         // transfer file data into storage
-        error = Storage_transfer(&storageHandle,&fileHandle);
+        error = Storage_transferFromFile(&fileHandle,&storageHandle);
         if (error != ERROR_NONE)
         {
           (void)Storage_close(&storageHandle);
@@ -5980,17 +5793,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     if (globalOptions.deleteOldArchiveFilesFlag)
     {
-      // get archive name pattern
+      // get archive name pattern (expand macros)
       pattern = String_new();
-      error = formatArchiveFileName(pattern,
-                                    createInfo->storageInfo.storageSpecifier.archiveName,
-                                    EXPAND_MACRO_MODE_PATTERN,
-                                    createInfo->archiveType,
-                                    createInfo->scheduleTitle,
-                                    createInfo->customText,
-                                    createInfo->createdDateTime,
-                                    ARCHIVE_PART_NUMBER_NONE
-                                   );
+      error = Archive_formatName(pattern,
+                                 createInfo->storageInfo.storageSpecifier.archiveName,
+                                 EXPAND_MACRO_MODE_PATTERN,
+                                 createInfo->archiveType,
+                                 createInfo->scheduleTitle,
+                                 createInfo->customText,
+                                 createInfo->createdDateTime,
+                                 ARCHIVE_PART_NUMBER_NONE
+                                );
       if (error == ERROR_NONE)
       {
         // delete all matching storage files which are unknown

@@ -595,6 +595,7 @@ void Job_doneAll(void);
 * Input  : archiveType     - archive type; see ArchiveTypes
 *          minKeep,maxKeep - min./max. keep
 *          maxAge          - max. age [days] or AGE_FOREVER
+*          moveTo          - move-to URI or ""
 * Output : -
 * Return : new persistence node
 * Notes  : -
@@ -603,7 +604,8 @@ void Job_doneAll(void);
 PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
                                         int          minKeep,
                                         int          maxKeep,
-                                        int          maxAge
+                                        int          maxAge,
+                                        ConstString  moveTo
                                        );
 
 /***********************************************************************\
@@ -972,7 +974,7 @@ INLINE bool Job_isLocal(const JobNode *jobNode)
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Job_listChanged
+* Name   : Job_setListModified
 * Purpose: called when job list changed
 * Input  : -
 * Output : -
@@ -980,7 +982,7 @@ INLINE bool Job_isLocal(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-void Job_listChanged(void);
+void Job_setListModified(void);
 
 /***********************************************************************\
 * Name   : Job_listAppend
@@ -998,7 +1000,7 @@ INLINE void Job_listAppend(JobNode *jobNode)
   assert(jobNode != NULL);
 
   List_append(&jobList,jobNode);
-  Job_listChanged();
+  Job_setListModified();
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -1018,7 +1020,7 @@ INLINE void Job_listRemove(JobNode *jobNode)
   assert(jobNode != NULL);
 
   List_remove(&jobList,jobNode);
-  Job_listChanged();
+  Job_setListModified();
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -1254,48 +1256,48 @@ INLINE JobNode *Job_findByName(ConstString name)
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID);
 
 /***********************************************************************\
-* Name   : Job_includeExcludeChanged
-* Purpose: called when include/exclude lists changed
+* Name   : Job_setIncludeExcludeModified
+* Purpose: actions when includes/excludes modified, set modified
 * Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_includeExcludeChanged(JobNode *jobNode);
+void Job_setIncludeExcludeModified(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_mountChanged
-* Purpose: called when mount lists changed
+* Name   : Job_setMountModified
+* Purpose: actions when mounts modified, set modified
 * Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_mountChanged(JobNode *jobNode);
+void Job_setMountModified(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_scheduleChanged
-* Purpose: notify schedule related actions
+* Name   : Job_setScheduleModified
+* Purpose: actions when schedule modified, set modified
 * Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_scheduleChanged(const JobNode *jobNode);
+void Job_setScheduleModified(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_persistenceChanged
-* Purpose: notify persistence related actions
+* Name   : Job_setPersistenceModified
+* Purpose: actions whne persistence modified, set modified
 * Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_persistenceChanged(const JobNode *jobNode);
+void Job_setPersistenceModified(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_readScheduleInfo

@@ -1018,9 +1018,9 @@ bool Storage_equalNames(ConstString storageName1,
 * Notes  : if archiveName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-String Storage_getName(String           string,
-                       StorageSpecifier *storageSpecifier,
-                       ConstString      archiveName
+String Storage_getName(String                 string,
+                       const StorageSpecifier *storageSpecifier,
+                       ConstString            archiveName
                       );
 
 /***********************************************************************\
@@ -1502,18 +1502,18 @@ Errors Storage_write(StorageHandle *storageHandle,
                     );
 
 /***********************************************************************\
-* Name   : Storage_transfer
+* Name   : Storage_transferFromFile
 * Purpose: transfer content of file into storage file
-* Input  : storageHandle  - storage handle
-*          fileHandle     - file handle
+* Input  : fileHandle     - file handle
+*          storageHandle  - storage handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_transfer(StorageHandle *storageHandle,
-                        FileHandle    *fromFileHandle
-                       );
+Errors Storage_transferFromFile(FileHandle    *fromFileHandle,
+                                StorageHandle *storageHandle
+                               );
 
 /***********************************************************************\
 * Name   : Storage_tell
@@ -1554,6 +1554,54 @@ Errors Storage_seek(StorageHandle *storageHandle,
 uint64 Storage_getSize(StorageHandle *storageHandle);
 
 /***********************************************************************\
+* Name   : Storage_copyToLocal
+* Purpose: copy storage file to local file
+* Input  : storageSpecifier                - storage specifier structure
+*          localFileName                   - local archive file name
+*          jobOptions                      - job options
+*          maxBandWidthLIst                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          storageUpdateStatusInfoFunction - status info call-back
+*          storageUpdateStatusInfoUserData - user data for status info
+*                                            call-back
+*          storageRequestVolumeFunction    - volume request call-back
+*          storageRequestVolumeUserData    - user data for volume request
+*                                            call-back
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+// TODO: storageSpecifier -> storageInfo
+Errors Storage_copyToLocal(const StorageSpecifier          *storageSpecifier,
+                           ConstString                     localFileName,
+                           const JobOptions                *jobOptions,
+                           BandWidthList                   *maxBandWidthList,
+                           StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                           void                            *storageUpdateStatusInfoUserData,
+                           StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                           void                            *storageRequestVolumeUserData
+                          );
+
+/***********************************************************************\
+* Name   : Storage_copy
+* Purpose: copy storage
+* Input  : fromStorageInfo, toStorageInfo - fromt/to storage info
+*          fromArchiveName, toArchiveName - fromt/to archive name (can be NULL)
+*          archiveSize                    - archive size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_copy(StorageInfo *fromStorageInfo,
+                    ConstString fromArchiveName,
+                    StorageInfo *toStorageInfo,
+                    ConstString toArchiveName,
+                    uint64      archiveSize
+                   );
+
+/***********************************************************************\
 * Name   : Storage_rename
 * Purpose: rename storage file
 * Input  : storageInfo    - storage
@@ -1582,16 +1630,28 @@ Errors Storage_rename(const StorageInfo *storageInfo,
 Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
-* Name   : Storage_pruneDirectories
-* Purpose: delete empty directories in path
+* Name   : Storage_makeDirectory
+* Purpose: create directories
 * Input  : storageInfo - storage info
-*          fileName    - file name (can be NULL)
+*          pathName    - path name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString fileName);
+Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName);
+
+/***********************************************************************\
+* Name   : Storage_pruneDirectories
+* Purpose: delete empty directories in path
+* Input  : storageInfo - storage info
+*          pathName    - path name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString pathName);
 
 #if 0
 still not complete
@@ -1676,35 +1736,6 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                 );
 
 /*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : Storage_copy
-* Purpose: copy storage file to local file
-* Input  : storageSpecifier                - storage specifier structure
-*          jobOptions                      - job options
-*          maxBandWidthLIst                - list with max. band width
-*                                            to use [bits/s] or NULL
-*          storageUpdateStatusInfoFunction - status info call-back
-*          storageUpdateStatusInfoUserData - user data for status info
-*                                            call-back
-*          storageRequestVolumeFunction    - volume request call-back
-*          storageRequestVolumeUserData    - user data for volume request
-*                                            call-back
-*          localFileName                   - local archive file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
-                    const JobOptions                *jobOptions,
-                    BandWidthList                   *maxBandWidthList,
-                    StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
-                    void                            *storageUpdateStatusInfoUserData,
-                    StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                    void                            *storageRequestVolumeUserData,
-                    ConstString                     localFileName
-                   );
 
 /***********************************************************************\
 * Name   : Storage_forAll

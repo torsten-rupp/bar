@@ -328,7 +328,8 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
                                         int          minKeep,
                                         int          maxKeep,
-                                        int          maxAge
+                                        int          maxAge,
+                                        ConstString  moveTo
                                        )
 {
   PersistenceNode *persistenceNode;
@@ -347,6 +348,7 @@ PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
   persistenceNode->minKeep     = minKeep;
   persistenceNode->maxKeep     = maxKeep;
   persistenceNode->maxAge      = maxAge;
+  persistenceNode->moveTo      = String_set(String_new(),moveTo);
 
   return persistenceNode;
 }
@@ -391,7 +393,10 @@ void Job_insertPersistenceNode(PersistenceList *persistenceList,
   // find position in persistence list
   nextPersistenceNode = LIST_FIND_FIRST(persistenceList,
                                         nextPersistenceNode,
-                                        (persistenceNode->maxAge != AGE_FOREVER) && ((nextPersistenceNode->maxAge == AGE_FOREVER) || (nextPersistenceNode->maxAge > persistenceNode->maxAge))
+                                           (persistenceNode->maxAge != AGE_FOREVER)
+                                        && (   (nextPersistenceNode->maxAge == AGE_FOREVER)
+                                            || (nextPersistenceNode->maxAge > persistenceNode->maxAge)
+                                           )
                                        );
 
   // insert into persistence list
@@ -402,8 +407,9 @@ void Job_freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
 {
   assert(persistenceNode != NULL);
 
-  UNUSED_VARIABLE(persistenceNode);
   UNUSED_VARIABLE(userData);
+
+  String_delete(persistenceNode->moveTo);
 }
 
 void Job_deletePersistenceNode(PersistenceNode *persistenceNode)
@@ -426,7 +432,6 @@ void Job_deletePersistenceNode(PersistenceNode *persistenceNode)
 LOCAL void initOptionsFileServer(FileServer *fileServer)
 {
   assert(fileServer != NULL);
-//  assert(globalOptions.defaultFileServer != NULL);
 
   UNUSED_VARIABLE(fileServer);
 }
@@ -1380,7 +1385,7 @@ void Job_delete(JobNode *jobNode)
   LIST_DELETE_NODE(jobNode);
 }
 
-void Job_listChanged(void)
+void Job_setListModified(void)
 {
 }
 
@@ -1492,7 +1497,7 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   return scheduleNode;
 }
 
-void Job_includeExcludeChanged(JobNode *jobNode)
+void Job_setIncludeExcludeModified(JobNode *jobNode)
 {
   const ScheduleNode *scheduleNode;
 
@@ -1520,9 +1525,11 @@ void Job_includeExcludeChanged(JobNode *jobNode)
       }
     }
   }
+
+  Job_setModified(jobNode);
 }
 
-void Job_mountChanged(JobNode *jobNode)
+void Job_setMountModified(JobNode *jobNode)
 {
   const MountNode *mountNode;
 
@@ -1531,9 +1538,11 @@ void Job_mountChanged(JobNode *jobNode)
   LIST_ITERATE(&jobNode->job.options.mountList,mountNode)
   {
   }
+
+  Job_setModified(jobNode);
 }
 
-void Job_scheduleChanged(const JobNode *jobNode)
+void Job_setScheduleModified(JobNode *jobNode)
 {
   const ScheduleNode *scheduleNode;
 
@@ -1561,13 +1570,15 @@ void Job_scheduleChanged(const JobNode *jobNode)
       }
     }
   }
+
+  Job_setModified(jobNode);
 }
 
-void Job_persistenceChanged(const JobNode *jobNode)
+void Job_setPersistenceModified(JobNode *jobNode)
 {
   assert(Semaphore_isLocked(&jobList.lock));
 
-  UNUSED_VARIABLE(jobNode);
+  Job_setModified(jobNode);
 }
 
 Errors Job_readScheduleInfo(JobNode *jobNode)
@@ -1704,7 +1715,8 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
         persistenceNode = Job_newPersistenceNode(scheduleNode->archiveType,
                                                  minKeep,
                                                  maxKeep,
-                                                 maxAge
+                                                 maxAge,
+                                                 NULL
                                                 );
         assert(persistenceNode != NULL);
 
@@ -1810,10 +1822,11 @@ bool Job_read(JobNode *jobNode)
   bool       failFlag;
   uint       lineNb;
   String     line;
+  StringList commentList;
   String     s;
   String     name,value;
   long       nextIndex;
-  uint       i,i0,i1;
+  uint       i,firstValueIndex,lastValueIndex;
 
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
@@ -1844,13 +1857,51 @@ bool Job_read(JobNode *jobNode)
   failFlag    = FALSE;
   line        = String_new();
   lineNb      = 0;
+  StringList_init(&commentList);
   s           = String_new();
   name        = String_new();
   value       = String_new();
-  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
+  while (File_getLine(&fileHandle,line,&lineNb,NULL) && !failFlag)
   {
     // parse line
-    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,s))
+    if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+    {
+      // discard separator or empty line
+      StringList_clear(&commentList);
+    }
+    else if (String_startsWithCString(line,"# "))
+    {
+      // store comment
+      String_remove(line,STRING_BEGIN,2);
+      StringList_append(&commentList,line);
+    }
+// TODO:
+#if 1
+    else if (String_parse(line,STRING_BEGIN,"#%S=",&nextIndex,name))
+    {
+      uint i;
+
+      // commented value -> only store comments
+      if (!StringList_isEmpty(&commentList))
+      {
+        i = ConfigValue_find(CONFIG_VALUES,
+                             CONFIG_VALUE_INDEX_NONE,
+                             CONFIG_VALUE_INDEX_NONE,
+                             String_cString(name)
+                            );
+        if (i != CONFIG_VALUE_INDEX_NONE)
+        {
+          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
+          StringList_clear(&commentList);
+        }
+      }
+    }
+#endif
+    else if (String_startsWithChar(line,'#'))
+    {
+      // ignore other commented lines
+    }
+    else if (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,s))
     {
       ScheduleNode       *scheduleNode;
       const ScheduleNode *existingScheduleNode;
@@ -1858,8 +1909,8 @@ bool Job_read(JobNode *jobNode)
       // find section
       i = ConfigValue_findSection(JOB_CONFIG_VALUES,
                                   "schedule",
-                                  &i0,
-                                  &i1
+                                  &firstValueIndex,
+                                  &lastValueIndex
                                  );
       assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
       UNUSED_VARIABLE(i);
@@ -1874,8 +1925,8 @@ bool Job_read(JobNode *jobNode)
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
           i = ConfigValue_find(JOB_CONFIG_VALUES,
-                               i0,
-                               i1,
+                               firstValueIndex,
+                               lastValueIndex,
                                String_cString(name)
                               );
           if (i != CONFIG_VALUE_INDEX_NONE)
@@ -1896,8 +1947,7 @@ bool Job_read(JobNode *jobNode)
                                 printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
                               }),NULL,
                               scheduleNode,
-// TODO:
-NULL // commentLineList
+                              &commentList
                              );
           }
           else
@@ -1969,8 +2019,8 @@ NULL // commentLineList
       // find section
       i = ConfigValue_findSection(JOB_CONFIG_VALUES,
                                   "persistence",
-                                  &i0,
-                                  &i1
+                                  &firstValueIndex,
+                                  &lastValueIndex
                                  );
       assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'persistence'");
       UNUSED_VARIABLE(i);
@@ -1978,7 +2028,7 @@ NULL // commentLineList
       if (Archive_parseType(String_cString(s),&archiveType,NULL))
       {
         // new persistence
-        persistenceNode = Job_newPersistenceNode(archiveType,0,0,0);
+        persistenceNode = Job_newPersistenceNode(archiveType,0,0,0,NULL);
         assert(persistenceNode != NULL);
         while (   File_getLine(&fileHandle,line,&lineNb,"#")
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -1987,8 +2037,8 @@ NULL // commentLineList
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             i = ConfigValue_find(JOB_CONFIG_VALUES,
-                                 CONFIG_VALUE_INDEX_NONE,
-                                 CONFIG_VALUE_INDEX_NONE,
+                                 firstValueIndex,
+                                 lastValueIndex,
                                  String_cString(name)
                                 );
             if (i != CONFIG_VALUE_INDEX_NONE)
@@ -2009,7 +2059,7 @@ NULL // commentLineList
                                   printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
                                 }),NULL,
                                 persistenceNode,
-NULL // commentLineList
+                                &commentList
                                );
             }
             else
@@ -2103,7 +2153,7 @@ NULL // commentLineList
                             printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
                           }),NULL,
                           jobNode,
-NULL // commentLineList
+                          &commentList
                          );
       }
       else
@@ -2125,6 +2175,7 @@ NULL // commentLineList
   String_delete(value);
   String_delete(name);
   String_delete(s);
+  StringList_done(&commentList);
   String_delete(line);
 
   // close file
@@ -2200,13 +2251,13 @@ Errors Job_rereadAll(ConstString jobsDirectory)
           List_append(&jobList,jobNode);
 
           // notify about changes
-          Job_includeExcludeChanged(jobNode);
-          Job_mountChanged(jobNode);
-          Job_scheduleChanged(jobNode);
-          Job_persistenceChanged(jobNode);
+          Job_setIncludeExcludeModified(jobNode);
+          Job_setMountModified(jobNode);
+          Job_setScheduleModified(jobNode);
+          Job_setPersistenceModified(jobNode);
 
           // notify about changes
-          Job_listChanged();
+          Job_setListModified();
         }
         else
         {
@@ -2219,10 +2270,10 @@ Errors Job_rereadAll(ConstString jobsDirectory)
             (void)Job_read(jobNode);
 
             // notify about changes
-            Job_includeExcludeChanged(jobNode);
-            Job_mountChanged(jobNode);
-            Job_scheduleChanged(jobNode);
-            Job_persistenceChanged(jobNode);
+            Job_setIncludeExcludeModified(jobNode);
+            Job_setMountModified(jobNode);
+            Job_setScheduleModified(jobNode);
+            Job_setPersistenceModified(jobNode);
           }
         }
       }
@@ -2252,7 +2303,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
           jobNode = List_removeAndFree(&jobList,jobNode);
 
           // notify about changes
-          Job_listChanged();
+          Job_setListModified();
         }
       }
       else
@@ -2305,6 +2356,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
 
 Errors Job_write(JobNode *jobNode)
 {
+// TODO:
 #if 0
   StringList            jobLinesList;
   String                line;
@@ -2463,6 +2515,7 @@ Errors Job_write(JobNode *jobNode)
     }
 
     // write config
+fprintf(stderr,"%s:%d: wroite %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
     error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
     if (error != ERROR_NONE)
     {

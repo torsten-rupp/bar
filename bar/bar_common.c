@@ -23,6 +23,7 @@
 #include "common/global.h"
 
 #include "configuration.h"
+#include "archive.h"
 
 #include "bar_common.h"
 

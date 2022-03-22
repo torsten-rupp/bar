@@ -1533,7 +1533,7 @@ void freeServer(uint serverId)
 
   if (serverId != 0)
   {
-    SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // find server
       serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -4289,9 +4289,12 @@ LOCAL Errors bar(int argc, const char *argv[])
     if (error != ERROR_NONE)
     {
        if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"FAIL!\n"); }
+       String_delete(configFileName);
        return error;
     }
     if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"OK\n"); }
+    String_delete(configFileName);
+
     return ERROR_NONE;
   }
 

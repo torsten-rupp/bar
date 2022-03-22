@@ -752,6 +752,18 @@ void Configuration_freeMountNode(MountNode *mountNode, void *userData);
 
 void Configuration_deleteMountNode(MountNode *mountNode);
 
+/***********************************************************************\
+* Name   : Configuration_freeBandWidthNode
+* Purpose: free band width node
+* Input  : bandWidthNode - band width node
+*          userData      - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

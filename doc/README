@@ -356,7 +356,19 @@ Note: call configure with
 
   --with-launchj4-dir=<path>
 
---- License
+--- Term of use and license
+
+When you use BAR you do this with your own responsibility and
+risks.  You use BAR as it "is".  You agree that the author of BAR
+will not be responsible for any damage on physical or virtual
+entities or persons which may be caused directly or indirectly by
+BAR.  You agree not to claim for damages against the author of BAR
+in case there is an unexpected behavior or there are unexpected
+results of BAR (e.  g.  due to bugs in the software) or in case of
+miss usage of the BAR.  You can send bug reports and feature
+requests - which is encouraged -, but you agree that there is no
+liability of the author that a bug is corrected and you agree there
+is no claim that anything is changed in BAR by the author.
 
 BAR and all files are under the GPL version 2. The full GPL
 version 2 license text can be found here:
@@ -370,6 +382,6 @@ which can be found here:
 
 --- Contact
 
-Send an email to
+Send an email to Torsten Rupp (author of BAR):
 
 torsten.rupp@gmx.net

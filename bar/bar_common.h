@@ -288,6 +288,8 @@ typedef enum
 #define PROGRESS_FLAG_WHEEL      (1 << 0)
 #define PROGRESS_FLAG_PERCENTAGE (1 << 1)
 
+#define NAME_PART_NUMBER_NONE -1
+
 /***************************** Datatypes *******************************/
 
 // transform
@@ -445,6 +447,7 @@ typedef struct PersistenceNode
   ArchiveTypes archiveType;                                   // archive type to create
   int          minKeep,maxKeep;                               // min./max keep count
   int          maxAge;                                        // max. age [days]
+  String       moveTo;
 } PersistenceNode;
 
 typedef struct

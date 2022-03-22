@@ -1159,6 +1159,7 @@ LOCAL Errors StorageFTP_done(StorageInfo *storageInfo)
 
   #if   defined(HAVE_CURL)
     freeServer(storageInfo->ftp.serverId);
+    doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageInfo);
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -2358,6 +2359,114 @@ UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
+}
+
+LOCAL Errors StorageFTP_makeDirectory(const StorageInfo *storageInfo,
+                                      ConstString       directoryName
+                                     )
+{
+  #if   defined(HAVE_CURL)
+    CURLM             *curlMultiHandle;
+    CURL              *curlHandle;
+    String            url;
+    CURLcode          curlCode;
+    CURLMcode         curlMCode;
+    StringTokenizer   nameTokenizer;
+    ConstString       token;
+    int               runningHandles;
+  #else /* not HAVE_CURL || HAVE_FTP */
+  #endif /* HAVE_CURL || HAVE_FTP */
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(directoryName));
+
+  #if   defined(HAVE_CURL)
+    // init variables
+
+    // open Curl handles
+    curlMultiHandle = curl_multi_init();
+    if (curlMultiHandle == NULL)
+    {
+      return ERROR_FTP_SESSION_FAIL;
+    }
+    curlHandle = curl_easy_init();
+    if (curlHandle == NULL)
+    {
+      curl_multi_cleanup(curlMultiHandle);
+      return ERROR_FTP_SESSION_FAIL;
+    }
+
+    // get URL
+    url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+    File_initSplitFileName(&nameTokenizer,directoryName);
+    while (File_getNextSplitFileName(&nameTokenizer,&token))
+    {
+      String_appendChar(url,'/');
+      String_append(url,token);
+    }
+    File_doneSplitFileName(&nameTokenizer);
+    String_appendChar(url,'/');
+    String_append(url,directoryName);
+
+    // set FTP connect
+    curlCode = setFTPLogin(curlHandle,
+                           storageInfo->storageSpecifier.loginName,
+                           storageInfo->storageSpecifier.loginPassword,
+                           FTP_TIMEOUT
+                          );
+    if (curlCode != CURLE_OK)
+    {
+      String_delete(url);
+      (void)curl_easy_cleanup(curlHandle);
+      (void)curl_multi_cleanup(curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    }
+
+    // create directories if necessary
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
+    }
+    curlMCode = curl_multi_add_handle(curlMultiHandle,curlHandle);
+    if (curlMCode != CURLM_OK)
+    {
+      String_delete(url);
+      (void)curl_easy_cleanup(curlHandle);
+      (void)curl_multi_cleanup(curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
+    }
+
+    // start create
+    do
+    {
+      curlMCode = curl_multi_perform(curlMultiHandle,&runningHandles);
+    }
+    while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
+           && (runningHandles > 0)
+          );
+//fprintf(stderr,"%s, %d: storageHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageHandle->ftp.runningHandles);
+    if (curlMCode != CURLM_OK)
+    {
+      String_delete(url);
+      (void)curl_multi_remove_handle(curlMultiHandle,curlHandle);
+      (void)curl_easy_cleanup(curlHandle);
+      (void)curl_multi_cleanup(curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
+    }
+
+    // free resources
+    String_delete(url);
+
+    return ERROR_NONE;
+  #else /* not HAVE_CURL || HAVE_FTP */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(directoryName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_CURL || HAVE_FTP */
 }
 
 LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
