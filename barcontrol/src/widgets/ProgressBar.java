@@ -273,6 +273,15 @@ public class ProgressBar extends Canvas
     }
   }
 
+  /** convert to string
+   * @return string
+   */
+  @Override
+  public String toString()
+  {
+    return "ProgressBar {"+minimum+", "+maximum+"}";
+  }
+
   /** free allocated resources
    * @param disposeEvent dispose event
    */
