@@ -1,5 +1,4 @@
 /***********************************************************************\
-/***********************************************************************\
 *
 * $Revision: 1.30 $
 * $Date: 2019-01-17 21:06:25 +0100 (Thu, 17 Jan 2019) $
@@ -121,13 +120,12 @@ import jline.TerminalFactory;
  */
 enum StorageTypes
 {
-  NONE,
-
   FILESYSTEM,
   FTP,
   SCP,
   SFTP,
   WEBDAV,
+  WEBDAVS,
   CD,
   DVD,
   BD,
@@ -179,7 +177,7 @@ enum StorageTypes
     }
     else
     {
-      type = StorageTypes.NONE;
+      type = StorageTypes.FILESYSTEM;
     }
 
     return type;
@@ -192,7 +190,9 @@ enum StorageTypes
   {
     switch (this)
     {
-      case FILESYSTEM: return BARControl.tr("filesystem");
+      case FILESYSTEM:
+      default:
+                       return BARControl.tr("filesystem");
       case FTP:        return "ftp";
       case SCP:        return "scp";
       case SFTP:       return "sftp";
@@ -201,7 +201,6 @@ enum StorageTypes
       case DVD:        return "dvd";
       case BD:         return "bd";
       case DEVICE:     return BARControl.tr("device");
-      default:         return "";
     }
   }
 
@@ -213,7 +212,9 @@ enum StorageTypes
   {
     switch (this)
     {
-      case FILESYSTEM: return "filesystem";
+      case FILESYSTEM:
+      default:
+                       return "filesystem";
       case FTP:        return "ftp";
       case SCP:        return "scp";
       case SFTP:       return "sftp";
@@ -222,52 +223,51 @@ enum StorageTypes
       case DVD:        return "dvd";
       case BD:         return "bd";
       case DEVICE:     return "device";
-      default:         return "";
     }
   }
 }
 
-/** archive name parts
+/** URI name parts
 */
-class ArchiveNameParts
+class URIParts implements Cloneable
 {
   public StorageTypes type;           // type
-  public String       loginName;      // login name
-  public String       loginPassword;  // login password
   public String       hostName;       // host name
   public int          hostPort;       // host port
+  public String       loginName;      // login name
+  public String       loginPassword;  // login password
   public String       deviceName;     // device name
   public String       fileName;       // file name
 
-  /** parse archive name
+  /** parse URI
    * @param type archive type
-   * @param loginName login name
-   * @param loginPassword login password
    * @param hostName host name
    * @param hostPort host port
+   * @param loginName login name
+   * @param loginPassword login password
    * @param deviceName device name
    * @param fileName file name
    */
-  public ArchiveNameParts(StorageTypes type,
-                          String       loginName,
-                          String       loginPassword,
-                          String       hostName,
-                          int          hostPort,
-                          String       deviceName,
-                          String       fileName
-                         )
+  public URIParts(StorageTypes type,
+                  String       hostName,
+                  int          hostPort,
+                  String       loginName,
+                  String       loginPassword,
+                  String       deviceName,
+                  String       fileName
+                 )
   {
     this.type          = type;
-    this.loginName     = loginName;
-    this.loginPassword = loginPassword;
     this.hostName      = hostName;
     this.hostPort      = hostPort;
+    this.loginName     = loginName;
+    this.loginPassword = loginPassword;
     this.deviceName    = deviceName;
     this.fileName      = fileName;
   }
 
-  /** parse archive name
-   * @param archiveName archive name string
+  /** parse URI
+   * @param uri uri string
    *   ftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   scp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   sftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
@@ -279,24 +279,24 @@ class ArchiveNameParts
    *   file://<file name>
    *   <file name>
    */
-  public ArchiveNameParts(String archiveName)
+  public URIParts(String uri)
   {
     Matcher matcher;
 
-    type          = StorageTypes.NONE;
-    loginName     = "";
-    loginPassword = "";
+    type          = StorageTypes.FILESYSTEM;
     hostName      = "";
     hostPort      = 0;
+    loginName     = "";
+    loginPassword = "";
     deviceName    = "";
     fileName      = "";
 
-    if       (archiveName.startsWith("ftp://"))
+    if       (uri.startsWith("ftp://"))
     {
       // ftp
       type = StorageTypes.FTP;
 
-      String specifier = archiveName.substring(6);
+      String specifier = uri.substring(6);
       if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
         // ftp://<login name>:<login password>@<host name>:<host port>/<file name>
@@ -342,13 +342,30 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("scp://"))
+    else if (uri.startsWith("scp://"))
     {
       // scp
       type = StorageTypes.SCP;
 
-      String specifier = archiveName.substring(6);
-      if      ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      String specifier = uri.substring(6);
+      if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // sftp://<login name>:<login password>@<host name>:<host port>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        hostPort      = Integer.parseInt(matcher.group(5));
+        fileName      = matcher.group(6);
+      }
+      else if ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // sftp://<login name>:<login password>@<host name>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        fileName      = matcher.group(5);
+      }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
         // scp://<login name>@<host name>:<host port>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
@@ -382,12 +399,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("sftp://"))
+    else if (uri.startsWith("sftp://"))
     {
       // sftp
       type = StorageTypes.SFTP;
 
-      String specifier = archiveName.substring(7);
+      String specifier = uri.substring(7);
       if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
         // sftp://<login name>:<login password>@<host name>:<host port>/<file name>
@@ -439,12 +456,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("webdav://"))
+    else if (uri.startsWith("webdav://"))
     {
       // webdav
       type = StorageTypes.WEBDAV;
 
-      String specifier = archiveName.substring(9);
+      String specifier = uri.substring(9);
       if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
         // webdav://<login name>:<login password>@<host name>/<file name>
@@ -472,12 +489,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("cd://"))
+    else if (uri.startsWith("cd://"))
     {
       // cd
       type = StorageTypes.CD;
 
-      String specifier = archiveName.substring(5);
+      String specifier = uri.substring(5);
       Object[] data = new Object[2];
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
@@ -491,12 +508,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("dvd://"))
+    else if (uri.startsWith("dvd://"))
     {
       // dvd
       type = StorageTypes.DVD;
 
-      String specifier = archiveName.substring(6);
+      String specifier = uri.substring(6);
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
         // dvd://<device name>:<file name>
@@ -509,12 +526,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("bd://"))
+    else if (uri.startsWith("bd://"))
     {
       // bd
       type = StorageTypes.BD;
 
-      String specifier = archiveName.substring(5);
+      String specifier = uri.substring(5);
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
         // bd://<device name>:<file name>
@@ -527,12 +544,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("device://"))
+    else if (uri.startsWith("device://"))
     {
       // device0
       type = StorageTypes.DEVICE;
 
-      String specifier = archiveName.substring(9);
+      String specifier = uri.substring(9);
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
         // device://<device name>:<file name>
@@ -545,12 +562,12 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("file://"))
+    else if (uri.startsWith("file://"))
     {
       // file
       type = StorageTypes.FILESYSTEM;
 
-      String specifier = archiveName.substring(7);
+      String specifier = uri.substring(7);
       fileName = specifier.substring(2);
     }
     else
@@ -558,239 +575,254 @@ class ArchiveNameParts
       // file
       type = StorageTypes.FILESYSTEM;
 
-      fileName = archiveName;
+      fileName = uri;
     }
   }
 
-  /** get archive name
-   * @param fileName file name part
-   * @return archive name
+  /** clone URI data
+   * @return cloned of object
    */
-  public String getName(String fileName)
+  public URIParts clone()
   {
-    StringBuilder archiveNameBuffer = new StringBuilder();
+    return new URIParts(type,
+                        hostName,
+                        hostPort,
+                        loginName,
+                        loginPassword,
+                        deviceName,
+                        fileName
+                       );
+  }
+
+  /** get URI
+   * @param fileName file name part
+   * @return URI
+   */
+  public String getURI(String fileName)
+  {
+    StringBuilder buffer = new StringBuilder();
 
     switch (type)
     {
       case FILESYSTEM:
         break;
       case FTP:
-        archiveNameBuffer.append("ftp://");
+        buffer.append("ftp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
           if (!loginName.equals("") || !loginPassword.equals(""))
           {
-            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
-            archiveNameBuffer.append('@');
+            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            buffer.append('@');
           }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          archiveNameBuffer.append('/');
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          buffer.append('/');
         }
         break;
       case SCP:
-        archiveNameBuffer.append("scp://");
+        buffer.append("scp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
           if (!loginName.equals("") || !loginPassword.equals(""))
           {
-            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
-            archiveNameBuffer.append('@');
+            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            buffer.append('@');
           }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
-          archiveNameBuffer.append('/');
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
+          buffer.append('/');
         }
         break;
       case SFTP:
-        archiveNameBuffer.append("sftp://");
+        buffer.append("sftp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
           if (!loginName.equals("") || !loginPassword.equals(""))
           {
-            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
-            archiveNameBuffer.append('@');
+            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            buffer.append('@');
           }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
-          archiveNameBuffer.append('/');
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
+          buffer.append('/');
         }
         break;
       case WEBDAV:
-        archiveNameBuffer.append("webdav://");
+        buffer.append("webdav://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
           if (!loginName.equals("") || !loginPassword.equals(""))
           {
-            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
-            archiveNameBuffer.append('@');
+            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            buffer.append('@');
           }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          archiveNameBuffer.append('/');
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          buffer.append('/');
         }
         break;
       case CD:
-        archiveNameBuffer.append("cd://");
+        buffer.append("cd://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
       case DVD:
-        archiveNameBuffer.append("dvd://");
+        buffer.append("dvd://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
       case BD:
-        archiveNameBuffer.append("bd://");
+        buffer.append("bd://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
       case DEVICE:
-        archiveNameBuffer.append("device://");
+        buffer.append("device://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
     }
     if (fileName != null)
     {
-      archiveNameBuffer.append(fileName);
+      buffer.append(fileName);
     }
 
-    return archiveNameBuffer.toString();
+    return buffer.toString();
   }
 
-  /** get archive path name
-   * @return archive path name (archive name without file name)
+  /** get URI path name
+   * @return URI path name (URI name without file name)
    */
-  public String getPath()
+  public String getURIPath()
   {
     File file = new File(fileName);
-    return getName(file.getParent());
+    return getURI(file.getParent());
   }
 
-  /** get archive name
-   * @return archive name
+  /** get URI name
+   * @return URI name
    */
-  public String getName()
+  public String getURI()
   {
-    return getName(fileName);
+    return getURI(fileName);
   }
 
-  /** get archive name
+  /** get printable URI (without password)
    * @param fileName file name part
-   * @return archive name
+   * @return URI
    */
-  public String getPrintableName(String fileName)
+  public String getPrintableURI(String fileName)
   {
-    StringBuilder archiveNameBuffer = new StringBuilder();
+    StringBuilder buffer = new StringBuilder();
 
     switch (type)
     {
       case FILESYSTEM:
         break;
       case FTP:
-        archiveNameBuffer.append("ftp://");
+        buffer.append("ftp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
           if (!loginName.equals("") || !loginPassword.equals(""))
           {
-            if (!loginName.equals("")) archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            archiveNameBuffer.append('@');
+            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            buffer.append('@');
           }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          archiveNameBuffer.append('/');
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          buffer.append('/');
         }
         break;
       case SCP:
-        archiveNameBuffer.append("scp://");
+        buffer.append("scp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
-          archiveNameBuffer.append('/');
+          if (!loginName.equals("")) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
+          buffer.append('/');
         }
         break;
       case SFTP:
-        archiveNameBuffer.append("sftp://");
+        buffer.append("sftp://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
-          archiveNameBuffer.append('/');
+          if (!loginName.equals("")) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
+          buffer.append('/');
         }
         break;
       case WEBDAV:
-        archiveNameBuffer.append("webdav://");
+        buffer.append("webdav://");
         if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
-          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-          archiveNameBuffer.append('/');
+          if (!loginName.equals("")) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.equals("")) { buffer.append(hostName); }
+          buffer.append('/');
         }
         break;
       case CD:
-        archiveNameBuffer.append("cd://");
+        buffer.append("cd://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
       case DVD:
-        archiveNameBuffer.append("dvd://");
+        buffer.append("dvd://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
       case BD:
-        archiveNameBuffer.append("bd://");
+        buffer.append("bd://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
       case DEVICE:
-        archiveNameBuffer.append("device://");
+        buffer.append("device://");
         if (!deviceName.equals(""))
         {
-          archiveNameBuffer.append(deviceName);
-          archiveNameBuffer.append(':');
+          buffer.append(deviceName);
+          buffer.append(':');
         }
         break;
     }
     if (fileName != null)
     {
-      archiveNameBuffer.append(fileName);
+      buffer.append(fileName);
     }
 
-    return archiveNameBuffer.toString();
+    return buffer.toString();
   }
 
-  /** get archive name
-   * @return archive name
+  /** get printable URI (without password)
+   * @return URI
    */
-  public String getPrintableName()
+  public String getPrintableURI()
   {
-    return getPrintableName(fileName);
+    return getPrintableURI(fileName);
   }
 
   /** convert to string
@@ -799,7 +831,7 @@ class ArchiveNameParts
   @Override
   public String toString()
   {
-    return getName();
+    return "URIParts {"+type+", "+loginName+", "+loginPassword+", "+hostName+", "+hostPort+", "+deviceName+", "+fileName+"}";
   }
 }
 
