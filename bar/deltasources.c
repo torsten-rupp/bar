@@ -83,15 +83,13 @@ LOCAL Errors createLocalStorageArchive(StorageSpecifier       *localStorageSpeci
   }
 
   // copy storage to local file
-  error = Storage_copy(storageSpecifier,
-                       jobOptions,
-                       &globalOptions.maxBandWidthList,
-                       NULL,//StorageRequestVolumeFunction storageRequestVolumeFunction,
-                       NULL,//void                         *storageRequestVolumeUserData,
-                       NULL,//StorageStatusInfoFunction    storageStatusInfoFunction,
-                       NULL,//void                         *storageStatusInfoUserData,
-                       localStorageSpecifier->archiveName
-                      );
+  error = Storage_copyToLocal(storageSpecifier,
+                              localStorageSpecifier->archiveName,
+                              jobOptions,
+                              &globalOptions.maxBandWidthList,
+                              CALLBACK_(NULL,NULL),  // StorageRequestVolumeFunction
+                              CALLBACK_(NULL,NULL)  // StorageStatusInfoFunction
+                             );
   if (error != ERROR_NONE)
   {
     File_delete(localStorageSpecifier->archiveName,FALSE);

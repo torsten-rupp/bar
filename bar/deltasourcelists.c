@@ -64,8 +64,8 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode,
-                                                void            *userData
+LOCAL DeltaSourceNode *duplicateDeltaSourceNode(const DeltaSourceNode *deltaSourceNode,
+                                                void                  *userData
                                                )
 {
   DeltaSourceNode *newDeltaSourceNode;
@@ -81,9 +81,9 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode
     HALT_INSUFFICIENT_MEMORY();
   }
   #ifndef NDEBUG
-    newDeltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    newDeltaSourceNode->id        = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   #else
-    newDeltaSourceNode->id          = Misc_getId();
+    newDeltaSourceNode->id        = Misc_getId();
   #endif
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
@@ -135,7 +135,10 @@ void DeltaSourceList_doneAll(void)
 {
   assert(deltaSourceList != NULL);
 
-  List_init(deltaSourceList,CALLBACK_((ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL),CALLBACK_((ListNodeFreeFunction)freeDeltaSourceNode,NULL));
+  List_init(deltaSourceList,
+            CALLBACK_((ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL),
+            CALLBACK_((ListNodeFreeFunction)freeDeltaSourceNode,NULL)
+           );
   Semaphore_init(&deltaSourceList->lock,SEMAPHORE_TYPE_BINARY);
 
   #ifdef NDEBUG

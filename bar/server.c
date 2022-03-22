@@ -94,7 +94,7 @@
 // TODO:#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_INDEX_THREAD 10
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
-#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*S_PER_MINUTE)
+#define SLEEP_TIME_PERSISTENCE_THREAD            (10*S_PER_MINUTE)
 
 // id none
 #define ID_NONE                                  0
@@ -334,7 +334,8 @@ LOCAL Semaphore             updateIndexThreadTrigger;
 LOCAL Thread                updateIndexThread;           // thread to add/update index
 LOCAL Semaphore             autoIndexThreadTrigger;
 LOCAL Thread                autoIndexThread;             // thread to collect BAR files for auto-index
-LOCAL Thread                purgeExpiredEntitiesThread;  // thread to purge expired archive files
+LOCAL Thread                persistenceThread;           // thread to purge expired/move archive files
+LOCAL Semaphore             persistenceThreadTrigger;
 
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;                 // current server state
@@ -2731,7 +2732,10 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
   assert(expirationEntityList != NULL);
 
   // init variables
-  List_init(expirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+  List_init(expirationEntityList,
+            CALLBACK_(NULL,NULL),
+            CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL)
+           );
 
   if (indexHandle != NULL)
   {
@@ -2960,7 +2964,7 @@ LOCAL bool isInTransit(const ExpirationEntityNode *expirationEntityNode)
 *          newArchiveType - new archive type which will be created for
 *                           job or ARCHIVE_TYPE_NONE
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : if new created archive is given it is respected in expiration
 *          of job entities
 \***********************************************************************/
@@ -2972,7 +2976,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 {
   Array                      entityIdArray;
   String                     expiredJobName;
-  String                     string;
   ExpirationEntityList       expirationEntityList;
   IndexId                    expiredEntityId;
   ArchiveTypes               expiredArchiveType;
@@ -2987,15 +2990,17 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
+  char                       string[64];
 
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   expiredJobName = String_new();
-  string         = String_new();
 // TODO: free correct
-  List_init(&expirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+  List_init(&expirationEntityList,
+            CALLBACK_(NULL,NULL),
+            CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL)
+           );
 
-  Array_clear(&entityIdArray);
   error = ERROR_NONE;
   do
   {
@@ -3010,7 +3015,10 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     expiredCreatedDateTime = 0LL;
     expiredTotalEntryCount = 0;
     expiredTotalEntrySize  = 0LL;
-    List_init(&mountList,CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
+    List_init(&mountList,
+              CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
+              CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
+             );
 
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
@@ -3141,11 +3149,31 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
                     expiredTotalEntrySize
+                   );
+      }
+      else
+      {
+        plogMessage(NULL,  // logHandle,
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    #ifdef SIMULATE_PURGE
+                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
+                    #else /* not SIMULATE_PURGE */
+                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
+                    #endif /* SIMULATE_PURGE */
+                    String_cString(expiredJobName),
+                    Archive_archiveTypeToString(expiredArchiveType),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,NULL),
+                    expiredTotalEntryCount,
+                    BYTES_SHORT(expiredTotalEntrySize),
+                    BYTES_UNIT(expiredTotalEntrySize),
+                    expiredTotalEntrySize,
+                    Error_getText(error)
                    );
       }
     }
@@ -3155,13 +3183,10 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     List_done(&expirationEntityList);
   }
   while (   !INDEX_ID_IS_NONE(expiredEntityId)
- //TODO: remove
- //               && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
          && !isQuit()
         );
 
   // free resources
-  String_delete(string);
   String_delete(expiredJobName);
   Array_done(&entityIdArray);
 
@@ -3169,15 +3194,488 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : purgeExpiredEntitiesThreadCode
-* Purpose: purge expired entities thread
+* Name   : moveEntity
+* Purpose: move storages of entity to new destination
+* Input  : indexHandle            - index handle
+*          jobOptions             - job options
+*          moveEntityId           - entity id
+*          moveToStorageSpecifier - move-to storage specifier
+*          moveToPathName         - move-to path
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors moveEntity(IndexHandle            *indexHandle,
+                        const JobOptions       *jobOptions,
+                        IndexId                moveEntityId,
+                        const StorageSpecifier *moveToStorageSpecifier,
+                        ConstString            moveToPathName
+                       )
+{
+  String           storageName;
+  StorageSpecifier storageSpecifier;
+  String           baseName,toArchiveName;
+  BandWidthList    maxFromBandWidthList,maxToBandWidthList;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+  uint64           archiveSize;
+  StorageInfo      fromStorageInfo,toStorageInfo;
+
+  // init variables
+  storageName = String_new();
+  Storage_initSpecifier(&storageSpecifier);
+  baseName      = String_new();
+  toArchiveName = String_new();
+// TODO: bandwidht limitor NYI
+  List_init(&maxFromBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
+  List_init(&maxToBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
+
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 moveEntityId,
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount
+                                 INDEX_TYPE_SET_ALL,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
+                                 NULL,  // userName
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (   (error == ERROR_NONE)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
+                                   NULL,  // jobUUID
+                                   NULL,  // entityId
+                                   NULL,  // scheduleUUID
+                                   NULL,  // hostName
+                                   NULL,  // userName
+                                   NULL,  // comment
+                                   NULL,  // createdDateTime
+                                   NULL,  // archiveType
+                                   &storageId,
+                                   storageName,
+                                   NULL,  // createdDateTime,
+                                   &archiveSize,  // size
+                                   NULL,  // indexState,
+                                   NULL,  // indexMode,
+                                   NULL,  // lastCheckedDateTime,
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
+                                  )
+          )
+    {
+      error = Storage_parseName(&storageSpecifier,storageName);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      File_getBaseName(baseName,storageSpecifier.archiveName);
+
+      // get new archive name
+      File_setFileName(toArchiveName,moveToPathName);
+      File_appendFileName(toArchiveName,baseName);
+
+      // move storage
+      error = Storage_init(&fromStorageInfo,
+                           NULL,  // masterIO
+                           &storageSpecifier,
+                           jobOptions,
+                           &maxFromBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_LOW,
+                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                           CALLBACK_(NULL,NULL),  // isPauseFunction
+                           CALLBACK_(NULL,NULL),  // isAbortedFunction
+                           NULL  // logHandle
+                          );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Storage_init(&toStorageInfo,
+                           NULL,  // masterIO
+                           moveToStorageSpecifier,
+                           jobOptions,
+                           &maxToBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_LOW,
+                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                           CALLBACK_(NULL,NULL),  // isPauseFunction
+                           CALLBACK_(NULL,NULL),  // isAbortedFunction
+                           NULL  // logHandle
+                          );
+      if (error != ERROR_NONE)
+      {
+        Storage_done(&fromStorageInfo);
+        break;
+      }
+
+      error = Storage_copy(&fromStorageInfo,
+                           storageSpecifier.archiveName,
+                           &toStorageInfo,
+                           toArchiveName,
+                           archiveSize
+                          );
+      if (error != ERROR_NONE)
+      {
+        Storage_done(&toStorageInfo);
+        Storage_done(&fromStorageInfo);
+        break;
+      }
+
+      error = Storage_delete(&fromStorageInfo,
+                             storageSpecifier.archiveName
+                            );
+      if (error != ERROR_NONE)
+      {
+        (void)Storage_delete(&toStorageInfo,toArchiveName);
+        Storage_done(&toStorageInfo);
+        Storage_done(&fromStorageInfo);
+        break;
+      }
+
+      Storage_done(&toStorageInfo);
+      Storage_done(&fromStorageInfo);
+
+      // update index
+      error = Index_updateStorage(indexHandle,
+                                  storageId,
+                                  NULL,  // hostName,
+                                  NULL,  // userName,
+                                  Storage_getName(storageName,moveToStorageSpecifier,toArchiveName),
+                                  0LL,  // dateTime,
+                                  archiveSize,
+                                  NULL,  // comment,
+                                  FALSE  // updateNewest
+                                 );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  // free resources
+  List_done(&maxToBandWidthList);
+  List_done(&maxFromBandWidthList);
+  String_delete(toArchiveName);
+  String_delete(baseName);
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageName);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : moveAllEntities
+* Purpose: move all entities to requested destination
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
+{
+  Array                      entityIdArray;
+  StorageSpecifier           moveToStorageSpecifier;
+  String                     moveToJobName;
+  String                     storageName;
+  StorageSpecifier           storageSpecifier;
+  String                     pathName,baseName;
+  String                     moveToPathName;
+  JobOptions                 jobOptions;
+  IndexId                    moveToEntityId;
+  MountList                  mountList;
+  uint64                     now;
+  Errors                     error;
+  const JobNode              *jobNode;
+  const PersistenceNode      *persistenceNode;
+  IndexQueryHandle           indexQueryHandle1,indexQueryHandle2;
+  IndexId                    entityId;
+  ArchiveTypes               archiveType;
+  uint64                     createdDateTime;
+  uint                       lockedCount;
+  uint                       age;
+  IndexId                    storageId;
+  char                       string[64];
+
+  // init variables
+  Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Storage_initSpecifier(&moveToStorageSpecifier);
+  moveToJobName     = String_new();
+  storageName       = String_new();
+  Storage_initSpecifier(&storageSpecifier);
+  pathName          = String_new();
+  baseName          = String_new();
+  moveToPathName    = String_new();
+  Job_initOptions(&jobOptions);
+
+  error = ERROR_NONE;
+  do
+  {
+    // init variables
+    moveToEntityId = INDEX_ID_NONE;
+    List_init(&mountList,
+              CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
+              CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
+             );
+
+    now = Misc_getCurrentDateTime();
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      // find entity to move
+      JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(moveToEntityId))
+      {
+        LIST_ITERATEX(&jobNode->job.options.persistenceList,persistenceNode,INDEX_ID_IS_NONE(moveToEntityId))
+        {
+          // check if entity should be moved
+          if (!String_isEmpty(persistenceNode->moveTo))
+          {
+            // parse move-to name
+            error = Storage_parseName(&moveToStorageSpecifier,persistenceNode->moveTo);
+            if (error != ERROR_NONE)
+            {
+              continue;
+            }
+
+            // get entity to move
+            error = Index_initListEntities(&indexQueryHandle1,
+                                           indexHandle,
+                                           INDEX_ID_ANY,  // uuidId
+                                           jobNode->job.uuid,
+                                           NULL,  // scheduldUUID
+                                           ARCHIVE_TYPE_ANY,
+                                           INDEX_STATE_SET_ALL,
+                                           INDEX_MODE_SET_ALL,
+                                           NULL,  // name
+                                           INDEX_ENTITY_SORT_MODE_CREATED,
+                                           DATABASE_ORDERING_DESCENDING,
+                                           0LL,  // offset
+                                           INDEX_UNLIMITED
+                                          );
+            if (error == ERROR_NONE)
+            {
+              while (   INDEX_ID_IS_NONE(moveToEntityId)
+                     && Index_getNextEntity(&indexQueryHandle1,
+                                            NULL,  // uuidId,
+                                            NULL,  // jobUUID,
+                                            NULL,  // scheduleUUID,
+                                            &entityId,
+                                            &archiveType,
+                                            &createdDateTime,
+                                            NULL,  // lastErrorMessage
+                                            NULL,  // totalSize,
+                                            NULL,  // totalEntryCount,
+                                            NULL,  // totalEntrySize,
+                                            &lockedCount
+                                           )
+                    )
+              {
+                if (!Array_contains(&entityIdArray,&entityId,CALLBACK_(NULL,NULL)))
+                {
+                  age = (now-createdDateTime)/S_PER_DAY;
+
+                  if (   (lockedCount == 0)
+                      && (archiveType == persistenceNode->archiveType)
+                      && ((persistenceNode->maxAge == AGE_FOREVER) || (age < (uint)persistenceNode->maxAge))
+                     )
+                  {
+                    // check storages
+                    error = Index_initListStorages(&indexQueryHandle2,
+                                                   indexHandle,
+                                                   INDEX_ID_ANY,  // uuidId
+                                                   entityId,
+                                                   NULL,  // jobUUID
+                                                   NULL,  // scheduleUUID,
+                                                   NULL,  // indexIds
+                                                   0,  // indexIdCount
+                                                   INDEX_TYPE_SET_ALL,
+                                                   INDEX_STATE_SET_ALL,
+                                                   INDEX_MODE_SET_ALL,
+                                                   NULL,  // hostName
+                                                   NULL,  // userName
+                                                   NULL,  // name
+                                                   INDEX_STORAGE_SORT_MODE_NONE,
+                                                   DATABASE_ORDERING_NONE,
+                                                   0LL,  // offset
+                                                   INDEX_UNLIMITED
+                                                  );
+                    if (error == ERROR_NONE)
+                    {
+                      while (   INDEX_ID_IS_NONE(moveToEntityId)
+                             && Index_getNextStorage(&indexQueryHandle2,
+                                                     NULL,  // uuidId
+                                                     NULL,  // jobUUID
+                                                     NULL,  // entityId
+                                                     NULL,  // scheduleUUID
+                                                     NULL,  // hostName
+                                                     NULL,  // userName
+                                                     NULL,  // comment
+                                                     NULL,  // createdDateTime
+                                                     NULL,  // archiveType
+                                                     &storageId,
+                                                     storageName,
+                                                     NULL,  // createdDateTime,
+                                                     NULL,  // size
+                                                     NULL,  // indexState,
+                                                     NULL,  // indexMode,
+                                                     NULL,  // lastCheckedDateTime,
+                                                     NULL,  // errorMessage
+                                                     NULL,  // totalEntryCount
+                                                     NULL  // totalEntrySize
+                                                    )
+                            )
+                      {
+                        // parse storage name, get path
+                        error = Storage_parseName(&storageSpecifier,storageName);
+                        if (error != ERROR_NONE)
+                        {
+                          continue;
+                        }
+                        File_getDirectoryName(pathName,storageSpecifier.archiveName);
+
+                        // get move-to path name (expand macros)
+                        error = Archive_formatName(moveToPathName,
+                                                   moveToStorageSpecifier.archiveName,
+                                                   EXPAND_MACRO_MODE_STRING,
+                                                   archiveType,
+                                                   NULL,  // scheduleTitle,
+                                                   NULL,  // customText,
+                                                   createdDateTime,
+                                                   NAME_PART_NUMBER_NONE
+                                                  );
+                        if (error != ERROR_NONE)
+                        {
+                          continue;
+                        }
+
+                        if (!Storage_equalSpecifiers(&moveToStorageSpecifier,
+                                                     moveToPathName,
+                                                     &storageSpecifier,
+                                                     pathName
+                                                    )
+                           )
+                        {
+                          moveToEntityId = entityId;
+                          String_set(moveToJobName,jobNode->name);
+
+                          List_copy(&mountList,
+                                    NULL,
+                                    &jobNode->job.options.mountList,
+                                    NULL,
+                                    NULL
+                                   );
+                        }
+                      }
+                      Index_doneList(&indexQueryHandle2);
+                    }
+                  }
+                }
+              }
+              Index_doneList(&indexQueryHandle1);
+            }
+          }
+        }
+      }
+    } // jobList
+
+    // move entity
+    if (!INDEX_ID_IS_NONE(moveToEntityId))
+    {
+      Array_append(&entityIdArray,&moveToEntityId);
+
+      // mount devices
+      error = mountAll(&mountList);
+      if (error == ERROR_NONE)
+      {
+        // move entity
+        error = moveEntity(indexHandle,
+                           &jobOptions,
+                           moveToEntityId,
+                           &moveToStorageSpecifier,
+                           moveToPathName
+                          );
+
+        // unmount devices
+        (void)unmountAll(&mountList);
+      }
+      if (error == ERROR_NONE)
+      {
+        plogMessage(NULL,  // logHandle,
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    "Moved archives of entity #%"PRIi64" '%s': %s, created at %s to '%s'",
+                    Index_getDatabaseId(moveToEntityId),
+                    String_cString(moveToJobName),
+                    Archive_archiveTypeToString(archiveType),
+                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,NULL),
+                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName))
+                   );
+      }
+      else
+      {
+        plogMessage(NULL,  // logHandle,
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Fail to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
+                    Index_getDatabaseId(moveToEntityId),
+                    String_cString(moveToJobName),
+                    Archive_archiveTypeToString(archiveType),
+                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,NULL),
+                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName)),
+                    Error_getText(error)
+                   );
+      }
+    }
+
+    // free resources
+    List_done(&mountList);
+  }
+  while (   !INDEX_ID_IS_NONE(moveToEntityId)
+         && !isQuit()
+        );
+
+  // free resources
+  Job_doneOptions(&jobOptions);
+  String_delete(moveToPathName);
+  String_delete(baseName);
+  String_delete(pathName);
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageName);
+  String_delete(moveToJobName);
+  Storage_doneSpecifier(&moveToStorageSpecifier);
+  Array_done(&entityIdArray);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : persistenceThreadCode
+* Purpose: purge expired entities/move entities thread
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void purgeExpiredEntitiesThreadCode(void)
+LOCAL void persistenceThreadCode(void)
 {
   IndexHandle *indexHandle;
   Errors      error;
@@ -3201,17 +3699,31 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
 //          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
          )
       {
+        error = ERROR_NONE;
+
         // purge expired entities
-        error = purgeExpiredEntities(indexHandle,NULL,ARCHIVE_TYPE_NONE);
+        if (error == ERROR_NONE)
+        {
+          error = purgeExpiredEntities(indexHandle,
+                                       NULL,  // jobUUID
+                                       ARCHIVE_TYPE_NONE
+                                      );
+        }
 
         // purge expired mounts
         purgeMounts(FALSE);
+
+        // move all entities to destination
+        if (error == ERROR_NONE)
+        {
+          error = moveAllEntities(indexHandle);
+        }
 
         // sleep
         if (error == ERROR_NONE)
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
+          delayThread(SLEEP_TIME_PERSISTENCE_THREAD,&persistenceThreadTrigger);
         }
         else
         {
@@ -3222,7 +3734,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
       else
       {
         // sleep and check quit flag
-        delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
+        delayThread(SLEEP_TIME_PERSISTENCE_THREAD,&persistenceThreadTrigger);
       }
     }
 
@@ -10633,11 +11145,8 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     // clear include list
     EntryList_clear(&jobNode->job.includeEntryList);
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modfiied include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10710,11 +11219,8 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     // add to include list
     EntryList_append(&jobNode->job.includeEntryList,entryType,patternString,patternType,&entryId);
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",entryId);
@@ -10795,11 +11301,8 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     // update include list
     EntryList_update(&jobNode->job.includeEntryList,entryId,entryType,patternString,patternType);
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10865,11 +11368,8 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
       return;
     }
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10980,11 +11480,8 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     // clear exclude list
     PatternList_clear(&jobNode->job.excludePatternList);
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11050,11 +11547,8 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     // add to exclude list
     PatternList_append(&jobNode->job.excludePatternList,patternString,patternType,&patternId);
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify mpdified include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",patternId);
@@ -11128,11 +11622,8 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     // update exclude list
     PatternList_update(&jobNode->job.excludePatternList,patternId,patternString,patternType);
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified include/exclude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11198,11 +11689,8 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
       return;
     }
 
-    // notify about changed lists
-    Job_includeExcludeChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified include/execlude lists
+    Job_setIncludeExcludeModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11317,11 +11805,8 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     // clear mount list
     List_clear(&jobNode->job.options.mountList);
 
-    // notify about changed lists
-    Job_mountChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified mounts
+    Job_setMountModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11414,11 +11899,8 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     // get id
     mountId = mountNode->id;
 
-    // notify about changed lists
-    Job_mountChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified mounts
+    Job_setMountModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",mountId);
@@ -11514,11 +11996,8 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     String_set(mountNode->name,name);
     String_set(mountNode->device,device);
 
-    // notify about changed lists
-    Job_mountChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified mounts
+    Job_setMountModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11591,11 +12070,8 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     List_remove(&jobNode->job.options.mountList,mountNode);
     Configuration_deleteMountNode(mountNode);
 
-    // notify about changed lists
-    Job_mountChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified mounts
+    Job_setMountModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -12759,11 +13235,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     // add to schedule list
     List_append(&jobNode->job.options.scheduleList,scheduleNode);
 
-    // notify about changed schedule
-    Job_scheduleChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
@@ -12840,11 +13313,8 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     // remove from list
     List_removeAndFree(&jobNode->job.options.scheduleList,scheduleNode);
 
-    // notify about changed schedule
-    Job_scheduleChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -12867,6 +13337,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 *            minKeep=<n>|* \
 *            maxKeep=<n>|* \
 *            maxAge=<n>|* \
+*            moveTo=<uri> #
 *            entityId=<n> \
 *            createdDateTime=<time stamp [s]> \
 *            size=<n> \
@@ -12928,12 +13399,13 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
       if (persistenceNode->maxKeep != KEEP_ALL   ) stringFormat(s2,sizeof(s2),"%d",persistenceNode->maxKeep); else stringSet(s2,sizeof(s2),"*");
       if (persistenceNode->maxAge  != AGE_FOREVER) stringFormat(s3,sizeof(s3),"%d",persistenceNode->maxAge ); else stringSet(s3,sizeof(s3),"*");
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "persistenceId=%u archiveType=%s minKeep=%s maxKeep=%s maxAge=%s size=%"PRIu64"",
+                          "persistenceId=%u archiveType=%s minKeep=%s maxKeep=%s maxAge=%s moveTo=%'S size=%"PRIu64"",
                           persistenceNode->id,
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,persistenceNode->archiveType,NULL),
                           s1,
                           s2,
                           s3,
+                          persistenceNode->moveTo,
 //TODO
 0LL//                            persistenceNode->totalEntitySize
                          );
@@ -13011,11 +13483,8 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     List_clear(&jobNode->job.options.persistenceList);
     jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
-    // notify about changed lists
-    Job_persistenceChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified persistence list
+    Job_setPersistenceModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13036,6 +13505,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
 *            minKeep=<n>|*
 *            maxKeep=<n>|*
 *            maxAge=<n>|*
+*            moveTo=<uri>
 *          Result:
 *            id=<n>
 \***********************************************************************/
@@ -13046,6 +13516,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
   ArchiveTypes    archiveType;
   int             minKeep,maxKeep;
   int             maxAge;
+  String          moveTo;
   JobNode         *jobNode;
   PersistenceNode *persistenceNode;
   uint            persistenceId;
@@ -13093,6 +13564,8 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
     return;
   }
+  moveTo = String_new();
+  StringMap_getString(argumentMap,"moveTo",moveTo,"");
 
   persistenceId = ID_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -13103,7 +13576,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
-      Job_deletePersistenceNode(persistenceNode);
+      String_delete(moveTo);
       return;
     }
 
@@ -13117,7 +13590,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
        )
     {
       // insert into persistence list
-      persistenceNode = Job_newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
+      persistenceNode = Job_newPersistenceNode(archiveType,minKeep,maxKeep,maxAge,moveTo);
       assert(persistenceNode != NULL);
       Job_insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
 
@@ -13127,17 +13600,17 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       // get id
       persistenceId = persistenceNode->id;
 
-      // notify about changed schedule
-      Job_scheduleChanged(jobNode);
-
-      // set modified
-      Job_setModified(jobNode);
+      // notify modified persistence list
+      Job_setPersistenceModified(jobNode);
     }
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",persistenceId);
 
+  Semaphore_signalModified(&persistenceThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+
   // free resources
+  String_delete(moveTo);
 }
 
 /***********************************************************************\
@@ -13156,6 +13629,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
 *            minKeep=<n>|*
 *            maxKeep=<n>|*
 *            maxAge=<n>|*
+*            moveTo=<uri>
 *          Result:
 \***********************************************************************/
 
@@ -13166,6 +13640,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
   ArchiveTypes          archiveType;
   int                   minKeep,maxKeep;
   int                   maxAge;
+  String                moveTo;
   JobNode               *jobNode;
   PersistenceNode       *persistenceNode;
   const PersistenceNode *existingPersistenceNode;
@@ -13175,7 +13650,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get jobUUID, mount id, name
+  // get jobUUID, persistence id, archive type, min./max keep, max. age
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -13218,6 +13693,8 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
     return;
   }
+  moveTo = String_new();
+  StringMap_getString(argumentMap,"moveTo",moveTo,"");
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -13227,6 +13704,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
+      String_delete(moveTo);
       return;
     }
 
@@ -13236,6 +13714,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PERSISTENCE_ID_NOT_FOUND,"%u",persistenceId);
       Job_listUnlock();
+      String_delete(moveTo);
       return;
     }
 
@@ -13247,6 +13726,8 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     persistenceNode->minKeep     = minKeep;
     persistenceNode->maxKeep     = maxKeep;
     persistenceNode->maxAge      = maxAge;
+// TODO:
+    String_set(persistenceNode->moveTo,moveTo);
 
     if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        existingPersistenceNode,
@@ -13273,16 +13754,16 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     // set last-modified timestamp
     jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
-    // notify about changed lists
-    Job_persistenceChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified persistence list
+    Job_setPersistenceModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
+  Semaphore_signalModified(&persistenceThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+
   // free resources
+  String_delete(moveTo);
 }
 
 /***********************************************************************\
@@ -13354,11 +13835,8 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     // set last-modified timestamp
     jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
-    // notify about changed persistence
-    Job_persistenceChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified persistence list
+    Job_setPersistenceModified(jobNode);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -13608,11 +14086,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
       return;
     }
 
-    // notify about changed schedule
-    Job_scheduleChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
   }
 
   // free resources
@@ -13716,11 +14191,8 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 #endif
 //    ConfigValue_reset(&JOB_CONFIG_VALUES[z],jobNode);
 
-    // notify about changed schedule
-    Job_scheduleChanged(jobNode);
-
-    // set modified
-    Job_setModified(jobNode);
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
   }
 
   // free resources
@@ -20057,6 +20529,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   assert(clientInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
+  // signal quit
   clientInfo->quitFlag = TRUE;
 
   // wait for commands
@@ -20912,9 +21385,10 @@ Errors Server_socket(void)
       {
         HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
-      if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
+      Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&persistenceThread,"BAR persistence",globalOptions.niceLevel,persistenceThreadCode,NULL))
       {
-        HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+        HALT_FATAL_ERROR("Cannot initialize persistence thread!");
       }
     }
   }
@@ -21417,11 +21891,12 @@ Errors Server_socket(void)
   {
     if (Index_isAvailable())
     {
-      if (!Thread_join(&purgeExpiredEntitiesThread))
+      if (!Thread_join(&persistenceThread))
       {
         HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
       }
-      Thread_done(&purgeExpiredEntitiesThread);
+      Thread_done(&persistenceThread);
+      Semaphore_done(&persistenceThreadTrigger);
 
       if (!Thread_join(&autoIndexThread))
       {
@@ -21594,10 +22069,11 @@ Errors Server_batch(int inputDescriptor,
     {
       HALT_FATAL_ERROR("Cannot initialize index update thread!");
     }
-    if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
+    if (!Thread_init(&persistenceThread,"BAR purge expired",globalOptions.niceLevel,persistenceThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
+    Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
   }
 
   // run in batch mode
@@ -21689,11 +22165,12 @@ processCommand(&clientInfo,commandString);
   // wait for thread exit
   if (Index_isAvailable())
   {
-    if (!Thread_join(&purgeExpiredEntitiesThread))
+    if (!Thread_join(&persistenceThread))
     {
-      HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
+      HALT_INTERNAL_ERROR("Cannot stop persistence thread!");
     }
-    Thread_done(&purgeExpiredEntitiesThread);
+    Thread_done(&persistenceThread);
+    Semaphore_done(&persistenceThreadTrigger);
 
     if (!Thread_join(&autoIndexThread))
     {

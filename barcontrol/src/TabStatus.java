@@ -1388,6 +1388,7 @@ public class TabStatus
       Widgets.layout(label,0,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneSize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
@@ -1572,6 +1573,7 @@ public class TabStatus
       Widgets.layout(label,2,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
@@ -1614,6 +1616,7 @@ public class TabStatus
       Widgets.layout(label,3,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());

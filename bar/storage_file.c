@@ -106,7 +106,6 @@ LOCAL String StorageFile_getName(String                 string,
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_clear(string);
   if (!String_isEmpty(storageFileName))
   {
     String_append(string,storageFileName);
@@ -547,6 +546,24 @@ LOCAL Errors StorageFile_rename(const StorageInfo *storageInfo,
   error = File_rename(oldArchiveName,newArchiveName,NULL);
 
   return error;
+}
+
+LOCAL Errors StorageFile_makeDirectory(const StorageInfo *storageInfo,
+                                       ConstString       directoryName
+                                      )
+{
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(directoryName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_makeDirectory(directoryName,
+                            FILE_DEFAULT_USER_ID,
+                            FILE_DEFAULT_GROUP_ID,
+                            FILE_DEFAULT_PERMISSION,
+                            FALSE
+                           );
 }
 
 LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,

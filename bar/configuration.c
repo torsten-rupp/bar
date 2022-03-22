@@ -1547,26 +1547,6 @@ LOCAL Errors readKeyFile(Key *key, ConstString fileName)
   return readKeyFileCString(key,String_cString(fileName));
 }
 
-/***********************************************************************\
-* Name   : freeBandWidthNode
-* Purpose: free band width node
-* Input  : bandWidthNode - band width node
-*          userData      - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
-{
-  assert(bandWidthNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(bandWidthNode->fileName);
-}
-
-
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
@@ -1598,7 +1578,7 @@ LOCAL void initGlobalOptions(void)
   initHash(&globalOptions.masterInfo.uuidHash);
   Configuration_initKey(&globalOptions.masterInfo.publicKey);
 
-  List_init(&globalOptions.maxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
+  List_init(&globalOptions.maxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
 
@@ -1609,7 +1589,7 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.indexDatabaseUpdateFlag                         = TRUE;
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
-  List_init(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
+  List_init(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
   globalOptions.indexDatabaseMaxBandWidthList.n                 = 0L;
   globalOptions.indexDatabaseMaxBandWidthList.lastReadTimestamp = 0LL;
   globalOptions.indexDatabaseKeepTime                           = S_PER_DAY;
@@ -3854,6 +3834,68 @@ LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueOpera
 }
 
 /***********************************************************************\
+* Name   : configValuePersistenceSectionDataIterator
+* Purpose: section iterator handler
+* Input  : sectionDataIterator - section data iterator variable
+*          operation           - operation to execute; see
+*                                CONFIG_VALUE_OPERATION_...
+*          data                - data
+*          userData            - user data
+* Output : -
+* Return : next data element or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void *configValuePersistenceSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator,
+                                                      ConfigValueOperations          operation,
+                                                      void                           *data,
+                                                      void                           *userData
+                                                     )
+{
+  void *result;
+
+  assert(sectionDataIterator != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  result = NULL;
+
+  switch (operation)
+  {
+    case CONFIG_VALUE_OPERATION_INIT:
+      assert(data != NULL);
+
+      (*sectionDataIterator) = List_first((PersistenceNode*)data);
+      break;
+    case CONFIG_VALUE_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
+    case CONFIG_VALUE_OPERATION_FORMAT:
+      {
+        PersistenceNode *persistenceNode = (PersistenceNode*)(*sectionDataIterator);
+        String          name             = (String)data;
+
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+        if (persistenceNode != NULL)
+        {
+          (*sectionDataIterator) = persistenceNode->next;
+          if (name != NULL)
+          {
+            String_setCString(name,Archive_archiveTypeToString(persistenceNode->archiveType));
+          }
+        }
+
+        result = persistenceNode;
+      }
+   }
+
+   return result;
+}
+
+/***********************************************************************\
 * Name   : configValuePersistenceMinKeepParse
 * Purpose: config value option call back for parsing min. keep
 * Input  : userData              - user data
@@ -3919,7 +3961,7 @@ LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValu
   switch (operation)
   {
     case CONFIG_VALUE_OPERATION_INIT:
-      (*formatUserData) = (PersistenceNode*)data;
+      (*formatUserData) = (int*)data;
       break;
     case CONFIG_VALUE_OPERATION_DONE:
       break;
@@ -3933,28 +3975,23 @@ LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValu
       break;
     case CONFIG_VALUE_OPERATION_FORMAT:
       {
-        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
-        String                line             = (String)data;
+        const int *minKeep = (const int*)(*formatUserData);
+        String    line     = (String)data;
 
-        if (persistenceNode != NULL)
+        assert(minKeep != NULL);
+
+        if ((*minKeep) != KEEP_ALL)
         {
-          if (persistenceNode->minKeep != KEEP_ALL)
-          {
-            String_appendFormat(line,"%d",persistenceNode->minKeep);
-          }
-          else
-          {
-            String_appendCString(line,"*");
-          }
-
-          (*formatUserData) = NULL;
-
-          return TRUE;
+          String_appendFormat(line,"%d",*minKeep);
         }
         else
         {
-          return FALSE;
+          String_appendCString(line,"*");
         }
+
+        (*formatUserData) = NULL;
+
+        return TRUE;
       }
       break;
   }
@@ -4042,28 +4079,23 @@ LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValu
       break;
     case CONFIG_VALUE_OPERATION_FORMAT:
       {
-        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
-        String                line             = (String)data;
+        const int *maxKeep = (const int*)(*formatUserData);
+        String    line     = (String)data;
 
-        if (persistenceNode != NULL)
+        assert(maxKeep != NULL);
+
+        if ((*maxKeep) != KEEP_ALL)
         {
-          if (persistenceNode->maxKeep != KEEP_ALL)
-          {
-            String_appendFormat(line,"%d",persistenceNode->maxKeep);
-          }
-          else
-          {
-            String_appendCString(line,"*");
-          }
-
-          (*formatUserData) = NULL;
-
-          return TRUE;
+          String_appendFormat(line,"%d",*maxKeep);
         }
         else
         {
-          return FALSE;
+          String_appendCString(line,"*");
         }
+
+        (*formatUserData) = NULL;
+
+        return TRUE;
       }
       break;
   }
@@ -4151,28 +4183,23 @@ LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValue
       break;
     case CONFIG_VALUE_OPERATION_FORMAT:
       {
-        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
-        String                line             = (String)data;
+        const int *maxAge = (const int*)(*formatUserData);
+        String    line    = (String)data;
 
-        if (persistenceNode != NULL)
+        assert(maxAge != NULL);
+
+        if ((*maxAge) != AGE_FOREVER)
         {
-          if (persistenceNode->maxAge != AGE_FOREVER)
-          {
-            String_appendFormat(line,"%d",persistenceNode->maxAge);
-          }
-          else
-          {
-            String_appendCString(line,"*");
-          }
-
-          (*formatUserData) = NULL;
-
-          return TRUE;
+          String_appendFormat(line,"%d",*maxAge);
         }
         else
         {
-          return FALSE;
+          String_appendCString(line,"*");
         }
+
+        (*formatUserData) = NULL;
+
+        return TRUE;
       }
       break;
   }
@@ -6578,9 +6605,10 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
   {
     if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
     {
-      // discard comments if separator or empty line
-      StringList_clear(&commentList);
+      // discard separator or empty line
+//      StringList_clear(&commentList);
     }
+#if 0
     else if (String_startsWithCString(line,"# "))
     {
       // store comment
@@ -6610,6 +6638,14 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
     {
       // ignore other commented lines
     }
+#else
+    else if (String_startsWithCString(line,"#"))
+    {
+      // store comment
+      String_remove(line,STRING_BEGIN,1);
+      StringList_append(&commentList,line);
+    }
+#endif
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
       uint i;
@@ -6739,28 +6775,110 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   value      = String_new();
   StringList_init(&commentList);
   if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
+
+// TODO:
+  // skip header
+  bool headerLineFlag = TRUE;
+  if (headerLineFlag)
+  {
+    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
+                     && String_startsWithCString(line,"# ----");
+  }
+  if (headerLineFlag)
+  {
+    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
+                     && String_startsWithCString(line,"# BAR configuration");
+  }
+  if (headerLineFlag)
+  {
+    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
+                     && String_startsWithCString(line,"# ----");
+  }
+
+  // parse
+  bool lineFlag;
   while (   (error == ERROR_NONE)
          && File_getLine(&fileHandle,line,&lineNb,NULL)
         )
   {
     // parse line
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+//fprintf(stderr,"%s, %d: %d: %s\n",__FILE__,__LINE__,lineNb,String_cString(line));
     String_trim(line,STRING_WHITE_SPACES);
-    if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+
+    if      (String_isEmpty(line))
     {
-      // discard comments on separator or empty line
-      StringList_clear(&commentList);
+      // discard empty lines
     }
-    else if (String_startsWithCString(line,"# "))
+    else if (String_startsWithCString(line,"# --- "))
     {
-      // store comment
-      String_remove(line,STRING_BEGIN,2);
-      StringList_append(&commentList,line);
+      // discard separator lines
+    }
+// TODO:
+#if 1
+    else if (String_parse(line,STRING_BEGIN,"#%S=",&nextIndex,name))
+    {
+      uint i;
+
+      // parse value template
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+
+      // commented value -> only store comments
+      if (!StringList_isEmpty(&commentList))
+      {
+        i = ConfigValue_find(CONFIG_VALUES,
+                             CONFIG_VALUE_INDEX_NONE,
+                             CONFIG_VALUE_INDEX_NONE,
+                             String_cString(name)
+                            );
+        if (i != CONFIG_VALUE_INDEX_NONE)
+        {
+          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
+          StringList_clear(&commentList);
+        }
+      }
+    }
+#endif
+    else if (String_startsWithCString(line,"#"))
+    {
+      uint i;
+
+      // store comment blocks
+      do
+      {
+        String_remove(line,STRING_BEGIN,1);
+        StringList_append(&commentList,line);
+
+        lineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+        String_trim(line,STRING_WHITE_SPACES);
+
+        if (String_parse(line,STRING_BEGIN,"#%S=",&nextIndex,name))
+        {
+          i = ConfigValue_find(CONFIG_VALUES,
+                             CONFIG_VALUE_INDEX_NONE,
+                             CONFIG_VALUE_INDEX_NONE,
+                             String_cString(name)
+                            );
+        }
+        else
+        {
+          i = CONFIG_VALUE_INDEX_NONE;
+        }
+      }
+      while (   lineFlag
+             && (   String_isEmpty(line)
+                 || String_startsWithCString(line,"#")
+                )
+             && !String_startsWithCString(line,"# --- ")
+             && (i == CONFIG_VALUE_INDEX_NONE)
+            );
+      if (lineFlag) File_ungetLine(&fileHandle,line,&lineNb);
     }
     else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
     {
       uint       i,firstValueIndex,lastValueIndex;
       ServerNode *serverNode;
+
+      // parse file-server section
 
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
@@ -6792,7 +6910,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "file-server",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     serverNode
                                    );
@@ -6813,6 +6932,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       uint       i,firstValueIndex,lastValueIndex;
       ServerNode *serverNode;
+
+      // parse ftp-server section
 
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
@@ -6845,7 +6966,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "ftp-server",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     serverNode
                                    );
@@ -6866,6 +6988,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       uint       i,firstValueIndex,lastValueIndex;
       ServerNode *serverNode;
+
+      // parse ssh-server section
 
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
@@ -6897,7 +7021,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "ssh-server",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     serverNode
                                    );
@@ -6918,6 +7043,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       uint       i,firstValueIndex,lastValueIndex;
       ServerNode *serverNode;
+
+      // parse webdav-server section
 
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
@@ -6950,7 +7077,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "webdav-server",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     serverNode
                                    );
@@ -6971,6 +7099,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       uint       i,firstValueIndex,lastValueIndex;
       DeviceNode *deviceNode;
+
+      // parse device-server section
 
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
@@ -6996,7 +7126,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "device",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     deviceNode
                                    );
@@ -7017,6 +7148,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       uint i,firstValueIndex,lastValueIndex;
 
+      // parse master section
+
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
                                   "master",
@@ -7031,7 +7164,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "master",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     NULL  // variable
                                    );
@@ -7040,6 +7174,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       uint            i,firstValueIndex,lastValueIndex;
       MaintenanceNode *maintenanceNode;
+
+      // parse maintenance section
 
       // find section
       i = ConfigValue_findSection(CONFIG_VALUES,
@@ -7060,7 +7196,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                     &fileHandle,
                                     &lineNb,
                                     "maintenance",
-                                    firstValueIndex,lastValueIndex,
+                                    firstValueIndex,
+                                    lastValueIndex,
                                     printInfoFlag,
                                     maintenanceNode
                                    );
@@ -7085,33 +7222,13 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       // nothing to do
     }
-    else if (String_parse(line,STRING_BEGIN,"#%S=",&nextIndex,name))
-    {
-      uint i;
-
-      // commented value -> only store comments
-      if (!StringList_isEmpty(&commentList))
-      {
-        i = ConfigValue_find(CONFIG_VALUES,
-                             CONFIG_VALUE_INDEX_NONE,
-                             CONFIG_VALUE_INDEX_NONE,
-                             String_cString(name)
-                            );
-        if (i != CONFIG_VALUE_INDEX_NONE)
-        {
-          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
-          StringList_clear(&commentList);
-        }
-      }
-    }
-    else if (String_startsWithChar(line,'#'))
-    {
-      // ignore other commented lines
-    }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
       uint i;
 
+      // parse value
+
+//if (String_equalsCString(name,"pairing-master-file")) {fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");}
       i = ConfigValue_find(CONFIG_VALUES,
                            CONFIG_VALUE_INDEX_NONE,
                            CONFIG_VALUE_INDEX_NONE,
@@ -8131,10 +8248,11 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   CONFIG_VALUE_SEPARATOR("persistence"),
-  CONFIG_STRUCT_VALUE_SECTION_ARRAY("persistence",JobNode,job.options.persistenceList,ConfigValue_listSectionDataIterator,NULL,
+  CONFIG_STRUCT_VALUE_SECTION_ARRAY("persistence",JobNode,job.options.persistenceList,configValuePersistenceSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
+    CONFIG_STRUCT_VALUE_STRING    ("move-to",                   PersistenceNode,moveTo                           ,"<URI>"),
   ),
 
   // deprecated
@@ -9059,6 +9177,15 @@ void Configuration_deleteMountNode(MountNode *mountNode)
 
   Configuration_freeMountNode(mountNode,NULL);
   LIST_DELETE_NODE(mountNode);
+}
+
+void Configuration_freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
+{
+  assert(bandWidthNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(bandWidthNode->fileName);
 }
 
 void Configuration_add(ConfigFileTypes configFileType, const char *fileName)

@@ -3861,9 +3861,10 @@ public class ServerSettings
         Widgets.layout(widgetLoginName,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(widgetLoginName,serverData)
         {
-          public void modified(Control control)
+          @Override
+          public void modified(Text text, WidgetVariable widgetVariable)
           {
-            Widgets.setEnabled(control,
+            Widgets.setEnabled(text,
                                   (serverData.type == ServerTypes.FTP)
                                || (serverData.type == ServerTypes.SSH)
                                || (serverData.type == ServerTypes.WEBDAV)
@@ -3881,9 +3882,10 @@ public class ServerSettings
         Widgets.layout(widgetPort,0,2,TableLayoutData.E,0,0,0,0,70,SWT.DEFAULT);
         Widgets.addModifyListener(new WidgetModifyListener(widgetPort,serverData)
         {
-          public void modified(Control control)
+          @Override
+          public void modified(Spinner spinner, WidgetVariable widgetVariable)
           {
-            Widgets.setEnabled(control,
+            Widgets.setEnabled(spinner,
                                   (serverData.type == ServerTypes.FTP)
                                || (serverData.type == ServerTypes.SSH)
                                || (serverData.type == ServerTypes.WEBDAV)
@@ -3899,9 +3901,10 @@ public class ServerSettings
       Widgets.layout(widgetPassword,2,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(widgetPassword,serverData)
       {
-        public void modified(Control control)
+        @Override
+        public void modified(Text text, WidgetVariable widgetVariable)
         {
-          Widgets.setEnabled(control,
+          Widgets.setEnabled(text,
                                 (serverData.type == ServerTypes.FTP)
                              || (serverData.type == ServerTypes.SSH)
                              || (serverData.type == ServerTypes.WEBDAV)
@@ -3920,13 +3923,14 @@ public class ServerSettings
         Widgets.layout(widgetPublicKey,0,0,TableLayoutData.NSWE);
         Widgets.addModifyListener(new WidgetModifyListener(widgetPublicKey,serverData)
         {
-          public void modified(Control control)
+          @Override
+          public void modified(Text text, WidgetVariable widgetVariable)
           {
             boolean enabled =    (serverData.type == ServerTypes.FTP)
                               || (serverData.type == ServerTypes.SSH)
                               || (serverData.type == ServerTypes.WEBDAV);
-            control.setBackground(enabled ? null : COLOR_INACTIVE);
-            Widgets.setEnabled(control,enabled);
+            text.setBackground(enabled ? null : COLOR_INACTIVE);
+            Widgets.setEnabled(text,enabled);
           }
         });
 
@@ -3965,9 +3969,10 @@ public class ServerSettings
         });
         Widgets.addModifyListener(new WidgetModifyListener(button,serverData)
         {
-          public void modified(Control control)
+          @Override
+          public void modified(Button button, WidgetVariable widgetVariable)
           {
-            Widgets.setEnabled(control,
+            Widgets.setEnabled(button,
                                   (serverData.type == ServerTypes.FTP)
                                || (serverData.type == ServerTypes.SSH)
                                || (serverData.type == ServerTypes.WEBDAV)
@@ -3987,13 +3992,14 @@ public class ServerSettings
         Widgets.layout(widgetPrivateKey,0,0,TableLayoutData.NSWE);
         Widgets.addModifyListener(new WidgetModifyListener(widgetPrivateKey,serverData)
         {
-          public void modified(Control control)
+          @Override
+          public void modified(Text text, WidgetVariable widgetVariable)
           {
             boolean enabled =    (serverData.type == ServerTypes.FTP)
                               || (serverData.type == ServerTypes.SSH)
                               || (serverData.type == ServerTypes.WEBDAV);
-            control.setBackground(enabled ? null : COLOR_INACTIVE);
-            Widgets.setEnabled(control,enabled);
+            text.setBackground(enabled ? null : COLOR_INACTIVE);
+            Widgets.setEnabled(text,enabled);
           }
         });
 
@@ -4031,9 +4037,10 @@ public class ServerSettings
         });
         Widgets.addModifyListener(new WidgetModifyListener(button,serverData)
         {
-          public void modified(Control control)
+          @Override
+          public void modified(Button button, WidgetVariable widgetVariable)
           {
-            Widgets.setEnabled(control,
+            Widgets.setEnabled(button,
                                   (serverData.type == ServerTypes.FTP)
                                || (serverData.type == ServerTypes.SSH)
                                || (serverData.type == ServerTypes.WEBDAV)
@@ -4051,9 +4058,10 @@ public class ServerSettings
       Widgets.layout(widgetMaxConnectionCount,5,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
       Widgets.addModifyListener(new WidgetModifyListener(widgetPort,serverData)
       {
-        public void modified(Control control)
+        @Override
+        public void modified(Spinner spinner, WidgetVariable widgetVariable)
         {
-          Widgets.setEnabled(control,
+          Widgets.setEnabled(spinner,
                                 (serverData.type == ServerTypes.FTP)
                              || (serverData.type == ServerTypes.SSH)
                              || (serverData.type == ServerTypes.WEBDAV)
@@ -4117,7 +4125,6 @@ throw new Error("NYI");
         Combo widget = (Combo)selectionEvent.widget;
 
         serverData.type = Widgets.getSelectedComboItem(widget,ServerTypes.FILE);
-Dprintf.dprintf("serverData.type=%s",serverData.type);
         Widgets.modified(serverData);
       }
     });

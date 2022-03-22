@@ -1961,7 +1961,7 @@ LOCAL bool parseString(const char *string,
           case 's':
             // get and copy data
             value.s = va_arg(arguments,char*);
-            assert(formatToken.width > 0);
+            assert((value.s == NULL) || (formatToken.width > 0));
 
             i = 0L;
             if (index < length)
@@ -5937,8 +5937,8 @@ void String_debugDone(void)
     pthread_mutex_lock(&debugStringLock);
     {
       debugMaxStringNextWarningCount = 0LL;
-      List_done(&debugStringFreeList,NULL,NULL);
-      List_done(&debugStringAllocList,NULL,NULL);
+      List_done(&debugStringFreeList);
+      List_done(&debugStringAllocList);
     }
     pthread_mutex_unlock(&debugStringLock);
   #endif /* TRACE_STRING_ALLOCATIONS */
@@ -6148,7 +6148,7 @@ void String_debugDumpInfo(FILE                   *handle,
     pthread_mutex_lock(&debugStringLock);
     {
       // init variables
-      List_init(&stringHistogramList);
+      List_init(&stringHistogramList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
       n     = 0L;
       count = 0L;
 
@@ -6262,7 +6262,7 @@ void String_debugDumpInfo(FILE                   *handle,
       // free resources
       if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
-        List_done(&stringHistogramList,CALLBACK_(NULL,NULL));
+        List_done(&stringHistogramList);
       }
     }
     pthread_mutex_unlock(&debugStringLock);

@@ -812,6 +812,16 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
       0, DATABASE_DATATYPE_UINT64 \
     ) \
   }
+#define DATABASE_COLUMN_DOUBLE(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_DOUBLE \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_DOUBLE \
+    ) \
+  }
 #define DATABASE_COLUMN_ENUM(name,...) \
   { name, \
     _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
@@ -857,6 +867,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_PARAMETER_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
 #define DATABASE_PARAMETER_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
 #define DATABASE_PARAMETER_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_PARAMETER_DOUBLE(value)   { DATABASE_DATATYPE_DOUBLE,   { (intptr_t)(value) } }
 #define DATABASE_PARAMETER_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
 #define DATABASE_PARAMETER_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
 #define DATABASE_PARAMETER_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
@@ -994,6 +1005,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_FILTER_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(uint)(value) } }
 #define DATABASE_FILTER_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
 #define DATABASE_FILTER_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_FILTER_DOUBLE(value)   { DATABASE_DATATYPE_DOUBLE,   { (intptr_t)(value) } }
 #define DATABASE_FILTER_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
 #define DATABASE_FILTER_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
 #define DATABASE_FILTER_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }

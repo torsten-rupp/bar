@@ -84,7 +84,7 @@ typedef struct
 
   LOCAL pthread_once_t       debugThreadInitFlag                = PTHREAD_ONCE_INIT;
 
-  LOCAL pthread_mutex_t      debugThreadSignalLock              = PTHREAD_MUTEX_INITIALIZER;
+  LOCAL pthread_mutex_t      debugThreadSignalLock              = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
   LOCAL pthread_mutex_t      debugThreadStackTraceThreadLock    = PTHREAD_MUTEX_INITIALIZER;
   LOCAL StackTraceThreadInfo debugThreadStackTraceThreads[256];

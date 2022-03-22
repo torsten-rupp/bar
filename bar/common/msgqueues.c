@@ -149,7 +149,7 @@ LOCAL void unlock(MsgQueue *msgQueue)
   assert(msgQueue != NULL);
   assert(msgQueue->lockCount > 0);
 
-  if (msgQueue->modifiedFlag && (msgQueue->lockCount == 1))
+  if (msgQueue->modifiedFlag && (msgQueue->lockCount <= 1))
   {
     pthread_cond_broadcast(&msgQueue->modified);
   }
@@ -205,12 +205,14 @@ LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
   assert(msgQueue != NULL);
   assert(msgQueue->lockCount > 0);
 
+  // temporary revert lock count > 1
   lockCount = msgQueue->lockCount;
-
   for (i = 1; i < lockCount; i++)
   {
     pthread_mutex_unlock(&msgQueue->lock);
   }
+
+  // wait modified
   msgQueue->lockCount  = 0;
   if (timeout != NULL)
   {
@@ -220,6 +222,8 @@ LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
   {
     result = pthread_cond_wait(&msgQueue->modified,&msgQueue->lock);
   }
+
+  // restore lock count > 1
   msgQueue->lockCount  = lockCount;
   for (i = 1; i < lockCount; i++)
   {

@@ -3,6 +3,7 @@
     save configuration file
   * added support for external index database engines
     MariaDB, PostgreSQL
+  * added optional move-to in persistence
   * use threads pools for client connections+worker
     threads
   * added option --test-created-archives
@@ -15,7 +16,6 @@
     restricted overwrite mode
   * parallel restore
   * use thread-pool
-  * added support for MariaDB database
   * execute pre/post command for BAR in non-server mode,
     too
   * upgrade bzip2 1.0.8
@@ -37,14 +37,16 @@
   * fix abort restore job if client connection is lost
   * renamed bar-sqlite3 to bar-index and support MariaDB
     and PostgreSQL
+  * BARControl: added create directory/delete file in
+    file requester
   * BARControl: fixed display of entry progress: count
     done+error+skipped
   * BARControl: fixed closing tooltips
   * BARControl: fixed initial values for a new job
   * BARControl: fixed goto parent directory in file
     requester
-  * BARControl: added create directory/delete file in
-    file requester
+  * BARControl: fixed storage of table columns width
+  * extended documentation by "term of use"
 
 2020-09-27 0.21f
   * fixed auto-index of new archives

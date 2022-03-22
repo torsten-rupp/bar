@@ -1387,22 +1387,9 @@ class Dialogs
       if ((dialog.getStyle() & SWT.APPLICATION_MODAL) == SWT.APPLICATION_MODAL)
       {
         // run dialog
-        try
+        while (!dialog.isDisposed())
         {
-          while (!dialog.isDisposed())
-          {
-            if (!display.readAndDispatch()) display.sleep();
-          }
-        }
-        catch (Exception exception)
-        {
-          // close dialog
-          if (!dialog.isDisposed())
-          {
-            Event event = new Event();
-            event.widget = dialog;
-            dialog.notifyListeners(SWT.Close,event);
-          }
+          if (!display.readAndDispatch()) display.sleep();
         }
 
         // update all

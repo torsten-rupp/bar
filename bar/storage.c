@@ -280,18 +280,19 @@ LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter
                                )
 {
   ulong maxBandWidth;
-  uint  z;
+  uint  i;
 
   assert(storageBandWidthLimiter != NULL);
+  assert(maxBandWidthList != NULL);
 
   maxBandWidth = getBandWidth(maxBandWidthList);
 
   storageBandWidthLimiter->maxBandWidthList     = maxBandWidthList;
   storageBandWidthLimiter->maxBlockSize         = 64*1024;
   storageBandWidthLimiter->blockSize            = 64*1024;
-  for (z = 0; z < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements); z++)
+  for (i = 0; i < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements); i++)
   {
-    storageBandWidthLimiter->measurements[z] = maxBandWidth;
+    storageBandWidthLimiter->measurements[i] = maxBandWidth;
   }
   storageBandWidthLimiter->measurementCount     = 0;
   storageBandWidthLimiter->measurementNextIndex = 0;
@@ -331,7 +332,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
                           uint64                  transmissionTime
                          )
 {
-  uint   z;
+  uint   i;
   ulong  averageBandWidth;   // average band width [bits/s]
   ulong  maxBandWidth;
   uint64 calculatedTime;
@@ -351,9 +352,9 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
       averageBandWidth = 0;
       if (storageBandWidthLimiter->measurementCount > 0)
       {
-        for (z = 0; z < storageBandWidthLimiter->measurementCount; z++)
+        for (i = 0; i < storageBandWidthLimiter->measurementCount; i++)
         {
-          averageBandWidth += storageBandWidthLimiter->measurements[z];
+          averageBandWidth += storageBandWidthLimiter->measurements[i];
         }
         averageBandWidth /= storageBandWidthLimiter->measurementCount;
       }
@@ -606,19 +607,18 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 #endif /* HAVE_SSH2 */
 
 /***********************************************************************\
-* Name   : transferToStorage
+* Name   : transferFileToStorage
 * Purpose: transfer file data from temporary file to storage
-* Input  : storageHandle  - storage handle
-*          fromFileHandle - file handle of temporary file
-*          length         - number of bytes to transfer or -1
-* Output : bytesTransfered - bytes transfered (can be NULL)
+* Input  : fromFileHandle - file handle of temporary file
+*          storageHandle  - storage handle
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors transferToStorage(StorageHandle *storageHandle,
-                               FileHandle    *fileHandle
-                              )
+LOCAL Errors transferFileToStorage(FileHandle    *fileHandle,
+                                   StorageHandle *storageHandle
+                                  )
 {
   #define TRANSFER_BUFFER_SIZE (1024*1024)
 
@@ -686,6 +686,92 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
 
     // pause storage (if requested)
     Storage_pause(storageHandle->storageInfo);
+  }
+
+  // free resources
+  free(buffer);
+
+  return ERROR_NONE;
+
+  #undef TRANSFER_BUFFER_SIZE
+}
+
+/***********************************************************************\
+* Name   : transferStorageToStorage
+* Purpose: transfer data from storage to storage
+* Input  : fromStorageHandle - from storage handle
+*          toStorageHandle   - to storage handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
+                                      StorageHandle *toStorageHandle
+                                     )
+{
+  #define TRANSFER_BUFFER_SIZE (1024*1024)
+
+  void    *buffer;
+  Errors  error;
+  uint64  size;
+  uint64  transferedBytes;
+  ulong   n;
+
+  assert(fromStorageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromStorageHandle);
+  assert(toStorageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(toStorageHandle);
+
+  // init variables
+  buffer = malloc(TRANSFER_BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // get total size
+  size = Storage_getSize(fromStorageHandle);
+
+  // transfer data
+  transferedBytes = 0L;
+  while (   (transferedBytes < size)
+         && !Storage_isAborted(fromStorageHandle->storageInfo)
+         && !Storage_isAborted(toStorageHandle->storageInfo)
+        )
+  {
+    // get block size
+    n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
+
+    // read data
+    error = Storage_read(fromStorageHandle,buffer,n,NULL);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    // transfer to storage
+    error = Storage_write(toStorageHandle,buffer,n);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    // next part
+    transferedBytes += (uint64)n;
+
+    // update status info
+    toStorageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
+    if (!updateStorageStatusInfo(toStorageHandle->storageInfo))
+    {
+      free(buffer);
+      return ERROR_ABORTED;
+    }
+
+    // pause storage (if requested)
+    Storage_pause(toStorageHandle->storageInfo);
   }
 
   // free resources
@@ -1534,9 +1620,9 @@ bool Storage_equalNames(ConstString storageName1,
   return result;
 }
 
-String Storage_getName(String           string,
-                       StorageSpecifier *storageSpecifier,
-                       ConstString      archiveName
+String Storage_getName(String                 string,
+                       const StorageSpecifier *storageSpecifier,
+                       ConstString            archiveName
                       )
 {
   assert(storageSpecifier != NULL);
@@ -1561,7 +1647,7 @@ String Storage_getName(String           string,
     }
   }
 
-  String_clear(storageSpecifier->storageName);
+  String_clear(string);
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
@@ -1919,6 +2005,7 @@ uint Storage_getServerSettings(Server                 *server,
   assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
+  assert(maxBandWidthList != NULL);
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
     UNUSED_VARIABLE(serverConnectionPriority);
@@ -3256,9 +3343,9 @@ Errors Storage_write(StorageHandle *storageHandle,
   return error;
 }
 
-Errors Storage_transfer(StorageHandle *storageHandle,
-                        FileHandle    *fromFileHandle
-                       )
+Errors Storage_transferFromFile(FileHandle    *fromFileHandle,
+                                StorageHandle *storageHandle
+                               )
 {
   Errors error;
 
@@ -3286,30 +3373,30 @@ Errors Storage_transfer(StorageHandle *storageHandle,
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_FTP:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_SSH:
         error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_SFTP:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_WEBDAV:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_DEVICE:
-        error = transferToStorage(storageHandle,fromFileHandle);
+        error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       default:
         #ifndef NDEBUG
@@ -3529,6 +3616,160 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
   return size;
 }
 
+Errors Storage_copyToLocal(const StorageSpecifier          *storageSpecifier,
+                           ConstString                     localFileName,
+                           const JobOptions                *jobOptions,
+                           BandWidthList                   *maxBandWidthList,
+                           StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                           void                            *storageUpdateStatusInfoUserData,
+                           StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                           void                            *storageRequestVolumeUserData
+                          )
+{
+  AutoFreeList  autoFreeList;
+  void          *buffer;
+  Errors        error;
+  StorageInfo   storageInfo;
+  StorageHandle storageHandle;
+  FileHandle    fileHandle;
+  ulong         bytesRead;
+
+  assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
+  assert(jobOptions != NULL);
+  assert(localFileName != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
+  buffer = (byte*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
+
+  // open storage
+  error = Storage_init(&storageInfo,
+NULL, // masterIO
+                       storageSpecifier,
+                       jobOptions,
+                       maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+                       CALLBACK_(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
+                       NULL  // logHandle
+                      );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  error = Storage_open(&storageHandle,
+                       &storageInfo,
+                       NULL  // archiveName
+                      );
+  if (error != ERROR_NONE)
+  {
+    (void)Storage_done(&storageInfo);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_close(&storageHandle); (void)Storage_done(&storageInfo); });
+
+  // create local file
+  error = File_open(&fileHandle,
+                    localFileName,
+                    FILE_OPEN_CREATE
+                   );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
+  AUTOFREE_ADD(&autoFreeList,localFileName,{ (void)File_delete(localFileName,FALSE); });
+
+  // copy data from archive to local file
+  while (   (error == ERROR_NONE)
+         && !Storage_eof(&storageHandle)
+        )
+  {
+    error = Storage_read(&storageHandle,
+                         buffer,
+                         BUFFER_SIZE,
+                         &bytesRead
+                        );
+    if (error == ERROR_NONE)
+    {
+      error = File_write(&fileHandle,
+                         buffer,
+                         bytesRead
+                        );
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
+  // close local file
+  File_close(&fileHandle);
+
+  // close archive
+  Storage_close(&storageHandle);
+  (void)Storage_done(&storageInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList);
+
+  return ERROR_NONE;
+}
+
+Errors Storage_copy(StorageInfo *fromStorageInfo,
+                    ConstString fromArchiveName,
+                    StorageInfo *toStorageInfo,
+                    ConstString toArchiveName,
+                    uint64      archiveSize
+                   )
+{
+  StorageHandle fromStorageHandle,toStorageHandle;
+  Errors        error;
+
+  // open storages
+  error = Storage_open(&fromStorageHandle,fromStorageInfo,fromArchiveName);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Storage_create(&toStorageHandle,toStorageInfo,toArchiveName,archiveSize,TRUE);
+  if (error != ERROR_NONE)
+  {
+    Storage_close(&fromStorageHandle);
+    return error;
+  }
+
+  // transfer data
+  error = transferStorageToStorage(&fromStorageHandle,&toStorageHandle);
+  if (error != ERROR_NONE)
+  {
+    Storage_close(&toStorageHandle);
+    Storage_close(&fromStorageHandle);
+    return error;
+  }
+
+  // close storages
+  Storage_close(&toStorageHandle);
+  Storage_close(&fromStorageHandle);
+
+  // free resources
+
+  return error;
+}
+
 Errors Storage_rename(const StorageInfo *storageInfo,
                       ConstString       fromArchiveName,
                       ConstString       toArchiveName
@@ -3675,7 +3916,84 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveName)
+Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
+{
+  String          directoryName;
+  ConstString     name;
+  JobOptions      jobOptions;
+  StringTokenizer stringTokenizer;
+  Errors          error;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get path name
+  if (pathName == NULL) pathName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(pathName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  error         = ERROR_NONE;
+  directoryName = String_new();
+  Job_initOptions(&jobOptions);
+  File_initSplitFileName(&stringTokenizer,pathName);
+  while (   (error == ERROR_NONE)
+         && File_getNextSplitFileName(&stringTokenizer,&name)
+        )
+  {
+    File_appendFileName(directoryName,name);
+    if (!Storage_exists(storageInfo,directoryName))
+    {
+      switch (storageInfo->storageSpecifier.type)
+      {
+        case STORAGE_TYPE_NONE:
+          break;
+        case STORAGE_TYPE_FILESYSTEM:
+          error = StorageFile_makeDirectory(storageInfo,directoryName);
+          break;
+        case STORAGE_TYPE_FTP:
+          error = StorageFTP_makeDirectory(storageInfo,directoryName);
+          break;
+        case STORAGE_TYPE_SSH:
+          #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          #else /* not HAVE_SSH2 */
+          #endif /* HAVE_SSH2 */
+          break;
+        case STORAGE_TYPE_SCP:
+          error = StorageSCP_makeDirectory(storageInfo,directoryName);
+          break;
+        case STORAGE_TYPE_SFTP:
+          error = StorageSFTP_makeDirectory(storageInfo,directoryName);
+          break;
+        case STORAGE_TYPE_WEBDAV:
+          error = StorageWebDAV_makeDirectory(storageInfo,directoryName);
+          break;
+        case STORAGE_TYPE_CD:
+        case STORAGE_TYPE_DVD:
+        case STORAGE_TYPE_BD:
+          error = StorageOptical_makeDirectory(storageInfo,directoryName);
+          break;
+        case STORAGE_TYPE_DEVICE:
+          error = StorageDevice_makeDirectory(storageInfo,directoryName);
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
+    }
+  }
+  File_doneSplitFileName(&stringTokenizer);
+  Job_doneOptions(&jobOptions);
+  String_delete(directoryName);
+
+  return error;
+}
+
+Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString pathName)
 {
   String                     directoryName;
   JobOptions                 jobOptions;
@@ -3686,14 +4004,14 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
-  if (String_isEmpty(archiveName))
+  // get path name
+  if (pathName == NULL) pathName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(pathName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  directoryName = File_getDirectoryName(String_new(),archiveName);
+  directoryName = File_getDirectoryName(String_new(),pathName);
   Job_initOptions(&jobOptions);
   do
   {
@@ -4096,119 +4414,6 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   assert(error != ERROR_UNKNOWN);
 
   return error;
-}
-
-Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
-                    const JobOptions                *jobOptions,
-                    BandWidthList                   *maxBandWidthList,
-                    StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
-                    void                            *storageUpdateStatusInfoUserData,
-                    StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                    void                            *storageRequestVolumeUserData,
-                    ConstString                     localFileName
-                   )
-{
-  AutoFreeList  autoFreeList;
-  void          *buffer;
-  Errors        error;
-  StorageInfo   storageInfo;
-  StorageHandle storageHandle;
-  FileHandle    fileHandle;
-  ulong         bytesRead;
-
-  assert(storageSpecifier != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
-  assert(jobOptions != NULL);
-  assert(localFileName != NULL);
-
-  // init variables
-  AutoFree_init(&autoFreeList);
-  buffer = (byte*)malloc(BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
-
-  // open storage
-  error = Storage_init(&storageInfo,
-NULL, // masterIO
-                       storageSpecifier,
-                       jobOptions,
-                       maxBandWidthList,
-                       SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
-                       CALLBACK_(NULL,NULL),  // updateStatusInfo
-                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
-                       CALLBACK_(NULL,NULL),  // isPause
-                       CALLBACK_(NULL,NULL),  // isAborted
-                       NULL  // logHandle
-                      );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  error = Storage_open(&storageHandle,
-                       &storageInfo,
-                       NULL  // archiveName
-                      );
-  if (error != ERROR_NONE)
-  {
-    (void)Storage_done(&storageInfo);
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_close(&storageHandle); (void)Storage_done(&storageInfo); });
-
-  // create local file
-  error = File_open(&fileHandle,
-                    localFileName,
-                    FILE_OPEN_CREATE
-                   );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
-  AUTOFREE_ADD(&autoFreeList,localFileName,{ (void)File_delete(localFileName,FALSE); });
-
-  // copy data from archive to local file
-  while (   (error == ERROR_NONE)
-         && !Storage_eof(&storageHandle)
-        )
-  {
-    error = Storage_read(&storageHandle,
-                         buffer,
-                         BUFFER_SIZE,
-                         &bytesRead
-                        );
-    if (error == ERROR_NONE)
-    {
-      error = File_write(&fileHandle,
-                         buffer,
-                         bytesRead
-                        );
-    }
-  }
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-
-  // close local file
-  File_close(&fileHandle);
-
-  // close archive
-  Storage_close(&storageHandle);
-  (void)Storage_done(&storageInfo);
-
-  // free resources
-  AutoFree_done(&autoFreeList);
-
-  return ERROR_NONE;
 }
 
 Errors Storage_forAll(StorageSpecifier        *storageSpecifier,

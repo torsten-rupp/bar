@@ -589,6 +589,35 @@ const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType)
 bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType);
 
 /***********************************************************************\
+* Name   : Archive_formatName
+* Purpose: format archive name
+* Input  : name               - name variable
+*          templateFileName   - template file name
+*          expandMacroMode    - expand macro mode; see
+*                               EXPAND_MACRO_MODE_*
+*          archiveType        - archive type; see ARCHIVE_TYPE_*
+*          scheduleTitle      - schedule title or NULL
+*          scheduleCustomText - schedule custom text or NULL
+*          dateTime           - date/time
+*          partNumber         - part number (>=0 for parts,
+*                               ARCHIVE_PART_NUMBER_NONE for single
+*                               part archive)
+* Output : name - formated name
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_formatName(String           name,
+                          ConstString      templateFileName,
+                          ExpandMacroModes expandMacroMode,
+                          ArchiveTypes     archiveType,
+                          const char       *scheduleTitle,
+                          const char       *scheduleCustomText,
+                          uint64           dateTime,
+                          int              partNumber
+                         );
+
+/***********************************************************************\
 * Name   : Archive_isArchiveFile
 * Purpose: check if archive file
 * Input  : fileName - file name

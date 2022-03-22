@@ -1078,7 +1078,24 @@ LOCAL Errors StorageDevice_rename(const StorageInfo *storageInfo,
 #ifndef WERROR
 #warning TODO still not implemented
 #endif
-  return ERROR_STILL_NOT_IMPLEMENTED;
+return ERROR_STILL_NOT_IMPLEMENTED;
+}
+
+LOCAL Errors StorageDevice_makeDirectory(const StorageInfo *storageInfo,
+                                         ConstString       directoryName
+                                        )
+{
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(directoryName));
+
+  UNUSED_VARIABLE(storageInfo);
+
+// TODO:
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,

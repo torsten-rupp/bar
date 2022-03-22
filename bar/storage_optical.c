@@ -532,7 +532,6 @@ LOCAL String StorageOptical_getName(String                 string,
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_clear(string);
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_CD:
@@ -2250,9 +2249,34 @@ LOCAL Errors StorageOptical_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
 
+// TODO:
 UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
 UNUSED_VARIABLE(toArchiveName);
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+error = ERROR_STILL_NOT_IMPLEMENTED;
+
+  return error;
+}
+
+LOCAL Errors StorageOptical_makeDirectory(const StorageInfo *storageInfo,
+                                          ConstString       directoryName
+                                         )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(directoryName));
+
+// TODO:
+UNUSED_VARIABLE(storageInfo);
+UNUSED_VARIABLE(directoryName);
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;

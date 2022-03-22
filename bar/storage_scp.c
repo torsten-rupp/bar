@@ -1664,17 +1664,28 @@ LOCAL Errors StorageSCP_rename(const StorageInfo *storageInfo,
                                ConstString       toArchiveName
                               )
 {
-  Errors error;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
-UNUSED_VARIABLE(storageInfo);
-UNUSED_VARIABLE(fromArchiveName);
-UNUSED_VARIABLE(toArchiveName);
-error = ERROR_STILL_NOT_IMPLEMENTED;
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(fromArchiveName);
+  UNUSED_VARIABLE(toArchiveName);
 
-  return error;
+  return ERROR_FUNCTION_NOT_SUPPORTED;
+}
+
+LOCAL Errors StorageSCP_makeDirectory(const StorageInfo *storageInfo,
+                                      ConstString       directoryName
+                                     )
+{
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(directoryName));
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(directoryName);
+
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
 LOCAL Errors StorageSCP_delete(const StorageInfo *storageInfo,
