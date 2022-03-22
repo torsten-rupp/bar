@@ -9366,7 +9366,7 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
         directoryName = File_getDirectoryNameCString(String_new(),
                                                      (databaseName != NULL)
                                                        ? databaseName
-                                                       : String_cString(databaseSpecifier->postgresql.databaseName)
+                                                       : String_cString(databaseSpecifier->sqlite.fileName)
                                                     );
         if (   !String_isEmpty(directoryName)
             && !File_isDirectory(directoryName)
