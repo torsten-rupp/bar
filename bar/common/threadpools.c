@@ -501,16 +501,17 @@ bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode)
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
   assert(threadPoolNode != NULL);
 
-  pthread_mutex_lock(&threadPool->lock);
+  if (pthread_equal(threadPoolNode->usedBy,pthread_self()) != 0)
   {
-    while (   (pthread_equal(threadPoolNode->usedBy,pthread_self()) == 0)
-           && (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING)
-          )
+    pthread_mutex_lock(&threadPool->lock);
     {
-      pthread_cond_wait(&threadPool->modified,&threadPool->lock);
+      while (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING)
+      {
+        pthread_cond_wait(&threadPool->modified,&threadPool->lock);
+      }
     }
+    pthread_mutex_unlock(&threadPool->lock);
   }
-  pthread_mutex_unlock(&threadPool->lock);
 
   return TRUE;
 }
