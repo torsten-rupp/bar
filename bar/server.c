@@ -91,8 +91,7 @@
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
-// TODO:#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
-#define SLEEP_TIME_INDEX_THREAD 10
+#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
 #define SLEEP_TIME_PERSISTENCE_THREAD            (10*S_PER_MINUTE)
 
@@ -4314,103 +4313,116 @@ LOCAL void autoIndexThreadCode(void)
                                      CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                      {
                                        Errors error;
+                                       uint64 now;
 
                                        assert(fileInfo != NULL);
 
                                        UNUSED_VARIABLE(userData);
 
-                                       error = Storage_parseName(&storageSpecifier,storageName);
-                                       if (error == ERROR_NONE)
-                                       {
-                                         // check entry type and file name
-                                         switch (fileInfo->type)
-                                         {
-                                           case FILE_TYPE_FILE:
-                                           case FILE_TYPE_LINK:
-                                           case FILE_TYPE_HARDLINK:
-                                             // get printable name
-                                             Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+                                       now = Misc_getCurrentDateTime();
+//fprintf(stderr,"%s:%d: file=%lld now=%lld\n",__FILE__,__LINE__,fileInfo->timeModified,now);
 
-                                             // get index id, request index update
-                                             if      (Index_findStorageByName(indexHandle,
-                                                                              &storageSpecifier,
-                                                                              NULL,  // archiveName
-                                                                              NULL,  // uuidId
-                                                                              NULL,  // entityId
-                                                                              NULL,  // jobUUID
-                                                                              NULL,  // scheduleUUID
-                                                                              &storageId,
-                                                                              NULL,  // createdDateTime
-                                                                              NULL,  // size
-                                                                              &indexState,
-                                                                              NULL,  // indexMode
-                                                                              &lastCheckedDateTime,
-                                                                              NULL,  // errorMessage
-                                                                              NULL,  // totalEntryCount
-                                                                              NULL  // totalEntrySize
-                                                                             )
-                                                     )
-                                             {
-                                               // already in index -> check if modified/state
-                                               if      (fileInfo->timeModified > lastCheckedDateTime)
+                                       // to avoid add/update on currently created archive, wait for min. 30min after creation
+                                       if (now > (fileInfo->timeLastChanged+30*60))
+                                       {
+                                         error = Storage_parseName(&storageSpecifier,storageName);
+                                         if (error == ERROR_NONE)
+                                         {
+                                           // check entry type and file name
+                                           switch (fileInfo->type)
+                                           {
+                                             case FILE_TYPE_FILE:
+                                             case FILE_TYPE_LINK:
+                                             case FILE_TYPE_HARDLINK:
+                                               // get printable name
+                                               Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+                                               // get index id, request index update
+                                               if      (Index_findStorageByName(indexHandle,
+                                                                                &storageSpecifier,
+                                                                                NULL,  // archiveName
+                                                                                NULL,  // uuidId
+                                                                                NULL,  // entityId
+                                                                                NULL,  // jobUUID
+                                                                                NULL,  // scheduleUUID
+                                                                                &storageId,
+                                                                                NULL,  // createdDateTime
+                                                                                NULL,  // size
+                                                                                &indexState,
+                                                                                NULL,  // indexMode
+                                                                                &lastCheckedDateTime,
+                                                                                NULL,  // errorMessage
+                                                                                NULL,  // totalEntryCount
+                                                                                NULL  // totalEntrySize
+                                                                               )
+                                                       )
                                                {
-                                                 // modified -> request update index
-                                                 error = Index_setStorageState(indexHandle,
-                                                                               storageId,
-                                                                               INDEX_STATE_UPDATE_REQUESTED,
-                                                                               Misc_getCurrentDateTime(),
-                                                                               NULL  // errorMessage
-                                                                              );
+                                                 // already in index -> check if modified/state
+//fprintf(stderr,"%s:%d: file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,fileInfo->timeModified,lastCheckedDateTime);
+                                                 if      (fileInfo->timeModified > lastCheckedDateTime)
+                                                 {
+                                                   // modified -> request update index
+                                                   error = Index_setStorageState(indexHandle,
+                                                                                 storageId,
+                                                                                 INDEX_STATE_UPDATE_REQUESTED,
+                                                                                 now,
+                                                                                 NULL  // errorMessage
+                                                                                );
+                                                   if (error == ERROR_NONE)
+                                                   {
+                                                     plogMessage(NULL,  // logHandle,
+                                                                 LOG_TYPE_INDEX,
+                                                                 "INDEX",
+                                                                 "Auto requested update index for '%s'",
+                                                                 String_cString(printableStorageName)
+                                                                );
+                                                   }
+                                                 }
+                                                 else if (indexState == INDEX_STATE_OK)
+                                                 {
+                                                   // set last checked date/time
+                                                   error = Index_setStorageState(indexHandle,
+                                                                                 storageId,
+                                                                                 INDEX_STATE_OK,
+                                                                                 now,
+                                                                                 NULL  // errorMessage
+                                                                                );
+                                                 }
+                                               }
+                                               else
+                                               {
+                                                 // add to index
+                                                 error = Index_newStorage(indexHandle,
+                                                                          INDEX_ID_NONE, // uuidId
+                                                                          INDEX_ID_NONE, // entityId
+                                                                          NULL,  // hostName
+                                                                          NULL,  // userName
+                                                                          storageName,
+                                                                          0LL,  // createdDateTime
+                                                                          0LL,  // size
+                                                                          INDEX_STATE_UPDATE_REQUESTED,
+                                                                          INDEX_MODE_AUTO,
+                                                                          &storageId
+                                                                         );
                                                  if (error == ERROR_NONE)
                                                  {
                                                    plogMessage(NULL,  // logHandle,
                                                                LOG_TYPE_INDEX,
                                                                "INDEX",
-                                                               "Auto requested update index for '%s'",
+                                                               "Auto requested add index for '%s'",
                                                                String_cString(printableStorageName)
                                                               );
                                                  }
                                                }
-                                               else if (indexState == INDEX_STATE_OK)
-                                               {
-                                                 // set last checked date/time
-                                                 error = Index_setStorageState(indexHandle,
-                                                                               storageId,
-                                                                               INDEX_STATE_OK,
-                                                                               Misc_getCurrentDateTime(),
-                                                                               NULL  // errorMessage
-                                                                              );
-                                               }
-                                             }
-                                             else if (Misc_getCurrentDateTime() > (fileInfo->timeLastChanged+30*S_PER_MINUTE))
-                                             {
-                                               // add to index (Note: to avoid update on currently created archive, wait for min. 30min after creation)
-                                               error = Index_newStorage(indexHandle,
-                                                                        INDEX_ID_NONE, // uuidId
-                                                                        INDEX_ID_NONE, // entityId
-                                                                        NULL,  // hostName
-                                                                        NULL,  // userName
-                                                                        storageName,
-                                                                        0LL,  // createdDateTime
-                                                                        0LL,  // size
-                                                                        INDEX_STATE_UPDATE_REQUESTED,
-                                                                        INDEX_MODE_AUTO,
-                                                                        &storageId
-                                                                       );
-                                               if (error == ERROR_NONE)
-                                               {
-                                                 plogMessage(NULL,  // logHandle,
-                                                             LOG_TYPE_INDEX,
-                                                             "INDEX",
-                                                             "Auto requested add index for '%s'",
-                                                             String_cString(printableStorageName)
-                                                            );
-                                               }
-                                             }
-                                             break;
-                                           default:
-                                             break;
+                                               break;
+                                             default:
+                                               break;
+                                           }
                                          }
+                                       }
+                                       else
+                                       {
+                                         error = ERROR_NONE;
                                        }
 
                                        return error;
