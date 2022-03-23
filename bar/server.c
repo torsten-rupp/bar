@@ -6719,7 +6719,7 @@ LOCAL void serverCommand_masterPairingStatus(ClientInfo *clientInfo, IndexHandle
                       ERROR_NONE,
                       "name=%'S restTime=%lu totalTime=%lu",
                       newMaster.name,
-                      Misc_getRestTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S,
+                      Misc_getRestTimeout(&newMaster.pairingTimeoutInfo,MAX_ULONG)/MS_PER_S,
                       Misc_getTotalTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S
                      );
 }

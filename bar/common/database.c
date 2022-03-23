@@ -844,28 +844,35 @@ LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void 
 #endif /* !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG) */
 
 /***********************************************************************\
-* Name   : getTime
-* Purpose: get POSIX compatible time
-* Input  : -
+* Name   : getTimeSpec
+* Purpose: get POSIX compatible timespec with offset
+* Input  : timeOffset - time offset [ms]
 * Output : timespec - time
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#if   defined(PLATFORM_LINUX)
-#elif defined(PLATFORM_WINDOWS)
-LOCAL void getTime(struct timespec *timespec)
+LOCAL_INLINE void getTimeSpec(struct timespec *timespec, ulong timeOffset)
 {
-  __int64 windowsTime;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    __int64 windowsTime;
+  #endif /* PLATFORM_... */
 
   assert(timespec != NULL);
 
-  GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
-  windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
-  timespec->tv_sec  = (windowsTime/10000000LL);
-  timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
+  #if   defined(PLATFORM_LINUX)
+    clock_gettime(CLOCK_REALTIME,timespec);
+  #elif defined(PLATFORM_WINDOWS)
+    GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
+    windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
+    timespec->tv_sec  = (windowsTime/10000000LL);
+    timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
+  #endif /* PLATFORM_... */
+  timespec->tv_nsec = timespec->tv_nsec+((timeOffset)%1000L)*1000000L; \
+  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000L)+(timeOffset))/1000L; \
+  timespec->tv_nsec %= 1000000L; \
 }
-#endif /* PLATFORM_... */
 
 #ifndef NDEBUG
 
@@ -4307,14 +4314,7 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      #if   defined(PLATFORM_LINUX)
-        clock_gettime(CLOCK_REALTIME,&timespec);
-      #elif defined(PLATFORM_WINDOWS)
-        getTime(&timespec);
-      #endif /* PLATFORM_... */
-      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
-      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
-      timespec.tv_nsec %= 1000000L;
+      getTime(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
@@ -4330,14 +4330,7 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      #if   defined(PLATFORM_LINUX)
-        clock_gettime(CLOCK_REALTIME,&timespec);
-      #elif defined(PLATFORM_WINDOWS)
-        getTime(&timespec);
-      #endif /* PLATFORM_... */
-      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
-      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
-      timespec.tv_nsec %= 1000000L;
+      getTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,&databaseLock,&timespec) == ETIMEDOUT)
       {
 //TODO
@@ -4405,14 +4398,7 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      #if   defined(PLATFORM_LINUX)
-        clock_gettime(CLOCK_REALTIME,&timespec);
-      #elif defined(PLATFORM_WINDOWS)
-        getTime(&timespec);
-      #endif /* PLATFORM_... */
-      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
-      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
-      timespec.tv_nsec %= 1000000L;
+      getTime(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
@@ -4428,14 +4414,7 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      #if   defined(PLATFORM_LINUX)
-        clock_gettime(CLOCK_REALTIME,&timespec);
-      #elif defined(PLATFORM_WINDOWS)
-        getTime(&timespec);
-      #endif /* PLATFORM_... */
-      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
-      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
-      timespec.tv_nsec %= 1000000L;
+      getTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,&databaseLock,&timespec) == ETIMEDOUT)
       {
 //TODO
@@ -4504,14 +4483,7 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      #if   defined(PLATFORM_LINUX)
-        clock_gettime(CLOCK_REALTIME,&timespec);
-      #elif defined(PLATFORM_WINDOWS)
-        getTime(&timespec);
-      #endif /* PLATFORM_... */
-      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
-      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
-      timespec.tv_nsec %= 1000000L;
+      getTime(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
@@ -4527,14 +4499,7 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      #if   defined(PLATFORM_LINUX)
-        clock_gettime(CLOCK_REALTIME,&timespec);
-      #elif defined(PLATFORM_WINDOWS)
-        getTime(&timespec);
-      #endif /* PLATFORM_... */
-      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
-      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
-      timespec.tv_nsec %= 1000000L;
+      getTime(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,&databaseLock,&timespec) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
@@ -4596,16 +4561,10 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
     databaseHandle->databaseNode->debug.lastTrigger.transactionCount        = databaseHandle->databaseNode->transactionCount;
     BACKTRACE(databaseHandle->databaseNode->debug.lastTrigger.stackTrace,databaseHandle->databaseNode->debug.lastTrigger.stackTraceSize);
   #endif /* not NDEBUG */
-//TODO: do while?
-//  do
-  {
-//fprintf(stderr,".");
   if (pthread_cond_broadcast(&databaseHandle->databaseNode->readTrigger) != 0)
   {
     HALT_INTERNAL_ERROR("read trigger fail: %s",strerror(errno));
   }
-  }
-//  while ((databaseHandle->databaseNode->readCount == 0) && (databaseHandle->databaseNode->pendingReadCount > 0));
 }
 
 /***********************************************************************\
@@ -4647,16 +4606,10 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
     databaseHandle->databaseNode->debug.lastTrigger.transactionCount        = databaseHandle->databaseNode->transactionCount;
     BACKTRACE(databaseHandle->databaseNode->debug.lastTrigger.stackTrace,databaseHandle->databaseNode->debug.lastTrigger.stackTraceSize);
   #endif /* not NDEBUG */
-//TODO: do while?
-//  do
-  {
-//fprintf(stderr,".");
   if (pthread_cond_broadcast(&databaseHandle->databaseNode->readWriteTrigger) != 0)
   {
     HALT_INTERNAL_ERROR("read/write trigger fail: %s",strerror(errno));
   }
-  }
-//  while ((databaseHandle->databaseNode->readWriteCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount > 0));
 }
 
 /***********************************************************************\
@@ -10420,7 +10373,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
 //TODO: how to handle lost triggers?
 #ifdef DATABASE_WAIT_TRIGGER_WORK_AROUND
   TimeoutInfo timeoutInfo;
-  uint t;
+  ulong       t;
 #endif
 
   assert(databaseHandle != NULL);
@@ -10477,7 +10430,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
             {
               do
               {
-                t = MIN(Misc_getRestTimeout(&timeoutInfo),DT);
+                t = Misc_getRestTimeout(&timeoutInfo,DT);
 //fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
@@ -10612,7 +10565,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
             {
               do
               {
-                t = MIN(Misc_getRestTimeout(&timeoutInfo),DT);
+                t = Misc_getRestTimeout(&timeoutInfo,DT);
 //fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
 
                 waitTriggerRead(databaseHandle,t);
@@ -10669,7 +10622,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
             {
               do
               {
-                t = MIN(Misc_getRestTimeout(&timeoutInfo),DT);
+                t = Misc_getRestTimeout(&timeoutInfo,DT);
 //fprintf(stderr,"%s, %d: c %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
