@@ -2286,10 +2286,6 @@ LOCAL Errors StorageWebDAV_makeDirectory(const StorageInfo *storageInfo,
                                          ConstString       directoryName
                                         )
 {
-  assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-  assert(!String_isEmpty(directoryName));
-
   Errors      error;
   #ifdef HAVE_CURL
     CURL            *curlHandle;

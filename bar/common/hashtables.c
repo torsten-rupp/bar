@@ -371,6 +371,8 @@ LOCAL HashTableEntry* findFreeEntry(HashTable *hashTable,
   return hashTableEntry;
 }
 
+// TODO: use?
+#if 0
 /***********************************************************************\
 * Name   : growTable
 * Purpose: grow table size
@@ -395,6 +397,7 @@ LOCAL HashTableEntry *growTable(HashTableEntry *entries, uint oldSize, uint newS
 
   return entries;
 }
+#endif
 
 /***********************************************************************\
 * Name   : getNext

@@ -2276,6 +2276,9 @@ Errors Job_rereadAll(ConstString jobsDirectory)
             Job_setPersistenceModified(jobNode);
           }
         }
+
+        // reset modified flag
+        jobNode->modifiedFlag = FALSE;
       }
     }
   }
@@ -2515,7 +2518,6 @@ Errors Job_write(JobNode *jobNode)
     }
 
     // write config
-fprintf(stderr,"%s:%d: wroite %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
     error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
     if (error != ERROR_NONE)
     {
@@ -3106,38 +3108,40 @@ void Job_connectorUnlock(ConnectorInfo *connectorInfo)
 
 void Job_updateNotifies(const JobNode *jobNode)
 {
+  const ScheduleNode *scheduleNode;
+
   assert(jobNode != NULL);
 
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+  {
+    if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+    {
+      if (scheduleNode->enabled)
+      {
+        Continuous_initNotify(jobNode->name,
+                              jobNode->job.uuid,
+                              scheduleNode->uuid,
+                              &jobNode->job.includeEntryList
+                             );
+      }
+      else
+      {
+        Continuous_doneNotify(jobNode->name,
+                              jobNode->job.uuid,
+                              scheduleNode->uuid
+                             );
+      }
+    }
+  }
 }
 
 void Job_updateAllNotifies(void)
 {
-  const JobNode      *jobNode;
-  const ScheduleNode *scheduleNode;
+  const JobNode *jobNode;
 
   JOB_LIST_ITERATE(jobNode)
   {
-    LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-    {
-      if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
-      {
-        if (scheduleNode->enabled)
-        {
-          Continuous_initNotify(jobNode->name,
-                                jobNode->job.uuid,
-                                scheduleNode->uuid,
-                                &jobNode->job.includeEntryList
-                               );
-        }
-        else
-        {
-          Continuous_doneNotify(jobNode->name,
-                                jobNode->job.uuid,
-                                scheduleNode->uuid
-                               );
-        }
-      }
-    }
+    Job_updateNotifies(jobNode);
   }
 }
 

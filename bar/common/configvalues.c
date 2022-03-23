@@ -3271,13 +3271,22 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
 
+// TODO:
+#if 0
 bool ConfigValue_isCommentLine(const ConfigValue configValues[],
                                uint              firstValueIndex,
                                uint              lastValueIndex,
                                const char        *line
                               )
 {
+// TODO:
+UNUSED_VARIABLE(configValues);
+UNUSED_VARIABLE(firstValueIndex);
+UNUSED_VARIABLE(lastValueIndex);
+UNUSED_VARIABLE(line);
+return FALSE;
 }
+#endif
 
 bool ConfigValue_parse(const ConfigValue    *configValue,
                        const char           *sectionName,

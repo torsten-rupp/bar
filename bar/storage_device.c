@@ -1090,6 +1090,7 @@ LOCAL Errors StorageDevice_makeDirectory(const StorageInfo *storageInfo,
   assert(!String_isEmpty(directoryName));
 
   UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(directoryName);
 
 // TODO:
 #ifndef WERROR
