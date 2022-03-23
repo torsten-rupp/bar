@@ -1980,8 +1980,6 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.jobsDirectory);
   String_delete(globalOptions.tmpDirectory);
   String_delete(globalOptions.barExecutable);
-
-  List_done(&configFileList);
 }
 
 // ----------------------------------------------------------------------
@@ -8274,16 +8272,16 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 Errors Configuration_initAll(void)
 {
   initGlobalOptions();
-
   instanceUUID = String_new();
+  List_init(&configFileList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL));
 
   return ERROR_NONE;
 }
 
 void Configuration_doneAll(void)
 {
+  List_done(&configFileList);
   String_delete(instanceUUID);
-
   doneGlobalOptions();
 }
 

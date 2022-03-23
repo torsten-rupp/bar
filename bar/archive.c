@@ -27,7 +27,6 @@
 #include "common/semaphores.h"
 #include "common/passwords.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"

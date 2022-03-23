@@ -329,7 +329,7 @@ LOCAL void printInfo(const char *format, ...)
 * Notes  : -
 \***********************************************************************/
 
-void printWarning(const char *text, ...)
+LOCAL void printWarning(const char *text, ...)
 {
   String  line;
   va_list arguments;
@@ -794,6 +794,8 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
 * Notes  : increment step counter for each call!
 \***********************************************************************/
 
+// TODO: use
+#if 0
 LOCAL void logImportProgress(const char *format, ...)
 {
   va_list arguments;
@@ -802,6 +804,7 @@ LOCAL void logImportProgress(const char *format, ...)
   vfprintf(stdout,format,arguments); fflush(stdout);
   va_end(arguments);
 }
+#endif
 
 /***********************************************************************\
 * Name   : getCopyPauseCallback
@@ -817,6 +820,8 @@ LOCAL_INLINE DatabaseCopyPauseCallbackFunction getCopyPauseCallback(void)
   return NULL;
 }
 
+// TODO: use?
+#if 0
 LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
                         DatabaseHandle *newDatabaseHandle,
                         DatabaseId     storageId,
@@ -932,6 +937,7 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
                          )
                         );
 }
+#endif
 
 /***********************************************************************\
 * Name   : formatSubProgressInfo

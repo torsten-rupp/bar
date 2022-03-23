@@ -634,7 +634,7 @@ LOCAL NotifyInfo *addNotify(ConstString name)
     }
     notifyInfo->watchHandle = watchHandle;
     notifyInfo->name        = String_duplicate(name);
-    List_init(&notifyInfo->uuidList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+    List_init(&notifyInfo->uuidList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeUUIDNode,NULL));
 
     // add notify
     Dictionary_add(&notifyHandles,

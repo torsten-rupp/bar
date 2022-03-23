@@ -62,6 +62,8 @@
   extern "C" {
 #endif
 
+// TODO: not used?
+#if 0
 /***********************************************************************\
 * Name   : cleanUpStorageNoEntity
 * Purpose: clean-up storage entries without any entity
@@ -326,6 +328,7 @@ UNUSED_VARIABLE(indexHandle);
 return ERROR_NONE;
 #endif
 }
+#endif
 
 /***********************************************************************\
 * Name   : isEmptyEntity
@@ -376,6 +379,8 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                  );
 }
 
+// TODO: remove?
+#if 0
 /***********************************************************************\
 * Name   : refreshEntitiesInfos
 * Purpose: refresh entities infos
@@ -453,6 +458,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
 
   return error;
 }
+#endif
 
 /***********************************************************************\
 * Name   : rebuildNewestInfo

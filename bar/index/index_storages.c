@@ -71,6 +71,8 @@
 * Notes  : -
 \***********************************************************************/
 
+// TODO: use?
+#if 0
 LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 {
   Errors           error;
@@ -208,6 +210,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 
   return ERROR_NONE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : cleanUpStoragenNoName
@@ -687,7 +690,7 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
 \***********************************************************************/
 
 //TODO: use
-#if 1
+#if 0
 LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
 {
   Errors       error;
