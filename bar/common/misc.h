@@ -630,14 +630,15 @@ INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo)
 * Name   : Misc_getRestTimeout
 * Purpose: get rest timeout
 * Input  : timeoutInfo - timeout info
+*          maxTimeout  - max. timeout [ms]
 * Output : -
 * Return : rest timeout [ms]
 * Notes  : -
 \***********************************************************************/
 
-INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo);
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
-INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo)
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout)
 {
   uint64 timestamp;
 
@@ -646,11 +647,13 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo)
   if (timeoutInfo->timeout != WAIT_FOREVER)
   {
     timestamp = Misc_getTimestamp();
-    return (timestamp <= timeoutInfo->endTimestamp) ? (long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS) : 0L;
+    return (timestamp <= timeoutInfo->endTimestamp)
+             ? MIN((long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),maxTimeout)
+             : 0L;
   }
   else
   {
-    return WAIT_FOREVER;
+    return maxTimeout;
   }
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
