@@ -156,7 +156,7 @@ TARGETS              = bar/bar@EXEEXT@ \
                        bar/destroyer@EXEEXT@ \
                        bar/bar-keygen@SHELLEXT@ \
                        $(if $(findstring $(ENABLE_GUI),yes),\
-                         barcontrol/barcontrol@SHELLEXT@ \
+                         barcontrol/barcontrol \
                          barcontrol/barcontrol.cmd \
                        ) \
 
@@ -363,7 +363,7 @@ bar-keygen: bar/bar-keygen@SHELLEXT@
 
 barcontrol barcontrol/barcontrol:
 ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol barcontrol@SHELLEXT@
+	$(MAKE) -C barcontrol barcontrol
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
 endif
@@ -565,8 +565,6 @@ clean_dist:
 
 # create distribution
 $(DISTRIBUTION_NAME).tar.bz2: \
-  $(TARGETS) \
-  \
   configure \
   configure.ac \
   Makefile.in \
@@ -1249,7 +1247,7 @@ clean_gui:
 	$(RMF) $(DISTRIBUTION_NAME_GUI).zip
 
 $(DISTRIBUTION_NAME_GUI).zip: \
-  barcontrol/barcontrol@SHELLEXT@ \
+  barcontrol/barcontrol \
   barcontrol/barcontrol.cmd \
   barcontrol/barcontrol-linux.jar \
   barcontrol/barcontrol-linux_64.jar \
@@ -1261,7 +1259,7 @@ $(DISTRIBUTION_NAME_GUI).zip: \
   barcontrol/barcontrol-macosx_64.jar
 	$(INSTALL) -d tmp/gui/linux
 	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol@SHELLEXT@ \
+                   barcontrol/barcontrol \
                    tmp/gui/linux
 	$(INSTALL) -m 664 \
                    barcontrol/barcontrol-linux.jar \
