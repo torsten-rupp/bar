@@ -830,9 +830,9 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 #include "index_version3.c"
 #include "index_version4.c"
 #include "index_version5.c"
-#include "index_version6.c"
 #include "index_version7.c"
 #endif
+//#include "index_version6.c"
 
 #if 0
 /***********************************************************************\
@@ -903,7 +903,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   uint64            t1;
   IndexId           uuidId,entityId,storageId;
 
-  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME,NULL);
+  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
 
   // open old index (Note: must be read/write to fix errors in database)
   error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);

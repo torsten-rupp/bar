@@ -79,7 +79,8 @@ LOCAL ulong getImportStepsVersion5(IndexHandle *oldIndexHandle,
 \***********************************************************************/
 
 LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
-                                 IndexHandle *newIndexHandle
+                                 IndexHandle *newIndexHandle,
+                                 ProgressInfo   *progressInfo
                                 )
 {
   Errors  error;
@@ -105,20 +106,20 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
                                // map type
                                Database_setTableColumnListInt64(toColumnList,
                                                                 "type",
-                                                                1+Database_getTableColumnListInt64(fromColumnList,"type",DATABASE_ID_NONE)
+                                                                1+Database_getTableColumnListInt64(fromColumnInfo,"type",DATABASE_ID_NONE)
                                                                );
 
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storage
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromEntityId;
                                DatabaseId toEntityId;
@@ -128,11 +129,11 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                UNUSED_VARIABLE(userData);
 
-                               fromEntityId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                               fromEntityId = Database_getTableColumnListId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                assert(fromEntityId != DATABASE_ID_NONE);
                                toEntityId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
-//fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
+//fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnInfo,"jobUUID",NULL));
 
                                // transfer storages of entity
                                t0 = Misc_getTimestamp();
@@ -143,9 +144,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
-                                                            UNUSED_VARIABLE(fromColumnList);
+                                                            UNUSED_VARIABLE(fromColumnInfo);
                                                             UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
@@ -153,7 +154,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: transfer files, images, directories, links, special entries
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             Errors     error;
                                                             DatabaseId fromStorageId;
@@ -161,7 +162,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                             UNUSED_VARIABLE(userData);
 
-                                                            fromStorageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            fromStorageId = Database_getTableColumnListId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(fromStorageId != DATABASE_ID_NONE);
                                                             toStorageId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                             assert(toStorageId != DATABASE_ID_NONE);
@@ -178,9 +179,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(fromColumnInfo);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -188,7 +189,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
@@ -210,7 +211,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    ",
                                                                                                                    toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListCString(fromColumnList,"name",NULL)
+                                                                                                                   Database_getTableColumnListCString(fromColumnInfo,"name",NULL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
@@ -228,9 +229,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(fromColumnInfo);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -238,7 +239,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
@@ -264,9 +265,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    ",
                                                                                                                    toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"size",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
@@ -284,9 +285,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(fromColumnInfo);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -294,7 +295,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
@@ -324,11 +325,11 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    ",
                                                                                                                    toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt(fromColumnList,"fileSystemType",0),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
+                                                                                                                   Database_getTableColumnListInt64(fromColumnInfo,"size",0LL),
+                                                                                                                   Database_getTableColumnListInt(fromColumnInfo,"fileSystemType",0),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"blockSize",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"blockOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
@@ -346,9 +347,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(fromColumnInfo);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -356,7 +357,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
@@ -378,7 +379,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    ",
                                                                                                                    toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                                                   Database_getTableColumnListCString(fromColumnInfo,"destinationName",NULL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
@@ -396,9 +397,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(fromColumnInfo);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -406,7 +407,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
@@ -432,9 +433,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    ",
                                                                                                                    toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"size",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnInfo,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
@@ -452,9 +453,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(fromColumnInfo);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -462,7 +463,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
@@ -488,9 +489,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    ",
                                                                                                                    toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt(fromColumnList,"specialType",0),
-                                                                                                                   Database_getTableColumnListUInt(fromColumnList,"major",0),
-                                                                                                                   Database_getTableColumnListUInt(fromColumnList,"minor",0)
+                                                                                                                   Database_getTableColumnListInt(fromColumnInfo,"specialType",0),
+                                                                                                                   Database_getTableColumnListUInt(fromColumnInfo,"major",0),
+                                                                                                                   Database_getTableColumnListUInt(fromColumnInfo,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
@@ -519,15 +520,19 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                            "INDEX",
                                            "Imported entity #%llu: '%s' (%llus)",
                                            toEntityId,
-                                           Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                           Database_getTableColumnListCString(fromColumnInfo,"jobUUID",""),
                                            (t1-t0)/US_PER_SECOND
                                           );
 
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(NULL,NULL),  // progress
-                             NULL  // filter
+                             CALLBACK_(ProgressInfo_step,progressInfo),
+                             DATABASE_FILTERS_NONE,
+                             NULL,  // groupBy
+                             NULL,  // orderby
+                             0L,
+                             DATABASE_UNLIMITED
                             );
   if (error != ERROR_NONE)
   {
@@ -541,16 +546,16 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
                                StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
 
-                               UNUSED_VARIABLE(fromColumnList);
+                               UNUSED_VARIABLE(fromColumnInfo);
                                UNUSED_VARIABLE(userData);
 
                                if (   Index_findStorageById(oldIndexHandle,
-                                                            INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
+                                                            INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnInfo,"id",DATABASE_ID_NONE)),
                                                             jobUUID,
                                                             NULL,  // scheduleUUDI
                                                             NULL,  // uuidId
@@ -604,7 +609,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                return error;
                              },NULL),
                              // post: copy files, images, directories, links, special entries
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromStorageId;
                                DatabaseId toStorageId;
@@ -613,7 +618,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                UNUSED_VARIABLE(userData);
 
-                               fromStorageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                               fromStorageId = Database_getTableColumnListId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                assert(fromStorageId != DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                assert(toStorageId != DATABASE_ID_NONE);
@@ -630,9 +635,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
-                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(fromColumnInfo);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListId(toColumnList,"storageId",toStorageId);
@@ -640,7 +645,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
@@ -662,7 +667,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                       ",
                                                                                       toStorageId,
                                                                                       Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListCString(fromColumnList,"name",NULL)
+                                                                                      Database_getTableColumnListCString(fromColumnInfo,"name",NULL)
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
@@ -680,9 +685,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
-                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(fromColumnInfo);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListId(toColumnList,"storageId",toStorageId);
@@ -690,7 +695,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
@@ -716,9 +721,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                       ",
                                                                                       toStorageId,
                                                                                       Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
@@ -736,9 +741,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
-                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(fromColumnInfo);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListId(toColumnList,"storageId",toStorageId);
@@ -746,7 +751,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
@@ -776,11 +781,11 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                       ",
                                                                                       toStorageId,
                                                                                       Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt(fromColumnList,"fileSystemType",0),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"size",0LL),
+                                                                                      Database_getTableColumnListInt(fromColumnInfo,"fileSystemType",0),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"blockSize",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
@@ -798,9 +803,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
-                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(fromColumnInfo);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
@@ -808,7 +813,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
@@ -830,7 +835,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                       ",
                                                                                       toStorageId,
                                                                                       Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                      Database_getTableColumnListCString(fromColumnInfo,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
@@ -848,9 +853,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
-                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(fromColumnInfo);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListId(toColumnList,"storageId",toStorageId);
@@ -858,7 +863,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
@@ -884,9 +889,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                       ",
                                                                                       toStorageId,
                                                                                       Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnInfo,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
@@ -904,9 +909,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
-                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(fromColumnInfo);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListId(toColumnList,"storageId",toStorageId);
@@ -914,7 +919,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
@@ -940,9 +945,9 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                                                       ",
                                                                                       toStorageId,
                                                                                       Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt(fromColumnList,"specialType",0),
-                                                                                      Database_getTableColumnListUInt(fromColumnList,"major",0),
-                                                                                      Database_getTableColumnListUInt(fromColumnList,"minor",0)
+                                                                                      Database_getTableColumnListInt(fromColumnInfo,"specialType",0),
+                                                                                      Database_getTableColumnListUInt(fromColumnInfo,"major",0),
+                                                                                      Database_getTableColumnListUInt(fromColumnInfo,"minor",0)
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
@@ -959,7 +964,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                            "INDEX",
                                            "Imported storage #%llu: '%s' (%llus)",
                                            toStorageId,
-                                           Database_getTableColumnListCString(fromColumnList,"name",""),
+                                           Database_getTableColumnListCString(fromColumnInfo,"name",""),
                                            (t1-t0)/US_PER_SECOND
                                           );
 

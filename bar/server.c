@@ -21193,10 +21193,9 @@ Errors Server_socket(void)
     bool              validURIPrefix;
     String            printableDatabaseURI;
 
-    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME,&validURIPrefix);
-    if (!validURIPrefix)
+    if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
     {
-      printWarning("No valid prefix in database URI");
+      printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
     }
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
 
@@ -22025,13 +22024,11 @@ Errors Server_batch(int inputDescriptor,
   if (!stringIsEmpty(globalOptions.indexDatabaseURI))
   {
     DatabaseSpecifier databaseSpecifier;
-    bool              validURIPrefix;
     String            printableDatabaseURI;
 
-    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME,&validURIPrefix);
-    if (!validURIPrefix)
+    if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
     {
-      printWarning("No valid prefix in database URI");
+      printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
     }
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
 

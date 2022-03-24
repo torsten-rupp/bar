@@ -1114,15 +1114,13 @@ void Database_doneAll(void);
 *                                  - postgresql:<server>:<user>:<passwored>[:<database>]
 *          defaultDatabaseName - default database name
 * Output : databaseSpecifier - database specifier
-* Return : validURIPrefixFlag - TRUE iff valid URI prefix is given (can
-*                               be NULL)
+* Return : TRUE iff valid URI prefix is given
 * Notes  : -
 \***********************************************************************/
 
-void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
+bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                              const char        *databaseURI,
-                             const char        *defaultDatabaseName,
-                             bool              *validURIPrefixFlag
+                             const char        *defaultDatabaseName
                             );
 
 /***********************************************************************\

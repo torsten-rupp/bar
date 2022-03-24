@@ -518,16 +518,14 @@ LOCAL void clearPercentage(void)
 LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseURI, bool createFlag)
 {
   DatabaseSpecifier databaseSpecifier;
-  bool              validURIPrefix;
   String            printableDataseURI;
   DatabaseOpenModes openMode;
   Errors            error;
 
   // parse URI and fill int default values
-  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME,&validURIPrefix);
-  if (!validURIPrefix)
+  if (!Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME))
   {
-    printWarning("No valid prefix in database URI");
+    printWarning("No valid database URI '%s'",databaseURI);
   }
   switch (databaseSpecifier.type)
   {
@@ -1114,7 +1112,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   DatabaseHandle    oldDatabaseHandle;
 
   // parse URI and fill in default values
-  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
+  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   switch (databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
