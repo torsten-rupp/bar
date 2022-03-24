@@ -7649,7 +7649,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,1,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,1,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
 
-  CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,1,globalOptions.debug.printConfigurationSHA256,                                                                           "fixed server ids"                                                   ),
+
+  CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,1,globalOptions.debug.printConfigurationSHA256,                                                                     "fixed server ids"                                                         ),
   #endif
 );
 

@@ -3630,6 +3630,13 @@ LOCAL Errors runDebug(void)
   }
   AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseURI,{ Index_done(); });
 
+  // init continuous database
+  error = Continuous_init(globalOptions.continuousDatabaseFileName);
+  if (error != ERROR_NONE)
+  {
+    printWarning("Continuous support is not available (reason: %s)",Error_getText(error));
+  }
+
   // open index
   indexHandle = NULL;
   while (indexHandle == NULL)
@@ -4103,6 +4110,7 @@ LOCAL Errors runDebug(void)
   }
 
   // free resources
+  Continuous_done();
   Index_done();
   String_delete(printableDatabaseURI);
   Database_doneSpecifier(&databaseSpecifier);
