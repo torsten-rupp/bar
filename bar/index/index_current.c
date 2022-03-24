@@ -651,7 +651,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  },NULL),
                                  CALLBACK_(NULL,NULL),  // post-copy
                                  CALLBACK_(NULL,NULL),  // pause
-                                 CALLBACK_(NULL,NULL),  // pause
+                                 CALLBACK_(NULL,NULL),  // progress
                                  "entryId=?",
                                  DATABASE_FILTERS
                                  (

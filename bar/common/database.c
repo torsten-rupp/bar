@@ -7065,6 +7065,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
                   Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,NULL);
+fprintf(stderr,"%s:%d: date=%s\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -8765,142 +8766,162 @@ void Database_doneAll(void)
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 }
 
-void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
+bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                              const char        *databaseURI,
-                             const char        *defaultDatabaseName,
-                             bool              *validURIPrefixFlag
+                             const char        *defaultDatabaseName
                             )
 {
+  bool       validURIFlag;
   const char *s1,*s2,*s3,*s4;
   size_t     n1,n2,n3,n4;
 
-  // get database type and open/connect data
-  if      (   (databaseURI != NULL)
-           && stringMatch(databaseURI,
-                          "^(sqlite|sqlite3):(.*)",
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          &s1,&n1,
-                          NULL
-                         )
-          )
+  validURIFlag = FALSE;
+
+  if (databaseURI != NULL)
   {
-    // sqlite[3]:<file name>
-    databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-    databaseSpecifier->sqlite.fileName = String_setBuffer(String_new(),s1,n1);
-    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
-  }
-  else if (   (databaseURI != NULL)
-           && stringMatch(databaseURI,
-                          "^mariadb:([^:]+):([^:]+):([^:]*):(.*)",
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          &s1,&n1,
-                          &s2,&n2,
-                          &s3,&n3,
-                          &s4,&n4,
-                          NULL
-                         )
-          )
-  {
-    // mariadb:<server>:<user>:<password>:<database>
-    #if defined(HAVE_MARIADB)
-      databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
-      databaseSpecifier->mysql.serverName  = String_setBuffer(String_new(),s1,n1);
-      databaseSpecifier->mysql.userName    = String_setBuffer(String_new(),s2,n2);
-      Password_init(&databaseSpecifier->mysql.password);
-      Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-      databaseSpecifier->mysql.databaseName = String_setBuffer(String_new(),s4,n4);
-    #else /* HAVE_MARIADB */
-// TODO:
-    #endif /* HAVE_MARIADB */
-    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
-  }
-  else if (   (databaseURI != NULL)
-           && stringMatch(databaseURI,
-                          "^mariadb:([^:]+):([^:]+):(.*)",
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          &s1,&n1,
-                          &s2,&n2,
-                          &s3,&n3,
-                          NULL
-                         )
-          )
-  {
-    // mariadb:<server>:<user>:<password>
-    #if defined(HAVE_MARIADB)
-      databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
-      databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
-      databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
-      Password_init(&databaseSpecifier->mysql.password);
-      Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-      databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
-    #else /* HAVE_MARIADB */
-      UNUSED_VARIABLE(defaultDatabaseName);
-    #endif /* HAVE_MARIADB */
-    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
-  }
-  else if (   (databaseURI != NULL)
-           && stringMatch(databaseURI,
-                          "^postgresql:([^:]+):([^:]+):([^:]*):(.*)",
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          &s1,&n1,
-                          &s2,&n2,
-                          &s3,&n3,
-                          &s4,&n4,
-                          NULL
-                         )
-          )
-  {
-    // postgresql:<server>:<user>:<password>:<database>
-    databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
-    #if defined(HAVE_POSTGRESQL)
-      databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
-      databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
-      Password_init(&databaseSpecifier->postgresql.password);
-      Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
-      databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
-    #else /* HAVE_POSTGRESQL */
-      UNUSED_VARIABLE(defaultDatabaseName);
-    #endif /* HAVE_POSTGRESQL */
-    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
-  }
-  else if (   (databaseURI != NULL)
-           && stringMatch(databaseURI,
-                          "^postgresql:([^:]+):([^:]+):(.*)",
-                          STRING_NO_ASSIGN,
-                          STRING_NO_ASSIGN,
-                          &s1,&n1,
-                          &s2,&n2,
-                          &s3,&n3,
-                          NULL
-                         )
-          )
-  {
-    // postgresql:<server>:<user>:<password>
-    databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
-    #if defined(HAVE_POSTGRESQL)
-      databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
-      databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
-      Password_init(&databaseSpecifier->postgresql.password);
-      Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
-      databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
-    #else /* HAVE_POSTGRESQL */
-      UNUSED_VARIABLE(defaultDatabaseName);
-    #endif /* HAVE_POSTGRESQL */
-    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
+    if      (stringStartsWith(databaseURI,"sqlite:"))
+    {
+      databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+      databaseSpecifier->sqlite.fileName = String_setCString(String_new(),&databaseURI[7]);
+      validURIFlag = TRUE;
+    }
+    else if (stringStartsWith(databaseURI,"sqlite3:"))
+    {
+      databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+      databaseSpecifier->sqlite.fileName = String_setCString(String_new(),&databaseURI[8]);
+      validURIFlag = TRUE;
+    }
+    else if (stringStartsWith(databaseURI,"mariadb:"))
+    {
+      if      (stringMatch(&databaseURI[8],
+                           "^([^:]+):([^:]+):([^:]*):(.*)",
+                           STRING_NO_ASSIGN,
+                           STRING_NO_ASSIGN,
+                           &s1,&n1,
+                           &s2,&n2,
+                           &s3,&n3,
+                           &s4,&n4,
+                           NULL
+                          )
+              )
+      {
+        // mariadb:<server>:<user>:<password>:<database>
+        #if defined(HAVE_MARIADB)
+          databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
+          databaseSpecifier->mysql.serverName  = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->mysql.userName    = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->mysql.password);
+          Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
+          databaseSpecifier->mysql.databaseName = String_setBuffer(String_new(),s4,n4);
+        #else /* HAVE_MARIADB */
+    // TODO:
+        #endif /* HAVE_MARIADB */
+        validURIFlag = TRUE;
+      }
+      else if (stringMatch(&databaseURI[8],
+                           "^([^:]+):([^:]+):(.*)",
+                           STRING_NO_ASSIGN,
+                           STRING_NO_ASSIGN,
+                           &s1,&n1,
+                           &s2,&n2,
+                           &s3,&n3,
+                           NULL
+                          )
+              )
+      {
+        // mariadb:<server>:<user>:<password>
+        #if defined(HAVE_MARIADB)
+          databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
+          databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->mysql.password);
+          Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
+          databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
+        #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(defaultDatabaseName);
+        #endif /* HAVE_MARIADB */
+        validURIFlag = TRUE;
+      }
+      else
+      {
+        // default: sqlite
+        databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+        databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
+      }
+    }
+    else if (stringStartsWith(databaseURI,"postgresql:"))
+    {
+      if      (stringMatch(&databaseURI[11],
+                           "^([^:]+):([^:]+):([^:]*):(.*)",
+                           STRING_NO_ASSIGN,
+                           STRING_NO_ASSIGN,
+                           &s1,&n1,
+                           &s2,&n2,
+                           &s3,&n3,
+                           &s4,&n4,
+                           NULL
+                          )
+              )
+      {
+        // postgresql:<server>:<user>:<password>:<database>
+        databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
+        #if defined(HAVE_POSTGRESQL)
+          databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->postgresql.password);
+          Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
+          databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
+        #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(defaultDatabaseName);
+        #endif /* HAVE_POSTGRESQL */
+        validURIFlag = TRUE;
+      }
+      else if (stringMatch(&databaseURI[11],
+                           "^([^:]+):([^:]+):(.*)",
+                           STRING_NO_ASSIGN,
+                           STRING_NO_ASSIGN,
+                           &s1,&n1,
+                           &s2,&n2,
+                           &s3,&n3,
+                           NULL
+                          )
+              )
+      {
+        // postgresql:<server>:<user>:<password>
+        databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+        #if defined(HAVE_POSTGRESQL)
+          databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->postgresql.password);
+          Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
+          databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
+        #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(defaultDatabaseName);
+        #endif /* HAVE_POSTGRESQL */
+        validURIFlag = TRUE;
+      }
+      else
+      {
+        // default: sqlite
+        databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+        databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
+      }
+    }
+    else
+    {
+      // default: sqlite
+      databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+      databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
+    }
   }
   else
   {
-    // sqlite
+    // default: sqlite
     databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
     databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
-    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = FALSE;
   }
+
+  return validURIFlag;
 }
 
 void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
@@ -8973,6 +8994,7 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
                                         )
 {
   DatabaseSpecifier *databaseSpecifier;
+  bool              flag;
 
   databaseSpecifier = (DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
   if (databaseSpecifier == NULL)
@@ -8980,7 +9002,8 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName,validURIPrefixFlag);
+  flag = Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
+  if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = flag;
 
   return databaseSpecifier;
 }
@@ -10431,7 +10454,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
               do
               {
                 t = Misc_getRestTimeout(&timeoutInfo,DT);
-//fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
+//fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
               }
@@ -10440,7 +10463,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     );
               if (isReadWriteLock(databaseHandle))
               {
-//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo)); asm("int3");
+//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)); asm("int3");
                 Misc_doneTimeout(&timeoutInfo);
                 pendingReadsDecrement(databaseHandle);
                 return FALSE;
@@ -10566,7 +10589,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
               do
               {
                 t = Misc_getRestTimeout(&timeoutInfo,DT);
-//fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
+//fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),t);
 
                 waitTriggerRead(databaseHandle,t);
               }
@@ -10575,7 +10598,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     );
               if (isReadLock(databaseHandle))
               {
-//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ_WRITE 1: wait read %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo)); asm("int3");
+//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ_WRITE 1: wait read %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)); asm("int3");
                 Misc_doneTimeout(&timeoutInfo);
                 pendingReadWritesDecrement(databaseHandle);
                 return FALSE;
@@ -10623,7 +10646,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
               do
               {
                 t = Misc_getRestTimeout(&timeoutInfo,DT);
-//fprintf(stderr,"%s, %d: c %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
+//fprintf(stderr,"%s, %d: c %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
               }
@@ -10632,7 +10655,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     );
               if (isReadWriteLock(databaseHandle))
               {
-//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ_WRITE 2: wait read/write %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo)); asm("int3");
+//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ_WRITE 2: wait read/write %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)); asm("int3");
                 Misc_doneTimeout(&timeoutInfo);
                 pendingReadWritesDecrement(databaseHandle);
                 return FALSE;
