@@ -2016,6 +2016,7 @@ test_arguments: \
 	@$(call functionInfoBegin,Test arguments)
 	@$(ECHO) "# test config" >intermediate/test.cfg
 	@#
+	@#
 	# short/long options
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --create intermediate/test.bar data/zero.dat $(LOG))
@@ -2170,14 +2171,17 @@ endif
 	$(RMRF) restore
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=stop --no-stop-on-error --no-fragments-check $(LOG))
+	$(RMF) restore/data/readonly.dat restore/data/file400.dat restore/data/readonly512k.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=overwrite $(LOG))
 	test -f restore/data/zero.dat;
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar -# data/zero128.dat -# data/large128M.dat --destination restore --restore-entry-mode=rename $(LOG))
-	test -f restore/data/zero128-??:??:??.dat;
-	test -f restore/data/large128M-??:??:??.dat;
+	test -f restore/data/zero128-0.dat;
+	test -f restore/data/large128M-0.dat;
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar -# data/zero128.dat -# data/large128M.dat --destination restore --restore-entry-mode=rename $(LOG))
-	test -f restore/data/zero128-??:??:??-0.dat;
-	test -f restore/data/large128M-??:??:??-0.dat;
+	test -f restore/data/zero128-0.dat;
+	test -f restore/data/zero128-1.dat;
+	test -f restore/data/large128M-0.dat;
+	test -f restore/data/large128M-1.dat;
 	#
 	$(call functionTestCheckExitcode,0,0,$(ECHO) intermediate/test*.bar | $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l --storage-list-stdin $(LOG))
 	$(ECHO) 'intermediate/test*.bar' > intermediate/storage.list
@@ -2214,6 +2218,15 @@ endif
 #	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --remote-bar-executable=$(TEST_BAR) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --config=intermediate/bar.cfg $(LOG))
+	@#
+	# databases
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=sqlite:intermediate/index.db --debug-index-wait-operations $(LOG))
+ifeq (@HAVE_MARIADB@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=mariadb:localhost:test:test --debug-index-wait-operations $(LOG))
+endif
+ifeq (@HAVE_POSTGRESQL@,1)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=postgresql:localhost:test:test --debug-index-wait-operations $(LOG))
+endif
 	@#
 	# server
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --server-mode=master $(LOG))

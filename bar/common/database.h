@@ -692,7 +692,7 @@ typedef struct
 /***********************************************************************\
 * Name   : DatabaseCopyTableFunction
 * Purpose: execute copy table row callback function
-* Input  : fromColumnList - from column list
+* Input  : fromColumnInfo - from column list
 *          toColumnList   - to column list
 *          userData       - user data
 * Output : -

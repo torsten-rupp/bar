@@ -7978,6 +7978,8 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
+          error = ERROR_NONE;
+
           if (databaseStatementHandle->parameterCount > 0)
           {
             if (mysql_stmt_bind_param(databaseStatementHandle->mysql.statementHandle,
@@ -8771,8 +8773,6 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
 {
   const char *s1,*s2,*s3,*s4;
   size_t     n1,n2,n3,n4;
-
-  assert(databaseURI != NULL);
 
   // get database type and open/connect data
   if      (   (databaseURI != NULL)
