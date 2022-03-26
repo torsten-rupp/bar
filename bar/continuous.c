@@ -261,6 +261,7 @@ LOCAL void printNotifies(void)
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
+                          NULL,  // databaseName
                           DATABASE_OPEN_MODE_READWRITE,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
@@ -268,6 +269,7 @@ LOCAL void printNotifies(void)
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
+                            NULL,  // databaseName
                             DATABASE_OPEN_MODE_READWRITE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
@@ -277,6 +279,7 @@ LOCAL void printNotifies(void)
     #ifdef NDEBUG
       error = Database_open(databaseHandle,
                             databaseSpecifier,
+                            NULL,  // databaseName
                             DATABASE_OPEN_MODE_CREATE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
@@ -284,6 +287,7 @@ LOCAL void printNotifies(void)
       error = __Database_open(__fileName__,__lineNb__,
                               databaseHandle,
                               databaseSpecifier,
+                              NULL,  // databaseName
                               DATABASE_OPEN_MODE_CREATE,
                               CONTINUOUS_DATABASE_TIMEOUT
                              );
@@ -333,6 +337,7 @@ LOCAL void printNotifies(void)
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
+                          NULL,  // databaseName
                           DATABASE_OPEN_MODE_CREATE,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
@@ -340,6 +345,7 @@ LOCAL void printNotifies(void)
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
+                            NULL,  // databaseName
                             DATABASE_OPEN_MODE_CREATE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );

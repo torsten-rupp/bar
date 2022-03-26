@@ -1294,7 +1294,6 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
 
   // allocate buffer and format date/time
   length = strftime(buffer,bufferSize-1,format,tm);
-fprintf(stderr,"%s:%d: format=%s nbu=%s\n",__FILE__,__LINE__,format,buffer);
   if (length == 0)
   {
     return NULL;

@@ -147,11 +147,17 @@ LOCAL const char *MARIADB_CHARACTER_SETS[] =
 #ifdef HAVE_POSTGRESQL
   #define MIN_POSTGRESQL_PROTOCOL_VERSION 3
 
+  #define POSTGRESQL_CHARACTER_SET "utf8"
+// TODO: which collate?
+  #define POSTGRESQL_COLLATE       "en_US.UTF-8"
+
   #ifdef POSTGRESQL_BINARY_INTERFACE
     /* PostgreSQL store timestamp since 2000-01-01 00:00:00 in us
        See: https://www.postgresql.org/docs/9.1/datatype-datetime.html
     */
     #define POSTGRES_BASE_TIMESTAMP 946681200LL
+  #else
+    #define POSTGRESQL_DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S"
   #endif /* POSTGRESQL_BINARY_INTERFACE */
 #endif /* HAVE_POSTGRESQL */
 
@@ -603,6 +609,9 @@ LOCAL DatabaseList databaseList;
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
+  #define openDatabase(...)               __openDatabase              (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define closeDatabase(...)              __closeDatabase             (__FILE__,__LINE__, ## __VA_ARGS__)
+
   #define begin(...)                      __begin                     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define end(...)                        __end                       (__FILE__,__LINE__, ## __VA_ARGS__)
 
@@ -1843,10 +1852,7 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
   Password_undeploy(password,deployPassword);
 
   stringFormat(sqlString,sizeof(sqlString),
-               "CREATE DATABASE IF NOT EXISTS %s \
-                CHARACTER SET '%s' \
-                COLLATE '%s_bin' \
-               ",
+               "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
                databaseName,
                characterSet,
                characterSet
@@ -2306,6 +2312,8 @@ LOCAL void postgresqlReceiveMessageHandler(void *arg, const PGresult *result)
 *          userName     - user name
 *          password     - password
 *          databaseName - database name
+*          characterSet - character set encoding
+*          collate      - collate
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2314,7 +2322,9 @@ LOCAL void postgresqlReceiveMessageHandler(void *arg, const PGresult *result)
 LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                                       const char     *userName,
                                       const Password *password,
-                                      const char     *databaseName
+                                      const char     *databaseName,
+                                      const char     *characterSet,
+                                      const char     *collate
                                      )
 {
   #define POSTGRESQL_CONNECT_PARAMETER(i,name,value) \
@@ -2370,9 +2380,11 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
 
   // create database
   stringFormat(sqlString,sizeof(sqlString),
-               "CREATE DATABASE %s WITH OWNER=%s",
+               "CREATE DATABASE %s WITH OWNER=%s ENCODING '%s' LC_COLLATE='%s' TEMPLATE=template0",
                databaseName,
-               userName
+               userName,
+               characterSet,
+               collate
               );
   postgresqlResult = PQexec(handle,sqlString);
   if (postgresqlResult != NULL)
@@ -2516,31 +2528,41 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
                                const char     *databaseName
                               )
 {
-  #define POSTGRESQL_CONNECT_PARAMETER(i,name,value) \
-    keywords[i] = name; \
-    values[i]   = value
+  #define POSTGRESQL_INIT_CONNECT_PARAMETER() \
+    connectParameterCount = 0
+  #define POSTGRESQL_DONE_CONNECT_PARAMETER() \
+    keywords[connectParameterCount] = NULL; \
+    values[connectParameterCount]   = NULL
+  #define POSTGRESQL_CONNECT_PARAMETER(name,value) \
+    assert(connectParameterCount < SIZE_OF_ARRAY(keywords)); \
+    assert(connectParameterCount < SIZE_OF_ARRAY(values)); \
+    keywords[connectParameterCount] = name; \
+    values[connectParameterCount]   = value; \
+    connectParameterCount++
 
   String         string;
+  uint           connectParameterCount;
   const char     *keywords[6+1],*values[6+1];
   const char     *deployPassword;
   ConnStatusType postgreConnectionSQLStatus;
   Errors         error;
 
   assert(handle != NULL);
+  assert(serverName != NULL);
+  assert(databaseName != NULL);
 
   // connect
-  string = String_toLower(String_newCString(databaseName));
+  string = String_toLower(String_newCString(databaseName));  // Note: PostgreSQL require lower case database name :-(
   deployPassword = Password_deploy(password);
-  POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
-  POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
-  POSTGRESQL_CONNECT_PARAMETER(2,"password",       deployPassword);
-  POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         String_cString(string));
-  POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
-  POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
+  POSTGRESQL_INIT_CONNECT_PARAMETER();
+  POSTGRESQL_CONNECT_PARAMETER("host",           serverName);
+  POSTGRESQL_CONNECT_PARAMETER("user",           userName);
+  POSTGRESQL_CONNECT_PARAMETER("password",       deployPassword);
+  POSTGRESQL_CONNECT_PARAMETER("dbname",         !stringIsEmpty(databaseName) ? String_cString(string) : "postgres");
+  POSTGRESQL_CONNECT_PARAMETER("connect_timeout","60");
+  POSTGRESQL_CONNECT_PARAMETER("client_encoding","UTF-8");
+  POSTGRESQL_DONE_CONNECT_PARAMETER();
 
-// TODO:
-//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
-  POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
   (*handle) = PQconnectdbParams(keywords,values,0);
   if ((*handle) == NULL)
   {
@@ -2904,8 +2926,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 * Purpose: open database
 * Input  : databaseHandle    - database handle variable
 *          databaseSpecifier - database specifier
-*          databaseName      - database name or NULL for database name in
-*                              database specifider
+*          databaseName      - database name or NULL for name from
+*                              specifier or "" for no specific
+*                              database (MariaDB or PostgreSQL only)
 *          openDatabaseMode  - open mode; see DatabaseOpenModes
 *          timeout           - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
@@ -2916,19 +2939,19 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 #ifdef NDEBUG
   LOCAL Errors openDatabase(DatabaseHandle          *databaseHandle,
                             const DatabaseSpecifier *databaseSpecifier,
-                            ConstString             databaseName,
+                            const char              *databaseName,
                             DatabaseOpenModes       openDatabaseMode,
                             long                    timeout
                           )
 #else /* not NDEBUG */
-  LOCAL Errors openDatabase(const char              *__fileName__,
-                            ulong                   __lineNb__,
-                            DatabaseHandle          *databaseHandle,
-                            const DatabaseSpecifier *databaseSpecifier,
-                            ConstString             databaseName,
-                            DatabaseOpenModes       openDatabaseMode,
-                            long                    timeout
-                          )
+  LOCAL Errors __openDatabase(const char              *__fileName__,
+                              ulong                   __lineNb__,
+                              DatabaseHandle          *databaseHandle,
+                              const DatabaseSpecifier *databaseSpecifier,
+                              const char              *databaseName,
+                              DatabaseOpenModes       openDatabaseMode,
+                              long                    timeout
+                            )
 #endif /* NDEBUG */
 {
   String        directoryName;
@@ -2954,16 +2977,16 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
     return ERRORX_(DATABASE,0,"init locking");
   }
 
-  #if defined(HAVE_MARIADB)
-    databaseHandle->mysql.handle = NULL;
-  #endif /* HAVE_MARIADB */
-
   // get database node
   SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     databaseNode = LIST_FIND(&databaseList,
                              databaseNode,
-                             Database_equalSpecifiers(&databaseNode->databaseSpecifier,databaseSpecifier)
+                             Database_equalSpecifiers(&databaseNode->databaseSpecifier,
+                                                      NULL,
+                                                      databaseSpecifier,
+                                                      databaseName
+                                                     )
                             );
     if (databaseNode != NULL)
     {
@@ -2976,33 +2999,18 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      Database_copySpecifier(&databaseNode->databaseSpecifier,databaseSpecifier);
+      Database_copySpecifier(&databaseNode->databaseSpecifier,
+                             databaseSpecifier,
+                             databaseName
+                            );
       databaseNode->openCount               = 1;
       #ifdef DATABASE_LOCK_PER_INSTANCE
         if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
         {
           Database_doneSpecifier(&databaseNode->databaseSpecifier);
           LIST_DELETE_NODE(databaseNode);
-          switch (databaseType)
-          {
-            case DATABASE_TYPE_SQLITE3:
-              sqlite3_close(databaseHandle->sqlite.handle);
-              break;
-            case DATABASE_TYPE_MARIADB:
-              #if defined(HAVE_MARIADB)
-                mariadb_close(databaseHandle->mysql.handle);
-              #else /* HAVE_MARIADB */
-              #endif /* HAVE_MARIADB */
-              break;
-            case DATABASE_TYPE_POSTGRESQL:
-              #if defined(HAVE_POSTGRESQL)
-                PQfinish(databaseHandle->postgresql.handle);
-              #else /* HAVE_POSTGRESQL */
-              #endif /* HAVE_POSTGRESQL */
-              break;
-          }
           sem_destroy(&databaseHandle->wakeUp);
-          return ERRORX_(DATABASE,0,"init locking");
+          return ERRORX_(DATABASE,0,"init locking attributes");
         }
         pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
         if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
@@ -3010,18 +3018,6 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           pthread_mutexattr_destroy(&databaseNode->lockAttribute);
           Database_doneSpecifier(&databaseNode->databaseSpecifier);
           LIST_DELETE_NODE(databaseNode);
-          switch (databaseType)
-          {
-            case DATABASE_TYPE_SQLITE3:
-              sqlite3_close(databaseHandle->sqlite.handle);
-              break;
-            case DATABASE_TYPE_MARIADB:
-              #if defined(HAVE_MARIADB)
-                mariadb_close(databaseHandle->mysql.handle);
-              #else /* HAVE_MARIADB */
-              #endif /* HAVE_MARIADB */
-              break;
-          }
           sem_destroy(&databaseHandle->wakeUp);
           return ERRORX_(DATABASE,0,"init locking");
         }
@@ -3041,9 +3037,11 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
       pthread_cond_init(&databaseNode->transactionTrigger,NULL);
 
       List_init(&databaseNode->busyHandlerList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+// TODO: return value
       Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
       List_init(&databaseNode->progressHandlerList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+// TODO: return value
       Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
       #ifdef DATABASE_DEBUG_LOCK
@@ -3082,75 +3080,67 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        ConstString fileName;
-        String      sqliteName;
-        int         sqliteMode;
-        int         sqliteResult;
+        const char *fileName;
+        String     sqliteName;
+        int        sqliteMode;
+        int        sqliteResult;
 
-        // get filename
-        if (!String_isEmpty(databaseName))
+        // get file name
+        fileName = (databaseName != NULL)
+                     ? databaseName
+                     : String_cString(databaseSpecifier->sqlite.fileName);
+
+        // create directory if needed
+        directoryName = File_getDirectoryNameCString(String_new(),fileName);
+        if (   !String_isEmpty(directoryName)
+            && !File_isDirectory(directoryName)
+           )
         {
-          fileName = databaseName;
+          error = File_makeDirectory(directoryName,
+                                     FILE_DEFAULT_USER_ID,
+                                     FILE_DEFAULT_GROUP_ID,
+                                     FILE_DEFAULT_PERMISSION,
+                                     FALSE
+                                    );
+          if (error != ERROR_NONE)
+          {
+            File_deleteFileName(directoryName);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+        }
+        String_delete(directoryName);
+
+        // delete database on force
+        if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
+        {
+          // delete existing file
+          (void)File_deleteCString(fileName,FALSE);
+        }
+
+        // check if exists
+        if (File_existsCString(fileName))
+        {
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_CREATE)
+          {
+            return ERROR_DATABASE_EXISTS;
+          }
         }
         else
         {
-          fileName = databaseSpecifier->sqlite.fileName;
-        }
-
-        if (!String_isEmpty(fileName))
-        {
-          // create directory if needed
-          directoryName = File_getDirectoryName(String_new(),fileName);
-          if (   !String_isEmpty(directoryName)
-              && !File_isDirectory(directoryName)
+          if (   ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_READ)
+              || ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_READWRITE)
              )
           {
-            error = File_makeDirectory(directoryName,
-                                       FILE_DEFAULT_USER_ID,
-                                       FILE_DEFAULT_GROUP_ID,
-                                       FILE_DEFAULT_PERMISSION,
-                                       FALSE
-                                      );
-            if (error != ERROR_NONE)
-            {
-              File_deleteFileName(directoryName);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-          }
-          String_delete(directoryName);
-
-          // delete database on force
-          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
-          {
-            // delete existing file
-            (void)File_delete(fileName,FALSE);
-          }
-
-          // check if exists
-          if (File_exists(fileName))
-          {
-            if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_CREATE)
-            {
-              return ERROR_DATABASE_EXISTS;
-            }
-          }
-          else
-          {
-            if (   ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_READ)
-                || ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_READWRITE)
-               )
-            {
-              return ERROR_DATABASE_NOT_FOUND;
-            }
+            return ERROR_DATABASE_NOT_FOUND;
           }
         }
 
         // get sqlite database name
-        if (!String_isEmpty(fileName))
+        if (databaseName != NULL)
         {
           // open file
-          sqliteName = String_format(String_new(),"file:%S",fileName);
+          sqliteName = String_format(String_new(),"file:%s",databaseName);
         }
         else
         {
@@ -3226,140 +3216,128 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           ulong      serverVersion;
           char       sqlString[256];
 
-          SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
 // TODO: create
-            // open database
-            databaseHandle->mysql.handle = mysql_init(NULL);
-            if (databaseHandle->mysql.handle == NULL)
-            {
-              error = ERROR_DATABASE;
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-            optionValue.b = TRUE;
-            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
-            optionValue.u = MARIADB_TIMEOUT;
-            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+          // open database
+          databaseHandle->mysql.handle = mysql_init(NULL);
+          if (databaseHandle->mysql.handle == NULL)
+          {
+            error = ERROR_DATABASE;
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+          optionValue.b = TRUE;
+          mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
+          optionValue.u = MARIADB_TIMEOUT;
+          mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+          mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
-            // connect
-            deployPassword = Password_deploy(&databaseSpecifier->mysql.password);
-            if (mysql_real_connect(databaseHandle->mysql.handle,
-                                   String_cString(databaseSpecifier->mysql.serverName),
-                                   String_cString(databaseSpecifier->mysql.userName),
-                                   deployPassword,
-                                   NULL,  // databaseName
-                                   0,  // port
-                                   NULL, // unix socket
-                                   0  // client flag
-                                  ) == NULL
-               )
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s",
-                              mysql_error(databaseHandle->mysql.handle)
-                             );
-              Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
-              mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
+          // connect
+          deployPassword = Password_deploy(&databaseSpecifier->mysql.password);
+          if (mysql_real_connect(databaseHandle->mysql.handle,
+                                 String_cString(databaseSpecifier->mysql.serverName),
+                                 String_cString(databaseSpecifier->mysql.userName),
+                                 deployPassword,
+                                 NULL,  // databaseName
+                                 0,  // port
+                                 NULL, // unix socket
+                                 0  // client flag
+                                ) == NULL
+             )
+          {
+            error = ERRORX_(DATABASE,
+                            mysql_errno(databaseHandle->mysql.handle),
+                            "%s",
+                            mysql_error(databaseHandle->mysql.handle)
+                           );
             Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
+            mysql_close(databaseHandle->mysql.handle);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+          Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
 
-            // check min. version
-            serverVersion = mysql_get_server_version(databaseHandle->mysql.handle);
-            if (serverVersion < MARIADB_MIN_SERVER_VERSION)
+          // check min. version
+          serverVersion = mysql_get_server_version(databaseHandle->mysql.handle);
+          if (serverVersion < MARIADB_MIN_SERVER_VERSION)
+          {
+            error = ERRORX_(DATABASE_VERSION,0,"available %lu, required %lu",
+                            serverVersion,
+                            MARIADB_MIN_SERVER_VERSION
+                           );
+            mysql_close(databaseHandle->mysql.handle);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+
+          // enable UTF8
+          error = mysqlSetCharacterSet(databaseHandle->mysql.handle,
+                                       "utf8mb4"
+                                      );
+          if (error != ERROR_NONE)
+          {
+            mysql_close(databaseHandle->mysql.handle);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+
+          // other options
+          error = mysqlExecute(databaseHandle->mysql.handle,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "SET innodb_lock_wait_timeout=%u",
+                                            MARIADB_TIMEOUT
+                                           )
+                              );
+          if (error != ERROR_NONE)
+          {
+            mysql_close(databaseHandle->mysql.handle);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+
+          // create database if requested
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
+          {
+            uint i;
+
+            /* try to create with character set uft8mb4 (4-byte UTF8),
+               then utf8 as a fallback for older MariaDB versions.
+            */
+            i = 0;
+            do
             {
-              error = ERRORX_(DATABASE_VERSION,0,"available %lu, required %lu",
-                              serverVersion,
-                              MARIADB_MIN_SERVER_VERSION
-                             );
-              mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
+              stringFormat(sqlString,sizeof(sqlString),
+                           "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
+                           (databaseName != NULL)
+                             ? databaseName
+                             : String_cString(databaseSpecifier->mysql.databaseName),
+                           MARIADB_CHARACTER_SETS[i],
+                           MARIADB_CHARACTER_SETS[i]
+                          );
+              error = mysqlExecute(databaseHandle->mysql.handle,
+                                   sqlString
+                                  );
+              i++;
             }
-
-            // enable UTF8
-            error = mysqlSetCharacterSet(databaseHandle->mysql.handle,
-                                         "utf8mb4"
-                                        );
+            while (   (error != ERROR_NONE)
+                   && (i < SIZE_OF_ARRAY(MARIADB_CHARACTER_SETS))
+                  );
             if (error != ERROR_NONE)
             {
               mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
+          }
 
-            // other options
-            error = mysqlExecute(databaseHandle->mysql.handle,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "SET innodb_lock_wait_timeout=%u",
-                                              MARIADB_TIMEOUT
-                                             )
-                                );
-            if (error != ERROR_NONE)
-            {
-              mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-
-            // create database if requested
-            if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
-            {
-              uint i;
-
-              /* try to create with character set uft8mb4 (4-byte UTF8),
-                 then utf8 as a fallback for older MariaDB versions.
-              */
-              i = 0;
-              do
-              {
-                stringFormat(sqlString,sizeof(sqlString),
-                             "CREATE DATABASE IF NOT EXISTS %s \
-                              CHARACTER SET '%s' \
-                              COLLATE '%s_bin' \
-                             ",
-                             !String_isEmpty(databaseName)
-                               ? String_cString(databaseName)
-                               : String_cString(databaseSpecifier->mysql.databaseName),
-                             MARIADB_CHARACTER_SETS[i],
-                             MARIADB_CHARACTER_SETS[i]
-                            );
-                error = mysqlExecute(databaseHandle->mysql.handle,
-                                     sqlString
-                                    );
-                i++;
-              }
-              while (   (error != ERROR_NONE)
-                     && (i < SIZE_OF_ARRAY(MARIADB_CHARACTER_SETS))
-                    );
-              if (error != ERROR_NONE)
-              {
-                mysql_close(databaseHandle->mysql.handle);
-                Semaphore_unlock(&databaseList.lock);
-                sem_destroy(&databaseHandle->wakeUp);
-                return error;
-              }
-            }
-
-            // select database
+          // select database
+          if (!stringIsEmpty(databaseName))
+          {
             error = mysqlSelectDatabase(databaseHandle->mysql.handle,
-                                        !String_isEmpty(databaseName)
-                                          ? String_cString(databaseName)
-                                          : String_cString(databaseSpecifier->mysql.databaseName)
+                                        databaseName
                                        );
             if (error != ERROR_NONE)
             {
               mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
@@ -3381,55 +3359,58 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                          CALLBACK_(NULL,NULL)
                         );
 
-          SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          // create database (if it does not exists)
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
           {
-            // create database (if it does not exists)
             error = postgresqlCreateDatabase(String_cString(databaseSpecifier->postgresql.serverName),
                                              String_cString(databaseSpecifier->postgresql.userName),
                                              &databaseSpecifier->postgresql.password,
-                                             String_cString(databaseSpecifier->postgresql.databaseName)
+                                             (databaseName != NULL)
+                                               ? databaseName
+                                               : String_cString(databaseSpecifier->postgresql.databaseName),
+                                             POSTGRESQL_CHARACTER_SET,
+                                             POSTGRESQL_COLLATE
                                             );
             if (error != ERROR_NONE)
             {
-              Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
+          }
 
-            // connect
-            error = postgresqlConnect(&databaseHandle->postgresql.handle,
-                                      String_cString(databaseSpecifier->postgresql.serverName),
-                                      String_cString(databaseSpecifier->postgresql.userName),
-                                      &databaseSpecifier->postgresql.password,
-                                      String_cString(databaseSpecifier->postgresql.databaseName)
-                                     );
-            if (error != ERROR_NONE)
-            {
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
+          // connect
+          error = postgresqlConnect(&databaseHandle->postgresql.handle,
+                                    String_cString(databaseSpecifier->postgresql.serverName),
+                                    String_cString(databaseSpecifier->postgresql.userName),
+                                    &databaseSpecifier->postgresql.password,
+                                    (databaseName != NULL)
+                                      ? databaseName
+                                      : String_cString(databaseSpecifier->postgresql.databaseName)
+                                   );
+          if (error != ERROR_NONE)
+          {
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
 
-            // handle server messages
-            PQsetNoticeReceiver(databaseHandle->postgresql.handle,
-                                postgresqlReceiveMessageHandler,NULL
-                               );
-
-            // check for protocol version 3.0 (support PQexecParams())
-            protocolVersion = PQprotocolVersion(databaseHandle->postgresql.handle);
-            if (protocolVersion < MIN_POSTGRESQL_PROTOCOL_VERSION)
-            {
-              error = ERRORX_(DATABASE,
-                              0,
-                              "detected PostgreSQL protocol version %d, required %d",
-                              protocolVersion,
-                              MIN_POSTGRESQL_PROTOCOL_VERSION
+          // handle server messages
+          PQsetNoticeReceiver(databaseHandle->postgresql.handle,
+                              postgresqlReceiveMessageHandler,NULL
                              );
-              PQfinish(databaseHandle->postgresql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
+
+          // check for protocol version 3.0 (support PQexecParams())
+          protocolVersion = PQprotocolVersion(databaseHandle->postgresql.handle);
+          if (protocolVersion < MIN_POSTGRESQL_PROTOCOL_VERSION)
+          {
+            error = ERRORX_(DATABASE,
+                            0,
+                            "detected PostgreSQL protocol version %d, required %d",
+                            protocolVersion,
+                            MIN_POSTGRESQL_PROTOCOL_VERSION
+                           );
+            PQfinish(databaseHandle->postgresql.handle);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
           }
         }
       #else /* HAVE_POSTGRESQL */
@@ -3660,10 +3641,10 @@ mysql_options(databaseHandle->mysql.handle,
 #ifdef NDEBUG
   LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
 #else /* not NDEBUG */
-  LOCAL void closeDatabase(const char     *__fileName__,
-                           ulong          __lineNb__,
-                           DatabaseHandle *databaseHandle
-                          )
+  LOCAL void __closeDatabase(const char     *__fileName__,
+                             ulong          __lineNb__,
+                             DatabaseHandle *databaseHandle
+                            )
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
@@ -5319,7 +5300,6 @@ LOCAL void formatParameters(String               sqlString,
               }
             #endif /* not NDEBUG */
 
-    //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
             error = mysqlPrepareStatement(databaseStatementHandle->mysql.statementHandle,
                                           sqlString
                                          );
@@ -5859,7 +5839,6 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
         // finalize statement
-//fprintf(stderr,"%s:%d: finalyize %p\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.result);
         if (databaseStatementHandle->postgresql.result != NULL)
         {
           PQclear(databaseStatementHandle->postgresql.result);
@@ -6541,7 +6520,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                     statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
                     statement.parameterFormats[i] = 1;
                   #else
-                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,NULL);
+                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
                     statement.parameterValues[i]  = statement.bind[i].data;
                     statement.parameterLengths[i] = stringLength(statement.bind[i].data);
                     statement.parameterFormats[i] = 0;
@@ -6620,10 +6599,10 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
     }
     else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
     {
-  //fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
-  //Database_debugPrintLockInfo(databaseHandle);
+//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
+//Database_debugPrintLockInfo(databaseHandle);
       // execute registered busy handlers
-  //TODO: lock list?
+//TODO: lock list?
       LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
@@ -7064,8 +7043,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,NULL);
-fprintf(stderr,"%s:%d: date=%s\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.bind[i].data);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -7491,7 +7469,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,NULL);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -8925,7 +8903,8 @@ bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
 }
 
 void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
-                            const DatabaseSpecifier *fromDatabaseSpecifier
+                            const DatabaseSpecifier *fromDatabaseSpecifier,
+                            const char              *fromDatabaseName
                            )
 {
   assert(databaseSpecifier != NULL);
@@ -8935,23 +8914,26 @@ void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
   switch (fromDatabaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
-      databaseSpecifier->sqlite.fileName = String_duplicate(fromDatabaseSpecifier->sqlite.fileName);
+      if (fromDatabaseName == NULL) fromDatabaseName = String_cString(fromDatabaseSpecifier->sqlite.fileName);
+      databaseSpecifier->sqlite.fileName = String_newCString(fromDatabaseName);
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
+        if (fromDatabaseName == NULL) fromDatabaseName = String_cString(fromDatabaseSpecifier->mysql.databaseName);
         databaseSpecifier->mysql.serverName   = String_duplicate(fromDatabaseSpecifier->mysql.serverName);
         databaseSpecifier->mysql.userName     = String_duplicate(fromDatabaseSpecifier->mysql.userName);
         Password_initDuplicate(&databaseSpecifier->mysql.password,&fromDatabaseSpecifier->mysql.password);
-        databaseSpecifier->mysql.databaseName = String_duplicate(fromDatabaseSpecifier->mysql.databaseName);
+        databaseSpecifier->mysql.databaseName = String_newCString(fromDatabaseName);
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
+        if (fromDatabaseName == NULL) fromDatabaseName = String_cString(fromDatabaseSpecifier->postgresql.databaseName);
         databaseSpecifier->postgresql.serverName   = String_duplicate(fromDatabaseSpecifier->postgresql.serverName);
         databaseSpecifier->postgresql.userName     = String_duplicate(fromDatabaseSpecifier->postgresql.userName);
         Password_initDuplicate(&databaseSpecifier->postgresql.password,&fromDatabaseSpecifier->postgresql.password);
-        databaseSpecifier->postgresql.databaseName = String_duplicate(fromDatabaseSpecifier->postgresql.databaseName);
+        databaseSpecifier->postgresql.databaseName = String_newCString(fromDatabaseName);
       #else /* HAVE_POSTGRESQL */
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -9017,7 +8999,7 @@ DatabaseSpecifier *Database_duplicateSpecifier(const DatabaseSpecifier *database
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  Database_copySpecifier(newDatabaseSpecifier,databaseSpecifier);
+  Database_copySpecifier(newDatabaseSpecifier,databaseSpecifier,NULL);
 
   return newDatabaseSpecifier;
 }
@@ -9038,19 +9020,11 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
   DatabaseHandle databaseHandle;
   bool           existsFlag;
 
-  #ifdef NDEBUG
-    error = openDatabase(&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPEN_MODE_READ,NO_WAIT);
-  #else /* not NDEBUG */
-    error = openDatabase(__FILE__,__LINE__,&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPEN_MODE_READ,NO_WAIT);
-  #endif /* NDEBUG */
+  error = openDatabase(&databaseHandle,databaseSpecifier,String_cString(databaseName),DATABASE_OPEN_MODE_READ,NO_WAIT);
   if (error == ERROR_NONE)
   {
+    closeDatabase(&databaseHandle);
     existsFlag = TRUE;
-    #ifdef NDEBUG
-      closeDatabase(&databaseHandle);
-    #else /* not NDEBUG */
-      closeDatabase(__FILE__,__LINE__,&databaseHandle);
-    #endif /* NDEBUG */
   }
   else
   {
@@ -9060,30 +9034,53 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
   return existsFlag;
 }
 
-bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const DatabaseSpecifier *databaseSpecifier1)
+bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0,
+                              const char              *databaseName0,
+                              const DatabaseSpecifier *databaseSpecifier1,
+                              const char              *databaseName1
+                             )
 {
   assert(databaseSpecifier0 != NULL);
   assert(databaseSpecifier0 != NULL);
 
-  return     (databaseSpecifier0->type == databaseSpecifier1->type)
-          && (   (   (databaseSpecifier0->type == DATABASE_TYPE_SQLITE3)
-                  && String_equals(databaseSpecifier0->sqlite.fileName,databaseSpecifier1->sqlite.fileName)
-                 )
-             );
-
-  #if defined(HAVE_MARIADB)
-    return     (databaseSpecifier0->type == DATABASE_TYPE_MARIADB)
-            && String_equals(databaseSpecifier0->mysql.serverName,databaseSpecifier1->mysql.serverName)
-            && String_equals(databaseSpecifier0->mysql.userName,databaseSpecifier1->mysql.userName)
-            && String_equals(databaseSpecifier0->mysql.databaseName,databaseSpecifier1->mysql.databaseName);
-  #else /* HAVE_MARIADB */
-  #endif /* HAVE_MARIADB */
+  if (databaseSpecifier0->type == databaseSpecifier1->type)
+  {
+    switch (databaseSpecifier0->type)
+    {
+      case DATABASE_TYPE_SQLITE3:
+        if (databaseName0 == NULL) databaseName0 = String_cString(databaseSpecifier0->sqlite.fileName);
+        if (databaseName1 == NULL) databaseName1 = String_cString(databaseSpecifier1->sqlite.fileName);
+        return stringEquals(databaseName0,databaseName1);
+        break;
+      case DATABASE_TYPE_MARIADB:
+        #if defined(HAVE_MARIADB)
+          if (databaseName0 == NULL) databaseName0 = String_cString(databaseSpecifier0->mysql.databaseName);
+          if (databaseName1 == NULL) databaseName1 = String_cString(databaseSpecifier1->mysql.databaseName);
+          return     String_equals(databaseSpecifier0->mysql.serverName,  databaseSpecifier1->mysql.serverName  )
+                  && String_equals(databaseSpecifier0->mysql.userName,    databaseSpecifier1->mysql.userName    )
+                  && stringEquals(databaseName0,databaseName1);
+        #else /* HAVE_MARIADB */
+        #endif /* HAVE_MARIADB */
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        #if defined(HAVE_POSTGRESQL)
+          if (databaseName0 == NULL) databaseName0 = String_cString(databaseSpecifier0->postgresql.databaseName);
+          if (databaseName1 == NULL) databaseName1 = String_cString(databaseSpecifier1->postgresql.databaseName);
+          return     String_equals(databaseSpecifier0->postgresql.serverName,  databaseSpecifier1->postgresql.serverName  )
+                  && String_equals(databaseSpecifier0->postgresql.userName,    databaseSpecifier1->postgresql.userName    )
+                  && stringEquals(databaseName0,databaseName1);
+        #else /* HAVE_POSTGRESQL */
+        #endif /* HAVE_POSTGRESQL */
+        break;
+    }
+  }
 
   return FALSE;
 }
 
 String Database_getPrintableName(String                  string,
-                                 const DatabaseSpecifier *databaseSpecifier
+                                 const DatabaseSpecifier *databaseSpecifier,
+                                 const char              *databaseName
                                 )
 {
   assert(string != NULL);
@@ -9092,18 +9089,20 @@ String Database_getPrintableName(String                  string,
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
+      if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->sqlite.fileName);
       String_format(string,
-                    "sqlite3:%S",
-                    databaseSpecifier->sqlite.fileName
+                    "sqlite3:%s",
+                    databaseName
                    );
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
+        if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mysql.databaseName);
         String_format(string,
-                      "mariadb:%S:%S:*:%S",
+                      "mariadb:%S:%S:*:%s",
                       databaseSpecifier->mysql.serverName,
                       databaseSpecifier->mysql.userName,
-                      databaseSpecifier->mysql.databaseName
+                      databaseName
                      );
       #else /* not HAVE_MARIADB */
         String_clear(string);
@@ -9111,11 +9110,12 @@ String Database_getPrintableName(String                  string,
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
+        if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->postgresql.databaseName);
         String_format(string,
-                      "postgresql:%S:%S:*:%S",
+                      "postgresql:%S:%S:*:%s",
                       databaseSpecifier->postgresql.serverName,
                       databaseSpecifier->postgresql.userName,
-                      databaseSpecifier->postgresql.databaseName
+                      databaseName
                      );
       #else /* not HAVE_POSTGRESQL */
         String_clear(string);
@@ -9127,7 +9127,8 @@ String Database_getPrintableName(String                  string,
 }
 
 Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
-                       ConstString       newDatabaseName
+                       const char        *databaseName,
+                       const char        *newDatabaseName
                       )
 {
   Errors error;
@@ -9141,11 +9142,12 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
-      error = File_rename(databaseSpecifier->sqlite.fileName,
-                          newDatabaseName,
-                          NULL
-                         );
-      String_set(databaseSpecifier->sqlite.fileName,newDatabaseName);
+      if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->sqlite.fileName);
+      error = File_renameCString(databaseName,
+                                 newDatabaseName,
+                                 NULL
+                                );
+      String_setCString(databaseSpecifier->sqlite.fileName,newDatabaseName);
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -9156,8 +9158,8 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           StringListIterator iterator;
           String             name;
 
-          // open database
-          error = Database_open(&databaseHandle,databaseSpecifier,DATABASE_OPEN_MODE_READ,NO_WAIT);
+          // open database with no selected database
+          error = openDatabase(&databaseHandle,databaseSpecifier,"",DATABASE_OPEN_MODE_READ,NO_WAIT);
           if (error != ERROR_NONE)
           {
             return error;
@@ -9171,11 +9173,8 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 
             error = mysqlExecute(databaseHandle.mysql.handle,
                                  stringFormat(sqlString,sizeof(sqlString),
-                                              "CREATE DATABASE %s \
-                                               CHARACTER SET '%s' \
-                                               COLLATE '%s_bin' \
-                                              ",
-                                              String_cString(newDatabaseName),
+                                              "CREATE DATABASE %s CHARACTER SET '%s' COLLATE '%s_bin'",
+                                              newDatabaseName,
                                               MARIADB_CHARACTER_SETS[i],
                                               MARIADB_CHARACTER_SETS[i]
                                              )
@@ -9187,7 +9186,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                 );
           if (error != ERROR_NONE)
           {
-            Database_close(&databaseHandle);
+            closeDatabase(&databaseHandle);
             return error;
           }
 
@@ -9210,18 +9209,18 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           }
           if (error != ERROR_NONE)
           {
-            Database_close(&databaseHandle);
+            closeDatabase(&databaseHandle);
             StringList_done(&tableNameList);
             return error;
           }
           StringList_done(&tableNameList);
 
           // close database
-          Database_close(&databaseHandle);
+          closeDatabase(&databaseHandle);
 
           // free resources
 
-          String_set(databaseSpecifier->mysql.databaseName,newDatabaseName);
+          String_setCString(databaseSpecifier->mysql.databaseName,newDatabaseName);
         }
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -9231,85 +9230,42 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 // TODO:
       #if defined(HAVE_POSTGRESQL)
         {
-          DatabaseHandle     databaseHandle;
-          uint               i;
-          StringList         tableNameList;
-          StringListIterator iterator;
-          String             name;
+          DatabaseHandle databaseHandle;
+          char           sqlString[256];
 
-          // open database
-          error = Database_open(&databaseHandle,databaseSpecifier,DATABASE_OPEN_MODE_READ,NO_WAIT);
+          // open database with no selected database
+          error = openDatabase(&databaseHandle,databaseSpecifier,"",DATABASE_OPEN_MODE_READ,NO_WAIT);
           if (error != ERROR_NONE)
           {
             return error;
           }
 
-          // create new database
-          i = 0;
-          do
-          {
-            char sqlString[256];
-
-            stringFormat(sqlString,sizeof(sqlString),
-                         "CREATE DATABASE %s \
-                          CHARACTER SET '%s' \
-                          COLLATE '%s_bin' \
-                         ",
-                         String_cString(newDatabaseName),
-                         MARIADB_CHARACTER_SETS[i],
-                         MARIADB_CHARACTER_SETS[i]
-                        );
-            error = postgresqlExecute(databaseHandle.postgresql.handle,
-                                      sqlString,
-                                      NULL,  // parameterTypes,
-                                      NULL,  // parameterValues,
-                                      NULL,  // parameterLengths,
-                                      NULL,  // parameterFormats,
-                                      0  // parameterCount
-                                     );
-
-            i++;
-          }
-          while (   (error != ERROR_NONE)
-                 && (i < SIZE_OF_ARRAY(MARIADB_CHARACTER_SETS))
-                );
+          // rename database
+          stringFormat(sqlString,sizeof(sqlString),
+                       "ALTER DATABASE %s RENAME TO %s",
+                       String_cString(databaseSpecifier->postgresql.databaseName),
+                       newDatabaseName
+                      );
+          error = postgresqlExecute(databaseHandle.postgresql.handle,
+                                    sqlString,
+                                    NULL,  // parameterTypes,
+                                    NULL,  // parameterValues,
+                                    NULL,  // parameterLengths,
+                                    NULL,  // parameterFormats,
+                                    0  // parameterCount
+                                   );
           if (error != ERROR_NONE)
           {
-            Database_close(&databaseHandle);
+            closeDatabase(&databaseHandle);
             return error;
           }
-
-          // rename tables
-          StringList_init(&tableNameList);
-          error = Database_getTableList(&tableNameList,&databaseHandle);
-          STRINGLIST_ITERATEX(&tableNameList,iterator,name,error == ERROR_NONE)
-          {
-            error = Database_execute(&databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     "RENAME TABLE ? TO ?.?",
-                                     DATABASE_PARAMETERS
-                                     (
-                                       DATABASE_PARAMETER_STRING(name),
-                                       DATABASE_PARAMETER_STRING(newDatabaseName),
-                                       DATABASE_PARAMETER_STRING(name),
-                                     )
-                                    );
-          }
-          if (error != ERROR_NONE)
-          {
-            Database_close(&databaseHandle);
-            StringList_done(&tableNameList);
-            return error;
-          }
-          StringList_done(&tableNameList);
 
           // close database
-          Database_close(&databaseHandle);
+          closeDatabase(&databaseHandle);
 
           // free resources
 
-          String_set(databaseSpecifier->postgresql.databaseName,newDatabaseName);
+          String_setCString(databaseSpecifier->postgresql.databaseName,newDatabaseName);
         }
       #else /* HAVE_POSTGRESQL */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -9406,7 +9362,9 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
                                          &databaseSpecifier->postgresql.password,
                                          (databaseName != NULL)
                                            ? databaseName
-                                           : String_cString(databaseSpecifier->postgresql.databaseName)
+                                           : String_cString(databaseSpecifier->postgresql.databaseName),
+                                         POSTGRESQL_CHARACTER_SET,
+                                         POSTGRESQL_COLLATE
                                         );
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -9471,6 +9429,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle          *databaseHandle,
                        const DatabaseSpecifier *databaseSpecifier,
+                       const char              *databaseName,
                        DatabaseOpenModes       openDatabaseMode,
                        long                    timeout
                       )
@@ -9479,6 +9438,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
                          ulong                   __lineNb__,
                          DatabaseHandle          *databaseHandle,
                          const DatabaseSpecifier *databaseSpecifier,
+                         const char              *databaseName,
                          DatabaseOpenModes       openDatabaseMode,
                          long                    timeout
                         )
@@ -9490,9 +9450,9 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
   assert(databaseSpecifier != NULL);
 
   #ifdef NDEBUG
-    error = openDatabase(databaseHandle,databaseSpecifier,NULL,openDatabaseMode,timeout);
+    error = openDatabase(databaseHandle,databaseSpecifier,databaseName,openDatabaseMode,timeout);
   #else /* not NDEBUG */
-    error = openDatabase(__fileName__,__lineNb__,databaseHandle,databaseSpecifier,NULL,openDatabaseMode,timeout);
+    error = __openDatabase(__fileName__,__lineNb__,databaseHandle,databaseSpecifier,databaseName,openDatabaseMode,timeout);
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
@@ -9607,11 +9567,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
     }
   #endif
 
-  #ifdef NDEBUG
-    closeDatabase(databaseHandle);
-  #else /* not NDEBUG */
-    closeDatabase(__fileName__,__lineNb__,databaseHandle);
-  #endif /* NDEBUG */
+  closeDatabase(databaseHandle);
 }
 
 void Database_addBusyHandler(DatabaseHandle              *databaseHandle,

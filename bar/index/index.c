@@ -68,11 +68,13 @@
 const char *DATABASE_SAVE_EXTENSIONS[] =
 {
   ".old%03d",
+  "_old%03d",
   "_old%03d"
 };
 const char *DATABASE_SAVE_PATTERNS[] =
 {
   ".*\\.old\\d\\d\\d$",
+  ".*\\_old\\d\\d\\d$",
   ".*\\_old\\d\\d\\d$"
 };
 
@@ -432,6 +434,7 @@ LOCAL void busyHandler(void *userData)
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
                              databaseSpecifier,
+                             NULL,  // databaseName
                              DATABASE_OPEN_MODE_FORCE_CREATE|DATABASE_OPEN_MODE_AUX,
                              DATABASE_TIMEOUT
                             );
@@ -439,6 +442,7 @@ LOCAL void busyHandler(void *userData)
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
                                databaseSpecifier,
+                               NULL,  // databaseName
                                DATABASE_OPEN_MODE_FORCE_CREATE|DATABASE_OPEN_MODE_AUX,
                                DATABASE_TIMEOUT
                               );
@@ -490,6 +494,7 @@ LOCAL void busyHandler(void *userData)
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
                              databaseSpecifier,
+                             NULL,  // databaseName
                              (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
                                ? DATABASE_OPEN_MODE_READWRITE
                                : DATABASE_OPEN_MODE_READ
@@ -500,6 +505,7 @@ LOCAL void busyHandler(void *userData)
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
                                databaseSpecifier,
+                               NULL,  // databaseName
                                (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
                                  ? DATABASE_OPEN_MODE_READWRITE
                                  : DATABASE_OPEN_MODE_READ
@@ -594,6 +600,7 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   // drop triggers (required for some databases before rename)
   error = Database_open(&databaseHandle,
                         databaseSpecifier,
+                        NULL,  // databaseName
                         DATABASE_OPEN_MODE_READWRITE,
                         NO_WAIT
                        );
@@ -610,7 +617,7 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   Database_close(&databaseHandle);
 
   // rename
-  Database_copySpecifier(&renameToDatabaseSpecifier,databaseSpecifier);
+  Database_copySpecifier(&renameToDatabaseSpecifier,databaseSpecifier,NULL);
   error = Database_rename(&renameToDatabaseSpecifier,newDatabaseName);
   if (error != ERROR_NONE)
   {
@@ -621,6 +628,7 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   // re-create triggers
   error = Database_open(&databaseHandle,
                         &renameToDatabaseSpecifier,
+                        NULL,  // databaseName
                         DATABASE_OPEN_MODE_READWRITE,
                         NO_WAIT
                        );
@@ -2549,7 +2557,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  printableDatabaseURI = Database_getPrintableName(String_new(),indexDatabaseSpecifier);
+  printableDatabaseURI = Database_getPrintableName(String_new(),indexDatabaseSpecifier,NULL);
 
   createFlag = FALSE;
 
@@ -2581,7 +2589,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
           while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
 
           // rename database
-          error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
+          error = Database_rename(indexDatabaseSpecifier,NULL,String_cString(saveDatabaseName));
           if (error != ERROR_NONE)
           {
             String_delete(printableDatabaseURI);
@@ -2635,7 +2643,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     {
       DatabaseSpecifier indexDatabaseSpecifierReference;
 
-      Database_copySpecifier(&indexDatabaseSpecifierReference,indexDatabaseSpecifier);
+      Database_copySpecifier(&indexDatabaseSpecifierReference,indexDatabaseSpecifier,NULL);
       switch (indexDatabaseSpecifier->type)
       {
         case DATABASE_TYPE_SQLITE3:
@@ -2713,7 +2721,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
         while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
 
         // rename database
-        error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
+        error = Database_rename(indexDatabaseSpecifier,NULL,String_cString(saveDatabaseName));
         if (error != ERROR_NONE)
         {
           String_delete(printableDatabaseURI);
