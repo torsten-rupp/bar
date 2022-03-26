@@ -1171,7 +1171,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
         {
           // re-open log for log-rotation
           nowTimestamp = Misc_getTimestamp();
-          if (nowTimestamp > (lastReopenTimestamp+30LL*US_PER_SECOND))
+          if (nowTimestamp > (lastReopenTimestamp+10LL*US_PER_MINUTE))
           {
             reopenLog();
             lastReopenTimestamp = nowTimestamp;
