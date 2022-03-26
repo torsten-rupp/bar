@@ -1043,9 +1043,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
   }
 
-  if (!Array_contains(&setOptions,&commandLineOption->variable.pointer,NULL,NULL))
+  if (!Array_contains(&setOptions,commandLineOption->variable.pointer,NULL,NULL))
   {
-    Array_append(&setOptions,&commandLineOption->variable.pointer);
+    Array_append(&setOptions,commandLineOption->variable.pointer);
   }
 
   return TRUE;
