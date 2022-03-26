@@ -148,7 +148,7 @@ LOCAL void doneAll(void);
 
 /***********************************************************************\
 * Name   : openLog
-* Purpose: open log file
+* Purpose: open global log file
 * Input  : -
 * Output : -
 * Return : -
@@ -169,7 +169,7 @@ LOCAL void openLog(void)
 
 /***********************************************************************\
 * Name   : closeLog
-* Purpose: close log file
+* Purpose: close global log file
 * Input  : -
 * Output : -
 * Return : -
@@ -1171,7 +1171,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
         {
           // re-open log for log-rotation
           nowTimestamp = Misc_getTimestamp();
-          if (nowTimestamp > (lastReopenTimestamp+30LL*US_PER_SECOND))
+          if (nowTimestamp > (lastReopenTimestamp+10LL*US_PER_MINUTE))
           {
             reopenLog();
             lastReopenTimestamp = nowTimestamp;
@@ -3170,6 +3170,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   JobOptions   jobOptions;
   Errors       error;
 
+  if (CmdOption_isSet(globalOptions.logFileName))
+  {
+    // open log file
+    openLog();
+  }
+
   // get include/excluded entries from file list
   if (!String_isEmpty(globalOptions.includeFileListFileName))
   {
@@ -3179,6 +3185,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
+      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3190,6 +3197,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
+      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3201,6 +3209,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
+      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3214,6 +3223,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
+      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3225,6 +3235,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
+      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3236,6 +3247,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
+      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3576,6 +3588,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       break;
   }
   Job_doneOptions(&jobOptions);
+
+  if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
 
   return error;
 }
