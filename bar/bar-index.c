@@ -551,7 +551,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
       #endif /* HAVE_POSTGRESQL */
       break;
   }
-  printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+  printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
   // open database
   printInfo("Open database '%s'...",String_cString(printableDataseURI));
@@ -561,6 +561,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   openMode |= DATABASE_OPEN_MODE_AUX;
   error = Database_open(databaseHandle,
                         &databaseSpecifier,
+                        NULL,  // databaseName
                         openMode,
                         WAIT_FOREVER
                        );
@@ -1130,12 +1131,13 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       #endif /* HAVE_POSTGRESQL */
       break;
   }
-  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
   printInfo("Import database '%s':\n",String_cString(printableDatabaseURI));
 
   error = Database_open(&oldDatabaseHandle,
                         &databaseSpecifier,
+                        NULL,  // databaseName
                         DATABASE_OPEN_MODE_READ,
                         WAIT_FOREVER
                        );

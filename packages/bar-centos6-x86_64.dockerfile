@@ -30,7 +30,7 @@ RUN yum -y install \
   initscripts \
   lua \
   m4 \
-  mysql-client \
+  mysql \
   openssl \
   patch \
   pkg-config \

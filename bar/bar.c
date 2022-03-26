@@ -3585,7 +3585,6 @@ LOCAL Errors runDebug(void)
 {
   AutoFreeList      autoFreeList;
   DatabaseSpecifier databaseSpecifier;
-  bool              validURIPrefix;
   String            printableDatabaseURI;
   IndexHandle       *indexHandle;
   uint              deletedStorageCount;
@@ -3609,13 +3608,12 @@ LOCAL Errors runDebug(void)
     return ERROR_DATABASE;
   }
 
-  Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
-  AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
-  if (!validURIPrefix)
+  if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
   {
     printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
   }
-  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+  AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
+  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
   AUTOFREE_ADD(&autoFreeList,printableDatabaseURI,{ String_delete(printableDatabaseURI); });
 
   error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));

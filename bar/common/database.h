@@ -1128,14 +1128,15 @@ bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
 * Purpose: copy database specifier
 * Input  : databaseSpecifier     - database specifier variable
 *          fromDatabaseSpecifier - from database specifier variable
-*          newDatabaseName       - new database name (can be NULL)
+*          fromDatabaseName      - from database name or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
-                            const DatabaseSpecifier *fromDatabaseSpecifier
+                            const DatabaseSpecifier *fromDatabaseSpecifier,
+                            const char              *fromDatabaseName
                            );
 
 /***********************************************************************\
@@ -1195,12 +1196,17 @@ void Database_deleteSpecifier(DatabaseSpecifier *databaseSpecifier);
 * Name   : Database_equalSpecifiers
 * Purpose: compare database specifiers if equals
 * Input  : databaseSpecifier0,databaseSpecifier1 - database specifiers
+*          databaseName0,databaseName1           - database name or NULL
 * Output : -
 * Return : TRUE iff equals (except passwords)
 * Notes  : -
 \***********************************************************************/
 
-bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const DatabaseSpecifier *databaseSpecifier1);
+bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0,
+                              const char              *databaseName0,
+                              const DatabaseSpecifier *databaseSpecifier1,
+                              const char              *databaseName1
+                             );
 
 /***********************************************************************\
 * Name   : Database_getPrintableName
@@ -1213,7 +1219,8 @@ bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const
 \***********************************************************************/
 
 String Database_getPrintableName(String                  string,
-                                 const DatabaseSpecifier *databaseSpecifier
+                                 const DatabaseSpecifier *databaseSpecifier,
+                                 const char              *databaseName
                                 );
 
 /***********************************************************************\
@@ -1235,6 +1242,8 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
 * Name   : Database_rename
 * Purpose: rename database
 * Input  : databaseSpecifier - database specifier
+*          databaseName      - database name or NULL for name from
+*                              database specifier
 *          newDatabaseName   - new database name
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1242,7 +1251,8 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
 \***********************************************************************/
 
 Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
-                       ConstString       newDatabaseName
+                       const char        *databaseName,
+                       const char        *newDatabaseName
                       );
 
 //Database_delete(indexDatabaseSpecifier,databaseName);
@@ -1251,7 +1261,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 * Name   : Database_create
 * Purpose: create database
 * Input  : databaseSpecifier - database specifier
-*          databaseName      - database name or NULL for naem from
+*          databaseName      - database name or NULL for name from
 *                              database specifier
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1266,7 +1276,7 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
 * Name   : Database_drop
 * Purpose: drop database
 * Input  : databaseSpecifier - database specifier
-*          databaseName      - database name or NULL for naem from
+*          databaseName      - database name or NULL for name from
 *                              database specifier
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1282,6 +1292,8 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
 * Purpose: open database
 * Input  : databaseHandle    - database handle variable
 *          databaseSpecifier - database specifier
+*          databaseName      - database name or NULL for name from
+*                              database specifier
 *          databaseOpenMode  - open mode; see DatabaseOpenModes
 *          timeout           - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
@@ -1292,6 +1304,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle          *databaseHandle,
                        const DatabaseSpecifier *databaseSpecifier,
+                       const char              *databaseName,
                        DatabaseOpenModes       databaseOpenMode,
                        long                    timeout
                       );
@@ -1300,6 +1313,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
                          ulong                   __lineNb__,
                          DatabaseHandle          *databaseHandle,
                          const DatabaseSpecifier *databaseSpecifier,
+                         const char              *databaseName,
                          DatabaseOpenModes       databaseOpenMode,
                          long                    timeout
                         );
