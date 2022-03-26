@@ -5262,6 +5262,9 @@ Dprintf.dprintf("");
           {
             treeItem.removeAll();
             updateStorageTreeTableThread.updateTreeItem(treeItem);
+          }
+          if (!treeItem.isDisposed())
+          {
             treeItem.setExpanded(true);
           }
         }

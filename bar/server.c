@@ -21140,7 +21140,7 @@ Errors Server_socket(void)
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR %u.%u%s server%s on '%s' with %u threads",
+             "Started BAR %u.%u%s server%s on '%s' with %u worker threads",
              VERSION_MAJOR,
              VERSION_MINOR,
              VERSION_PATCH,
@@ -21148,7 +21148,7 @@ Errors Server_socket(void)
              String_cString(hostName),
              (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
             );
-  printInfo(1,"Started BAR %u.%u%s server%s on '%s' with %u threads\n",
+  printInfo(1,"Started BAR %u.%u%s server%s on '%s' with %u worker threads\n",
             VERSION_MAJOR,
             VERSION_MINOR,
             VERSION_PATCH,
@@ -21190,14 +21190,13 @@ Errors Server_socket(void)
   if (!stringIsEmpty(globalOptions.indexDatabaseURI))
   {
     DatabaseSpecifier databaseSpecifier;
-    bool              validURIPrefix;
     String            printableDatabaseURI;
 
     if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
     {
       printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
     }
-    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
@@ -22030,7 +22029,7 @@ Errors Server_batch(int inputDescriptor,
     {
       printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
     }
-    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
