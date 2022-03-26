@@ -895,6 +895,7 @@ TEST_FILES_CLEAN = \
   intermediate/*.bar \
   intermediate/*.bar_destroyed \
   intermediate/*.bid \
+  intermediate/*.log \
   intermediate/new \
   intermediate/*.image \
   intermediate/aux0 \
@@ -2173,15 +2174,15 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=stop --no-stop-on-error --no-fragments-check $(LOG))
 	$(RMF) restore/data/readonly.dat restore/data/file400.dat restore/data/readonly512k.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=overwrite $(LOG))
-	test -f restore/data/zero.dat;
+	test -f restore/data/zero.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar -# data/zero128.dat -# data/large128M.dat --destination restore --restore-entry-mode=rename $(LOG))
-	test -f restore/data/zero128-0.dat;
-	test -f restore/data/large128M-0.dat;
+	test -f restore/data/zero128-0.dat
+	test -f restore/data/large128M-0.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar -# data/zero128.dat -# data/large128M.dat --destination restore --restore-entry-mode=rename $(LOG))
-	test -f restore/data/zero128-0.dat;
-	test -f restore/data/zero128-1.dat;
-	test -f restore/data/large128M-0.dat;
-	test -f restore/data/large128M-1.dat;
+	test -f restore/data/zero128-0.dat
+	test -f restore/data/zero128-1.dat
+	test -f restore/data/large128M-0.dat
+	test -f restore/data/large128M-1.dat
 	#
 	$(call functionTestCheckExitcode,0,0,$(ECHO) intermediate/test*.bar | $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l --storage-list-stdin $(LOG))
 	$(ECHO) 'intermediate/test*.bar' > intermediate/storage.list
@@ -2283,9 +2284,9 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --overwrite-files=yes $(LOG))
 	@#
 	# templates
-	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar; \
-        $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test-%Y-%m-%d-%H-%M-%S-%#.bar $(TEST_FILES) --overwrite-archive-files $(LOG)); \
-        test -f intermediate/test-????-??-??-??-??-??-#.bar;
+	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test-%Y-%m-%d-%H-%M-%S-%#.bar $(TEST_FILES) --overwrite-archive-files $(LOG))
+	test -f intermediate/test-????-??-??-??-??-??-#.bar
 	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar
 	@#
 	# scripts
@@ -2330,6 +2331,12 @@ endif
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
+	@#
+	# log file
+	@$(call functionCleanTestFiles)
+	test ! -f intermediate/test.log
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --log-file=intermediate/test.log --log=all $(LOG))
+	test -f intermediate/test.log
 	@#
 	# different options
 	@$(call functionCleanTestFiles)
