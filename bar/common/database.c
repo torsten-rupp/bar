@@ -3137,10 +3137,10 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
         }
 
         // get sqlite database name
-        if (databaseName != NULL)
+        if (!stringIsEmpty(fileName))
         {
           // open file
-          sqliteName = String_format(String_new(),"file:%s",databaseName);
+          sqliteName = String_format(String_new(),"file:%s",fileName);
         }
         else
         {

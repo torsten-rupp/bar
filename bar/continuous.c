@@ -1673,6 +1673,7 @@ bool Continuous_isAvailable(void)
 
 Errors Continuous_init(const char *databaseURI)
 {
+  bool   createFlag;
   Errors error;
   uint   continuousVersion;
 
@@ -1730,40 +1731,49 @@ Errors Continuous_init(const char *databaseURI)
   }
   assert(continuousDatabaseSpecifier->type == DATABASE_TYPE_SQLITE3);
 
-  // check if continuous database exists in expected version, create database
-  error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
-  if (error == ERROR_NONE)
+  createFlag = FALSE;
+  if (Database_exists(continuousDatabaseSpecifier,NULL))
   {
-    if (continuousVersion < CONTINUOUS_VERSION)
+    // check if continuous database exists in expected version, create database
+    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
+    if (error == ERROR_NONE)
     {
-      // create new database
-      error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-      if (error != ERROR_NONE)
+      if (continuousVersion < CONTINUOUS_VERSION)
       {
-        Database_deleteSpecifier(continuousDatabaseSpecifier);
-        return error;
+        // insufficient version -> create new
+        createFlag = TRUE;
+      }
+      else
+      {
+        // unknown version -> create new
+        createFlag = TRUE;
       }
     }
     else
     {
-      // open continuous database
-      error = openContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-      if (error != ERROR_NONE)
-      {
-        Database_deleteSpecifier(continuousDatabaseSpecifier);
-        return error;
-      }
+      // unknown version -> create new
+      createFlag = TRUE;
     }
   }
   else
   {
+    // does not exists -> create new
+    createFlag = TRUE;
+  }
+  if (createFlag)
+  {
     // create new database
     error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-    if (error != ERROR_NONE)
-    {
-      Database_deleteSpecifier(continuousDatabaseSpecifier);
-      return error;
-    }
+  }
+  else
+  {
+    // open continuous database
+    error = openContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
+  }
+  if (error != ERROR_NONE)
+  {
+    Database_deleteSpecifier(continuousDatabaseSpecifier);
+    return error;
   }
 
   initFlag = TRUE;
