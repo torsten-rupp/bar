@@ -1162,13 +1162,13 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
 * Notes  :
 ***********************************************************************/
 
-INLINE ulong CmdOption_isSet(void *variable);
+INLINE ulong CmdOption_isSet(const void *variable);
 #if defined(NDEBUG) || defined(__CMDOPTION_IMPLEMENTATION__)
-INLINE ulong CmdOption_isSet(void *variable)
+INLINE ulong CmdOption_isSet(const void *variable)
 {
   extern Array setOptions;
 
-  return Array_contains(&setOptions,&variable,NULL,NULL);
+  return Array_contains(&setOptions,&variable,CALLBACK_(NULL,NULL));
 }
 #endif /* NDEBUG || __CMDOPTION_IMPLEMENTATION__ */
 

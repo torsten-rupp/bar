@@ -2838,7 +2838,7 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
 //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
     if (   String_equals(expirationEntityNode->jobUUID,jobUUID)
         #ifdef SIMULATE_PURGE
-        && !Array_contains(&simulatedPurgeEntityIdArray,&expirationEntityNode->entityId,NULL,NULL)
+        && !Array_contains(&simulatedPurgeEntityIdArray,&expirationEntityNode->entityId,CALLBACK_(NULL,NULL))
         #endif /* SIMULATE_PURGE */
        )
     {
