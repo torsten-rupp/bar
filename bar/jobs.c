@@ -348,7 +348,7 @@ PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
   persistenceNode->minKeep     = minKeep;
   persistenceNode->maxKeep     = maxKeep;
   persistenceNode->maxAge      = maxAge;
-  persistenceNode->moveTo      = String_set(String_new(),moveTo);
+  persistenceNode->moveTo      = String_duplicate(moveTo);
 
   return persistenceNode;
 }
@@ -377,6 +377,7 @@ PersistenceNode *Job_duplicatePersistenceNode(PersistenceNode *fromPersistenceNo
   persistenceNode->minKeep     = fromPersistenceNode->minKeep;
   persistenceNode->maxKeep     = fromPersistenceNode->maxKeep;
   persistenceNode->maxAge      = fromPersistenceNode->maxAge;
+  persistenceNode->moveTo      = String_duplicate(fromPersistenceNode->moveTo);
 
   return persistenceNode;
 }

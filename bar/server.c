@@ -5526,6 +5526,12 @@ NULL,//                                                        scheduleTitle,
         scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
       }
 
+      if (!jobOptions.dryRun)
+      {
+        // store schedule info
+        Job_writeScheduleInfo(jobNode,archiveType,executeEndDateTime);
+      }
+
       // free resources
       if (connectorInfo != NULL)
       {
@@ -5534,12 +5540,6 @@ NULL,//                                                        scheduleTitle,
       Job_doneOptions(&jobOptions);
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
-
-      if (!jobOptions.dryRun)
-      {
-        // store schedule info
-        Job_writeScheduleInfo(jobNode,archiveType,executeEndDateTime);
-      }
     }
   }
 
