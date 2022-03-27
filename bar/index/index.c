@@ -2626,13 +2626,13 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     else
     {
       // does not exists -> create new
+      createFlag = TRUE;
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Index database '%s' does not exist - create new",
                   String_cString(printableDatabaseURI)
                  );
-      createFlag = TRUE;
     }
   }
 
