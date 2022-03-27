@@ -456,10 +456,13 @@ ERROR CREATE_FILE
   }
 
 ERROR OPEN_FILE
-  stringSet(errorText,sizeof(errorText),TR("open file fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),"%s",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("open file fail"));
   }
 
 ERROR CREATE_DIRECTORY

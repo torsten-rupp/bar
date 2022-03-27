@@ -2587,7 +2587,9 @@ public class TabStatus
                                                   totalEntryCount.getLong()
                                                  )
                                      );
-            totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
+            totalBytesProgress.set   (getProgress(doneSize.getLong()+skippedEntrySize.getLong()+errorEntrySize.getLong(),
+                                                  totalEntrySize.getLong())
+                                                 );
             requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
             message.set              (valueMap.getString("message"));
 

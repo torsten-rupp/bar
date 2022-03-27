@@ -6074,7 +6074,6 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
   if (error != ERROR_NONE)
   {
-//TODO
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
       printInfo(2,"Cannot not get extended attributes for '%s' - continue (error: %s)!",
@@ -6100,7 +6099,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->statusInfo.skipped.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6114,6 +6113,11 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+      {
+        createInfo->statusInfo.error.count++;
+      }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
 
@@ -6130,15 +6134,15 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Open file failed '%s' (error: %s)",
+                 "Cannot open file '%s' - skipped (error: %s)",
                  String_cString(fileName),
                  Error_getText(error)
                 );
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.error.count++;
-        createInfo->statusInfo.error.size += (uint64)fileInfo->size;
+        createInfo->statusInfo.skipped.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->statusInfo.skipped.size  += fragmentSize;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6152,6 +6156,12 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+      {
+        createInfo->statusInfo.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->statusInfo.error.size  += (uint64)fileInfo->size;
+      }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
 
@@ -6226,7 +6236,6 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
              && (size > 0LL)
             )
       {
-//fprintf(stderr,"%s, %d: fragmentOffset=%llu size=%llu\n",__FILE__,__LINE__,fragmentOffset,size);
         // pause
         Storage_pause(&createInfo->storageInfo);
 
@@ -6558,15 +6567,15 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Open device failed '%s' (error: %s)",
+                 "Cannot open device '%s' - skipped (error: %s)",
                  String_cString(deviceName),
                  Error_getText(error)
                 );
 
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
-        createInfo->statusInfo.error.count++;
-        createInfo->statusInfo.error.size += (uint64)deviceInfo->size;
+        createInfo->statusInfo.skipped.count++;
+        createInfo->statusInfo.skipped.size += fragmentSize;
       }
 
       return ERROR_NONE;
@@ -6578,6 +6587,12 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  String_cString(deviceName),
                  Error_getText(error)
                 );
+
+      STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
+      {
+        createInfo->statusInfo.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->statusInfo.error.size  += fragmentSize;
+      }
 
       return error;
     }
@@ -7346,7 +7361,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   error = File_getExtendedAttributes(&fileExtendedAttributeList,StringList_first(fileNameList,NULL));
   if (error != ERROR_NONE)
   {
-//TODO
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
       printWarning("Cannot not get extended attributes for '%s' - continue (error: %s)!",
@@ -7372,7 +7386,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->statusInfo.skipped.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7386,6 +7400,11 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
+
+      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
+      {
+        createInfo->statusInfo.error.count++;
+      }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
 
@@ -7402,15 +7421,15 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Open file failed '%s' (error: %s)",
+                 "Cannot open hardlink '%s' - skipped (error: %s)",
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.error.count += StringList_count(fileNameList);
-        createInfo->statusInfo.error.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo->size;
+        createInfo->statusInfo.skipped.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->statusInfo.skipped.size  += fragmentSize;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7420,10 +7439,16 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot open file '%s' (error: %s)",
+      printError("Cannot open hardlink '%s' (error: %s)",
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
+
+      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
+      {
+        createInfo->statusInfo.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->statusInfo.error.size  += fragmentSize;
+      }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
 
@@ -7497,7 +7522,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
              && (size > 0LL)
             )
       {
-//fprintf(stderr,"%s, %d: fragmentOffset=%llu size=%llu\n",__FILE__,__LINE__,fragmentOffset,size);
         // pause create
         pauseCreate(createInfo);
 
