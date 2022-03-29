@@ -159,6 +159,7 @@ class JobData implements Comparable<JobData>
   String       name;
   States       state;
   String       slaveHostName;
+  int          slaveHostPort;
   SlaveStates  slaveState;
   ArchiveTypes archiveType;
   long         archivePartSize;
@@ -179,6 +180,7 @@ class JobData implements Comparable<JobData>
    * @param name name
    * @param state job state
    * @param slaveHostName slave host name
+   * @param slaveHostPort slave host port
    * @param slaveState slave state
    * @param archiveType archive type
    * @param archivePartSize archive part size
@@ -195,6 +197,7 @@ class JobData implements Comparable<JobData>
           String       name,
           States       state,
           String       slaveHostName,
+          int          slaveHostPort,
           SlaveStates  slaveState,
           ArchiveTypes archiveType,
           long         archivePartSize,
@@ -212,6 +215,7 @@ class JobData implements Comparable<JobData>
     this.name                   = name;
     this.state                  = state;
     this.slaveHostName          = slaveHostName;
+    this.slaveHostPort          = slaveHostPort;
     this.slaveState             = slaveState;
     this.archiveType            = archiveType;
     this.archivePartSize        = archivePartSize;
@@ -312,7 +316,7 @@ class JobData implements Comparable<JobData>
   @Override
   public String toString()
   {
-    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+"', "+archiveType+"}";
+    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+":"+slaveHostPort+"', "+archiveType+"}";
   }
 };
 
@@ -1314,6 +1318,7 @@ public class TabStatus
                 Point point = display.getCursorLocation();
                 if (point.x > 16) point.x -= 16;
                 if (point.y > 16) point.y -= 16;
+
                 showJobToolTip(jobData,point.x,point.y);
               }
             }
@@ -2084,6 +2089,7 @@ public class TabStatus
                                    String              name                   = valueMap.getString("name"                                );
                                    JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
                                    String              slaveHostName          = valueMap.getString("slaveHostName",""                    );
+                                   int                 slaveHostPort          = valueMap.getInt   ("slaveHostPort",0                     );
                                    JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
                                    ArchiveTypes        archiveType            = valueMap.getEnum  ("archiveType",ArchiveTypes.class      );
                                    long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
@@ -2107,6 +2113,7 @@ public class TabStatus
                                      jobData.master                 = master;
                                      jobData.state                  = state;
                                      jobData.slaveHostName          = slaveHostName;
+                                     jobData.slaveHostPort          = slaveHostPort;
                                      jobData.slaveState             = slaveState;
                                      jobData.archiveType            = archiveType;
                                      jobData.archivePartSize        = archivePartSize;
@@ -2125,6 +2132,7 @@ public class TabStatus
                                                            name,
                                                            state,
                                                            slaveHostName,
+                                                           slaveHostPort,
                                                            slaveState,
                                                            archiveType,
                                                            archivePartSize,
@@ -2176,7 +2184,7 @@ public class TabStatus
                                           (serverState == BARServer.States.RUNNING)
                                             ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
                                             : BARControl.tr("suspended"),
-                                          jobData.slaveHostName,
+                                          jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : ""),
                                           jobData.archiveType.getText(),
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                           jobData.formatCompressAlgorithm(),
@@ -2198,7 +2206,7 @@ public class TabStatus
                                                       (serverState == BARServer.States.RUNNING)
                                                         ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
                                                         : BARControl.tr("suspended"),
-                                                      jobData.slaveHostName,
+                                                      jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : ""),
                                                       jobData.archiveType.toString(),
                                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                                       jobData.formatCompressAlgorithm(),
