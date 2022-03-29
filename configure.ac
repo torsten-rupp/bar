@@ -4397,7 +4397,8 @@ AC_CHECK_HEADERS(\
                  unicode/uregex.h \
                  unicode/ustring.h \
                  unicode/ucol.h \
-                 uuid/uuid.h
+                 uuid/uuid.h \
+                 valgrind/callgrind.h
                 )
 
 # defines, constants, types, variables

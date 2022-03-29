@@ -80,7 +80,7 @@ typedef struct
       Password password;
       String   databaseName;
     }
-    mysql;
+    mariadb;
     #endif /* HAVE_MARIADB */
     #if defined(HAVE_POSTGRESQL)
     struct
@@ -407,7 +407,7 @@ typedef struct DatabaseHandle
     {
       MYSQL                   *handle;
     }
-    mysql;
+    mariadb;
     #endif /* HAVE_MARIADB */
     #if defined(HAVE_POSTGRESQL)
     struct
@@ -633,7 +633,7 @@ typedef struct
   {
     SQLiteStatement sqlite;
     #if defined(HAVE_MARIADB)
-      MySQLStatement mysql;
+      MySQLStatement mariadb;
     #endif /* HAVE_MARIADB */
     #if defined(HAVE_POSTGRESQL)
       PostgresSQLStatement postgresql;

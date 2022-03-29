@@ -229,7 +229,7 @@ LOCAL bool vscanString(const char *string,
 LOCAL bool vmatchString(const char *string,
                         const char *pattern,
                         const char **matchedString,
-                        ulong      *matchedStringSize,
+                        size_t     *matchedStringSize,
                         va_list    matchedSubStrings
                        )
 {

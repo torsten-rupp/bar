@@ -533,9 +533,9 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        if (String_isEmpty(databaseSpecifier.mysql.databaseName))
+        if (String_isEmpty(databaseSpecifier.mariadb.databaseName))
         {
-          String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+          String_setCString(databaseSpecifier.mariadb.databaseName,DEFAULT_DATABASE_NAME);
         }
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
