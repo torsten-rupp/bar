@@ -57,9 +57,6 @@
 
 #include "server.h"
 
-// TODO:
-#include <valgrind/callgrind.h>
-
 /****************** Conditional compilation switches *******************/
 
 #define _NO_SESSION_ID

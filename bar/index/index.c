@@ -404,9 +404,9 @@ LOCAL void busyHandler(void *userData)
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        if (String_isEmpty(databaseSpecifier->mysql.databaseName))
+        if (String_isEmpty(databaseSpecifier->mariadb.databaseName))
         {
-          String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
+          String_setCString(databaseSpecifier->mariadb.databaseName,DEFAULT_DATABASE_NAME);
         }
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2655,7 +2655,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
           break;
         case DATABASE_TYPE_MARIADB:
           #if defined(HAVE_MARIADB)
-            String_format(indexDatabaseSpecifierReference.mysql.databaseName,"%s_tmp",DEFAULT_DATABASE_NAME);
+            String_format(indexDatabaseSpecifierReference.mariadb.databaseName,"%s_tmp",DEFAULT_DATABASE_NAME);
           #else /* HAVE_MARIADB */
             Database_doneSpecifier(&indexDatabaseSpecifierReference);
 
