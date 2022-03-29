@@ -18797,7 +18797,8 @@ for ac_header in \
                  unicode/uregex.h \
                  unicode/ustring.h \
                  unicode/ucol.h \
-                 uuid/uuid.h
+                 uuid/uuid.h \
+                 valgrind/callgrind.h
 
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`

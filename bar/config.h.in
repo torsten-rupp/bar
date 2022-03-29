@@ -673,6 +673,9 @@
 /* u_init() available */
 #undef HAVE_U_INIT
 
+/* Define to 1 if you have the <valgrind/callgrind.h> header file. */
+#undef HAVE_VALGRIND_CALLGRIND_H
+
 /* waitpid() available */
 #undef HAVE_WAITPID
 
