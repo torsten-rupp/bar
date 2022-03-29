@@ -135,8 +135,8 @@ typedef struct
   uint64 endTimestamp;
 } TimeoutInfo;
 
-// UUID
-typedef char UUID[MISC_UUID_STRING_LENGTH+1];
+// UUID (Note; name clash with Windows)
+typedef char UUID_[MISC_UUID_STRING_LENGTH+1];
 
 // machine/application id
 typedef const byte* MachineId;

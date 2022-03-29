@@ -661,7 +661,7 @@ LOCAL_INLINE bool checkDatabaseInitialized(DatabaseHandle *databaseHandle)
       return (databaseHandle->sqlite.handle != NULL);
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        return (databaseHandle->mysql.handle != NULL);
+        return (databaseHandle->mariadb.handle != NULL);
       #else /* HAVE_MARIADB */
         return FALSE;
       #endif /* HAVE_MARIADB */
@@ -3218,24 +3218,24 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 
 // TODO: create
           // open database
-          databaseHandle->mysql.handle = mysql_init(NULL);
-          if (databaseHandle->mysql.handle == NULL)
+          databaseHandle->mariadb.handle = mysql_init(NULL);
+          if (databaseHandle->mariadb.handle == NULL)
           {
             error = ERROR_DATABASE;
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
           optionValue.b = TRUE;
-          mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
+          mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_RECONNECT,&optionValue);
           optionValue.u = MARIADB_TIMEOUT;
-          mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-          mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+          mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+          mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
           // connect
-          deployPassword = Password_deploy(&databaseSpecifier->mysql.password);
-          if (mysql_real_connect(databaseHandle->mysql.handle,
-                                 String_cString(databaseSpecifier->mysql.serverName),
-                                 String_cString(databaseSpecifier->mysql.userName),
+          deployPassword = Password_deploy(&databaseSpecifier->mariadb.password);
+          if (mysql_real_connect(databaseHandle->mariadb.handle,
+                                 String_cString(databaseSpecifier->mariadb.serverName),
+                                 String_cString(databaseSpecifier->mariadb.userName),
                                  deployPassword,
                                  NULL,  // databaseName
                                  0,  // port
@@ -3245,43 +3245,43 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
              )
           {
             error = ERRORX_(DATABASE,
-                            mysql_errno(databaseHandle->mysql.handle),
+                            mysql_errno(databaseHandle->mariadb.handle),
                             "%s",
-                            mysql_error(databaseHandle->mysql.handle)
+                            mysql_error(databaseHandle->mariadb.handle)
                            );
-            Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
-            mysql_close(databaseHandle->mysql.handle);
+            Password_undeploy(&databaseSpecifier->mariadb.password,deployPassword);
+            mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
-          Password_undeploy(&databaseSpecifier->mysql.password,deployPassword);
+          Password_undeploy(&databaseSpecifier->mariadb.password,deployPassword);
 
           // check min. version
-          serverVersion = mysql_get_server_version(databaseHandle->mysql.handle);
+          serverVersion = mysql_get_server_version(databaseHandle->mariadb.handle);
           if (serverVersion < MARIADB_MIN_SERVER_VERSION)
           {
             error = ERRORX_(DATABASE_VERSION,0,"available %lu, required %lu",
                             serverVersion,
                             MARIADB_MIN_SERVER_VERSION
                            );
-            mysql_close(databaseHandle->mysql.handle);
+            mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
 
           // enable UTF8
-          error = mysqlSetCharacterSet(databaseHandle->mysql.handle,
+          error = mysqlSetCharacterSet(databaseHandle->mariadb.handle,
                                        "utf8mb4"
                                       );
           if (error != ERROR_NONE)
           {
-            mysql_close(databaseHandle->mysql.handle);
+            mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
 
           // other options
-          error = mysqlExecute(databaseHandle->mysql.handle,
+          error = mysqlExecute(databaseHandle->mariadb.handle,
                                stringFormat(sqlString,sizeof(sqlString),
                                             "SET innodb_lock_wait_timeout=%u",
                                             MARIADB_TIMEOUT
@@ -3289,7 +3289,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                               );
           if (error != ERROR_NONE)
           {
-            mysql_close(databaseHandle->mysql.handle);
+            mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
@@ -3309,11 +3309,11 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                            "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
                            (databaseName != NULL)
                              ? databaseName
-                             : String_cString(databaseSpecifier->mysql.databaseName),
+                             : String_cString(databaseSpecifier->mariadb.databaseName),
                            MARIADB_CHARACTER_SETS[i],
                            MARIADB_CHARACTER_SETS[i]
                           );
-              error = mysqlExecute(databaseHandle->mysql.handle,
+              error = mysqlExecute(databaseHandle->mariadb.handle,
                                    sqlString
                                   );
               i++;
@@ -3323,7 +3323,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                   );
             if (error != ERROR_NONE)
             {
-              mysql_close(databaseHandle->mysql.handle);
+              mysql_close(databaseHandle->mariadb.handle);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
@@ -3332,12 +3332,12 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           // select database
           if (!stringIsEmpty(databaseName))
           {
-            error = mysqlSelectDatabase(databaseHandle->mysql.handle,
+            error = mysqlSelectDatabase(databaseHandle->mariadb.handle,
                                         databaseName
                                        );
             if (error != ERROR_NONE)
             {
-              mysql_close(databaseHandle->mysql.handle);
+              mysql_close(databaseHandle->mariadb.handle);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
@@ -3570,7 +3570,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           int mysqlResult;
 
           // set SQL mode: allow null dates, disable strict to allow automatic cut of too long values
-          mysqlResult = mysql_query(databaseHandle->mysql.handle,
+          mysqlResult = mysql_query(databaseHandle->mariadb.handle,
 // TODO:
           // ONLY_FULL_GROUP_BY
                                     "SET SESSION sql_mode='ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
@@ -3580,7 +3580,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 
 // TODO:
 bool b = FALSE;
-mysql_options(databaseHandle->mysql.handle,
+mysql_options(databaseHandle->mariadb.handle,
               MYSQL_REPORT_DATA_TRUNCATION,
               &b);
         }
@@ -3726,7 +3726,7 @@ mysql_options(databaseHandle->mysql.handle,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        mysql_close(databaseHandle->mysql.handle);
+        mysql_close(databaseHandle->mariadb.handle);
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
@@ -3757,7 +3757,7 @@ mysql_options(databaseHandle->mysql.handle,
 
 //// TODO: free database node
 //  Database_doneSpecifier(&databaseNode->databaseSpecifier);
-//mysql_close(databaseHandle->mysql.handle);
+//mysql_close(databaseHandle->mariadb.handle);
 
   // free resources
 //TODO: remove?
@@ -5288,26 +5288,26 @@ LOCAL void formatParameters(String               sqlString,
           // prepare SQL statement
           DATABASE_DEBUG_TIME_START(databaseStatementHandle);
           {
-            databaseStatementHandle->mysql.statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
+            databaseStatementHandle->mariadb.statementHandle = mysql_stmt_init(databaseHandle->mariadb.handle);
             #ifndef NDEBUG
-              if (databaseStatementHandle->mysql.statementHandle == NULL)
+              if (databaseStatementHandle->mariadb.statementHandle == NULL)
               {
                 HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s: %s",
-                                    mysql_errno(databaseHandle->mysql.handle),
-                                    mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),
+                                    mysql_errno(databaseHandle->mariadb.handle),
+                                    mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle),
                                     sqlString
                                    );
               }
             #endif /* not NDEBUG */
 
-            error = mysqlPrepareStatement(databaseStatementHandle->mysql.statementHandle,
+            error = mysqlPrepareStatement(databaseStatementHandle->mariadb.statementHandle,
                                           sqlString
                                          );
           }
           DATABASE_DEBUG_TIME_END(databaseStatementHandle);
           if (error != ERROR_NONE)
           {
-            mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
+            mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
             Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
             #ifndef NDEBUG
               String_delete(databaseStatementHandle->debug.sqlString);
@@ -5316,43 +5316,43 @@ LOCAL void formatParameters(String               sqlString,
           }
 
           // get value/result count
-          databaseStatementHandle->parameterCount = mysql_stmt_param_count(databaseStatementHandle->mysql.statementHandle);
-          databaseStatementHandle->resultCount    = mysql_stmt_field_count(databaseStatementHandle->mysql.statementHandle);
+          databaseStatementHandle->parameterCount = mysql_stmt_param_count(databaseStatementHandle->mariadb.statementHandle);
+          databaseStatementHandle->resultCount    = mysql_stmt_field_count(databaseStatementHandle->mariadb.statementHandle);
 
           // allocate bind data
-          databaseStatementHandle->mysql.values.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->parameterCount,
+          databaseStatementHandle->mariadb.values.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->parameterCount,
                                                                            sizeof(MYSQL_BIND)
                                                                           );
-          if (databaseStatementHandle->mysql.values.bind == NULL)
+          if (databaseStatementHandle->mariadb.values.bind == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          databaseStatementHandle->mysql.values.time = (MYSQL_TIME*)calloc(databaseStatementHandle->parameterCount,
+          databaseStatementHandle->mariadb.values.time = (MYSQL_TIME*)calloc(databaseStatementHandle->parameterCount,
                                                                            sizeof(MYSQL_TIME)
                                                                           );
-          if (databaseStatementHandle->mysql.values.time == NULL)
+          if (databaseStatementHandle->mariadb.values.time == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
 
-          databaseStatementHandle->mysql.results.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->resultCount,
+          databaseStatementHandle->mariadb.results.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->resultCount,
                                                                             sizeof(MYSQL_BIND)
                                                                            );
-          if (databaseStatementHandle->mysql.results.bind == NULL)
+          if (databaseStatementHandle->mariadb.results.bind == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          databaseStatementHandle->mysql.results.time = (MYSQL_TIME*)calloc(databaseStatementHandle->resultCount,
+          databaseStatementHandle->mariadb.results.time = (MYSQL_TIME*)calloc(databaseStatementHandle->resultCount,
                                                                             sizeof(MYSQL_TIME)
                                                                            );
-          if (databaseStatementHandle->mysql.results.time == NULL)
+          if (databaseStatementHandle->mariadb.results.time == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          databaseStatementHandle->mysql.results.lengths = (unsigned long*)calloc(databaseStatementHandle->resultCount,
+          databaseStatementHandle->mariadb.results.lengths = (unsigned long*)calloc(databaseStatementHandle->resultCount,
                                                                                   sizeof(unsigned long)
                                                                                  );
-          if (databaseStatementHandle->mysql.results.lengths == NULL)
+          if (databaseStatementHandle->mariadb.results.lengths == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
@@ -5550,65 +5550,65 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].id;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].id;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
                 break;
               case DATABASE_DATATYPE_BOOL:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_TINY;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].b;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_TINY;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].b;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
                 break;
               case DATABASE_DATATYPE_INT:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].i;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].i;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_INT64:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].i64;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].i64;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_UINT:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_UINT64:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u64;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u64;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_DOUBLE:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].d;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].d;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
                 break;
               case DATABASE_DATATYPE_DATETIME:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].dateTime;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].dateTime;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_STRING:
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_length = MAX_TEXT_LENGTH;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = &databaseStatementHandle->mysql.results.lengths[databaseStatementHandle->resultIndex];
-                if (databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer == NULL)
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_STRING;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_length = MAX_TEXT_LENGTH;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = &databaseStatementHandle->mariadb.results.lengths[databaseStatementHandle->resultIndex];
+                if (databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer == NULL)
                 {
                   HALT_INSUFFICIENT_MEMORY();
                 }
@@ -5783,12 +5783,12 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_MARIADB)
         {
           // finalize statement
-          mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
+          mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
 
           // free bind data
           for (i = 0; i < (databaseStatementHandle->resultCount); i++)
           {
-            switch (databaseStatementHandle->mysql.results.bind[i].buffer_type)
+            switch (databaseStatementHandle->mariadb.results.bind[i].buffer_type)
             {
               case MYSQL_TYPE_TINY:
               case MYSQL_TYPE_SHORT:
@@ -5810,7 +5810,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               case MYSQL_TYPE_DATETIME:
                 break;
               case MYSQL_TYPE_STRING:
-                free(databaseStatementHandle->mysql.results.bind[i].buffer);
+                free(databaseStatementHandle->mariadb.results.bind[i].buffer);
                 break;
               case MYSQL_TYPE_VAR_STRING:
                 break;
@@ -5826,11 +5826,11 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                 break;
             }
           }
-          if (databaseStatementHandle->mysql.results.lengths != NULL) free(databaseStatementHandle->mysql.results.lengths);
-          if (databaseStatementHandle->mysql.results.time != NULL) free(databaseStatementHandle->mysql.results.time);
-          if (databaseStatementHandle->mysql.results.bind != NULL) free(databaseStatementHandle->mysql.results.bind);
-          if (databaseStatementHandle->mysql.values.time != NULL) free(databaseStatementHandle->mysql.values.time);
-          if (databaseStatementHandle->mysql.values.bind != NULL) free(databaseStatementHandle->mysql.values.bind);
+          if (databaseStatementHandle->mariadb.results.lengths != NULL) free(databaseStatementHandle->mariadb.results.lengths);
+          if (databaseStatementHandle->mariadb.results.time != NULL) free(databaseStatementHandle->mariadb.results.time);
+          if (databaseStatementHandle->mariadb.results.bind != NULL) free(databaseStatementHandle->mariadb.results.bind);
+          if (databaseStatementHandle->mariadb.values.time != NULL) free(databaseStatementHandle->mariadb.values.time);
+          if (databaseStatementHandle->mariadb.values.bind != NULL) free(databaseStatementHandle->mariadb.values.bind);
         }
       #else /* HAVE_MARIADB */
         return;
@@ -6036,13 +6036,13 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           MYSQL_FIELD *mysqlFields;
           uint i;
 
-          mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mysql.statementHandle);
+          mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mariadb.statementHandle);
           switch (mysqlResult)
           {
             case 0:
               if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
               {
-                mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mysql.statementHandle);
+                mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mariadb.statementHandle);
                 assert(mysqlMetaData != NULL);
                 assert(mysql_num_fields(mysqlMetaData) == databaseStatementHandle->resultCount);
 
@@ -6090,8 +6090,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                     break;
                   case DATABASE_DATATYPE_STRING:
                     String_setBuffer(databaseStatementHandle->results[i].string,
-                                     databaseStatementHandle->mysql.results.bind[i].buffer,
-                                     databaseStatementHandle->mysql.results.lengths[i]
+                                     databaseStatementHandle->mariadb.results.bind[i].buffer,
+                                     databaseStatementHandle->mariadb.results.lengths[i]
                                     );
                     break;
                   case DATABASE_DATATYPE_CSTRING:
@@ -6243,7 +6243,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        id = mysqlGetLastInsertId(databaseStatementHandle->mysql.statementHandle);
+        id = mysqlGetLastInsertId(databaseStatementHandle->mariadb.statementHandle);
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
@@ -6327,7 +6327,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             MYSQL_STMT *statementHandle;
 
             // prepare SQL statement
-            statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
+            statementHandle = mysql_stmt_init(databaseHandle->mariadb.handle);
             assert(statementHandle != NULL);
             error = mysqlPrepareStatement(statementHandle,
                                           sqlString
@@ -6805,56 +6805,56 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].id;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].id;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_BOOL:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_TINY;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].b;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_TINY;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].b;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_INT:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].i;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].i;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_INT64:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].i64;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].i64;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_UINT:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].u;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].u;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_UINT64:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].u64;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].u64;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_DOUBLE:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].d;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].d;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_DATETIME:
@@ -6874,34 +6874,34 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                                      NULL,  // weekDay,
                                      NULL  // isDayLightSaving
                                     );
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].year   = year;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].month  = month;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].day    = day;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].hour   = hour;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].minute = minute;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].second = second;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].year   = year;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].month  = month;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].day    = day;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].hour   = hour;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].minute = minute;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].second = second;
 
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DATETIME;
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex];
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DATETIME;
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex];
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                   databaseStatementHandle->parameterIndex++;
                 }
                 break;
               case DATABASE_DATATYPE_STRING:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)String_cString(values[i].string);
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_length = String_length(values[i].string);
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)String_cString(values[i].string);
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_length = String_length(values[i].string);
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_CSTRING:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)values[i].s;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_length = stringLength(values[i].s);
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)values[i].s;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_length = stringLength(values[i].s);
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_BLOB:
@@ -7247,50 +7247,50 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].id;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].id;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 break;
               case DATABASE_DATATYPE_BOOL:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_TINY;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].b;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_TINY;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].b;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 break;
               case DATABASE_DATATYPE_INT:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].i;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].i;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_INT64:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].i64;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].i64;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_UINT:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].u;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].u;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_UINT64:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].u64;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].u64;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_DOUBLE:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].d;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].d;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 break;
               case DATABASE_DATATYPE_DATETIME:
 // TODO: function to convert unix timestamp to mysql internal format?
@@ -7309,32 +7309,32 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                      NULL,  // weekDay,
                                      NULL  // isDayLightSaving
                                     );
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].year   = year;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].month  = month;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].day    = day;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].hour   = hour;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].minute = minute;
-                  databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex].second = second;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].year   = year;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].month  = month;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].day    = day;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].hour   = hour;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].minute = minute;
+                  databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex].second = second;
 
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DATETIME;
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&databaseStatementHandle->mysql.values.time[databaseStatementHandle->parameterIndex];
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                  databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_DATETIME;
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&databaseStatementHandle->mariadb.values.time[databaseStatementHandle->parameterIndex];
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                  databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
                 }
                 break;
               case DATABASE_DATATYPE_STRING:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)String_cString(filters[i].string);
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_length = String_length(filters[i].string);
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)String_cString(filters[i].string);
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_length = String_length(filters[i].string);
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
                 break;
               case DATABASE_DATATYPE_CSTRING:
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = filters[i].s;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_length = stringLength(filters[i].s);
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = filters[i].s;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_length = stringLength(filters[i].s);
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
                 break;
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -7581,7 +7581,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           {
             MYSQL_RES *result;
 
-            error = mysqlExecute(databaseHandle->mysql.handle,sqlString);
+            error = mysqlExecute(databaseHandle->mariadb.handle,sqlString);
             if (error != ERROR_NONE)
             {
               break;
@@ -7590,11 +7590,11 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
+              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mariadb.handle);
             }
 
             // get and discard results
-            result = mysql_use_result(databaseHandle->mysql.handle);
+            result = mysql_use_result(databaseHandle->mariadb.handle);
             mysql_free_result(result);
           }
         #else /* HAVE_MARIADB */
@@ -7620,7 +7620,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             // get number of changes
             if (changedRowCount != NULL)
             {
-//// TODO:              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
+//// TODO:              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mariadb.handle);
             }
           }
         #else /* HAVE_POSTGRESQL */
@@ -7790,15 +7790,15 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // bind values
             if (databaseStatementHandle->parameterCount > 0)
             {
-              if (mysql_stmt_bind_param(databaseStatementHandle->mysql.statementHandle,
-                                        databaseStatementHandle->mysql.values.bind
+              if (mysql_stmt_bind_param(databaseStatementHandle->mariadb.statementHandle,
+                                        databaseStatementHandle->mariadb.values.bind
                                        ) != 0
                  )
               {
                 error = ERRORX_(DATABASE_BIND,
-                                mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
+                                mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
                                 "parameters: %s",
-                                mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
+                                mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
                                );
                 break;
               }
@@ -7806,22 +7806,22 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   // TODO: required? queries do not have an result
             if (databaseStatementHandle->resultCount > 0)
             {
-              if (mysql_stmt_bind_result(databaseStatementHandle->mysql.statementHandle,
-                                         databaseStatementHandle->mysql.results.bind
+              if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
+                                         databaseStatementHandle->mariadb.results.bind
                                         ) != 0
                  )
               {
                 error = ERRORX_(DATABASE_BIND,
-                                mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
+                                mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
                                 "results: %s",
-                                mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
+                                mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
                                );
                 break;
               }
             }
 
             // do query
-            error = mysqlExecutePreparedStatement(databaseStatementHandle->mysql.statementHandle);
+            error = mysqlExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
@@ -7830,7 +7830,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mysql.handle);
+              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
             }
           }
         #else /* HAVE_MARIADB */
@@ -7961,30 +7961,30 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
 
           if (databaseStatementHandle->parameterCount > 0)
           {
-            if (mysql_stmt_bind_param(databaseStatementHandle->mysql.statementHandle,
-                                      databaseStatementHandle->mysql.values.bind
+            if (mysql_stmt_bind_param(databaseStatementHandle->mariadb.statementHandle,
+                                      databaseStatementHandle->mariadb.values.bind
                                      ) != 0
                )
             {
               error = ERRORX_(DATABASE_BIND,
-                              mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
+                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
                               "parameters: %s",
-                              mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
+                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
                              );
               break;
             }
           }
           if (databaseStatementHandle->resultCount > 0)
           {
-            if (mysql_stmt_bind_result(databaseStatementHandle->mysql.statementHandle,
-                                       databaseStatementHandle->mysql.results.bind
+            if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
+                                       databaseStatementHandle->mariadb.results.bind
                                       ) != 0
                )
             {
               error = ERRORX_(DATABASE_BIND,
-                              mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
+                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
                               "results: %s",
-                              mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
+                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
                              );
               break;
             }
@@ -8048,12 +8048,12 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            error = mysqlExecutePreparedStatement(databaseStatementHandle->mysql.statementHandle);
+            error = mysqlExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
             }
-            (void)mysql_stmt_store_result(databaseStatementHandle->mysql.statementHandle);
+            (void)mysql_stmt_store_result(databaseStatementHandle->mariadb.statementHandle);
 
             if (databaseRowFunction != NULL)
             {
@@ -8069,7 +8069,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
               // get number of changes
               if (changedRowCount != NULL)
               {
-                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mysql.statementHandle);
+                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
               }
             }
           }
@@ -8104,7 +8104,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
               if (changedRowCount != NULL)
               {
 // TODO:
-//                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mysql.statementHandle);
+//                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
               }
             }
           }
@@ -8584,7 +8584,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
           MYSQL_RES   *mysqlMetaData;
           MYSQL_FIELD *mysqlFields;
 
-          mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mysql.statementHandle);
+          mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mariadb.statementHandle);
           assert(mysqlMetaData != NULL);
 
           (*columnCount) = mysql_num_fields(mysqlMetaData);
@@ -8786,11 +8786,11 @@ bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
         // mariadb:<server>:<user>:<password>:<database>
         #if defined(HAVE_MARIADB)
           databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
-          databaseSpecifier->mysql.serverName  = String_setBuffer(String_new(),s1,n1);
-          databaseSpecifier->mysql.userName    = String_setBuffer(String_new(),s2,n2);
-          Password_init(&databaseSpecifier->mysql.password);
-          Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-          databaseSpecifier->mysql.databaseName = String_setBuffer(String_new(),s4,n4);
+          databaseSpecifier->mariadb.serverName  = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->mariadb.userName    = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->mariadb.password);
+          Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
+          databaseSpecifier->mariadb.databaseName = String_setBuffer(String_new(),s4,n4);
         #else /* HAVE_MARIADB */
     // TODO:
         #endif /* HAVE_MARIADB */
@@ -8810,11 +8810,11 @@ bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
         // mariadb:<server>:<user>:<password>
         #if defined(HAVE_MARIADB)
           databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
-          databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
-          databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
-          Password_init(&databaseSpecifier->mysql.password);
-          Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-          databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
+          databaseSpecifier->mariadb.serverName   = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->mariadb.userName     = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->mariadb.password);
+          Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
+          databaseSpecifier->mariadb.databaseName = String_newCString(defaultDatabaseName);
         #else /* HAVE_MARIADB */
           UNUSED_VARIABLE(defaultDatabaseName);
         #endif /* HAVE_MARIADB */
@@ -8919,11 +8919,11 @@ void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        if (fromDatabaseName == NULL) fromDatabaseName = String_cString(fromDatabaseSpecifier->mysql.databaseName);
-        databaseSpecifier->mysql.serverName   = String_duplicate(fromDatabaseSpecifier->mysql.serverName);
-        databaseSpecifier->mysql.userName     = String_duplicate(fromDatabaseSpecifier->mysql.userName);
-        Password_initDuplicate(&databaseSpecifier->mysql.password,&fromDatabaseSpecifier->mysql.password);
-        databaseSpecifier->mysql.databaseName = String_newCString(fromDatabaseName);
+        if (fromDatabaseName == NULL) fromDatabaseName = String_cString(fromDatabaseSpecifier->mariadb.databaseName);
+        databaseSpecifier->mariadb.serverName   = String_duplicate(fromDatabaseSpecifier->mariadb.serverName);
+        databaseSpecifier->mariadb.userName     = String_duplicate(fromDatabaseSpecifier->mariadb.userName);
+        Password_initDuplicate(&databaseSpecifier->mariadb.password,&fromDatabaseSpecifier->mariadb.password);
+        databaseSpecifier->mariadb.databaseName = String_newCString(fromDatabaseName);
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
@@ -8951,10 +8951,10 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier)
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        String_delete(databaseSpecifier->mysql.databaseName);
-        Password_done(&databaseSpecifier->mysql.password);
-        String_delete(databaseSpecifier->mysql.userName);
-        String_delete(databaseSpecifier->mysql.serverName);
+        String_delete(databaseSpecifier->mariadb.databaseName);
+        Password_done(&databaseSpecifier->mariadb.password);
+        String_delete(databaseSpecifier->mariadb.userName);
+        String_delete(databaseSpecifier->mariadb.serverName);
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
@@ -9054,10 +9054,10 @@ bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0,
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
-          if (databaseName0 == NULL) databaseName0 = String_cString(databaseSpecifier0->mysql.databaseName);
-          if (databaseName1 == NULL) databaseName1 = String_cString(databaseSpecifier1->mysql.databaseName);
-          return     String_equals(databaseSpecifier0->mysql.serverName,  databaseSpecifier1->mysql.serverName  )
-                  && String_equals(databaseSpecifier0->mysql.userName,    databaseSpecifier1->mysql.userName    )
+          if (databaseName0 == NULL) databaseName0 = String_cString(databaseSpecifier0->mariadb.databaseName);
+          if (databaseName1 == NULL) databaseName1 = String_cString(databaseSpecifier1->mariadb.databaseName);
+          return     String_equals(databaseSpecifier0->mariadb.serverName,  databaseSpecifier1->mariadb.serverName  )
+                  && String_equals(databaseSpecifier0->mariadb.userName,    databaseSpecifier1->mariadb.userName    )
                   && stringEquals(databaseName0,databaseName1);
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
@@ -9097,11 +9097,11 @@ String Database_getPrintableName(String                  string,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mysql.databaseName);
+        if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mariadb.databaseName);
         String_format(string,
                       "mariadb:%S:%S:*:%s",
-                      databaseSpecifier->mysql.serverName,
-                      databaseSpecifier->mysql.userName,
+                      databaseSpecifier->mariadb.serverName,
+                      databaseSpecifier->mariadb.userName,
                       databaseName
                      );
       #else /* not HAVE_MARIADB */
@@ -9171,7 +9171,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           {
             char sqlString[256];
 
-            error = mysqlExecute(databaseHandle.mysql.handle,
+            error = mysqlExecute(databaseHandle.mariadb.handle,
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "CREATE DATABASE %s CHARACTER SET '%s' COLLATE '%s_bin'",
                                               newDatabaseName,
@@ -9220,7 +9220,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 
           // free resources
 
-          String_setCString(databaseSpecifier->mysql.databaseName,newDatabaseName);
+          String_setCString(databaseSpecifier->mariadb.databaseName,newDatabaseName);
         }
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -9343,12 +9343,12 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        error = mysqlCreateDatabase(String_cString(databaseSpecifier->mysql.serverName),
-                                    String_cString(databaseSpecifier->mysql.userName),
-                                    &databaseSpecifier->mysql.password,
+        error = mysqlCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
+                                    String_cString(databaseSpecifier->mariadb.userName),
+                                    &databaseSpecifier->mariadb.password,
                                     (databaseName != NULL)
                                       ? databaseName
-                                      : String_cString(databaseSpecifier->mysql.databaseName),
+                                      : String_cString(databaseSpecifier->mariadb.databaseName),
                                     "utf8mb4"
                                    );
       #else /* HAVE_MARIADB */
@@ -9396,12 +9396,12 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        error = mysqlDropDatabase(String_cString(databaseSpecifier->postgresql.serverName),
-                                  String_cString(databaseSpecifier->postgresql.userName),
-                                  &databaseSpecifier->postgresql.password,
+        error = mysqlDropDatabase(String_cString(databaseSpecifier->mariadb.serverName),
+                                  String_cString(databaseSpecifier->mariadb.userName),
+                                  &databaseSpecifier->mariadb.password,
                                   (databaseName != NULL)
                                     ? databaseName
-                                    : String_cString(databaseSpecifier->postgresql.databaseName)
+                                    : String_cString(databaseSpecifier->mariadb.databaseName)
                                  );
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -15768,7 +15768,7 @@ void Database_debugPrintSimpleLockInfo(void)
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
-          printf("Database: 'mariadb:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
+          printf("Database: 'mariadb:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mariadb.serverName),String_cString(databaseNode->databaseSpecifier.mariadb.userName));
         #else /* HAVE_MARIADB */
           return;
         #endif /* HAVE_MARIADB */
@@ -15886,8 +15886,8 @@ void Database_debugPrintInfo(void)
             #if defined(HAVE_MARIADB)
               fprintf(stderr,
                       "  opened 'mariadb:%s:%s': %u\n",
-                      String_cString(databaseNode->databaseSpecifier.mysql.serverName),
-                      String_cString(databaseNode->databaseSpecifier.mysql.userName),
+                      String_cString(databaseNode->databaseSpecifier.mariadb.serverName),
+                      String_cString(databaseNode->databaseSpecifier.mariadb.userName),
                       databaseNode->openCount
                      );
             #else /* HAVE_MARIADB */
@@ -16154,8 +16154,8 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
           #if defined(HAVE_MARIADB)
             fprintf(stderr,
                     "Database lock info 'mariadb:%s:%s':\n",
-                    String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName),
-                    String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
+                    String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.serverName),
+                    String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.userName)
                    );
           #else /* HAVE_MARIADB */
           #endif /* HAVE_MARIADB */
@@ -16251,8 +16251,8 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
         fprintf(stderr,
                 "DEBUG database %s, %lu: 'mariadb:%s:%s': %s\n",
                 __fileName__,__lineNb__,
-                String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mysql.serverName),
-                String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mysql.userName),
+                String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mariadb.serverName),
+                String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mariadb.userName),
                 String_cString(databaseStatementHandle->debug.sqlString)
                );
       #else /* HAVE_MARIADB */

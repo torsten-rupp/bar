@@ -49,8 +49,10 @@
 
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
+  #include <winsock2.h>
   #include <windows.h>
   #include <rpcdce.h>
+  #include <lmcons.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
@@ -95,8 +97,8 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
 {
   static enum {NONE,BASE,COMPLETE} state = NONE;
 
-  uint i;
   #if   defined(PLATFORM_LINUX)
+    uint i;
     #if   defined(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC) || defined(HAVE_SD_ID128_GET_MACHINE)
       sd_id128_t sdApplicationId128;
       sd_id128_t sdId128;
@@ -200,12 +202,16 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
         state = COMPLETE;
       }
     #elif defined(PLATFORM_WINDOWS)
+      UNUSED_VARIABLE(applicationIdData);
+      UNUSED_VARIABLE(applicationIdDataLength);
+
       if (state != COMPLETE)
       {
         value = String_new();
         if (Misc_getRegistryString(value,HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Cryptography","MachineGuid"))
         {
-          if (UuidFromString(String_cString(value),&uuid) == RPC_S_OK)
+          // Note; Windows API broken: UUID string parameter is not const
+          if (UuidFromString((RPC_CSTR)String_cString(value),&uuid) == RPC_S_OK)
           {
             memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,&uuid,sizeof(uuid));
             state = COMPLETE;
@@ -308,194 +314,212 @@ LOCAL Errors execute(const char        *command,
                      uint              stderrStripCount
                     )
 {
-  String     text;
-  const char * const *s;
   Errors     error;
-  int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
-  pid_t      pid;
-  int        status;
-  bool       sleepFlag;
-  String     line;
-  int        exitcode;
-  int        terminateSignal;
+  #if   defined(PLATFORM_LINUX)
+    String     text;
+    const char * const *s;
+    int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
+    pid_t      pid;
+    int        status;
+    bool       sleepFlag;
+    String     line;
+    int        exitcode;
+    int        terminateSignal;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-  // init variables
-  text  = String_new();
-  error = ERROR_NONE;
+  #if   defined(PLATFORM_LINUX)
+    // init variables
+    text  = String_new();
+    error = ERROR_NONE;
 
-  // get command as text
-  if (errorText != NULL)
-  {
-    String_setCString(text,errorText);
-  }
-  else
-  {
-    String_setCString(text,command);
-    if ((arguments != NULL) && (arguments[0] != NULL))
+    // get command as text
+    if (errorText != NULL)
     {
-      s = &arguments[1];
-      while ((*s) != NULL)
+      String_setCString(text,errorText);
+    }
+    else
+    {
+      String_setCString(text,command);
+      if ((arguments != NULL) && (arguments[0] != NULL))
       {
-        String_joinCString(text,*s,' ' );
-        s++;
+        s = &arguments[1];
+        while ((*s) != NULL)
+        {
+          String_joinCString(text,*s,' ' );
+          s++;
+        }
       }
     }
-  }
-//fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
+  //fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
 
-  #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-    // create i/o pipes
-    if (pipe(pipeStdin) != 0)
-    {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
-      String_delete(text);
-      return error;
-    }
-    if (pipe(pipeStdout) != 0)
-    {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
-      close(pipeStdin[0]);
-      close(pipeStdin[1]);
-      String_delete(text);
-      return error;
-    }
-    if (pipe(pipeStderr) != 0)
-    {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
-      close(pipeStdout[0]);
-      close(pipeStdout[1]);
-      close(pipeStdin[0]);
-      close(pipeStdin[1]);
-      String_delete(text);
-      return error;
-    }
+    #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
+      // create i/o pipes
+      if (pipe(pipeStdin) != 0)
+      {
+        error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
+        String_delete(text);
+        return error;
+      }
+      if (pipe(pipeStdout) != 0)
+      {
+        error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
+        String_delete(text);
+        return error;
+      }
+      if (pipe(pipeStderr) != 0)
+      {
+        error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
+        close(pipeStdout[0]);
+        close(pipeStdout[1]);
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
+        String_delete(text);
+        return error;
+      }
 
-    // do fork to start separated process
-    pid = fork();
-    if      (pid == 0)
-    {
-      /* Note: do not use any function here which may synchronize (lock)
-               with the main program!
-      */
+      // do fork to start separated process
+      pid = fork();
+      if      (pid == 0)
+      {
+        /* Note: do not use any function here which may synchronize (lock)
+                 with the main program!
+        */
 
-      // close stdin, stdout, and stderr and reassign them to the pipes
-      close(STDERR_FILENO);
-      close(STDOUT_FILENO);
-      close(STDIN_FILENO);
+        // close stdin, stdout, and stderr and reassign them to the pipes
+        close(STDERR_FILENO);
+        close(STDOUT_FILENO);
+        close(STDIN_FILENO);
 
-      // redirect stdin/stdout/stderr to pipe
-      dup2(pipeStdin[0],STDIN_FILENO);
-      dup2(pipeStdout[1],STDOUT_FILENO);
-      dup2(pipeStderr[1],STDERR_FILENO);
+        // redirect stdin/stdout/stderr to pipe
+        dup2(pipeStdin[0],STDIN_FILENO);
+        dup2(pipeStdout[1],STDOUT_FILENO);
+        dup2(pipeStderr[1],STDERR_FILENO);
 
-      /* close unused pipe handles (the pipes are duplicated by fork(), thus
-         there are two open ends of the pipes)
-      */
-      close(pipeStderr[0]);
-      close(pipeStdout[0]);
-      close(pipeStdin[1]);
+        /* close unused pipe handles (the pipes are duplicated by fork(), thus
+           there are two open ends of the pipes)
+        */
+        close(pipeStderr[0]);
+        close(pipeStdout[0]);
+        close(pipeStdin[1]);
 
-      // execute external program
-      execvp(command,(char**)arguments);
+        // execute external program
+        execvp(command,(char**)arguments);
 
-      // in case exec() fail, return a default exitcode
-      exit(1);
-    }
-    else if (pid < 0)
-    {
-      error = ERRORX_(EXEC_FAIL,errno,"%s",String_cString(text));
+        // in case exec() fail, return a default exitcode
+        exit(1);
+      }
+      else if (pid < 0)
+      {
+        error = ERRORX_(EXEC_FAIL,errno,"%s",String_cString(text));
 
-      close(pipeStderr[0]);
+        close(pipeStderr[0]);
+        close(pipeStderr[1]);
+        close(pipeStdout[0]);
+        close(pipeStdout[1]);
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
+        String_delete(text);
+        return error;
+      }
+
+      // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
       close(pipeStderr[1]);
-      close(pipeStdout[0]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
-      close(pipeStdin[1]);
-      String_delete(text);
-      return error;
-    }
 
-    // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
-    close(pipeStderr[1]);
-    close(pipeStdout[1]);
-    close(pipeStdin[0]);
+      // read stdout/stderr and wait until process terminate
+      line   = String_new();
+      status = 0xFFFFFFFF;
+      while (   (waitpid(pid,&status,WNOHANG) == 0)
+             || (   !WIFEXITED(status)
+                 && !WIFSIGNALED(status)
+                )
+            )
+      {
+        sleepFlag = TRUE;
 
-    // read stdout/stderr and wait until process terminate
-    line   = String_new();
-    status = 0xFFFFFFFF;
-    while (   (waitpid(pid,&status,WNOHANG) == 0)
-           || (   !WIFEXITED(status)
-               && !WIFSIGNALED(status)
-              )
-          )
-    {
-      sleepFlag = TRUE;
+        if (readProcessIO(pipeStdout[0],line))
+        {
+          String_remove(line,STRING_BEGIN,stdoutStripCount);
+          if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(line,stdoutExecuteIOUserData);
+          String_clear(line);
+          sleepFlag = FALSE;
+        }
+        if (readProcessIO(pipeStderr[0],line))
+        {
+          String_remove(line,STRING_BEGIN,stderrStripCount);
+          if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(line,stderrExecuteIOUserData);
+          String_clear(line);
+          sleepFlag = FALSE;
+        }
 
-      if (readProcessIO(pipeStdout[0],line))
+        if (sleepFlag)
+        {
+          Misc_mdelay(250);
+        }
+      }
+      while (readProcessIO(pipeStdout[0],line))
       {
         String_remove(line,STRING_BEGIN,stdoutStripCount);
         if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(line,stdoutExecuteIOUserData);
         String_clear(line);
-        sleepFlag = FALSE;
       }
-      if (readProcessIO(pipeStderr[0],line))
+      while (readProcessIO(pipeStderr[0],line))
       {
         String_remove(line,STRING_BEGIN,stderrStripCount);
         if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(line,stderrExecuteIOUserData);
         String_clear(line);
-        sleepFlag = FALSE;
       }
+      String_delete(line);
 
-      if (sleepFlag)
+      // close i/o
+      close(pipeStderr[0]);
+      close(pipeStdout[0]);
+      close(pipeStdin[1]);
+
+      // check exit code
+      exitcode = -1;
+      if      (WIFEXITED(status))
       {
-        Misc_mdelay(250);
+        exitcode = WEXITSTATUS(status);
+        if (exitcode != 0)
+        {
+          error = ERRORX_(EXEC_FAIL,exitcode,"%s",String_cString(text));
+          String_delete(text);
+          return error;
+        }
       }
-    }
-    while (readProcessIO(pipeStdout[0],line))
-    {
-      String_remove(line,STRING_BEGIN,stdoutStripCount);
-      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(line,stdoutExecuteIOUserData);
-      String_clear(line);
-    }
-    while (readProcessIO(pipeStderr[0],line))
-    {
-      String_remove(line,STRING_BEGIN,stderrStripCount);
-      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(line,stderrExecuteIOUserData);
-      String_clear(line);
-    }
-    String_delete(line);
-
-    // close i/o
-    close(pipeStderr[0]);
-    close(pipeStdout[0]);
-    close(pipeStdin[1]);
-
-    // check exit code
-    exitcode = -1;
-    if      (WIFEXITED(status))
-    {
-      exitcode = WEXITSTATUS(status);
-      if (exitcode != 0)
+      else if (WIFSIGNALED(status))
       {
-        error = ERRORX_(EXEC_FAIL,exitcode,"%s",String_cString(text));
+        terminateSignal = WTERMSIG(status);
+        error = ERRORX_(EXEC_TERMINATE,0,"%s",String_cString(text),terminateSignal);
         String_delete(text);
         return error;
       }
-    }
-    else if (WIFSIGNALED(status))
-    {
-      terminateSignal = WTERMSIG(status);
-      error = ERRORX_(EXEC_TERMINATE,0,"%s",String_cString(text),terminateSignal);
-      String_delete(text);
-      return error;
-    }
-    else
-    {
-      String_delete(text);
-      return ERROR_UNKNOWN;
-    }
-// TODO: use PLATFORM_WINDOWS instead WIN32
-  #elif defined(WIN32)
+      else
+      {
+        String_delete(text);
+        return ERROR_UNKNOWN;
+      }
+    #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+      #error pipe()/fork()/waitpid() not available nor Windows system!
+    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+
+    // free resources
+    String_delete(text);
+  #elif defined(PLATFORM_WINDOWS)
+UNUSED_VARIABLE(command);
+UNUSED_VARIABLE(arguments);
+UNUSED_VARIABLE(errorText);
+UNUSED_VARIABLE(stdoutExecuteIOFunction);
+UNUSED_VARIABLE(stdoutExecuteIOUserData);
+UNUSED_VARIABLE(stdoutStripCount);
+UNUSED_VARIABLE(stderrExecuteIOFunction);
+UNUSED_VARIABLE(stderrExecuteIOUserData);
+UNUSED_VARIABLE(stderrStripCount);
 #if 0
 HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
     HANDLE hInputWriteTmp,hInputRead,hInputWrite;
@@ -596,13 +620,10 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
 
     if (!CloseHandle(hOutputRead)) DisplayError("CloseHandle");
     if (!CloseHandle(hInputWrite)) DisplayError("CloseHandle");
+#else
+error = ERROR_STILL_NOT_IMPLEMENTED;
 #endif
-  #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
-    #error pipe()/fork()/waitpid() not available nor Windows system!
-  #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
-
-  // free resources
-  String_delete(text);
+  #endif /* PLATFORM_... */
 
   return error;
 }
@@ -1197,6 +1218,7 @@ uint64 Misc_parseDateTime(const char *string)
         i++;
       }
     #else
+UNUSED_VARIABLE(string);
 #ifndef WERROR
 #warning implement strptime
 #endif
@@ -1597,12 +1619,32 @@ const char *Misc_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
 
 String Misc_getCurrentUserName(String string)
 {
-  #ifdef HAVE_GETLOGIN_R
-    char buffer[256];
-  #endif
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_GETLOGIN_R
+      char buffer[256];
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    TCHAR buffer[UNLEN+1];
+    DWORD length;
+  #endif /* PLATFORM_... */
 
-  #ifdef HAVE_GETLOGIN_R
-    if (getlogin_r(buffer,sizeof(buffer)) == 0)
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_GETLOGIN_R
+      if (getlogin_r(buffer,sizeof(buffer)) == 0)
+      {
+        String_setCString(string,buffer);
+      }
+      else
+      {
+        String_clear(string);
+      }
+    #else
+  //TODO: not available on Windows?
+      String_setCString(string,getlogin());
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    length = sizeof(buffer);
+    if (GetUserNameA(buffer,&length))
     {
       String_setCString(string,buffer);
     }
@@ -1610,10 +1652,7 @@ String Misc_getCurrentUserName(String string)
     {
       String_clear(string);
     }
-  #else
-//TODO: not available on Windows?
-    String_setCString(string,getlogin());
-  #endif
+  #endif /* PLATFORM_... */
 
   return string;
 }
@@ -1648,7 +1687,7 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
     #endif /* HAVE_UUID_GENERATE */
   #elif defined(PLATFORM_WINDOWS)
     UUID     uuid;
-    RPC_CSTR *rpcString;
+    RPC_CSTR rpcString;
   #endif /* PLATFORM_... */
 
   assert(buffer != NULL);
@@ -1692,7 +1731,7 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
     {
       if (UuidToString(&uuid,&rpcString) == RPC_S_OK)
       {
-        stringSet(buffer,bufferSize,rpcString);
+        stringSet(buffer,bufferSize,(const char*)rpcString);
         RpcStringFree(&rpcString);
       }
     }
@@ -2515,6 +2554,8 @@ bool Misc_isTerminal(int handle)
   #if   defined(PLATFORM_LINUX)
     return isatty(handle) == 1;
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(handle);
+
     return TRUE;
   #endif /* PLATFORM_... */
 }
@@ -2933,6 +2974,8 @@ bool Misc_getRegistryString(String string, HKEY parentKey, const char *subKey, c
   DWORD bufferLength;
   bool  result;
 
+  result = FALSE;
+
   if (RegOpenKeyEx(parentKey,subKey,0,KEY_READ|KEY_WOW64_64KEY,&hKey) == ERROR_SUCCESS)
   {
     dwType       = REG_SZ;
@@ -2941,10 +2984,6 @@ bool Misc_getRegistryString(String string, HKEY parentKey, const char *subKey, c
                 {
       String_setBuffer(string,buffer,bufferLength);
       result = TRUE;
-    }
-    else
-    {
-      result = FALSE;
     }
     RegCloseKey(hKey);
   }
