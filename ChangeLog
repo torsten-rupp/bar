@@ -20,6 +20,7 @@
     too
   * create log file in non-server mode if command line
     option --log-file is specified
+  * rename archives: use an increasing number suffix
   * upgrade bzip2 1.0.8
   * upgrade MMXL 3.2
   * upgrade zStandard 1.4.8

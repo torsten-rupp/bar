@@ -5189,35 +5189,36 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
          )
       {
-        // rename new entry
+        // rename new archive
+        String directoryName   = String_new();
+        String baseName        = String_new();
         String prefixFileName  = String_new();
         String postfixFileName = String_new();
-        long index = String_findLastChar(storageMsg.archiveName,STRING_END,'.');
+        File_splitFileName(storageMsg.archiveName,directoryName,baseName);
+        long index = String_findLastChar(baseName,STRING_END,'.');
         if (index >= 0)
         {
-          String_sub(prefixFileName,storageMsg.archiveName,STRING_BEGIN,index);
-          String_sub(postfixFileName,storageMsg.archiveName,index,STRING_END);
+          String_sub(prefixFileName,baseName,STRING_BEGIN,index);
+          String_sub(postfixFileName,baseName,index,STRING_END);
         }
         else
         {
-          String_set(prefixFileName,storageMsg.archiveName);
+          String_set(prefixFileName,baseName);
         }
-        String_set(storageMsg.archiveName,prefixFileName);
-        String_append(storageMsg.archiveName,postfixFileName);
-        if (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName))
+        uint n = 0;
+        do
         {
-          uint n = 0;
-          do
-          {
-            String_set(storageMsg.archiveName,prefixFileName);
-            String_appendFormat(storageMsg.archiveName,"-%u",n);
-            String_append(storageMsg.archiveName,postfixFileName);
-            n++;
-          }
-          while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
+          String_set(storageMsg.archiveName,directoryName);
+          File_appendFileName(storageMsg.archiveName,prefixFileName);
+          String_appendFormat(storageMsg.archiveName,"-%u",n);
+          String_append(storageMsg.archiveName,postfixFileName);
+          n++;
         }
+        while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
         String_delete(postfixFileName);
         String_delete(prefixFileName);
+        String_delete(baseName);
+        String_delete(directoryName);
       }
 
       // get printable storage name
@@ -5327,7 +5328,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
           else
           {
-            // create file -> abort
+            // create fail -> abort
             break;
           }
         }
