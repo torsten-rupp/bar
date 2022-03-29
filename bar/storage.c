@@ -2291,7 +2291,9 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
   assert(storageInfo->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMasterFlag
+  if (   (  (storageInfo->jobOptions == NULL)
+          || storageInfo->jobOptions->storageOnMasterFlag
+         )
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2354,7 +2356,9 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
   assert(storageInfo->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMasterFlag
+  if (   (   (storageInfo->jobOptions == NULL)
+          || storageInfo->jobOptions->storageOnMasterFlag
+         )
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2429,7 +2433,9 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo)
   assert(storageInfo->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMasterFlag
+  if (   (   (storageInfo->jobOptions == NULL)
+          || storageInfo->jobOptions->storageOnMasterFlag
+         )
       && (storageInfo->masterIO != NULL)
      )
   {
@@ -2914,7 +2920,9 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   }
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMasterFlag
+  if (   (   (storageInfo->jobOptions == NULL)
+          || storageInfo->jobOptions->storageOnMasterFlag
+         )
       && (storageInfo->masterIO != NULL)
      )
   {

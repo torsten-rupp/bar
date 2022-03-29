@@ -3156,10 +3156,10 @@ public class TabJobs
               widgetFileTreeToolTip = null;
             }
 
-            // show if table item available and mouse is in the right side
+            // show if mouse is in the right side
             if (mouseEvent.x > tree.getBounds().width/2)
             {
-              Label       label;
+              Label label;
 
               final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
               final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
@@ -3173,7 +3173,11 @@ public class TabJobs
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
-              Widgets.showToolTip(widgetFileTreeToolTip,tree.toDisplay(mouseEvent.x-16,mouseEvent.y-16));
+              Point point = display.getCursorLocation();
+              if (point.x > 16) point.x -= 16;
+              if (point.y > 16) point.y -= 16;
+
+              Widgets.showToolTip(widgetFileTreeToolTip,point.x,point.y);
             }
           }
         });
