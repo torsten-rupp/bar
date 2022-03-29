@@ -436,14 +436,9 @@ BAR_SOURCES_OTHER           = forward.h \
                               storage_device.c \
                               storage_master.c \
                               \
-                              index/index_version1.c \
-                              index/index_version2.c \
-                              index/index_version3.c \
-                              index/index_version4.c \
                               index/index_version5.c \
                               index/index_version6.c \
                               index/index_version7.c \
-                              index/index_current.c \
                               \
                               archive_format.pl \
                               archive_format.def \
