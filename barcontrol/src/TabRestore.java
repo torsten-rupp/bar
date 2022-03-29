@@ -6625,7 +6625,10 @@ Dprintf.dprintf("");
             EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
             if (entryIndexData != null)
             {
-              Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              Point point = display.getCursorLocation();
+              if (point.x > 16) point.x -= 16;
+              if (point.y > 16) point.y -= 16;
+
               showEntryToolTip(entryIndexData,point.x,point.y);
             }
           }
@@ -6752,6 +6755,7 @@ Dprintf.dprintf("");
                   Point point = display.getCursorLocation();
                   if (point.x > 16) point.x -= 16;
                   if (point.y > 16) point.y -= 16;
+
                   showEntryToolTip(entryIndexData,point.x,point.y);
                 }
               }
