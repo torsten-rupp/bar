@@ -1091,7 +1091,7 @@ LOCAL void outputProgressDone(ulong totalTime,
   fflush(stdout);
 }
 
-#include "index/index_current.c"
+#include "index/index_version7.c"
 
 /***********************************************************************\
 * Name   : importIntoDatabase
@@ -1193,7 +1193,13 @@ maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
                     NULL  // text
                    );
 
-  error = importIndexVersion7XXX(&oldDatabaseHandle,databaseHandle,&progressInfo);
+  error = importIndexVersion7(&oldDatabaseHandle,
+                              databaseHandle,
+                              &progressInfo,
+                              CALLBACK_(outputProgressInit,NULL),
+                              CALLBACK_(outputProgressDone,NULL),
+                              CALLBACK_(formatSubProgressInfo,NULL)
+                             );
   if (error != ERROR_NONE)
   {
     printError("Import database fail: %s!\n",Error_getText(error));

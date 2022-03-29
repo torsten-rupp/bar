@@ -942,14 +942,26 @@ LOCAL uint64 getImportStepsVersion7(DatabaseHandle *databaseHandle)
 * Purpose: import index version 7
 * Input  : oldDatabaseHandle,newDatabaseHandle - database handles
 *          progressInfo                        - progress info
+*          progressInitFunction                - init function
+*          progressInitUserData                - init function user data
+*          progressDoneFunction                - done function
+*          progressDoneUserData                - done function user data
+*          progressInfoFunction                - info function
+*          progressInfoUserData                - info function user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
-                                 DatabaseHandle *newDatabaseHandle,
-                                 ProgressInfo   *progressInfo
+LOCAL Errors importIndexVersion7(DatabaseHandle       *oldDatabaseHandle,
+                                 DatabaseHandle       *newDatabaseHandle,
+                                 ProgressInfo         *progressInfo,
+                                 ProgressInitFunction progressInitFunction,
+                                 void                 *progressInitUserData,
+                                 ProgressDoneFunction progressDoneFunction,
+                                 void                 *progressDoneUserData,
+                                 ProgressInfoFunction progressInfoFunction,
+                                 void                 *progressInfoUserData
                                 )
 {
   Errors     error;
@@ -1015,8 +1027,6 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                      void               *userData
                                                     ),
                              {
-                               DatabaseId   fromStorageId;
-                               DatabaseId   toStorageId;
                                DatabaseId   fromEntityId;
                                DatabaseId   toEntityId;
                                uint64       maxSteps;
@@ -1044,9 +1054,9 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                  32,  // filterWindowSize
                                                  500,  // reportTime
                                                  maxSteps,
-                                                 CALLBACK_(outputProgressInit,NULL),
-                                                 CALLBACK_(outputProgressDone,NULL),
-                                                 CALLBACK_(formatSubProgressInfo,NULL),
+                                                 CALLBACK_(progressInitFunction,progressInitUserData),
+                                                 CALLBACK_(progressDoneFunction,progressDoneUserData),
+                                                 CALLBACK_(progressInfoFunction,progressInfoUserData),
                                                  "Import entity #%"PRIi64" '%s': ",
                                                  fromEntityId,
                                                  Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
@@ -1082,6 +1092,9 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                   void               *userData
                                                                                  ),
                                                           {
+                                                            DatabaseId fromStorageId;
+                                                            DatabaseId toStorageId;
+
                                                             assert(fromColumnInfo != NULL);
                                                             assert(toColumnInfo != NULL);
 
@@ -1093,6 +1106,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
                                                             DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
+
                                                             Dictionary_add(&storageIdDictionary,
                                                                            &fromStorageId,
                                                                            sizeof(DatabaseId),

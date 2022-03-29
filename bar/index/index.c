@@ -291,8 +291,6 @@ LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
 
-LOCAL ProgressInfo               importProgressInfo;
-
 #ifdef INDEX_DEBUG_LOCK
   LOCAL ThreadLWPId indexUseCountLPWIds[32];
 #endif /* INDEX_DEBUG_LOCK */
@@ -838,56 +836,9 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 #include "index_version3.c"
 #include "index_version4.c"
 #include "index_version5.c"
+#endif
+#include "index_version6.c"
 #include "index_version7.c"
-#endif
-//#include "index_version6.c"
-
-#if 0
-/***********************************************************************\
-* Name   : getImportStepsCurrentVersion
-* Purpose: get number of import steps for current index version
-* Input  : oldIndexHandle     - old index handle
-*          uuidFactor         - UUID count factor (>= 1)
-*          entityCountFactor  - entity count factor (>= 1)
-*          storageCountFactor - storage count factor (>= 1)
-* Output : -
-* Return : number of import steps
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ulong getImportStepsCurrentVersion(DatabaseHandle *databaseHandle,
-                                         uint        uuidCountFactor,
-                                         uint        entityCountFactor,
-                                         uint        storageCountFactor
-                                        )
-{
-(void)databaseHandle;
-(void)uuidCountFactor;
-(void)entityCountFactor;
-(void)storageCountFactor;
-// TODO:  return getImportStepsVersion7(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
-return 7;
-}
-
-/***********************************************************************\
-* Name   : importCurrentVersion
-* Purpose: import current index version
-* Input  : oldIndexHandle,newIndexHandle - index handles
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
-                                  IndexHandle *newIndexHandle
-                                 )
-{
-// TODO:  return importIndexVersion7(oldIndexHandle,newIndexHandle);
-(void)oldIndexHandle;
-(void)newIndexHandle;
-return ERROR_STILL_NOT_IMPLEMENTED;
-}
-#endif
 
 /***********************************************************************\
 * Name   : importIndex
@@ -905,7 +856,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   Errors            error;
   IndexHandle       oldIndexHandle;
   int64             indexVersion;
-//  ulong             maxSteps;
+  ulong             maxSteps;
+  ProgressInfo      progressInfo;
   IndexQueryHandle  indexQueryHandle;
   uint64            t0;
   uint64            t1;
@@ -948,40 +900,44 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
               indexVersion
              );
   DIMPORT("import index %"PRIi64"",indexVersion);
-// TODO:
-#if 0
+
   maxSteps = 0LL;
   switch (indexVersion)
   {
     case 1:
-      maxSteps = getImportStepsVersion1(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 2:
-      maxSteps = getImportStepsVersion2(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 3:
-      maxSteps = getImportStepsVersion3(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 4:
-      maxSteps = getImportStepsVersion4(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 5:
-      maxSteps = getImportStepsVersion5(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 6:
-      maxSteps = getImportStepsVersion6(&oldIndexHandle,2,2,2);
+      maxSteps = getImportStepsVersion6(&oldIndexHandle.databaseHandle);
       break;
     case INDEX_CONST_VERSION:
-      maxSteps = getImportStepsCurrentVersion(&oldIndexHandle,2,2,2);
+      maxSteps = getImportStepsVersion7(&oldIndexHandle.databaseHandle);
       break;
     default:
       // unknown version if index
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-  ProgressInfo_init(&importProgressInfo,
-                    0,
+
+  ProgressInfo_init(&progressInfo,
+                    NULL,  // parentProgressInfo
+                    32,  // filterWindowSize
+                    500,  // reportTime
                     maxSteps,
+                    CALLBACK_(NULL,NULL),
+                    CALLBACK_(NULL,NULL),
                     CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
                     {
                        plogMessage(NULL,  // logHandle
@@ -999,33 +955,44 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   switch (indexVersion)
   {
     case 1:
-      error = importIndexVersion1(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 2:
-      error = importIndexVersion2(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 3:
-      error = importIndexVersion3(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 4:
-      error = importIndexVersion4(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 5:
-      error = importIndexVersion5(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 6:
-      error = importIndexVersion6(&oldIndexHandle,indexHandle);
+      error = importIndexVersion6(&oldIndexHandle.databaseHandle,
+                                  &indexHandle->databaseHandle,
+                                  &progressInfo,
+                                  CALLBACK_(NULL,NULL),  // progressInit
+                                  CALLBACK_(NULL,NULL),  // progressDone
+                                  CALLBACK_(NULL,NULL)  // progressInfo
+                                 );
       break;
     case INDEX_CONST_VERSION:
-      error = importCurrentVersion(&oldIndexHandle,indexHandle);
+      error = importIndexVersion7(&oldIndexHandle.databaseHandle,
+                                  &indexHandle->databaseHandle,
+                                  &progressInfo,
+                                  CALLBACK_(NULL,NULL),  // progressInit
+                                  CALLBACK_(NULL,NULL),  // progressDone
+                                  CALLBACK_(NULL,NULL)  // progressInfo
+                                 );
       break;
     default:
       // unknown version if index
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-#endif
-  ProgressInfo_done(&importProgressInfo);
+  ProgressInfo_done(&progressInfo);
   DIMPORT("import index done (error: %s)",Error_getText(error));
 
   DIMPORT("create aggregates");
@@ -1084,7 +1051,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      ProgressInfo_step(&importProgressInfo);
+      ProgressInfo_step(&progressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1130,7 +1097,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      ProgressInfo_step(&importProgressInfo);
+      ProgressInfo_step(&progressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1166,13 +1133,13 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      ProgressInfo_step(&importProgressInfo);
+      ProgressInfo_step(&progressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
 
-  ProgressInfo_done(&importProgressInfo);
+  ProgressInfo_done(&progressInfo);
 
   if (error == ERROR_NONE)
   {
@@ -2035,7 +2002,7 @@ LOCAL void indexThreadCode(void)
           else
           {
             failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
-  // TODO:
+// TODO:
             (void)File_rename(oldDatabaseFileName,failFileName,NULL);
             String_delete(failFileName);
           }
