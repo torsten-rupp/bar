@@ -61,7 +61,9 @@ sh "echo branch2 $env.BRANCH_NAME"
       // run tests
       script
       {
-        if (params.TESTS)
+        if (   params.TESTS
+            || (env.BRANCH_NAME == "feature/enable_gcov")
+           )
         {
           switch (params.BINARY_TYPE)
           {
@@ -122,7 +124,9 @@ sh "echo branch2 $env.BRANCH_NAME"
     {
       script
       {
-        if (params.CODE_COVERAGE || (env.BRANCH_NAME=="feature/enable_gcov"))
+        if (   params.CODE_COVERAGE
+            || (env.BRANCH_NAME == "feature/enable_gcov")
+           )
         {
           docker.image(DOCKER_IMAGE_NAME).inside
           {
@@ -157,7 +161,9 @@ sh "echo branch2 $env.BRANCH_NAME"
     {
       script
       {
-        if (params.PROFILING)
+        if (   params.PROFILING
+            || (env.BRANCH_NAME == "feature/enable_gcov")
+           )
         {
           docker.image(DOCKER_IMAGE_NAME).inside
           {
