@@ -3216,7 +3216,8 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           ulong      serverVersion;
           char       sqlString[256];
 
-// TODO: create
+          if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mariadb.databaseName);
+
           // open database
           databaseHandle->mariadb.handle = mysql_init(NULL);
           if (databaseHandle->mariadb.handle == NULL)
@@ -3351,6 +3352,8 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
       #if defined(HAVE_POSTGRESQL)
         {
           int protocolVersion;
+
+          if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->postgresql.databaseName);
 
           HashTable_init(&databaseHandle->postgresql.sqlStringHashTable,
                          512,  // minSize
@@ -9450,9 +9453,20 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
   assert(databaseSpecifier != NULL);
 
   #ifdef NDEBUG
-    error = openDatabase(databaseHandle,databaseSpecifier,databaseName,openDatabaseMode,timeout);
+    error = openDatabase(databaseHandle,
+                         databaseSpecifier,
+                         databaseName,
+                         openDatabaseMode,
+                         timeout
+                        );
   #else /* not NDEBUG */
-    error = __openDatabase(__fileName__,__lineNb__,databaseHandle,databaseSpecifier,databaseName,openDatabaseMode,timeout);
+    error = __openDatabase(__fileName__,__lineNb__,
+                           databaseHandle,
+                           databaseSpecifier,
+                           databaseName,
+                           openDatabaseMode,
+                           timeout
+                          );
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
