@@ -624,7 +624,6 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 EGREP
 GREP
-CPP
 ac_ct_CXX
 CXXFLAGS
 ac_ct_CC
@@ -736,6 +735,7 @@ OBJDUMP
 STRIP
 LD
 CC
+CPP
 LOCALE_DIR
 MAN_DIR
 TLS_DIR
@@ -3133,6 +3133,56 @@ done
 
 fi
 
+if test -z "$CPP"; then
+  for ac_prog in $host-cpp cpp
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_CPP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $CPP in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CPP="$CPP" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_CPP="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CPP=$ac_cv_path_CPP
+if test -n "$CPP"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CPP" >&5
+$as_echo "$CPP" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$CPP" && break
+done
+
+fi
+if test -z "$CPP"; then
+  as_fn_error $? "Cannot find C preprocessor in PATH. Please check your PATH environment variable." "$LINENO" 5
+fi
 if test -z "$CC"; then
   for ac_prog in $host-gcc $host-cc gcc cc
 do

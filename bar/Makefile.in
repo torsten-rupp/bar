@@ -49,6 +49,7 @@ SHELL                      = bash
 
 CTAGS_FLAGS                =
 
+CPP                        = @CPP@
 CC                         = @CC@
 CC_FLAGS                   = @CC_FLAGS@ -g
 CC_WARN_FLAGS              = @CC_WARN_FLAGS@

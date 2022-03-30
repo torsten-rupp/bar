@@ -36,6 +36,8 @@ ifeq ($(PLATFORM),WINDOWS)
   EXE_PREFIX = $(WINE)
 endif
 
+CPP = @CPP@
+
 #------------------------------- test commands--------------------------------
 
 # test executables
@@ -601,7 +603,7 @@ functionCleanTestDatabases = \
   MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
     $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "CREATE DATABASE bar"; \
   PGPASSWORD=test \
-    $(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 2>/dev/null || true; \
+    $(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 1>/dev/null 2>/dev/null || true; \
   PGPASSWORD=test \
     $(CREATEDB) --no-password --username $(TEST_POSTGRESQL_USER) -O $(TEST_POSTGRESQL_USER) bar; \
 
@@ -902,7 +904,7 @@ TEST_FILES_CLEAN = \
   intermediate/aux1 \
   intermediate/dev0 \
   intermediate/dev1 \
-  intermediate/index.db \
+  intermediate/*.db \
   restore \
   intermediate/output.txt \
 
@@ -4914,7 +4916,7 @@ test_index_operations_tool: \
   $(TEST_BAR_INDEX) \
   $(TEST_FILES)
 	# bar-index operations
-	@$(call functionInfoHeader,test index opertations tool)
+	@$(call functionInfoHeader,test index tool operations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@#
 	@$(call functionCleanTestFiles)
@@ -4923,10 +4925,10 @@ test_index_operations_tool: \
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@# options
-	$(TEST_BAR_INDEX) -h $(LOG)
-	$(TEST_BAR_INDEX) --help $(LOG)
-	$(TEST_BAR_INDEX) --xhelp $(LOG)
-	$(TEST_BAR_INDEX) --version $(LOG)
+	$(TEST_BAR_INDEX) -h 1>/dev/null $(LOG)
+	$(TEST_BAR_INDEX) --help 1>/dev/null $(LOG)
+	$(TEST_BAR_INDEX) --xhelp 1>/dev/null $(LOG)
+	$(TEST_BAR_INDEX) --version 1>/dev/null $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-triggers $(LOG)
