@@ -17,6 +17,8 @@ def build()
         checkout scm
         script
         {
+echo "branch1 "+env.BRANCH_NAME
+sh "echo branch2 $env.BRANCH_NAME"
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
