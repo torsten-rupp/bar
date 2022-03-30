@@ -595,15 +595,23 @@ functionExec = \
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
   $(CHMOD) o+w intermediate 2>/dev/null || true
-functionCleanTestDatabases = \
-  MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-    $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "DROP DATABASE bar" 2>/dev/null || true; \
-  MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-    $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "CREATE DATABASE bar"; \
-  PGPASSWORD=test \
-    $(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 1>/dev/null 2>/dev/null || true; \
-  PGPASSWORD=test \
-    $(CREATEDB) --no-password --username $(TEST_POSTGRESQL_USER) -O $(TEST_POSTGRESQL_USER) bar; \
+functionCleanTestDatabase = \
+  case $1 in \
+    $(TEST_INDEX_DATABASE_SQLITE)) \
+      ;; \
+    $(TEST_INDEX_DATABASE_MARIADB)) \
+			MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
+				$(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "DROP DATABASE bar" 2>/dev/null || true; \
+			MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
+				$(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "CREATE DATABASE bar"; \
+      ;; \
+    $(TEST_INDEX_DATABASE_POSTGRESQL)) \
+			PGPASSWORD=test \
+				$(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 1>/dev/null 2>/dev/null || true; \
+			PGPASSWORD=test \
+				$(CREATEDB) --no-password --username $(TEST_POSTGRESQL_USER) -O $(TEST_POSTGRESQL_USER) bar; \
+      ;; \
+  esac
 
 functionDoneTestFiles = \
   $(CHMOD) o-w intermediate
@@ -2465,7 +2473,7 @@ test_misc:
 	@$(call functionCleanTestFiles)
 	@#
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
-	  $(call functionTestCheckExitcode,127,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files $(LOG))); \
+	  $(call functionTestCheckExitcode,127,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG))); \
   fi
 ifneq ($(HAVE_SUDO_COMMANDS),)
 	@#
@@ -4917,9 +4925,10 @@ test_index_operations_tool: \
 	# bar-index operations
 	@$(call functionInfoHeader,test index tool operations)
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
 	@$(call functionCleanTestFiles)
-	@$(call functionCleanTestDatabases)
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test0.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
@@ -5002,9 +5011,10 @@ test_index_operations_base: \
 	# bar index operations
 	@$(call functionInfoHeader,test index opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
 	@$(call functionCleanTestFiles)
-	@$(call functionCleanTestDatabases)
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	@$(call functionExec,$(TEST_BAR)) -c intermediate/test0.bar $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR)) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
@@ -5211,9 +5221,10 @@ test_index_operations_server: \
 	# bar server index operations
 	@$(call functionInfoHeader,test index opertations server)
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
 	@$(call functionCleanTestFiles)
-	@$(call functionCleanTestDatabases)
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	for i in 1 2 3 4 6; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql" $(LOG); \
           $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) - < $(UP_DIR)/archive/index$$i.sql; \

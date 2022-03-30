@@ -7252,7 +7252,6 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(value));
         if (ConfigValue_parse(&CONFIG_VALUES[i],
                               NULL, // section name
                               String_cString(value),
