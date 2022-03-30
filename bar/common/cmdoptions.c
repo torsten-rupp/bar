@@ -29,7 +29,7 @@
 /***************************** Datatypes ******************************/
 
 /***************************** Variables ******************************/
-Array setOptions;
+Array cmdSetOptions;
 
 /******************************* Macros *******************************/
 #define ITERATE_UNITS(unit,units) \
@@ -1043,9 +1043,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
   }
 
-  if (!Array_contains(&setOptions,commandLineOption->variable.pointer,NULL,NULL))
+  if (!Array_contains(&cmdSetOptions,commandLineOption->variable.pointer,NULL,NULL))
   {
-    Array_append(&setOptions,commandLineOption->variable.pointer);
+    Array_append(&cmdSetOptions,commandLineOption->variable.pointer);
   }
 
   return TRUE;
@@ -1218,7 +1218,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
     }
   }
 
-  Array_init(&setOptions,sizeof(void*),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&cmdSetOptions,sizeof(void*),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(commandLineOptions,CommandLineOptions);
@@ -1249,7 +1249,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,commandLineOptions,CommandLineOptions);
   #endif /* NDEBUG */
 
-  Array_done(&setOptions);
+  Array_done(&cmdSetOptions);
 
   // free values and restore from default values
   for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
