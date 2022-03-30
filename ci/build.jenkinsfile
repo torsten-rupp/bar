@@ -90,7 +90,7 @@ sh "echo branch2 $env.BRANCH_NAME"
             default:
               docker.image(DOCKER_IMAGE_NAME).inside
               {
-                sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
+                sh "make test_smoke"+binaryExtension+" O='--verbose=1'"
               }
               break;
             case "FULL":
