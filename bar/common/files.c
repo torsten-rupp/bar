@@ -1000,8 +1000,6 @@ String File_getDirectoryName(String pathName, ConstString fileName)
 
   assert(pathName != NULL);
 
-//  return File_getDirectoryNameCString(pathName,String_cString(fileName));
-
   if (fileName != NULL)
   {
     n = String_findLastChar(fileName,STRING_END,FILE_PATH_SEPARATOR_CHAR);

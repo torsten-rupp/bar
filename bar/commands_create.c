@@ -5189,13 +5189,18 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
          )
       {
+        String directoryName;
+        String baseName;
+        String prefixFileName;
+        String postfixFileName;
+        long   index;
+        uint   n;
+
         // rename new archive
-        String directoryName   = String_new();
-        String baseName        = String_new();
-        String prefixFileName  = String_new();
-        String postfixFileName = String_new();
-        File_splitFileName(storageMsg.archiveName,directoryName,baseName);
-        long index = String_findLastChar(baseName,STRING_END,'.');
+        prefixFileName  = String_new();
+        postfixFileName = String_new();
+        File_splitFileName(storageMsg.archiveName,&directoryName,&baseName);
+        index = String_findLastChar(baseName,STRING_END,'.');
         if (index >= 0)
         {
           String_sub(prefixFileName,baseName,STRING_BEGIN,index);
@@ -5205,7 +5210,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         {
           String_set(prefixFileName,baseName);
         }
-        uint n = 0;
+        n = 0;
         do
         {
           String_set(storageMsg.archiveName,directoryName);
@@ -5215,10 +5220,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           n++;
         }
         while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
-        String_delete(postfixFileName);
-        String_delete(prefixFileName);
         String_delete(baseName);
         String_delete(directoryName);
+        String_delete(postfixFileName);
+        String_delete(prefixFileName);
       }
 
       // get printable storage name
