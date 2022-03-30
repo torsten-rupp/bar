@@ -17,8 +17,6 @@ def build()
         checkout scm
         script
         {
-echo "branch1 "+env.BRANCH_NAME
-sh "echo branch2 $env.BRANCH_NAME"
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
@@ -139,6 +137,7 @@ sh "echo branch2 $env.BRANCH_NAME"
             sh "make -C bar gcov_signatures"
             sh "make -C bar gcov_split"
             sh "make -C bar gcov_convert"
+            sh "make -C bar gcov_index TEST_INDEX_DATABASES=sqlite:intermediate/index.db"
             sh "make -C bar gcov_arguments"
             sh "make -C bar gcov_misc"
             sh "make -C bar gcov_html"
