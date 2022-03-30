@@ -783,7 +783,6 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   {
      archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
   }
-fprintf(stderr,"%s:%d: byteCompressAlgorithm=%d\n",__FILE__,__LINE__,byteCompressAlgorithm);
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,

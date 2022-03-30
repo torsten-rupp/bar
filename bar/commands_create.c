@@ -4087,6 +4087,7 @@ LOCAL Errors archiveTest(StorageInfo  *storageInfo,
   UNUSED_VARIABLE(scheduleUUID);
 
   // test archive
+fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,storageInfo->jobOptions->testCreatedArchivesFlag);
   if (storageInfo->jobOptions->testCreatedArchivesFlag)
   {
     // get archive file name (expand macros)
