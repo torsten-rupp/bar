@@ -3170,7 +3170,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   JobOptions   jobOptions;
   Errors       error;
 
-  if (CmdOption_isSet(globalOptions.logFileName))
+  if (CmdOption_isSet(&globalOptions.logFileName))
   {
     // open log file
     openLog();
@@ -3185,7 +3185,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3197,7 +3197,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3209,7 +3209,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3223,7 +3223,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3247,7 +3247,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3589,7 +3589,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   Job_doneOptions(&jobOptions);
 
-  if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+  if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
 
   return error;
 }
