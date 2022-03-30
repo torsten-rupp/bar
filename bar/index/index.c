@@ -1017,43 +1017,45 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
-    while (   (error == ERROR_NONE)
-           && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidId
-                                   NULL,  // jobUUID
-                                   NULL,  // entityId
-                                   NULL,  // scheduleUUID
-                                   NULL,  // hostName
-                                   NULL,  // userName
-                                   NULL,  // comment
-                                   NULL,  // createdDateTime
-                                   NULL,  // archiveType
-                                   &storageId,
-                                   NULL,  // storageName,
-                                   NULL,  // dateTime
-                                   NULL,  // size,
-                                   NULL,  // indexState
-                                   NULL,  // indexMode
-                                   NULL,  // lastCheckedDateTime
-                                   NULL,  // errorMessage
-                                   NULL,  // totalEntryCount
-                                   NULL  // totalEntrySize
-                                  )
-          )
+    if (error == ERROR_NONE)
     {
-      t0 = Misc_getTimestamp();
-      error = Index_updateStorageInfos(indexHandle,storageId);
-      t1 = Misc_getTimestamp();
-      if (error == ERROR_NONE)
+      while (   (error == ERROR_NONE)
+             && Index_getNextStorage(&indexQueryHandle,
+                                     NULL,  // uuidId
+                                     NULL,  // jobUUID
+                                     NULL,  // entityId
+                                     NULL,  // scheduleUUID
+                                     NULL,  // hostName
+                                     NULL,  // userName
+                                     NULL,  // comment
+                                     NULL,  // createdDateTime
+                                     NULL,  // archiveType
+                                     &storageId,
+                                     NULL,  // storageName,
+                                     NULL,  // dateTime
+                                     NULL,  // size,
+                                     NULL,  // indexState
+                                     NULL,  // indexMode
+                                     NULL,  // lastCheckedDateTime
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
+                                    )
+            )
       {
-        logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
-                          storageId,
-                          (t1-t0)/US_PER_SECOND
-                         );
+        t0 = Misc_getTimestamp();
+        error = Index_updateStorageInfos(indexHandle,storageId);
+        t1 = Misc_getTimestamp();
+        if (error == ERROR_NONE)
+        {
+          logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
+                            storageId,
+                            (t1-t0)/US_PER_SECOND
+                           );
+        }
       }
-      ProgressInfo_step(&progressInfo);
+      Index_doneList(&indexQueryHandle);
     }
-    Index_doneList(&indexQueryHandle);
   }
   if (error == ERROR_NONE)
   {
@@ -1071,35 +1073,37 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
-    while (   (error == ERROR_NONE)
-           && Index_getNextEntity(&indexQueryHandle,
-                                  NULL,  // uuidId,
-                                  NULL,  // jobUUID,
-                                  NULL,  // scheduleUUID,
-                                  &entityId,
-                                  NULL,  // archiveType,
-                                  NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage
-                                  NULL,  // totalSize
-                                  NULL,  // totalEntryCount
-                                  NULL,  // totalEntrySize
-                                  NULL  // lockedCount
-                                 )
-          )
+    if (error == ERROR_NONE)
     {
-      t0 = Misc_getTimestamp();
-      error = Index_updateEntityInfos(indexHandle,entityId);
-      t1 = Misc_getTimestamp();
-      if (error == ERROR_NONE)
+      while (   (error == ERROR_NONE)
+             && Index_getNextEntity(&indexQueryHandle,
+                                    NULL,  // uuidId,
+                                    NULL,  // jobUUID,
+                                    NULL,  // scheduleUUID,
+                                    &entityId,
+                                    NULL,  // archiveType,
+                                    NULL,  // createdDateTime,
+                                    NULL,  // lastErrorMessage
+                                    NULL,  // totalSize
+                                    NULL,  // totalEntryCount
+                                    NULL,  // totalEntrySize
+                                    NULL  // lockedCount
+                                   )
+            )
       {
-        logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
-                          entityId,
-                          (t1-t0)/US_PER_SECOND
-                         );
+        t0 = Misc_getTimestamp();
+        error = Index_updateEntityInfos(indexHandle,entityId);
+        t1 = Misc_getTimestamp();
+        if (error == ERROR_NONE)
+        {
+          logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
+                            entityId,
+                            (t1-t0)/US_PER_SECOND
+                           );
+        }
       }
-      ProgressInfo_step(&progressInfo);
+      Index_doneList(&indexQueryHandle);
     }
-    Index_doneList(&indexQueryHandle);
   }
   if (error == ERROR_NONE)
   {
@@ -1111,35 +1115,35 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                 0LL,  // offset
                                 INDEX_UNLIMITED
                                );
-    while (   (error == ERROR_NONE)
-           && Index_getNextUUID(&indexQueryHandle,
-                                &uuidId,
-                                NULL,  // jobUUID
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // lastErrorMessage
-                                NULL,  // size
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
+    if (error == ERROR_NONE)
     {
-      t0 = Misc_getTimestamp();
-      error = Index_updateUUIDInfos(indexHandle,uuidId);
-      t1 = Misc_getTimestamp();
-      if (error == ERROR_NONE)
+      while (   (error == ERROR_NONE)
+             && Index_getNextUUID(&indexQueryHandle,
+                                  &uuidId,
+                                  NULL,  // jobUUID
+                                  NULL,  // lastCheckedDateTime
+                                  NULL,  // lastErrorMessage
+                                  NULL,  // size
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
+                                 )
+            )
       {
-        logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
-                          uuidId,
-                          (t1-t0)/US_PER_SECOND
-                         );
+        t0 = Misc_getTimestamp();
+        error = Index_updateUUIDInfos(indexHandle,uuidId);
+        t1 = Misc_getTimestamp();
+        if (error == ERROR_NONE)
+        {
+          logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
+                            uuidId,
+                            (t1-t0)/US_PER_SECOND
+                           );
+        }
       }
-      ProgressInfo_step(&progressInfo);
+      Index_doneList(&indexQueryHandle);
     }
-    Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
-
-  ProgressInfo_done(&progressInfo);
 
   if (error == ERROR_NONE)
   {
