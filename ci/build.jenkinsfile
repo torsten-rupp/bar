@@ -122,7 +122,7 @@ sh "echo branch2 $env.BRANCH_NAME"
     {
       script
       {
-        if (params.CODE_COVERAGE)
+        if (params.CODE_COVERAGE || (env.BRANCH_NAME=="feature/enable_gcov"))
         {
           docker.image(DOCKER_IMAGE_NAME).inside
           {
