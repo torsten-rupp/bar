@@ -6776,22 +6776,41 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
 // TODO:
   // skip header
-  bool headerLineFlag = TRUE;
+  bool headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
   if (headerLineFlag)
   {
-    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
-                     && String_startsWithCString(line,"# ----");
+    if (String_startsWithCString(line,"# ----"))
+    {
+      headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+    }
+    else
+    {
+      headerLineFlag = FALSE;
+    }
   }
   if (headerLineFlag)
   {
-    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
-                     && String_startsWithCString(line,"# BAR configuration");
+    if (String_startsWithCString(line,"# BAR configuration"))
+    {
+      headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+    }
+    else
+    {
+      headerLineFlag = FALSE;
+    }
   }
   if (headerLineFlag)
   {
-    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
-                     && String_startsWithCString(line,"# ----");
+    if (String_startsWithCString(line,"# ----"))
+    {
+      headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+    }
+    else
+    {
+      headerLineFlag = FALSE;
+    }
   }
+  if (!headerLineFlag) File_ungetLine(&fileHandle,line,&lineNb);
 
   // parse
   bool lineFlag;
@@ -6800,7 +6819,6 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
         )
   {
     // parse line
-//fprintf(stderr,"%s, %d: %d: %s\n",__FILE__,__LINE__,lineNb,String_cString(line));
     String_trim(line,STRING_WHITE_SPACES);
 
     if      (String_isEmpty(line))
@@ -7234,6 +7252,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(value));
         if (ConfigValue_parse(&CONFIG_VALUES[i],
                               NULL, // section name
                               String_cString(value),
