@@ -322,7 +322,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
   printConsole(stdout,0,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
   printConsole(stdout,0,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
   printConsole(stdout,0,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
-  printConsole(stdout,0,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
+  printConsole(stdout,0,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,FALSE,NULL)));
   printConsole(stdout,0,"Signatures   : ");
   switch (allCryptSignatureState)
   {
@@ -523,7 +523,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -908,7 +908,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -1035,7 +1035,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -1181,7 +1181,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -4421,7 +4421,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           #endif /* NDEBUG */
           break;
       }
-      Misc_formatDateTime(String_clear(dateTimeString),directoryEntryNode->fileInfo.timeModified,NULL);
+      Misc_formatDateTime(String_clear(dateTimeString),directoryEntryNode->fileInfo.timeModified,FALSE,NULL);
       if (globalOptions.numericUIDGIDFlag)
       {
         stringFormat(userName,sizeof(userName),"%d",directoryEntryNode->fileInfo.userId);

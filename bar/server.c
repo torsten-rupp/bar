@@ -1949,7 +1949,7 @@ fprintf(stderr,"%s:%d: no schedule found\n",__FILE__,__LINE__);
                        LOG_TYPE_WARNING,
                        "Scheduled job '%s' for execution at %s",
                        String_cString(jobNode->name),
-                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,NULL)
+                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,FALSE,NULL)
                       );
 
             // store last schedule check time
@@ -2308,7 +2308,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                "Deleted storage #%lld: '%s', created at %s",
                Index_getDatabaseId(storageId),
                String_cString(storageName),
-               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
               );
   }
   else
@@ -2472,7 +2472,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                "Deleted entity #%lld: job '%s', created at %s",
                Index_getDatabaseId(entityId),
                String_cString(jobName),
-               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
               );
   }
   else
@@ -3145,7 +3145,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,FALSE,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
@@ -3164,7 +3164,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,FALSE,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
@@ -3621,7 +3621,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                     Index_getDatabaseId(moveToEntityId),
                     String_cString(moveToJobName),
                     Archive_archiveTypeToString(archiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
                     String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName))
                    );
       }
@@ -3634,7 +3634,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                     Index_getDatabaseId(moveToEntityId),
                     String_cString(moveToJobName),
                     Archive_archiveTypeToString(archiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
                     String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName)),
                     Error_getText(error)
                    );
@@ -4508,7 +4508,7 @@ LOCAL void autoIndexThreadCode(void)
                           "INDEX",
                           "Auto deleted index for '%s', last checked %s",
                           String_cString(printableStorageName),
-                          String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,NULL))
+                          String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,FALSE,NULL))
                          );
             }
           }

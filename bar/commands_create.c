@@ -4805,7 +4805,7 @@ NULL, // masterIO
         (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
         // log
-        Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
+        Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,FALSE,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
                    "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %"PRIu64" bytes",
@@ -5024,7 +5024,7 @@ NULL, // masterIO
         (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
         // log
-        Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
+        Misc_formatDateTime(dateTime,oldestCreatedDateTime,FALSE,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
                    "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %"PRIu64" bytes",

@@ -843,14 +843,15 @@ uint64 Misc_parseDateTime(const char *string);
 *          buffer     - buffer
 *          bufferSize - buffer size
 *          dateTime   - date/time (seconds since 1970-1-1 00:00:00)
+*          utcFlag    - TRUE to format date/time in UTC. FALSE otherwise
 *          format     - format string (see strftime) or NULL for default
 * Output : -
 * Return : date/time string
 * Notes  : -
 \***********************************************************************/
 
-String Misc_formatDateTime(String string, uint64 dateTime, const char *format);
-const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format);
+String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const char *format);
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, bool utcFlag, const char *format);
 
 /***********************************************************************\
 * Name   : Misc_udelay

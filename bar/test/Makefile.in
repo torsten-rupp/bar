@@ -2228,15 +2228,6 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --remote-bar-executable=$(TEST_BAR) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --config=intermediate/bar.cfg $(LOG))
 	@#
-	# databases
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=sqlite:intermediate/index.db --debug-index-wait-operations $(LOG))
-ifeq (@HAVE_MARIADB@,1)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=mariadb:localhost:test:test --debug-index-wait-operations $(LOG))
-endif
-ifeq (@HAVE_POSTGRESQL@,1)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=postgresql:localhost:test:test --debug-index-wait-operations $(LOG))
-endif
-	@#
 	# server
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --server-mode=master $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --server-mode=slave $(LOG))
@@ -3314,7 +3305,8 @@ test_file_operations: \
 test_file_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
-	@# normal tests
+	@#
+	# normal tests
 	@$(call functionInfoHeader,test file operations base)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -3371,7 +3363,8 @@ test_file_operations_delta: \
   $(TEST_FILES)
 	@$(call functionInfoHeader,test file operations delta)
 ifeq (@HAVE_XDELTA3@,1)
-	@# delta tests
+	@#
+	# delta tests
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
@@ -3429,7 +3422,8 @@ endif
 test_file_operations_dryrun: \
   $(TEST_BAR) \
   $(TEST_FILES)
-	@# normal tests
+	@#
+	# normal tests
 	@$(call functionInfoHeader,test file operations dryrun)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -3443,7 +3437,8 @@ test_file_operations_dryrun: \
 test_file_operations_incremental: \
   $(TEST_BAR) \
   $(TEST_FILES)
-	@# incremental tests
+	@#
+	# incremental tests
 	@$(call functionInfoHeader,test file operations incremental)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -3461,7 +3456,8 @@ test_file_operations_incremental: \
 test_file_operations_differential: \
   $(TEST_BAR) \
   $(TEST_FILES)
-	@# differential tests
+	@#
+	# differential tests
 	@$(call functionInfoHeader,test file operations differential)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -3481,7 +3477,8 @@ test_file_operations_destroyed: \
   $(TEST_BAR) \
   $(TEST_DESTROYER) \
   $(TEST_FILES)
-	@# tests which must cause errors
+	@#
+	# tests which must cause errors
 	@$(call functionInfoHeader,test file operations destroyed)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -3527,15 +3524,18 @@ test_convert_operations: \
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i none`")
-	@# convert compress
+	@#
+	# convert compress
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
-	@# convert job
+	@#
+	# convert job
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) --job=01234567-89ab-cdef-0123-456789abcdef --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i 01234567-89ab-cdef-0123-456789abcdef`")
-	@# convert comment
+	@#
+	# convert comment
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --comment='Franz Kafka: Das Schloss' --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Das Schloss'`")
@@ -4684,7 +4684,6 @@ test_image_operations_base: \
 	@$(call functionVerifyParameter,DEVICE1)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	@# ---
 	@$(call functionCleanTestFiles)
 	@$(call functionTestDeviceReset)
 	@#
@@ -4716,7 +4715,6 @@ test_image_operations_delta: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
-	@# ---
 	@$(call functionCleanTestFiles)
 	@$(call functionTestDeviceReset)
 	@#
@@ -4736,7 +4734,6 @@ endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x intermediate/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@#
-	@# ---
 	@$(call functionCleanTestFiles)
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A))
@@ -4765,7 +4762,6 @@ test_image_operations_check:
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	@# ---
 	@$(call functionTestDeviceReset)
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
@@ -4792,7 +4788,6 @@ test_image_operations_diff_image:
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	@# ---
 	@$(call functionTestDeviceReset)
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
@@ -4819,7 +4814,6 @@ test_image_operations_create: \
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	@# ---
 	@$(call functionCleanTestFiles)
 	@$(call functionTestDeviceReset)
 	@#
@@ -4864,7 +4858,6 @@ test_optical_operations: \
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	@# ---
 	@$(call functionCleanTestFiles)
 	$(SLEEP) $(TEST_OPTICAL_SLEEP_TIME)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c cd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank $(LOG))
@@ -4932,7 +4925,8 @@ test_index_operations_tool: \
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test0.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
-	@# options
+	@#
+	# options
 	$(TEST_BAR_INDEX) -h 1>/dev/null $(LOG)
 	$(TEST_BAR_INDEX) --help 1>/dev/null $(LOG)
 	$(TEST_BAR_INDEX) --xhelp 1>/dev/null $(LOG)
@@ -4971,7 +4965,8 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -n "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
-	@# newest entries in index
+	@#
+	# newest entries in index
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
 	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest") # no entries
 	($(CD) $(UP_DIR); \
@@ -5013,12 +5008,17 @@ test_index_operations_base: \
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
+	# maintain index
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --debug-index-wait-operations $(LOG))
+	@#
+	# import into index
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	@$(call functionExec,$(TEST_BAR)) -c intermediate/test0.bar $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR)) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
-	@# add to index
+	@#
+	# add to index
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest")
 	($(CD) $(UP_DIR); \
@@ -5034,7 +5034,8 @@ test_index_operations_base: \
         )
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries with entity 1
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE name NOT IN ($(call functionSQLList,$(TEST_FILES_SIMPLE)))") # only entries with known names
-	@# refresh index
+	@#
+	# refresh index
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
@@ -5047,7 +5048,8 @@ test_index_operations_base: \
            $(LOG) \
         )
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries with entity 1
-	@# remove from index
+	@#
+	# remove from index
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
@@ -5083,7 +5085,8 @@ test_index_operations_base: \
                                           LEFT JOIN storages ON storages.id=specialEntries.storageId \
                                         WHERE storages.deletedFlag!=1 \
                                        ") # no special entries
-	@# newest entries in index
+	@#
+	# newest entries in index
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
