@@ -263,7 +263,7 @@ LOCAL Errors validateCertificate(const void *certData,
     if (time(NULL) < certActivationTime)
     {
       gnutls_x509_crt_deinit(cert);
-      return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+      return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,FALSE,DATE_TIME_FORMAT_LOCALE));
     }
   }
   certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
@@ -272,7 +272,7 @@ LOCAL Errors validateCertificate(const void *certData,
     if (time(NULL) > certExpireTime)
     {
       gnutls_x509_crt_deinit(cert);
-      return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+      return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,FALSE,DATE_TIME_FORMAT_LOCALE));
     }
   }
 #if 0
@@ -1508,7 +1508,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           {
             gnutls_x509_crt_deinit(cert);
             disconnectDescriptor(serverSocketHandle->handle);
-            return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+            return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,FALSE,DATE_TIME_FORMAT_LOCALE));
           }
         }
         certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
@@ -1518,7 +1518,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           {
             gnutls_x509_crt_deinit(cert);
             disconnectDescriptor(serverSocketHandle->handle);
-            return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+            return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,FALSE,DATE_TIME_FORMAT_LOCALE));
           }
         }
 #if 0

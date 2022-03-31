@@ -24121,6 +24121,58 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gmtime_r" >&5
+$as_echo_n "checking for gmtime_r... " >&6; }
+if ${ac_cv_func_gmtime_r+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gmtime_r="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gmtime_r();"; fi`
+                                         #ifdef gmtime_r
+                                         #else
+                                           return (intptr_t)gmtime_r;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gmtime_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gmtime_r" >&5
+$as_echo "$ac_cv_func_gmtime_r" >&6; }
+  if test "$ac_cv_func_gmtime_r" != no; then :
+
+$as_echo "#define HAVE_GMTIME_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for localtime_r" >&5
 $as_echo_n "checking for localtime_r... " >&6; }
 if ${ac_cv_func_localtime_r+:} false; then :

@@ -1453,7 +1453,7 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
   format    = (argc >= 2) ? (const char *)argv[1] : NULL;
 
   // convert to Unix timestamp
-  Misc_formatDateTimeCString(text,sizeof(text),timestamp,format);
+  Misc_formatDateTimeCString(text,sizeof(text),timestamp,FALSE,format);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -1482,7 +1482,7 @@ LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
   UNUSED_VARIABLE(argv);
 
   // convert to Unix timestamp
-  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),DATE_TIME_FORMAT_DEFAULT);
+  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),FALSE,DATE_TIME_FORMAT_DEFAULT);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -3216,7 +3216,8 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           ulong      serverVersion;
           char       sqlString[256];
 
-// TODO: create
+          if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mariadb.databaseName);
+
           // open database
           databaseHandle->mariadb.handle = mysql_init(NULL);
           if (databaseHandle->mariadb.handle == NULL)
@@ -3351,6 +3352,8 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
       #if defined(HAVE_POSTGRESQL)
         {
           int protocolVersion;
+
+          if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->postgresql.databaseName);
 
           HashTable_init(&databaseHandle->postgresql.sqlStringHashTable,
                          512,  // minSize
@@ -6520,7 +6523,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                     statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
                     statement.parameterFormats[i] = 1;
                   #else
-                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
+                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
                     statement.parameterValues[i]  = statement.bind[i].data;
                     statement.parameterLengths[i] = stringLength(statement.bind[i].data);
                     statement.parameterFormats[i] = 0;
@@ -7043,7 +7046,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -7469,7 +7472,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -13462,7 +13465,7 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       String_format(string,"%lf",databaseValue->d);
       break;
     case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTime(string,databaseValue->dateTime,NULL);
+      Misc_formatDateTime(string,databaseValue->dateTime,FALSE,NULL);
       break;
     case DATABASE_DATATYPE_STRING:
       String_format(string,"%S",databaseValue->string);
@@ -13512,7 +13515,7 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%lf",databaseValue->d);
       break;
     case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,NULL);
+      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,FALSE,NULL);
       break;
     case DATABASE_DATATYPE_STRING:
       stringFormat(buffer,bufferSize,"%s",String_cString(databaseValue->string));

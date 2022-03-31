@@ -4585,6 +4585,7 @@ AC_CHECK_FUNCTION(inotify_init1,    AC_DEFINE(HAVE_INOTIFY_INIT1,    1,[inotify_
 AC_CHECK_FUNCTION(inotify_add_watch,AC_DEFINE(HAVE_INOTIFY_ADD_WATCH,1,[inotify_add_watch() available]))
 AC_CHECK_FUNCTION(inotify_rm_watch, AC_DEFINE(HAVE_INOTIFY_RM_WATCH, 1,[inotify_rm_watch() available]))
 
+AC_CHECK_FUNCTION(gmtime_r,   AC_DEFINE(HAVE_GMTIME_R,   1,[gmtime_r() available]))
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
 AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])

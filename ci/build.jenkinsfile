@@ -59,7 +59,9 @@ def build()
       // run tests
       script
       {
-        if (params.TESTS)
+        if (   params.TESTS
+            || (env.BRANCH_NAME == "master")
+           )
         {
           switch (params.BINARY_TYPE)
           {
@@ -86,7 +88,7 @@ def build()
             default:
               docker.image(DOCKER_IMAGE_NAME).inside
               {
-                sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
+                sh "make test_smoke"+binaryExtension+" O='--verbose=1'"
               }
               break;
             case "FULL":
@@ -120,7 +122,9 @@ def build()
     {
       script
       {
-        if (params.CODE_COVERAGE)
+        if (   params.CODE_COVERAGE
+            || (env.BRANCH_NAME == "master")
+           )
         {
           docker.image(DOCKER_IMAGE_NAME).inside
           {
@@ -133,6 +137,7 @@ def build()
             sh "make -C bar gcov_signatures"
             sh "make -C bar gcov_split"
             sh "make -C bar gcov_convert"
+            sh "make -C bar gcov_index TEST_INDEX_DATABASES=sqlite:intermediate/index.db"
             sh "make -C bar gcov_arguments"
             sh "make -C bar gcov_misc"
             sh "make -C bar gcov_html"
@@ -155,7 +160,9 @@ def build()
     {
       script
       {
-        if (params.PROFILING)
+        if (   params.PROFILING
+            || (env.BRANCH_NAME == "master")
+           )
         {
           docker.image(DOCKER_IMAGE_NAME).inside
           {

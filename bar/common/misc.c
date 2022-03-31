@@ -1238,15 +1238,15 @@ UNUSED_VARIABLE(string);
   return dateTime;
 }
 
-String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
+String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const char *format)
 {
   #define START_BUFFER_SIZE 256
   #define DELTA_BUFFER_SIZE 64
 
   time_t    n;
-  #ifdef HAVE_LOCALTIME_R
+  #if defined(HAVE_LOCALTIME_R) || defined(HAVE_GMTIME_R)
     struct tm tmBuffer;
-  #endif /* HAVE_LOCALTIME_R */
+  #endif /* HAVE_LOCALTIME_R || HAVE_GMTIME_R */
   struct tm *tm;
   char      *buffer;
   uint      bufferSize;
@@ -1255,11 +1255,22 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   assert(string != NULL);
 
   n = (time_t)dateTime;
-  #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&n,&tmBuffer);
-  #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&n);
-  #endif /* HAVE_LOCALTIME_R */
+  if (utcFlag)
+  {
+    #ifdef HAVE_LOCALTIME_R
+      tm = gmtime_r(&n,&tmBuffer);
+    #else /* not HAVE_LOCALTIME_R */
+      tm = gmtime(&n);
+    #endif /* HAVE_LOCALTIME_R */
+  }
+  else
+  {
+    #ifdef HAVE_LOCALTIME_R
+      tm = localtime_r(&n,&tmBuffer);
+    #else /* not HAVE_LOCALTIME_R */
+      tm = localtime(&n);
+    #endif /* HAVE_LOCALTIME_R */
+  }
   assert(tm != NULL);
 
   if (format == NULL) format = "%c";
@@ -1292,12 +1303,12 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   return string;
 }
 
-const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format)
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, bool utcFlag, const char *format)
 {
   time_t    n;
-  #ifdef HAVE_LOCALTIME_R
+  #if defined(HAVE_LOCALTIME_R) || defined(HAVE_GMTIME_R)
     struct tm tmBuffer;
-  #endif /* HAVE_LOCALTIME_R */
+  #endif /* HAVE_LOCALTIME_R || HAVE_GMTIME_R */
   struct tm *tm;
   int       length;
 
@@ -1305,11 +1316,22 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   assert(bufferSize > 0);
 
   n = (time_t)dateTime;
-  #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&n,&tmBuffer);
-  #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&n);
-  #endif /* HAVE_LOCALTIME_R */
+  if (utcFlag)
+  {
+    #ifdef HAVE_GMTIME_R
+      tm = gmtime_r(&n,&tmBuffer);
+    #else /* not HAVE_GMTIME_R */
+      tm = gmtime(&n);
+    #endif /* HAVE_GMTIME_R */
+  }
+  else
+  {
+    #ifdef HAVE_LOCALTIME_R
+      tm = localtime_r(&n,&tmBuffer);
+    #else /* not HAVE_LOCALTIME_R */
+      tm = localtime(&n);
+    #endif /* HAVE_LOCALTIME_R */
+  }
   assert(tm != NULL);
 
   if (format == NULL) format = "%c";

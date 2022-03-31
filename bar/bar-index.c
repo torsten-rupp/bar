@@ -6948,7 +6948,7 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
       case DATABASE_DATATYPE_UINT64:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
       case DATABASE_DATATYPE_DOUBLE:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%lf",values[i].d); break;
 //      case DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
-      case DATABASE_DATATYPE_DATETIME:    n = stringFormatLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,NULL)); break;
+      case DATABASE_DATATYPE_DATETIME:    n = stringFormatLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL)); break;
       case DATABASE_DATATYPE_STRING:      n = String_lengthCodepointsUTF8(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     n = stringLengthCodepointsUTF8(values[i].s); break;
       case DATABASE_DATATYPE_BLOB:        break;
@@ -7027,7 +7027,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
       case DATABASE_DATATYPE_UINT64:      s = stringFormat(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
       case DATABASE_DATATYPE_DOUBLE:      s = stringFormat(buffer,sizeof(buffer),"%lf",values[i].d); break;
 //      case DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
-      case DATABASE_DATATYPE_DATETIME:    s = Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,NULL); break;
+      case DATABASE_DATATYPE_DATETIME:    s = Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL); break;
       case DATABASE_DATATYPE_STRING:      s = String_cString(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     s = values[i].s; break;
       case DATABASE_DATATYPE_BLOB:        break;
@@ -8504,7 +8504,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 
                                                 printf("  Id              : %"PRIi64"\n",values[ 0].id);
                                                 printf("    Name          : %s\n",String_cString(values[ 5].string));
-                                                printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
+                                                printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,FALSE,NULL));
                                                 printf("    Host name     : %s\n",String_cString(values[ 7].string));
                                                 printf("    User name     : %s\n",String_cString(values[ 8].string));
                                                 printf("    Comment       : %s\n",String_cString(values[ 9].string));
@@ -8518,7 +8518,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                          ? MODE_TEXT[mode]
                                                          : stringFormat(buffer,sizeof(buffer),"unknown (%d)",mode)
                                                       );
-                                                printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
+                                                printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,FALSE,NULL));
                                                 printf("    Error message : %s\n",(values[13].s != NULL) ? values[13].s : "");
                                                 printf("\n");
                                                 printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);

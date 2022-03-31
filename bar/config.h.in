@@ -187,6 +187,9 @@
 /* get_current_dir_name() available */
 #undef HAVE_GET_CURRENT_DIR_NAME
 
+/* gmtime_r() available */
+#undef HAVE_GMTIME_R
+
 /* GNU TLS installed */
 #undef HAVE_GNU_TLS
 
