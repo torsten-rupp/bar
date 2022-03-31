@@ -2078,7 +2078,7 @@ test_arguments: \
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compress-algorithm=none $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -z none $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compress-algorithm=zip0 $(LOG))
-ifeq (@HAVE_BZIP@,1)
+ifeq (@HAVE_BZIP2@,1)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compress-algorithm=bzip1 $(LOG))
 endif
 ifeq (@HAVE_LZMA@,1)
@@ -2318,6 +2318,9 @@ endif
 	@$(RMRF) intermediate/keys
 	@#
 	# mount/umount
+ifeq (@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@,1)
+ifeq (@HAVE_SUDO_COMMAND_LOSETUP@,1)
+ifeq (@HAVE_SUDO_COMMAND_MKFS@,1)
 	@$(call functionTestDeviceReset)
 	@$(call functionCleanTestFiles)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
@@ -2330,6 +2333,9 @@ endif
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
+endif
+endif
+endif
 	@#
 	# log file
 	@$(call functionCleanTestFiles)
