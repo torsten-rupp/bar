@@ -60,7 +60,7 @@ def build()
       script
       {
         if (   params.TESTS
-            || (env.BRANCH_NAME == "feature/enable_gcov")
+            || (env.BRANCH_NAME == "master")
            )
         {
           switch (params.BINARY_TYPE)
@@ -123,7 +123,7 @@ def build()
       script
       {
         if (   params.CODE_COVERAGE
-            || (env.BRANCH_NAME == "feature/enable_gcov")
+            || (env.BRANCH_NAME == "master")
            )
         {
           docker.image(DOCKER_IMAGE_NAME).inside
@@ -161,7 +161,7 @@ def build()
       script
       {
         if (   params.PROFILING
-            || (env.BRANCH_NAME == "feature/enable_gcov")
+            || (env.BRANCH_NAME == "master")
            )
         {
           docker.image(DOCKER_IMAGE_NAME).inside
