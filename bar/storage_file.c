@@ -364,7 +364,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     error = File_makeDirectory(directoryName,
                                FILE_DEFAULT_USER_ID,
                                FILE_DEFAULT_GROUP_ID,
-                               FILE_DEFAULT_PERMISSION,
+                               FILE_DEFAULT_PERMISSIONS,
                                FALSE
                               );
     if (error != ERROR_NONE)
@@ -561,7 +561,7 @@ LOCAL Errors StorageFile_makeDirectory(const StorageInfo *storageInfo,
   return File_makeDirectory(directoryName,
                             FILE_DEFAULT_USER_ID,
                             FILE_DEFAULT_GROUP_ID,
-                            FILE_DEFAULT_PERMISSION,
+                            FILE_DEFAULT_PERMISSIONS,
                             FALSE
                            );
 }

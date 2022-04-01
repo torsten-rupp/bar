@@ -887,7 +887,7 @@ typedef struct
   int                         directoryStripCount;            // number of directories to strip in restore
   String                      destination;                    // destination for restore
   Owner                       owner;                          // restore owner
-  FilePermission              permissions;                    // restore permissions
+  FilePermissions              permissions;                    // restore permissions
 
   PatternTypes                patternType;                    // pattern type
 

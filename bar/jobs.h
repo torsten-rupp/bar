@@ -58,7 +58,7 @@ struct JobOptions
   int                         directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
   String                      destination;                   // destination for restore
   Owner                       owner;                         // restore owner
-  FilePermission              permissions;                   // restore permissions
+  FilePermissions             permissions;                   // restore permissions
   PatternTypes                patternType;                   // pattern type
 
   CompressAlgorithmsDeltaByte compressAlgorithms;            // compress algorithms delta/byte

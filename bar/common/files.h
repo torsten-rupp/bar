@@ -202,9 +202,9 @@ typedef enum
 #define FILE_OWN_GROUP_ID       0
 
 // default user, group ids, permission
-#define FILE_DEFAULT_USER_ID    0xFFFFFFFF
-#define FILE_DEFAULT_GROUP_ID   0xFFFFFFFF
-#define FILE_DEFAULT_PERMISSION 0xFFFFFFFF
+#define FILE_DEFAULT_USER_ID     0xFFFFFFFF
+#define FILE_DEFAULT_GROUP_ID    0xFFFFFFFF
+#define FILE_DEFAULT_PERMISSIONS 0xFFFFFFFF
 
 // attributes
 #define FILE_ATTRIBUTE_NONE 0LL
@@ -285,7 +285,7 @@ typedef struct
 } DirectoryListHandle;
 
 // file permission
-typedef uint32 FilePermission;
+typedef uint32 FilePermissions;
 
 // file attributes
 typedef uint64 FileAttributes;
@@ -323,7 +323,7 @@ typedef struct
   uint64           timeLastChanged;   // timestamp of last changed (changed meta-data or content)
   uint32           userId;            // user id
   uint32           groupId;           // group id
-  FilePermission   permission;        // permission flags
+  FilePermissions  permissions;       // permission flags
   FileSpecialTypes specialType;       // special type; see FileSpecialTypes
   uint32           major,minor;       // special type major/minor number
   FileAttributes   attributes;        // attributes
@@ -1159,24 +1159,24 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 * Purpose: convert string to file permission
 * Input  : string - string
 * Output : -
-* Return : file permission
+* Return : file permissions
 * Notes  : -
 \***********************************************************************/
 
-FilePermission File_stringToPermission(const char *string);
+FilePermissions File_stringToPermission(const char *string);
 
 /***********************************************************************\
 * Name   : File_permissionToString
 * Purpose: convert file permission to string
-* Input  : string     - string variable
-*          stringSize - max. size of string
-*          permission - file permission
+* Input  : string      - string variable
+*          stringSize  - max. size of string
+*          permissions - file permission
 * Output : -
 * Return : string
 * Notes  : -
 \***********************************************************************/
 
-const char *File_permissionToString(char *string, uint stringSize, FilePermission permission);
+const char *File_permissionToString(char *string, uint stringSize, FilePermissions permissions);
 
 /***********************************************************************\
 * Name   : File_getType
@@ -1595,15 +1595,15 @@ uint64 File_getFileTimeModified(ConstString fileName);
 /***********************************************************************\
 * Name   : File_setPermission
 * Purpose: set file permission
-* Input  : fileName   - file name
-*          permission - file permission
+* Input  : fileName    - file name
+*          permissions - file permissions
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setPermission(ConstString    fileName,
-                          FilePermission permission
+Errors File_setPermission(ConstString     fileName,
+                          FilePermissions permissions
                          );
 
 /***********************************************************************\
@@ -1628,7 +1628,7 @@ Errors File_setOwner(ConstString fileName,
 * Input  : pathName           - path name
 *          userId             - user id or FILE_DEFAULT_USER_ID
 *          groupId            - group id or FILE_DEFAULT_GROUP_ID
-*          permission         - permission or FILE_DEFAULT_PERMISSION
+*          permissions        - permissions or FILE_DEFAULT_PERMISSIONS
 *          ignoreExistingFlag - TRUE to ignore error if directory already
 *                               exists
 * Output : -
@@ -1636,17 +1636,17 @@ Errors File_setOwner(ConstString fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_makeDirectory(ConstString    pathName,
-                          uint32         userId,
-                          uint32         groupId,
-                          FilePermission permission,
-                          bool           ignoreExistingFlag
+Errors File_makeDirectory(ConstString     pathName,
+                          uint32          userId,
+                          uint32          groupId,
+                          FilePermissions permissions,
+                          bool            ignoreExistingFlag
                          );
-Errors File_makeDirectoryCString(const char     *pathName,
-                                 uint32         userId,
-                                 uint32         groupId,
-                                 FilePermission permission,
-                                 bool           ignoreExistingFlag
+Errors File_makeDirectoryCString(const char      *pathName,
+                                 uint32          userId,
+                                 uint32          groupId,
+                                 FilePermissions permissions,
+                                 bool            ignoreExistingFlag
                                 );
 
 /***********************************************************************\

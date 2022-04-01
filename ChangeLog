@@ -40,6 +40,8 @@
   * fix abort restore job if client connection is lost
   * renamed bar-sqlite3 to bar-index and support MariaDB
     and PostgreSQL
+  * fixed parsing permissions, fixed set permissions on
+    restore
   * BARControl: added create directory/delete file in
     file requester
   * BARControl: fixed display of entry progress: count

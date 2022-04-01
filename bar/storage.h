@@ -569,7 +569,7 @@ typedef struct
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
-        FilePermission          permission;
+        FilePermissions         permissions;
         bool                    entryReadFlag;               // TRUE if entry read
       } ftp;
     #endif /* HAVE_CURL */
@@ -591,7 +591,7 @@ typedef struct
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
-        FilePermission          permission;
+        FilePermissions          permission;
         bool                    entryReadFlag;               // TRUE if entry read
 */
       } webdav;

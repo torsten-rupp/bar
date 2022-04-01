@@ -65,6 +65,7 @@ typedef void(*ConfigReportFunction)(const char *errorMessage, void *userData);
 * Notes  : -
 \***********************************************************************/
 
+// TODO: userData as last parameter
 typedef bool(*ConfigParseFunction)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\

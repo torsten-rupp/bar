@@ -1874,7 +1874,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
     error = File_makeDirectory(directoryName,
                                FILE_DEFAULT_USER_ID,
                                FILE_DEFAULT_GROUP_ID,
-                               FILE_DEFAULT_PERMISSION,
+                               FILE_DEFAULT_PERMISSIONS,
                                FALSE
                               );
     if (error != ERROR_NONE)
@@ -2570,7 +2570,7 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
               fileInfo->timeLastChanged = 0LL;
               fileInfo->userId          = iso9660Stat->xa.user_id;
               fileInfo->groupId         = iso9660Stat->xa.group_id;
-              fileInfo->permission      = iso9660Stat->xa.attributes;
+              fileInfo->permissions     = iso9660Stat->xa.attributes;
               fileInfo->major           = 0;
               fileInfo->minor           = 0;
               memClear(&fileInfo->cast,sizeof(FileCast));

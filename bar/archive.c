@@ -3827,7 +3827,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
                                archiveEntryInfo->file.chunkFileEntry.userId,
                                archiveEntryInfo->file.chunkFileEntry.groupId,
-                               archiveEntryInfo->file.chunkFileEntry.permission,
+                               archiveEntryInfo->file.chunkFileEntry.permissions,
                                archiveEntryInfo->file.chunkFileData.fragmentOffset,
                                archiveEntryInfo->file.chunkFileData.fragmentSize
                               );
@@ -5138,7 +5138,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                      archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
                                      archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
                                      archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
-                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.permissions,
                                      archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
                                      archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
                                     );
@@ -7107,7 +7107,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->file.chunkFileEntry.timeLastChanged = fileInfo->timeLastChanged;
   archiveEntryInfo->file.chunkFileEntry.userId          = fileInfo->userId;
   archiveEntryInfo->file.chunkFileEntry.groupId         = fileInfo->groupId;
-  archiveEntryInfo->file.chunkFileEntry.permission      = fileInfo->permission;
+  archiveEntryInfo->file.chunkFileEntry.permissions     = fileInfo->permissions;
   String_set(archiveEntryInfo->file.chunkFileEntry.name,fileName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info); });
 
@@ -7740,7 +7740,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged = fileInfo->timeLastChanged;
   archiveEntryInfo->directory.chunkDirectoryEntry.userId          = fileInfo->userId;
   archiveEntryInfo->directory.chunkDirectoryEntry.groupId         = fileInfo->groupId;
-  archiveEntryInfo->directory.chunkDirectoryEntry.permission      = fileInfo->permission;
+  archiveEntryInfo->directory.chunkDirectoryEntry.permissions     = fileInfo->permissions;
   String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,directoryName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryEntry.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info); });
 
@@ -7981,7 +7981,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->link.chunkLinkEntry.timeLastChanged = fileInfo->timeLastChanged;
   archiveEntryInfo->link.chunkLinkEntry.userId          = fileInfo->userId;
   archiveEntryInfo->link.chunkLinkEntry.groupId         = fileInfo->groupId;
-  archiveEntryInfo->link.chunkLinkEntry.permission      = fileInfo->permission;
+  archiveEntryInfo->link.chunkLinkEntry.permissions     = fileInfo->permissions;
   String_set(archiveEntryInfo->link.chunkLinkEntry.name,linkName);
   String_set(archiveEntryInfo->link.chunkLinkEntry.destinationName,destinationName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkEntry.info,{ Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info); });
@@ -8372,7 +8372,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged = fileInfo->timeLastChanged;
   archiveEntryInfo->hardLink.chunkHardLinkEntry.userId          = fileInfo->userId;
   archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId         = fileInfo->groupId;
-  archiveEntryInfo->hardLink.chunkHardLinkEntry.permission      = fileInfo->permission;
+  archiveEntryInfo->hardLink.chunkHardLinkEntry.permissions     = fileInfo->permissions;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info); });
 
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkName.info,
@@ -8665,7 +8665,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged = fileInfo->timeLastChanged;
   archiveEntryInfo->special.chunkSpecialEntry.userId          = fileInfo->userId;
   archiveEntryInfo->special.chunkSpecialEntry.groupId         = fileInfo->groupId;
-  archiveEntryInfo->special.chunkSpecialEntry.permission      = fileInfo->permission;
+  archiveEntryInfo->special.chunkSpecialEntry.permissions     = fileInfo->permissions;
   archiveEntryInfo->special.chunkSpecialEntry.major           = fileInfo->major;
   archiveEntryInfo->special.chunkSpecialEntry.minor           = fileInfo->minor;
   String_set(archiveEntryInfo->special.chunkSpecialEntry.name,specialName);
@@ -10018,7 +10018,7 @@ NULL//                             password
               fileInfo->timeLastChanged = archiveEntryInfo->file.chunkFileEntry.timeLastChanged;
               fileInfo->userId          = archiveEntryInfo->file.chunkFileEntry.userId;
               fileInfo->groupId         = archiveEntryInfo->file.chunkFileEntry.groupId;
-              fileInfo->permission      = archiveEntryInfo->file.chunkFileEntry.permission;
+              fileInfo->permissions     = archiveEntryInfo->file.chunkFileEntry.permissions;
             }
 
             foundFileEntryFlag = TRUE;
@@ -11089,7 +11089,7 @@ NULL//                             password
               fileInfo->timeLastChanged = archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged;
               fileInfo->userId          = archiveEntryInfo->directory.chunkDirectoryEntry.userId;
               fileInfo->groupId         = archiveEntryInfo->directory.chunkDirectoryEntry.groupId;
-              fileInfo->permission      = archiveEntryInfo->directory.chunkDirectoryEntry.permission;
+              fileInfo->permissions     = archiveEntryInfo->directory.chunkDirectoryEntry.permissions;
             }
 
             foundDirectoryEntryFlag = TRUE;
@@ -11517,7 +11517,7 @@ NULL//                             password
               fileInfo->timeLastChanged = archiveEntryInfo->link.chunkLinkEntry.timeLastChanged;
               fileInfo->userId          = archiveEntryInfo->link.chunkLinkEntry.userId;
               fileInfo->groupId         = archiveEntryInfo->link.chunkLinkEntry.groupId;
-              fileInfo->permission      = archiveEntryInfo->link.chunkLinkEntry.permission;
+              fileInfo->permissions     = archiveEntryInfo->link.chunkLinkEntry.permissions;
             }
 
             foundLinkEntryFlag = TRUE;
@@ -12092,7 +12092,7 @@ NULL//                             password
               fileInfo->timeLastChanged = archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged;
               fileInfo->userId          = archiveEntryInfo->hardLink.chunkHardLinkEntry.userId;
               fileInfo->groupId         = archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId;
-              fileInfo->permission      = archiveEntryInfo->hardLink.chunkHardLinkEntry.permission;
+              fileInfo->permissions     = archiveEntryInfo->hardLink.chunkHardLinkEntry.permissions;
             }
 
             foundHardLinkEntryFlag = TRUE;
@@ -12625,7 +12625,7 @@ NULL//                             password
               fileInfo->timeLastChanged = archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged;
               fileInfo->userId          = archiveEntryInfo->special.chunkSpecialEntry.userId;
               fileInfo->groupId         = archiveEntryInfo->special.chunkSpecialEntry.groupId;
-              fileInfo->permission      = archiveEntryInfo->special.chunkSpecialEntry.permission;
+              fileInfo->permissions     = archiveEntryInfo->special.chunkSpecialEntry.permissions;
               fileInfo->specialType     = archiveEntryInfo->special.chunkSpecialEntry.specialType;
               fileInfo->major           = archiveEntryInfo->special.chunkSpecialEntry.major;
               fileInfo->minor           = archiveEntryInfo->special.chunkSpecialEntry.minor;
@@ -13061,7 +13061,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                        archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
                                        archiveEntryInfo->file.chunkFileEntry.userId,
                                        archiveEntryInfo->file.chunkFileEntry.groupId,
-                                       archiveEntryInfo->file.chunkFileEntry.permission,
+                                       archiveEntryInfo->file.chunkFileEntry.permissions,
                                        archiveEntryInfo->file.chunkFileData.fragmentOffset,
                                        archiveEntryInfo->file.chunkFileData.fragmentSize
                                       );
@@ -13271,7 +13271,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.timeLastChanged,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.userId,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.groupId,
-                                            archiveEntryInfo->directory.chunkDirectoryEntry.permission
+                                            archiveEntryInfo->directory.chunkDirectoryEntry.permissions
                                            );
                 }
               }
@@ -13313,7 +13313,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                        archiveEntryInfo->link.chunkLinkEntry.timeLastChanged,
                                        archiveEntryInfo->link.chunkLinkEntry.userId,
                                        archiveEntryInfo->link.chunkLinkEntry.groupId,
-                                       archiveEntryInfo->link.chunkLinkEntry.permission
+                                       archiveEntryInfo->link.chunkLinkEntry.permissions
                                       );
                 }
               }
@@ -13440,7 +13440,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                              archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
                                              archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
                                              archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
-                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.permissions,
                                              archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
                                              archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
                                             );
@@ -13507,7 +13507,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                           archiveEntryInfo->special.chunkSpecialEntry.timeLastChanged,
                                           archiveEntryInfo->special.chunkSpecialEntry.userId,
                                           archiveEntryInfo->special.chunkSpecialEntry.groupId,
-                                          archiveEntryInfo->special.chunkSpecialEntry.permission,
+                                          archiveEntryInfo->special.chunkSpecialEntry.permissions,
                                           archiveEntryInfo->special.chunkSpecialEntry.major,
                                           archiveEntryInfo->special.chunkSpecialEntry.minor
                                          );
@@ -15289,7 +15289,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                        fileInfo.timeLastChanged,
                        fileInfo.userId,
                        fileInfo.groupId,
-                       fileInfo.permission,
+                       fileInfo.permissions,
                        fragmentOffset,
                        fragmentSize
                       );
@@ -15372,7 +15372,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                             fileInfo.timeLastChanged,
                             fileInfo.userId,
                             fileInfo.groupId,
-                            fileInfo.permission
+                            fileInfo.permissions
                            );
 
           pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
@@ -15411,7 +15411,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                        fileInfo.timeLastChanged,
                        fileInfo.userId,
                        fileInfo.groupId,
-                       fileInfo.permission
+                       fileInfo.permissions
                       );
 
           pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
@@ -15461,7 +15461,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                              fileInfo.timeLastChanged,
                              fileInfo.userId,
                              fileInfo.groupId,
-                             fileInfo.permission,
+                             fileInfo.permissions,
                              fragmentOffset,
                              fragmentSize
                             );
@@ -15507,7 +15507,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                           fileInfo.timeLastChanged,
                           fileInfo.userId,
                           fileInfo.groupId,
-                          fileInfo.permission,
+                          fileInfo.permissions,
                           fileInfo.major,
                           fileInfo.minor
                          );
@@ -16516,7 +16516,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 error = File_makeDirectory(parentDirectoryName,
                                            FILE_DEFAULT_USER_ID,
                                            FILE_DEFAULT_GROUP_ID,
-                                           FILE_DEFAULT_PERMISSION
+                                           FILE_DEFAULT_PERMISSIONS
                                           );
                 if (error != ERROR_NONE)
                 {
@@ -16807,7 +16807,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   error = File_makeDirectory(parentDirectoryName,
                                              FILE_DEFAULT_USER_ID,
                                              FILE_DEFAULT_GROUP_ID,
-                                             FILE_DEFAULT_PERMISSION
+                                             FILE_DEFAULT_PERMISSIONS
                                             );
                   if (error != ERROR_NONE)
                   {
@@ -17234,7 +17234,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 error = File_makeDirectory(parentDirectoryName,
                                            FILE_DEFAULT_USER_ID,
                                            FILE_DEFAULT_GROUP_ID,
-                                           FILE_DEFAULT_PERMISSION
+                                           FILE_DEFAULT_PERMISSIONS
                                           );
                 if (error != ERROR_NONE)
                 {

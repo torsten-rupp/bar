@@ -880,7 +880,7 @@ LOCAL bool base64Decode(void *buffer, uint bufferSize, uint *bufferLength, const
   }
   if (bufferLength != NULL) (*bufferLength) = length;
 
-  return TRUE;
+  return i == n;
 
   #undef VALID_BASE64_CHAR
 }
