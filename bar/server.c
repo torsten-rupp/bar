@@ -9481,7 +9481,12 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
     else
     {
       // create directory
-      error = File_makeDirectory(name,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,TRUE);
+      error = File_makeDirectory(name,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 TRUE
+                                );
       if (error == ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -21162,7 +21167,7 @@ Errors Server_socket(void)
       error = File_makeDirectory(globalOptions.jobsDirectory,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION,
+                                 FILE_DEFAULT_PERMISSIONS,
                                  FALSE
                                 );
       if (error != ERROR_NONE)

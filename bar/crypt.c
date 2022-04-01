@@ -404,6 +404,7 @@ bool Crypt_parseHashAlgorithm(const char *name, CryptHashAlgorithms *cryptHashAl
          && !stringEqualsIgnoreCase(CRYPT_HASH_ALGORITHMS[i].name,name)
         )
   {
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,CRYPT_HASH_ALGORITHMS[i].name);
     i++;
   }
   if (i < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS))

@@ -2643,7 +2643,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     {
       if      (!File_exists(directoryName))
       {
-        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSIONS,FALSE);
         if (error != ERROR_NONE)
         {
           printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
@@ -2840,7 +2840,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     {
       if      (!File_exists(directoryName))
       {
-        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSIONS,FALSE);
         if (error != ERROR_NONE)
         {
           printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));

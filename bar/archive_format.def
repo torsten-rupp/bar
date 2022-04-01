@@ -397,7 +397,7 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   uint64 timeLastChanged
   uint32 userId
   uint32 groupId
-  uint32 permission
+  uint32 permissions
 #TODO
 #uint32 attributes
   string name
@@ -532,7 +532,7 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   uint64 timeLastChanged
   uint32 userId
   uint32 groupId
-  uint32 permission
+  uint32 permissions
   string name
   crc32  crc
 
@@ -580,7 +580,7 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   uint64 timeLastChanged
   uint32 userId
   uint32 groupId
-  uint32 permission
+  uint32 permissions
   string name
   string destinationName
   crc32  crc
@@ -632,7 +632,7 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   uint64 timeLastChanged
   uint32 userId
   uint32 groupId
-  uint32 permission
+  uint32 permissions
   crc32  crc
 
 # hard link extended attribute
@@ -712,7 +712,7 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   uint64 timeLastChanged
   uint32 userId
   uint32 groupId
-  uint32 permission
+  uint32 permissions
   uint32 major
   uint32 minor
   string name

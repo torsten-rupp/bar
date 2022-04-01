@@ -2934,7 +2934,7 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
         fileInfo->timeLastChanged = 0LL;
         fileInfo->userId          = FILE_DEFAULT_USER_ID;
         fileInfo->groupId         = FILE_DEFAULT_GROUP_ID;
-        fileInfo->permission      = 0;
+        fileInfo->permissions     = FILE_DEFAULT_PERMISSIONS;
         fileInfo->major           = 0;
         fileInfo->minor           = 0;
 

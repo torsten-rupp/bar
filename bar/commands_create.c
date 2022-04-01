@@ -602,7 +602,12 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   {
     if      (!File_exists(directoryName))
     {
-      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
+      error = File_makeDirectory(directoryName,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 FALSE
+                                );
       if (error != ERROR_NONE)
       {
         String_delete(directoryName);

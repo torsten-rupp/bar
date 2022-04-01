@@ -490,7 +490,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
                                  uint64         *timeModified,
                                  uint32         *userId,
                                  uint32         *groupId,
-                                 FilePermission *permission
+                                 FilePermissions *permission
                                 )
 {
   typedef struct
@@ -2933,7 +2933,7 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
                                                                             &storageDirectoryListHandle->ftp.timeModified,
                                                                             &storageDirectoryListHandle->ftp.userId,
                                                                             &storageDirectoryListHandle->ftp.groupId,
-                                                                            &storageDirectoryListHandle->ftp.permission
+                                                                            &storageDirectoryListHandle->ftp.permissions
                                                                            );
 
       // free resources
@@ -2979,7 +2979,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
                                                                               &storageDirectoryListHandle->ftp.timeModified,
                                                                               &storageDirectoryListHandle->ftp.userId,
                                                                               &storageDirectoryListHandle->ftp.groupId,
-                                                                              &storageDirectoryListHandle->ftp.permission
+                                                                              &storageDirectoryListHandle->ftp.permissions
                                                                              );
 
         // free resources
@@ -2999,7 +2999,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
         fileInfo->timeLastChanged = 0LL;
         fileInfo->userId          = storageDirectoryListHandle->ftp.userId;
         fileInfo->groupId         = storageDirectoryListHandle->ftp.groupId;
-        fileInfo->permission      = storageDirectoryListHandle->ftp.permission;
+        fileInfo->permissions     = storageDirectoryListHandle->ftp.permissions;
         fileInfo->major           = 0;
         fileInfo->minor           = 0;
       }

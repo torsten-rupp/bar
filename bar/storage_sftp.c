@@ -1821,7 +1821,7 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
             fileInfo->timeModified    = (uint64)sftpAttributes.mtime;
             fileInfo->userId          = sftpAttributes.uid;
             fileInfo->groupId         = sftpAttributes.gid;
-            fileInfo->permission      = (FilePermission)sftpAttributes.permissions;
+            fileInfo->permission      = (FilePermissions)sftpAttributes.permissions;
 
             error = ERROR_NONE;
           }
@@ -2210,7 +2210,7 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
           fileInfo->timeLastChanged = 0LL;
           fileInfo->userId          = storageDirectoryListHandle->sftp.attributes.uid;
           fileInfo->groupId         = storageDirectoryListHandle->sftp.attributes.gid;
-          fileInfo->permission      = storageDirectoryListHandle->sftp.attributes.permissions;
+          fileInfo->permissions     = storageDirectoryListHandle->sftp.attributes.permissions;
           fileInfo->major           = 0;
           fileInfo->minor           = 0;
           memClear(&fileInfo->cast,sizeof(FileCast));
