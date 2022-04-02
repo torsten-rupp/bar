@@ -7512,7 +7512,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
-    StringList_done(&archiveEntryNameList);
 
     // seek to start offset
     error = File_seek(&fileHandle,fragmentOffset);
@@ -7614,6 +7613,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       {
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
+        StringList_done(&archiveEntryNameList);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7633,6 +7633,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
+        StringList_done(&archiveEntryNameList);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7647,6 +7648,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                   );
 
         (void)Archive_closeEntry(&archiveEntryInfo);
+        StringList_done(&archiveEntryNameList);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7663,11 +7665,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       printError("Cannot close archive hardlink entry (error: %s)!",
                  Error_getText(error)
                 );
+      StringList_done(&archiveEntryNameList);
       (void)File_close(&fileHandle);
       fragmentDone(createInfo,StringList_first(fileNameList,NULL));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+    StringList_done(&archiveEntryNameList);
 
     // get final compression ratio
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)

@@ -4702,6 +4702,7 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(!archiveEntryInfo->hardLink.headerWrittenFlag);
+  assert(!StringList_isEmpty(archiveEntryInfo->hardLink.fileNameList));
 
   // create hard link chunk
   error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLink.info);
@@ -4946,7 +4947,10 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // check if split is allowed and necessary
       newPartFlag =    allowNewPartFlag
                     && isNewPartNeeded(archiveEntryInfo->archiveHandle,
-                                       (!archiveEntryInfo->hardLink.headerWrittenFlag ? archiveEntryInfo->hardLink.headerLength : 0) + minBytes
+                                       (!archiveEntryInfo->hardLink.headerWrittenFlag
+                                          ? archiveEntryInfo->hardLink.headerLength
+                                          : 0
+                                       ) + minBytes
                                       );
 
       // split
@@ -8140,6 +8144,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
+  assert(!StringList_isEmpty(fileNameList));
   assert(fileInfo != NULL);
 
   UNUSED_VARIABLE(fragmentSize);

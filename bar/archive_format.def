@@ -636,6 +636,8 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   crc32  crc
 
 # hard link extended attribute
+#
+# parent: HLN0
 # never compress, encrypted as specified in HLN0
 CHUNK HARDLINK_EXTENDED_ATTRIBUTE "HEAT" HardLinkExtendedAttribute
   ENCRYPT
