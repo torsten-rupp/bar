@@ -1125,7 +1125,9 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   }
   else
   {
-    return (sourceStorageName != NULL) ? ERRORX_(DELTA_SOURCE_NOT_FOUND,0,"%s",sourceStorageName) : ERROR_DELTA_SOURCE_NOT_FOUND;
+    return (sourceStorageName != NULL)
+      ? ERRORX_(DELTA_SOURCE_NOT_FOUND,0,"%s",sourceStorageName)
+      : ERROR_DELTA_SOURCE_NOT_FOUND;
   }
 }
 

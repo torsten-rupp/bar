@@ -856,13 +856,13 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
   storageName = String_new();
 
   // detect pattern type, get pattern
-  if      (stringStartsWith(value,"extended:")) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
+  if      (stringStartsWith(value,"extended:")) { String_setCString(storageName,value+9); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
   else if (stringStartsWith(value,"x:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
-  else if (stringStartsWith(value,"regex:"   )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_REGEX;          }
+  else if (stringStartsWith(value,"regex:"   )) { String_setCString(storageName,value+6); patternType = PATTERN_TYPE_REGEX;          }
   else if (stringStartsWith(value,"r:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_REGEX;          }
-  else if (stringStartsWith(value,"glob:"    )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_GLOB;           }
+  else if (stringStartsWith(value,"glob:"    )) { String_setCString(storageName,value+5); patternType = PATTERN_TYPE_GLOB;           }
   else if (stringStartsWith(value,"g:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_GLOB;           }
-  else                                          { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_GLOB;           }
+  else                                          { String_setCString(storageName,value  ); patternType = PATTERN_TYPE_GLOB;           }
 
   // append to delta source list
   DeltaSourceList_append((DeltaSourceList*)variable,storageName,patternType,NULL);
