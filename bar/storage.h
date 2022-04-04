@@ -423,6 +423,7 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
+        String                  url;
         uint64                  index;                       // current read/write index in file [0..n-1]
         uint64                  size;                        // size of file [bytes]
         struct                                               // receive buffer

@@ -14702,6 +14702,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 
   assert(archiveHandle != NULL);
 
+fprintf(stderr,"%s:%d: %p\n",__FILE__,__LINE__,archiveHandle->archiveCryptInfo);
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
   {
@@ -14893,6 +14894,8 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
     }
   }
   (void)Archive_seek(archiveHandle,offset);
+//archiveHandle->archiveCryptInfo = NULL;
+fprintf(stderr,"%s:%d: %p\n",__FILE__,__LINE__,archiveHandle->archiveCryptInfo);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
