@@ -863,8 +863,6 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         int result;
 
         assert(loginName != NULL);
-        assert(sshPublicKeyData != NULL);
-        assert(sshPrivateKeyData != NULL);
 
         // check login name
         if (String_isEmpty(loginName))
@@ -918,15 +916,25 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         result = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
-          result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                         String_cString(loginName),
-                                                         String_length(loginName),
-                                                         sshPublicKeyData,
-                                                         sshPublicKeyLength,
-                                                         sshPrivateKeyData,
-                                                         sshPrivateKeyLength,
-                                                         plainPassword
-                                                        );
+          if ((sshPublicKeyData != NULL) && (sshPrivateKeyData != NULL))
+          {
+            result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                           String_cString(loginName),
+                                                           String_length(loginName),
+                                                           sshPublicKeyData,
+                                                           sshPublicKeyLength,
+                                                           sshPrivateKeyData,
+                                                           sshPrivateKeyLength,
+                                                           plainPassword
+                                                          );
+          }
+          else
+          {
+            result = libssh2_userauth_password(socketHandle->ssh2.session,
+                                               String_cString(loginName),
+                                               plainPassword
+                                              );
+          }
         }
         if (result != 0)
         {

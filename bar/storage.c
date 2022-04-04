@@ -543,14 +543,16 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                            uint        hostPort,
                            ConstString loginName,
                            Password    *loginPassword,
-                           void        *publicKey,
+                           const void  *publicKeyData,
                            uint        publicKeyLength,
-                           void        *privateKey,
+                           const void  *privateKeyData,
                            uint        privateKeyLength
                           )
 {
   SocketHandle socketHandle;
   Errors       error;
+
+  assert(loginName != NULL);
 
   printInfo(5,"SSH: host %s:%d\n",String_cString(hostName),hostPort);
   error = Network_connect(&socketHandle,
@@ -559,9 +561,9 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                           hostPort,
                           loginName,
                           loginPassword,
-                          publicKey,
+                          publicKeyData,
                           publicKeyLength,
-                          privateKey,
+                          privateKeyData,
                           privateKeyLength,
                             SOCKET_FLAG_NONE
                           | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
