@@ -376,12 +376,17 @@ bool parseBandWidthNumber(ConstString s, ulong *n)
 
 ulong getBandWidth(BandWidthList *bandWidthList)
 {
+  uint64        currentDateTime;
   uint          currentYear,currentMonth,currentDay;
   WeekDays      currentWeekDay;
   uint          currentHour,currentMinute;
+  bool          currentIsDayLightSaving;
+  uint          matchingDateTime;
   BandWidthNode *matchingBandWidthNode;
-  bool          dateMatchFlag,weekDayMatchFlag,timeMatchFlag;
   BandWidthNode *bandWidthNode;
+  int           year,month,day;
+  uint          hour,minute;
+  uint64        dateTime;
   ulong         n;
   uint64        timestamp;
   FileHandle    fileHandle;
@@ -392,7 +397,8 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   n = 0L;
 
   // get current date/time values
-  Misc_splitDateTime(Misc_getCurrentDateTime(),
+  currentDateTime = Misc_getCurrentDateTime();
+  Misc_splitDateTime(currentDateTime,
                      &currentYear,
                      &currentMonth,
                      &currentDay,
@@ -400,75 +406,29 @@ ulong getBandWidth(BandWidthList *bandWidthList)
                      &currentMinute,
                      NULL,  // second
                      &currentWeekDay,
-                     NULL  // isDayLightSaving
+                     &currentIsDayLightSaving
                     );
 
   // find best matching band width node
+  matchingDateTime      = 0LL;
   matchingBandWidthNode = NULL;
   LIST_ITERATE(bandWidthList,bandWidthNode)
   {
+    year   = (bandWidthNode->year   != DATE_ANY) ? (uint)bandWidthNode->year   : currentYear;
+    month  = (bandWidthNode->month  != DATE_ANY) ? (uint)bandWidthNode->month  : currentMonth;
+    day    = (bandWidthNode->day    != DATE_ANY) ? (uint)bandWidthNode->day    : currentDay;
+    hour   = (bandWidthNode->hour   != TIME_ANY) ? (uint)bandWidthNode->hour   : currentHour;
+    minute = (bandWidthNode->minute != TIME_ANY) ? (uint)bandWidthNode->minute : currentMinute;
 
-    // match date
-    dateMatchFlag =       (matchingBandWidthNode == NULL)
-                       || (   (   (bandWidthNode->year == DATE_ANY)
-                               || (   (currentYear >= (uint)bandWidthNode->year)
-                                   && (   (matchingBandWidthNode->year == DATE_ANY)
-                                       || (bandWidthNode->year > matchingBandWidthNode->year)
-                                      )
-                                  )
-                              )
-                           && (   (bandWidthNode->month == DATE_ANY)
-                               || (   (bandWidthNode->year == DATE_ANY)
-                                   || (currentYear > (uint)bandWidthNode->year)
-                                   || (   (currentMonth >= (uint)bandWidthNode->month)
-                                       && (   (matchingBandWidthNode->month == DATE_ANY)
-                                           || (bandWidthNode->month > matchingBandWidthNode->month)
-                                          )
-                                      )
-                                  )
-                              )
-                           && (   (bandWidthNode->day    == DATE_ANY)
-                               || (   (bandWidthNode->month == DATE_ANY)
-                                   || (currentMonth > (uint)bandWidthNode->month)
-                                   || (   (currentDay >= (uint)bandWidthNode->day)
-                                       && (   (matchingBandWidthNode->day == DATE_ANY)
-                                           || (bandWidthNode->day > matchingBandWidthNode->day)
-                                          )
-                                      )
-                                  )
-                              )
-                          );
+    dateTime = Misc_makeDateTime(year,month,day,hour,minute,0,currentIsDayLightSaving);
 
-    // check week day
-    weekDayMatchFlag =    (matchingBandWidthNode == NULL)
-                       || (   (bandWidthNode->weekDaySet == WEEKDAY_SET_ANY)
-                           && IN_SET(bandWidthNode->weekDaySet,currentWeekDay)
-                          );
-
-    // check time
-    timeMatchFlag =    (matchingBandWidthNode == NULL)
-                    || (   (   (bandWidthNode->hour  == TIME_ANY)
-                            || (   (currentHour >= (uint)bandWidthNode->hour)
-                                && (   (matchingBandWidthNode->hour == TIME_ANY)
-                                    || (bandWidthNode->hour > matchingBandWidthNode->hour)
-                                    )
-                               )
-                           )
-                        && (   (bandWidthNode->minute == TIME_ANY)
-                            || (   (bandWidthNode->hour == TIME_ANY)
-                                || (currentHour > (uint)bandWidthNode->hour)
-                                || (   (currentMinute >= (uint)bandWidthNode->minute)
-                                    && (   (matchingBandWidthNode->minute == TIME_ANY)
-                                        || (bandWidthNode->minute > matchingBandWidthNode->minute)
-                                       )
-                                   )
-                               )
-                           )
-                       );
-
-    // check if matching band width node found
-    if (dateMatchFlag && weekDayMatchFlag && timeMatchFlag)
+    if (   (currentDateTime >= dateTime)
+        && (   (matchingBandWidthNode == NULL)
+            || (dateTime > matchingDateTime)
+           )
+       )
     {
+      matchingDateTime      = dateTime;
       matchingBandWidthNode = bandWidthNode;
     }
   }

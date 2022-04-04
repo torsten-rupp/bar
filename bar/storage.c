@@ -343,10 +343,13 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
   if (storageBandWidthLimiter->maxBandWidthList != NULL)
   {
     storageBandWidthLimiter->measurementBytes += transmittedBytes;
-    storageBandWidthLimiter->measurementTime += transmissionTime;
+    storageBandWidthLimiter->measurementTime  += transmissionTime;
 //fprintf(stderr,"%s, %d: sum %lu bytes %llu us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->measurementTime);
 
-    if (storageBandWidthLimiter->measurementTime > MS_TO_US(100LL))   // too small time values are not reliable, thus accumulate over time
+    // too small sizes/time values are not reliable, thus accumulate
+    if (   (storageBandWidthLimiter->measurementBytes > 1*MB           )
+        || (storageBandWidthLimiter->measurementTime  > MS_TO_US(100LL))
+       )
     {
       // calculate average band width
       averageBandWidth = 0;
@@ -358,20 +361,18 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
         }
         averageBandWidth /= storageBandWidthLimiter->measurementCount;
       }
-      else
-      {
-        averageBandWidth = 0L;
-      }
 //fprintf(stderr,"%s, %d: averageBandWidth=%lu bits/s\n",__FILE__,__LINE__,averageBandWidth);
 
-      // get max. band width to use
+      // get max. band width to use [bit/s]
       maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidthList);
 
       // calculate delay time
       if (maxBandWidth > 0L)
       {
-        calculatedTime = (BYTES_TO_BITS(storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/maxBandWidth;
-        delayTime      = (calculatedTime > storageBandWidthLimiter->measurementTime) ? calculatedTime-storageBandWidthLimiter->measurementTime : 0LL;
+        calculatedTime = (BYTES_TO_BITS(storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/maxBandWidth;  // [us]
+        delayTime      = (calculatedTime > storageBandWidthLimiter->measurementTime)
+                           ? calculatedTime-storageBandWidthLimiter->measurementTime
+                           : 0LL;
       }
       else
       {

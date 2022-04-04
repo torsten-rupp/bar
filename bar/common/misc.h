@@ -802,6 +802,17 @@ INLINE bool Misc_isLeapYear(uint year)
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Misc_isDayLightSavig
+* Purpose: check if day light saving is active for given date/time
+* Input  : dateTime - date/time
+* Output : -
+* Return : TRUE iff day light saving
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_isDayLightSaving(uint64 dateTime);
+
+/***********************************************************************\
 * Name   : Misc_makeDateTime
 * Purpose: create date/time from parts
 * Input  : year             - year, YYYY
