@@ -573,9 +573,10 @@ LOCAL bool parseFTPDirectoryLine(String         line,
                        )
           )
   {
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(line));
     // format:  <permission flags> * * * <size> <year>-<month>-<day> <hour>:<minute> <file name>
 
-    permissionStringLength = strlen(permissionString);
+    permissionStringLength = stringLength(permissionString);
 
     switch (permissionString[0])
     {
@@ -584,7 +585,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
                                         hour,minute,0,
-                                        TRUE
+                                        FALSE
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -615,7 +616,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
   {
     // format:  <permission flags> * * * <size> <month> <day> <hour>:<minute> <file name>
 
-    permissionStringLength = strlen(permissionString);
+    permissionStringLength = stringLength(permissionString);
 
     // get year, month
     Misc_splitDateTime(Misc_getCurrentDateTime(),
@@ -650,7 +651,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
                                         hour,minute,0,
-                                        TRUE
+                                        FALSE
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -680,7 +681,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
   {
     // format:  <permission flags> * * * <size> <month> <day> <year> <file name>
 
-    permissionStringLength = strlen(permissionString);
+    permissionStringLength = stringLength(permissionString);
 
     // get month
     Misc_splitDateTime(Misc_getCurrentDateTime(),
@@ -714,7 +715,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
                                         0,0,0,
-                                        TRUE
+                                        FALSE
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -743,7 +744,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
   {
     // format:  <permission flags> * * * <size> * * *:* <file name>
 
-    permissionStringLength = strlen(permissionString);
+    permissionStringLength = stringLength(permissionString);
 
     switch (permissionString[0])
     {
@@ -778,7 +779,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
   {
     // format:  <permission flags> * * * <size> * * * <file name>
 
-    permissionStringLength = strlen(permissionString);
+    permissionStringLength = stringLength(permissionString);
 
     switch (permissionString[0])
     {
@@ -1943,10 +1944,13 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
+
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlMultiHandle != NULL);
     assert(storageHandle->ftp.readAheadBuffer.data != NULL);
+
+    error = ERROR_NONE;
 
     // copy as much data as available from read-ahead buffer
     if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
@@ -2129,6 +2133,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
 {
   Errors error;
   #if   defined(HAVE_CURL)
+    char      errorBuffer[CURL_ERROR_SIZE];
     ulong     writtenBytes;
     ulong     length;
     uint64    startTimestamp,endTimestamp;
@@ -2144,9 +2149,16 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
+
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlMultiHandle != NULL);
+
+    error = ERROR_NONE;
+
+    // try to get error message
+    stringClear(errorBuffer);
+    (void)curl_easy_setopt(storageHandle->ftp.curlHandle, CURLOPT_ERRORBUFFER, errorBuffer);
 
     writtenBytes = 0L;
     while (writtenBytes < bufferLength)
@@ -2186,7 +2198,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
         do
         {
           curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
+//fprintf(stderr,"%s, %d: curlmCode=%d transfered=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->ftp.transferedBytes,storageHandle->ftp.length,runningHandles);
         }
         while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                && (runningHandles > 0)
@@ -2196,13 +2208,14 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
           error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
         }
       }
+
       if (error != ERROR_NONE)
       {
         break;
       }
       if      (storageHandle->ftp.transferedBytes <= 0L)
       {
-        error = ERROR_NETWORK_SEND;
+        error = ERRORX_(NETWORK_SEND,0,"%s",errorBuffer);
         break;
       }
       buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
@@ -2252,7 +2265,8 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
 
   (*offset) = 0LL;
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
+
   #ifdef HAVE_CURL
     (*offset) = storageHandle->ftp.index;
     error     = ERROR_NONE;
@@ -2282,7 +2296,8 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
+
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -2733,9 +2748,10 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // init variables
     AutoFree_init(&autoFreeList);
     Password_init(&password);
-    storageDirectoryListHandle->type         = STORAGE_TYPE_FTP;
+    storageDirectoryListHandle->type              = STORAGE_TYPE_FTP;
     StringList_init(&storageDirectoryListHandle->ftp.lineList);
-    storageDirectoryListHandle->ftp.fileName = String_new();
+    storageDirectoryListHandle->ftp.fileName      = String_new();
+    storageDirectoryListHandle->ftp.entryReadFlag = FALSE;
     AUTOFREE_ADD(&autoFreeList,&password,{ Password_done(&password); });
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.lineList,{ StringList_done(&storageDirectoryListHandle->ftp.lineList); });
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
@@ -2920,7 +2936,9 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
 
   endOfDirectoryFlag = TRUE;
   #if   defined(HAVE_CURL)
-    while (!storageDirectoryListHandle->ftp.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList))
+    while (   !storageDirectoryListHandle->ftp.entryReadFlag
+           && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList)
+          )
     {
       // get next line
       line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
@@ -2962,29 +2980,28 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
-    if (!storageDirectoryListHandle->ftp.entryReadFlag)
+    while (   !storageDirectoryListHandle->ftp.entryReadFlag
+           && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList)
+          )
     {
-      while (!storageDirectoryListHandle->ftp.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList))
-      {
-        // get next line
-        line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
+      // get next line
+      line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
 
-        // parse
-        storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                              fileName,
-                                                                              &storageDirectoryListHandle->ftp.type,
-                                                                              &storageDirectoryListHandle->ftp.size,
-                                                                              &storageDirectoryListHandle->ftp.timeModified,
-                                                                              &storageDirectoryListHandle->ftp.userId,
-                                                                              &storageDirectoryListHandle->ftp.groupId,
-                                                                              &storageDirectoryListHandle->ftp.permissions
-                                                                             );
+      // parse
+      storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
+                                                                            fileName,
+                                                                            &storageDirectoryListHandle->ftp.type,
+                                                                            &storageDirectoryListHandle->ftp.size,
+                                                                            &storageDirectoryListHandle->ftp.timeModified,
+                                                                            &storageDirectoryListHandle->ftp.userId,
+                                                                            &storageDirectoryListHandle->ftp.groupId,
+                                                                            &storageDirectoryListHandle->ftp.permissions
+                                                                           );
 
-        // free resources
-        String_delete(line);
-      }
+      // free resources
+      String_delete(line);
     }
 
     if (storageDirectoryListHandle->ftp.entryReadFlag)

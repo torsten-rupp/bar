@@ -1802,10 +1802,14 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
-  error = ERROR_NONE;
+
+  error = ERROR_UNKNOWN;
+
   #ifdef HAVE_CURL
     assert(storageHandle->webdav.curlMultiHandle != NULL);
     assert(storageHandle->webdav.receiveBuffer.data != NULL);
+
+    error = ERROR_NONE;
 
     while (   (bufferSize > 0L)
            && (storageHandle->webdav.index < storageHandle->webdav.size)
@@ -1953,6 +1957,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_CURL
+    char      errorBuffer[CURL_ERROR_SIZE];
     ulong     writtenBytes;
     ulong     length;
     uint64    startTimestamp,endTimestamp;
@@ -1969,9 +1974,16 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
+
   #ifdef HAVE_CURL
     assert(storageHandle->webdav.curlMultiHandle != NULL);
+
+    error = ERROR_NONE;
+
+    // try to get error message
+    stringClear(errorBuffer);
+    (void)curl_easy_setopt(storageHandle->ftp.curlHandle, CURLOPT_ERRORBUFFER, errorBuffer);
 
     writtenBytes = 0L;
     while (writtenBytes < bufferLength)
@@ -2027,7 +2039,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
       }
       if (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
       {
-        error = ERROR_NETWORK_SEND;
+        error = ERRORX_(NETWORK_SEND,0,"%s",errorBuffer);
         break;
       }
 //fprintf(stderr,"%s, %d: sent %d\n",__FILE__,__LINE__,storageHandle->webdav.sendBuffer.length);

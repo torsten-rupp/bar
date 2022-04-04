@@ -1078,6 +1078,25 @@ uint Misc_getLastDayOfMonth(uint year, uint month)
   return DAYS_IN_MONTH[Misc_isLeapYear(year) ? 1 : 0][month-1];
 }
 
+bool Misc_isDayLightSaving(uint64 dateTime)
+{
+  time_t    n;
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_LOCALTIME_R */
+  struct tm *tm;
+
+  n = (time_t)dateTime;
+  #ifdef HAVE_LOCALTIME_R
+    tm = localtime_r(&n,&tmBuffer);
+  #else /* not HAVE_LOCALTIME_R */
+    tm = localtime(&n);
+  #endif /* HAVE_LOCALTIME_R */
+  assert(tm != NULL);
+
+  return (tm->tm_isdst > 0);;
+}
+
 uint64 Misc_makeDateTime(uint year,
                          uint month,
                          uint day,
