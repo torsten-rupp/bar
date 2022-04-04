@@ -4317,7 +4317,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   String             line;
   char               userName[12],groupName[12];
   char               permissionsString[10];
-  TextMacros         (textMacros,6);
+  TextMacros         (textMacros,8);
   char               sizeString[32];
 
   assert(storageDirectoryListHandle != NULL);
