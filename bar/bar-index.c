@@ -10031,7 +10031,7 @@ else if (stringEquals(argv[i],"--xxx"))
   // check arguments
   if (databaseURI == NULL)
   {
-    printError("no database file name given!");
+    printError("no database URI given!");
     Array_done(&storageIds);
     Array_done(&entityIds);
     Array_done(&uuIds);

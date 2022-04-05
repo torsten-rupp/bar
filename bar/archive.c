@@ -3156,7 +3156,7 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
 
   assert(archiveHandle != NULL);
 
-  // call-back to test archive
+  // call-back to test intermediate archive
   if (archiveHandle->archiveTestFunction != NULL)
   {
     error = archiveHandle->archiveTestFunction(archiveHandle->storageInfo,
