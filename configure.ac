@@ -4425,9 +4425,9 @@ fi
 case $host_os in
   linux-*)
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(idn_free,idn,[LIBRARIES="$LIBRARIES idn"],,idn-free.h)
+      AC_SEARCH_LIBRARIES(idn_free,idn2,[LIBRARIES="$LIBRARIES idn2"],,idn-free.h)
     else
-      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn"],,idn-free.h)
+      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn2,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"],,idn-free.h)
     fi
     ;;
   sunos | solaris*)
