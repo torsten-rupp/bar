@@ -4053,92 +4053,6 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
 }
 
 /***********************************************************************\
-* Name   : archiveTest
-* Purpose: call back for simpel archive test
-* Input  : storageInfo          - storage info
-*          uuidId               - index UUID id
-*          jobUUID              - job UUID
-*          scheduleUUID         - schedule UUID
-*          entityId             - index entity id
-*          storageId            - index storage id
-*          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
-*                                 for single part
-*          intermediateFileName - intermediate archive file name
-*          intermediateFileSize - intermediate archive size [bytes]
-*          userData             - user data
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors archiveTest(StorageInfo  *storageInfo,
-                         ConstString  jobUUID,
-                         ConstString  scheduleUUID,
-                         int          partNumber,
-                         ConstString  intermediateFileName,
-                         uint64       intermediateFileSize,
-                         void         *userData
-                        )
-{
-  CreateInfo *createInfo = (CreateInfo*)userData;
-  Errors     error;
-  String     archiveName;
-
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(intermediateFileName));
-  assert(createInfo != NULL);
-
-  UNUSED_VARIABLE(jobUUID);
-  UNUSED_VARIABLE(scheduleUUID);
-
-  // test archive
-  if (storageInfo->jobOptions->testCreatedArchivesFlag)
-  {
-    // get archive file name (expand macros)
-    archiveName = String_new();
-    error = Archive_formatName(archiveName,
-                               storageInfo->storageSpecifier.archiveName,
-                               EXPAND_MACRO_MODE_STRING,
-                               createInfo->archiveType,
-                               createInfo->scheduleTitle,
-                               createInfo->customText,
-                               createInfo->createdDateTime,
-                               partNumber
-                              );
-    if (error != ERROR_NONE)
-    {
-      String_delete(archiveName);
-      return error;
-    }
-    DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
-
-    #ifndef NDEBUG
-      printInfo(1,"Test '%s'...",String_cString(intermediateFileName));
-    #else /* not NDEBUG */
-      printInfo(1,"Test '%s'...",String_cString(archiveName));
-    #endif /* NDEBUG */
-
-    error = simpleTestArchive(storageInfo,intermediateFileName);
-    if (error != ERROR_NONE)
-    {
-      printInfo(0,"FAIL!\n");
-      String_delete(archiveName);
-      return error;
-    }
-
-    printInfo(1,"OK (%"PRIu64" bytes)\n",intermediateFileSize);
-    logMessage(createInfo->logHandle,
-               LOG_TYPE_STORAGE,
-               "Tested '%s' (%"PRIu64" bytes)",
-               String_cString(archiveName),
-               intermediateFileSize
-              );
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : archiveStore
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
@@ -5199,7 +5113,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         String baseName        = String_new();
         String prefixFileName  = String_new();
         String postfixFileName = String_new();
-        File_splitFileName(storageMsg.archiveName,directoryName,baseName);
+        File_splitFileName(storageMsg.archiveName,&directoryName,&baseName);
         long index = String_findLastChar(baseName,STRING_END,'.');
         if (index >= 0)
         {
@@ -5429,6 +5343,27 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                   );
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         break;
+      }
+      printInfo(1,"OK (%"PRIu64" bytes)\n",storageSize);
+
+// TODO: test
+      if (createInfo->jobOptions->testCreatedArchivesFlag)
+      {
+        printInfo(1,"Test '%s'...",String_cString(printableStorageName));
+        error = simpleTestArchive(&createInfo->storageInfo,storageMsg.archiveName);
+        if (error != ERROR_NONE)
+        {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+          printInfo(0,"FAIL!\n");
+          printError("Cannot test '%s' (error: %s)!",
+                     String_cString(printableStorageName),
+                     Error_getText(createInfo->failError)
+                    );
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+          break;
+        }
+        printInfo(1,"OK (%"PRIu64" bytes)\n",fileInfo.size);
       }
 
       // update index database and set state
@@ -5700,7 +5635,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // done
-      printInfo(1,"OK (%"PRIu64" bytes)\n",storageSize);
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
                  "%s '%s' (%"PRIu64" bytes)",
@@ -8480,7 +8414,7 @@ Errors Command_create(ServerIO                     *masterIO,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(archiveGetSize,&createInfo),
-                         CALLBACK_(archiveTest,&createInfo),
+                         CALLBACK_(NULL,NULL),  // archiveTest
                          CALLBACK_(archiveStore,&createInfo),
                          CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle
