@@ -19229,7 +19229,7 @@ else
 
             ac_func_search_libraries_save_LIBS=$LIBS
 
-      for ac_library in idn ""; do
+      for ac_library in idn2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -19273,7 +19273,7 @@ fi
 $as_echo "$ac_cv_search_libraries_idn_free" >&6; }
   ac_result=$ac_cv_search_libraries_idn_free
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES idn"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES idn2"
 fi
 
     else
@@ -19289,7 +19289,7 @@ else
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in idn ""; do
+      for ac_library in idn2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -19334,7 +19334,7 @@ fi
 $as_echo "$ac_cv_search_static_idn_free" >&6; }
   ac_result=$ac_cv_search_static_idn_free
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES idn"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"
 fi
 
     fi
