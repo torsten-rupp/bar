@@ -1945,12 +1945,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   error = ERROR_UNKNOWN;
-
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlMultiHandle != NULL);
     assert(storageHandle->ftp.readAheadBuffer.data != NULL);
-
-    error = ERROR_NONE;
 
     // copy as much data as available from read-ahead buffer
     if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
@@ -1970,6 +1967,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
     }
 
     // read rest of data
+    error = ERROR_NONE;
     while (   (bufferSize > 0L)
            && (storageHandle->ftp.index < storageHandle->ftp.size)
            && (error == ERROR_NONE)
@@ -2150,18 +2148,18 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   error = ERROR_UNKNOWN;
-
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlMultiHandle != NULL);
-
-    error = ERROR_NONE;
 
     // try to get error message
     stringClear(errorBuffer);
     (void)curl_easy_setopt(storageHandle->ftp.curlHandle, CURLOPT_ERRORBUFFER, errorBuffer);
 
+    error        = ERROR_NONE;
     writtenBytes = 0L;
-    while (writtenBytes < bufferLength)
+    while (   (error == ERROR_NONE)
+           && (writtenBytes < bufferLength)
+          )
     {
       // get max. number of bytes to send in one step
       if (storageHandle->storageInfo->ftp.bandWidthLimiter.maxBandWidthList != NULL)
@@ -2209,26 +2207,30 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
         }
       }
 
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      if      (storageHandle->ftp.transferedBytes <= 0L)
-      {
-        error = ERRORX_(NETWORK_SEND,0,"%s",errorBuffer);
-        break;
-      }
-      buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
-      writtenBytes += storageHandle->ftp.transferedBytes;
-
       // get end time
       endTimestamp = Misc_getTimestamp();
+
+      // check transmission error
+      if (   (error == ERROR_NONE)
+          && (storageHandle->ftp.transferedBytes <= 0L)
+         )
+      {
+        error = ERRORX_(NETWORK_SEND,0,"%s",errorBuffer);
+      }
+
+      if (error == ERROR_NONE)
+      {
+        buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
+        writtenBytes += storageHandle->ftp.transferedBytes;
+      }
 
       /* limit used band width if requested (note: when the system time is
          changing endTimestamp may become smaller than startTimestamp;
          thus do not check this with an assert())
       */
-      if (endTimestamp >= startTimestamp)
+      if (   (error == ERROR_NONE)
+          && (endTimestamp >= startTimestamp)
+         )
       {
         SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -2266,7 +2268,6 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
   (*offset) = 0LL;
 
   error = ERROR_UNKNOWN;
-
   #ifdef HAVE_CURL
     (*offset) = storageHandle->ftp.index;
     error     = ERROR_NONE;
@@ -2297,7 +2298,6 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   error = ERROR_UNKNOWN;
-
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -2328,6 +2328,8 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
     storageHandle->ftp.index = offset;
     storageHandle->ftp.readAheadBuffer.offset = offset;
     storageHandle->ftp.readAheadBuffer.length = 0;
+
+    error = ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
@@ -2570,6 +2572,8 @@ LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
       String_delete(baseName);
       String_delete(directoryName);
       (void)curl_easy_cleanup(curlHandle);
+
+      error = ERROR_NONE;
     }
     else
     {
@@ -2701,6 +2705,8 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
     String_delete(pathName);
     (void)curl_easy_cleanup(curlHandle);
     freeServer(&server);
+
+    error = ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
