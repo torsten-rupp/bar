@@ -1063,6 +1063,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag          = FALSE;
   jobOptions->noStopOnErrorFlag          = FALSE;
+  jobOptions->noStopOnOwnerErrorFlag     = FALSE;
   jobOptions->noStopOnAttributeErrorFlag = FALSE;
   jobOptions->dryRun                     = FALSE;
 }
@@ -2826,6 +2827,7 @@ void Job_initOptions(JobOptions *jobOptions)
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag                         = globalOptions.noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                         = globalOptions.noStopOnErrorFlag;
+  jobOptions->noStopOnOwnerErrorFlag                    = globalOptions.noStopOnOwnerErrorFlag;
   jobOptions->noStopOnAttributeErrorFlag                = globalOptions.noStopOnAttributeErrorFlag;
   jobOptions->dryRun                                    = globalOptions.dryRun;
 
@@ -2955,6 +2957,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag                         = fromJobOptions->noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                         = fromJobOptions->noStopOnErrorFlag;
+  jobOptions->noStopOnOwnerErrorFlag                    = fromJobOptions->noStopOnOwnerErrorFlag;
   jobOptions->noStopOnAttributeErrorFlag                = fromJobOptions->noStopOnAttributeErrorFlag;
   jobOptions->dryRun                                    = fromJobOptions->dryRun;
 

@@ -16382,7 +16382,7 @@ archiveHandle->archiveInitUserData              = NULL;
               error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
               if (error != ERROR_NONE)
               {
-                if (   !jobOptions->noStopOnAttributeErrorFlag
+                if (   !jobOptions->noStopOnOwnerErrorFlag
                     && !File_isNetworkFileSystem(fragmentNode->name)
                    )
                 {
@@ -16405,7 +16405,7 @@ archiveHandle->archiveInitUserData              = NULL;
               error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
-                if (!jobOptions->noStopOnErrorFlag)
+                if (!jobOptions->noStopOnAttributeErrorFlagFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set directory info of '%s' (error: %s)",
@@ -16656,7 +16656,7 @@ archiveHandle->archiveInitUserData              = NULL;
               error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
               if (error != ERROR_NONE)
               {
-                if (   !jobOptions->noStopOnAttributeErrorFlag
+                if (   !jobOptions->noStopOnOwnerErrorFlag
                     && !File_isNetworkFileSystem(fragmentNode->name)
                    )
                 {
@@ -16679,7 +16679,7 @@ archiveHandle->archiveInitUserData              = NULL;
               error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
-                if (!jobOptions->noStopOnErrorFlag)
+                if (!jobOptions->noStopOnAttributeErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set file info of '%s' (error: %s)",
@@ -17049,7 +17049,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
                   if (error != ERROR_NONE)
                   {
-                    if (   !jobOptions->noStopOnAttributeErrorFlag
+                    if (   !jobOptions->noStopOnOwnerErrorFlag
                         && !File_isNetworkFileSystem(fragmentNode->name)
                        )
                     {
@@ -17072,7 +17072,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   error = File_setAttributes(fileInfo.attributes,destinationFileName);
                   if (error != ERROR_NONE)
                   {
-                    if (!jobOptions->noStopOnErrorFlag)
+                    if (!jobOptions->noStopOnAttributeErrorFlag)
                     {
                       printInfo(2,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)",
@@ -17373,7 +17373,7 @@ archiveHandle->archiveInitUserData              = NULL;
               error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
               if (error != ERROR_NONE)
               {
-                if (   !jobOptions->noStopOnAttributeErrorFlag
+                if (   !jobOptions->noStopOnOwnerErrorFlag
                     && !File_isNetworkFileSystem(fragmentNode->name)
                    )
                 {
@@ -17396,7 +17396,7 @@ archiveHandle->archiveInitUserData              = NULL;
               error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
-                if (!jobOptions->noStopOnErrorFlag)
+                if (!jobOptions->noStopOnAttributeErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set file info of '%s' (error: %s)",

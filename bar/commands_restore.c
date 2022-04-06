@@ -1099,7 +1099,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                              );
         if (error != ERROR_NONE)
         {
-          if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+          if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
               && !File_isNetworkFileSystem(destinationFileName)
              )
           {
@@ -1954,7 +1954,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                            );
       if (error != ERROR_NONE)
       {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+        if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
             && !File_isNetworkFileSystem(destinationFileName)
            )
         {
@@ -2284,7 +2284,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                            );
       if (error != ERROR_NONE)
       {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+        if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
             && !File_isNetworkFileSystem(destinationFileName)
            )
         {
@@ -2904,7 +2904,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                  );
             if (error != ERROR_NONE)
             {
-              if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+              if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
                   && !File_isNetworkFileSystem(destinationFileName)
                  )
               {
@@ -3343,7 +3343,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                            );
       if (error != ERROR_NONE)
       {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+        if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
             && !File_isNetworkFileSystem(destinationFileName)
            )
         {
@@ -4098,7 +4098,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                  );
             if (error != ERROR_NONE)
             {
-              if (   !jobOptions->noStopOnAttributeErrorFlag
+              if (   !jobOptions->noStopOnOwnerErrorFlag
                   && !File_isNetworkFileSystem(fragmentNode->name)
                  )
               {

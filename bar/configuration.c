@@ -1625,6 +1625,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.noSignatureFlag                                 = FALSE;
   globalOptions.noBAROnMediumFlag                               = FALSE;
   globalOptions.noStopOnErrorFlag                               = FALSE;
+  globalOptions.noStopOnOwnerErrorFlag                          = FALSE;
   globalOptions.noStopOnAttributeErrorFlag                      = FALSE;
   globalOptions.dryRun                                          = FALSE;
 
@@ -2440,6 +2441,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
   else
   {
     // get plain key data
+// TODO: output a warnign?
 
     // get key data length
     dataLength = stringLength(value);
@@ -2768,7 +2770,7 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance date '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance date '%s'",value);
     return FALSE;
   }
 
@@ -2889,7 +2891,7 @@ LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable,
   // parse
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
     return FALSE;
   }
 
@@ -3017,7 +3019,7 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance time '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance time '%s'",value);
     return FALSE;
   }
 
@@ -3525,7 +3527,7 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
     return FALSE;
   }
 
@@ -3646,7 +3648,7 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, co
   // parse
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
     return FALSE;
   }
 
@@ -3774,7 +3776,7 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
     return FALSE;
   }
 
@@ -3949,7 +3951,7 @@ LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, co
   {
     if (!String_parseCString(value,"%d",NULL,&minKeep))
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence min. keep '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse persistence min. keep '%s'",value);
       return FALSE;
     }
   }
@@ -4053,7 +4055,7 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, co
   {
     if (!String_parseCString(value,"%d",NULL,&maxKeep))
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. keep '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse persistence max. keep '%s'",value);
       return FALSE;
     }
   }
@@ -4157,7 +4159,7 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, con
   {
     if (!String_parseCString(value,"%d",NULL,&maxAge))
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. age '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse persistence max. age '%s'",value);
       return FALSE;
     }
   }
@@ -7680,6 +7682,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("force-verify-signatures",           0,  0,2,globalOptions.forceVerifySignaturesFlag,                                                                          "force verify signatures of archives. Stop on error"                       ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",                  0,  1,2,globalOptions.noBAROnMediumFlag,                                                                                  "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",                  0,  1,2,globalOptions.noStopOnErrorFlag,                                                                                  "do not immediately stop on error"                                         ),
+  CMD_OPTION_BOOLEAN      ("no-stop-on-owner-error",            0,  1,2,globalOptions.noStopOnOwnerErrorFlag,                                                                             "do not immediately stop on owner error"                                   ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-attribute-error",        0,  1,2,globalOptions.noStopOnAttributeErrorFlag,                                                                         "do not immediately stop on attribute error"                               ),
 
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
@@ -8154,6 +8157,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &globalOptions.skipVerifySignaturesFlag,-1,                    "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",                 &globalOptions.noBAROnMediumFlag,-1,                           "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",                 &globalOptions.noStopOnErrorFlag,-1,                           "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-stop-on-owner-error",           &globalOptions.noStopOnOwnerErrorFlag,-1,                      "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-attribute-error",       &globalOptions.noStopOnAttributeErrorFlag,-1,                  "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("quiet",                            &globalOptions.quietFlag,-1,                                   "yes|no"),
   CONFIG_VALUE_COMMENT           ("verbose level [0..6]"),
@@ -8284,6 +8288,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",              JobNode,job.options.noSignatureFlag,             "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",          JobNode,job.options.noBAROnMediumFlag,           "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-owner-error",    JobNode,job.options.noStopOnOwnerErrorFlag,      "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
 
   CONFIG_VALUE_SPACE(),
