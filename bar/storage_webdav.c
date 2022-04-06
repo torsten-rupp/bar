@@ -1494,9 +1494,6 @@ UNUSED_VARIABLE(forceFlag);
                              );
     if (curlCode != CURLE_OK)
     {
-      String_delete(baseName);
-      String_delete(directoryName);
-      String_delete(baseURL);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
@@ -1704,13 +1701,11 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
   #ifdef HAVE_CURL
     String          baseURL;
     CURLcode        curlCode;
-    CURLMcode       curlMCode;
     String          directoryName,baseName;
     StringTokenizer nameTokenizer;
     ConstString     token;
     Errors          error;
     double          fileSize;
-    int             runningHandles;
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
@@ -1763,9 +1758,6 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
                              );
     if (curlCode != CURLE_OK)
     {
-      String_delete(baseName);
-      String_delete(directoryName);
-      String_delete(baseURL);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       free(storageHandle->webdav.receiveBuffer.data);
