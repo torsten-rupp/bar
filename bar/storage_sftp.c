@@ -1257,8 +1257,6 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
                                  );
             if (n < 0)
             {
-// TODO:
-debugPrintStackTrace();
               error = ERROR_(IO,errno);
               break;
             }
