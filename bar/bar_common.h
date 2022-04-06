@@ -805,6 +805,7 @@ typedef struct
   bool                        noBAROnMediumFlag;              // TRUE for not storing BAR on medium
   bool                        noStopOnErrorFlag;              // TRUE for not stopping immediately on error
   bool                        noStopOnAttributeErrorFlag;     // TRUE for not stopping immediately on attribute error
+  bool                        noStopOnOwnerErrorFlag;         // TRUE for not stopping immediately on owner error
   bool                        dryRun;                         // TRUE for dry-run only
 
   bool                        quietFlag;                      // TRUE iff suppress any output
