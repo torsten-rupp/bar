@@ -8,6 +8,7 @@
     threads
   * added option --test-created-archives
   * added option --sparse
+  * added option --no-stop-on-owner-error
   * added begin/end time for continous schedules
   * place pid file into /run by default
   * fixed reading cryption keys via config file
@@ -21,6 +22,7 @@
   * create log file in non-server mode if command line
     option --log-file is specified
   * rename archives: use an increasing number suffix
+  * support ssh password login
   * upgrade bzip2 1.0.8
   * upgrade MMXL 3.2
   * upgrade zStandard 1.4.8
@@ -42,6 +44,10 @@
     and PostgreSQL
   * fixed parsing permissions, fixed set permissions on
     restore
+  * fixed band width calculation: use last specified
+    matching date/time
+  * fixed concurrent network connections handling
+  * improved tests
   * BARControl: added create directory/delete file in
     file requester
   * BARControl: fixed display of entry progress: count

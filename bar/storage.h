@@ -417,29 +417,6 @@ typedef struct
         ulong                   length;                      // length of data to write/read
         ulong                   transferedBytes;             // number of data bytes read/written
       } ftp;
-
-      // WebDAV storage
-      struct
-      {
-        CURLM                   *curlMultiHandle;
-        CURL                    *curlHandle;
-        String                  url;
-        uint64                  index;                       // current read/write index in file [0..n-1]
-        uint64                  size;                        // size of file [bytes]
-        struct                                               // receive buffer
-        {
-          byte   *data;                                      // data received
-          ulong  size;                                       // buffer size [bytes]
-          uint64 offset;                                     // data offset
-          ulong  length;                                     // length of data received
-        } receiveBuffer;
-        struct                                               // send buffer
-        {
-          const byte *data;                                  // data to send
-          ulong      index;                                  // data index
-          ulong      length;                                 // length of data to send
-        } sendBuffer;
-      } webdav;
     #endif /* HAVE_CURL */
 
     #ifdef HAVE_SSH2
@@ -494,6 +471,31 @@ typedef struct
         } readAheadBuffer;
       } sftp;
     #endif /* HAVE_SSH2 */
+
+    #if defined(HAVE_CURL)
+      // WebDAV storage
+      struct
+      {
+        CURLM                   *curlMultiHandle;
+        CURL                    *curlHandle;
+        String                  url;
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // receive buffer
+        {
+          byte   *data;                                      // data received
+          ulong  size;                                       // buffer size [bytes]
+          uint64 offset;                                     // data offset
+          ulong  length;                                     // length of data received
+        } receiveBuffer;
+        struct                                               // send buffer
+        {
+          const byte *data;                                  // data to send
+          ulong      index;                                  // data index
+          ulong      length;                                 // length of data to send
+        } sendBuffer;
+      } webdav;
+    #endif /* HAVE_CURL */
 
     // cd/dvd/bd storage
     struct
@@ -575,6 +577,24 @@ typedef struct
       } ftp;
     #endif /* HAVE_CURL */
 
+    #ifdef HAVE_SSH2
+      struct
+      {
+        uint                    serverId;                    // id of allocated server
+        String                  pathName;                    // directory name
+
+        SocketHandle            socketHandle;
+        LIBSSH2_SESSION         *session;
+        LIBSSH2_CHANNEL         *channel;
+        LIBSSH2_SFTP            *sftp;
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;
+        char                    *buffer;                     // buffer for reading file names
+        ulong                   bufferLength;
+        LIBSSH2_SFTP_ATTRIBUTES attributes;
+        bool                    entryReadFlag;               // TRUE if entry read
+      } sftp;
+    #endif /* HAVE_SSH2 */
+
     #if defined(HAVE_CURL) && defined(HAVE_MXML)
       struct
       {
@@ -598,22 +618,6 @@ typedef struct
       } webdav;
     #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
-    #ifdef HAVE_SSH2
-      struct
-      {
-        String                  pathName;                    // directory name
-
-        SocketHandle            socketHandle;
-        LIBSSH2_SESSION         *session;
-        LIBSSH2_CHANNEL         *channel;
-        LIBSSH2_SFTP            *sftp;
-        LIBSSH2_SFTP_HANDLE     *sftpHandle;
-        char                    *buffer;                     // buffer for reading file names
-        ulong                   bufferLength;
-        LIBSSH2_SFTP_ATTRIBUTES attributes;
-        bool                    entryReadFlag;               // TRUE if entry read
-      } sftp;
-    #endif /* HAVE_SSH2 */
     struct
     {
       String                    pathName;                    // directory name

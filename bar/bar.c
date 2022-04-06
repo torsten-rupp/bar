@@ -1427,8 +1427,8 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
       serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
       if (serverNode == NULL)
       {
-        Semaphore_unlock(&globalOptions.deviceList.lock);
-        return FALSE;
+        Semaphore_unlock(&globalOptions.serverList.lock);
+        return TRUE;
       }
 
       // get max. number of allowed concurrent connections

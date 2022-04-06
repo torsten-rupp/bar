@@ -4551,7 +4551,6 @@ Errors Command_list(StringList              *storageNameList,
         }
         else
         {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           // list archive content of matching files
           fileName           = String_new();
           while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
