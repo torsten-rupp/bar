@@ -694,7 +694,7 @@ LOCAL void doneAll(void)
   ThreadPool_doneAll();
   Thread_doneAll();
   Configuration_doneAll();
-  Common_initAll();
+  Common_doneAll();
 
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
 
