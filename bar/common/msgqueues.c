@@ -51,8 +51,7 @@ typedef bool MsgQueueLock;
 * Output : -
 * Return : -
 * Notes  : usage:
-*            MsgQueueLock msgQueueLock;
-*            MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+*            MSGQUEUE_LOCKED_DO(msgQueue)
 *            {
 *              ...
 *            }
@@ -60,10 +59,10 @@ typedef bool MsgQueueLock;
 *          message queue must be unlocked manually if break is used!
 \***********************************************************************/
 
-#define MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue) \
-  for (lock(msgQueue), msgQueueLock = TRUE; \
-       msgQueueLock; \
-       unlock(msgQueue), msgQueueLock = FALSE \
+#define MSGQUEUE_LOCKED_DO(msgQueue) \
+  for (MsgQueueLock __lock ## __COUNTER__ = lock(msgQueue); \
+       __lock ## __COUNTER__; \
+       unlock(msgQueue), __lock ## __COUNTER__ = FALSE \
       )
 
 /***************************** Forwards ********************************/
@@ -123,16 +122,18 @@ LOCAL void clear(MsgQueue *msgQueue)
 * Purpose: lock message queue
 * Input  : msgQueue - message queue
 * Output : -
-* Return : -
+* Return : TRUE iff locked
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void lock(MsgQueue *msgQueue)
+LOCAL bool lock(MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
 
   pthread_mutex_lock(&msgQueue->lock);
   msgQueue->lockCount++;
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -267,9 +268,10 @@ xxx
     pthread_mutex_destroy(&msgQueue->lock);
     return FALSE;
   }
-  msgQueue->modifiedFlag = FALSE;
-  msgQueue->lockCount    = 0;
-  msgQueue->endOfMsgFlag = FALSE;
+  msgQueue->modifiedFlag   = FALSE;
+  msgQueue->lockCount      = 0;
+  msgQueue->endOfMsgFlag   = FALSE;
+  msgQueue->terminatedFlag = FALSE;
   List_init(&msgQueue->list,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMsgNode,NULL));
 
   return TRUE;
@@ -339,13 +341,24 @@ void MsgQueue_delete(MsgQueue *msgQueue)
   free(msgQueue);
 }
 
-void MsgQueue_clear(MsgQueue *msgQueue)
+void MsgQueue_terminate(MsgQueue *msgQueue)
 {
-  MsgQueueLock msgQueueLock;
-
   assert(msgQueue != NULL);
 
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  MSGQUEUE_LOCKED_DO(msgQueue)
+  {
+    msgQueue->terminatedFlag = TRUE;
+
+    // signal modify
+    msgQueue->modifiedFlag = TRUE;
+  }
+}
+
+void MsgQueue_clear(MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+
+  MSGQUEUE_LOCKED_DO(msgQueue)
   {
     clear(msgQueue);
   }
@@ -368,21 +381,22 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
 
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
 {
-  MsgQueueLock    msgQueueLock;
   struct timespec timespec;
   MsgNode         *msgNode;
   ulong           n;
 
   assert(msgQueue != NULL);
 
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  MSGQUEUE_LOCKED_DO(msgQueue)
   {
     // wait for message
     if (timeout != WAIT_FOREVER)
     {
       initTimespec(&timespec,timeout);
 
-      while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+      while (   !msgQueue->endOfMsgFlag
+             && (List_count(&msgQueue->list) <= 0)
+            )
       {
         if (!waitModified(msgQueue,&timespec))
         {
@@ -393,7 +407,9 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
     }
     else
     {
-      while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+      while (   !msgQueue->endOfMsgFlag
+             && (List_count(&msgQueue->list) <= 0)
+            )
       {
         (void)waitModified(msgQueue,NULL);
       }
@@ -421,8 +437,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
 
 bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 {
-  MsgQueueLock msgQueueLock;
-  MsgNode      *msgNode;
+  MsgNode *msgNode;
 
   assert(msgQueue != NULL);
 
@@ -435,7 +450,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   msgNode->size = size;
   memcpy(msgNode->data,msg,size);
 
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  MSGQUEUE_LOCKED_DO(msgQueue)
   {
     // check if end of message
     if (msgQueue->endOfMsgFlag)
@@ -448,7 +463,9 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
     if (msgQueue->maxMsgs > 0)
     {
       // wait for space in queue
-      while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
+      while (   !msgQueue->endOfMsgFlag
+             && (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
+            )
       {
         waitModified(msgQueue,NULL);
       }
@@ -467,11 +484,9 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 
 void MsgQueue_wait(MsgQueue *msgQueue)
 {
-  MsgQueueLock msgQueueLock;
-
   assert(msgQueue != NULL);
 
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  MSGQUEUE_LOCKED_DO(msgQueue)
   {
     if (!msgQueue->endOfMsgFlag)
     {
@@ -482,11 +497,9 @@ void MsgQueue_wait(MsgQueue *msgQueue)
 
 void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
 {
-  MsgQueueLock msgQueueLock;
-
   assert(msgQueue != NULL);
 
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  MSGQUEUE_LOCKED_DO(msgQueue)
   {
     msgQueue->endOfMsgFlag = TRUE;
 
@@ -497,11 +510,9 @@ void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
 
 void MsgQueue_reset(MsgQueue *msgQueue)
 {
-  MsgQueueLock msgQueueLock;
-
   assert(msgQueue != NULL);
 
-  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  MSGQUEUE_LOCKED_DO(msgQueue)
   {
     clear(msgQueue);
     msgQueue->endOfMsgFlag = FALSE;
