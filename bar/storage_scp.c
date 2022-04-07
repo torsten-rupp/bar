@@ -398,16 +398,6 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_HOST_NAME;
     }
-    if (sshServer.publicKey.data == NULL)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_NO_SSH_PUBLIC_KEY;
-    }
-    if (sshServer.privateKey.data == NULL)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_NO_SSH_PRIVATE_KEY;
-    }
 
     // allocate SSH server
     if (!allocateServer(storageInfo->scp.serverId,serverConnectionPriority,60*1000L))
@@ -417,7 +407,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     }
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.serverId,{ freeServer(storageInfo->scp.serverId); });
 
-    // check if SSH login is possible
+    // check if SSH login, get correct password
     error = ERROR_SSH_AUTHENTICATION;
     if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
     {
@@ -445,6 +435,22 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
       if (error == ERROR_NONE)
       {
         Password_set(storageInfo->storageSpecifier.loginPassword,&sshServer.password);
+      }
+    }
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&sshServer.password))
+    {
+      error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            &defaultSSHPassword,
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length
+                           );
+      if (error == ERROR_NONE)
+      {
+        Password_set(storageInfo->storageSpecifier.loginPassword,&defaultSSHPassword);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
