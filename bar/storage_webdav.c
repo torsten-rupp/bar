@@ -1056,7 +1056,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->webdav.serverId,{ freeServer(storageInfo->webdav.serverId); });
 
     // check WebDAV login, get correct password
-    error = ERROR_WEBDAV_SESSION_FAIL;
+    error = ERROR_WEBDAV_AUTHENTICATION;
     if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,

@@ -426,6 +426,22 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
         Password_set(storageInfo->storageSpecifier.loginPassword,&sshServer.password);
       }
     }
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&sshServer.password))
+    {
+      error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            &defaultSSHPassword,
+                            storageInfo->sftp.publicKey.data,
+                            storageInfo->sftp.publicKey.length,
+                            storageInfo->sftp.privateKey.data,
+                            storageInfo->sftp.privateKey.length
+                           );
+      if (error == ERROR_NONE)
+      {
+        Password_set(storageInfo->storageSpecifier.loginPassword,&defaultSSHPassword);
+      }
+    }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
       // initialize interactive/default password

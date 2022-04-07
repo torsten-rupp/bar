@@ -1069,8 +1069,8 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       }
 
       // check FTP login, get correct password
-      error = ERROR_FTP_SESSION_FAIL;
-      if ((Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+      error = ERROR_FTP_AUTHENTICATION;
+      if ((Error_getCode(error) == ERROR_FTP_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
@@ -1078,7 +1078,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                               storageInfo->storageSpecifier.loginPassword
                              );
       }
-      if ((Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL) && !Password_isEmpty(&ftpServer.password))
+      if ((Error_getCode(error) == ERROR_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
@@ -1088,6 +1088,18 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
         if (error == ERROR_NONE)
         {
           Password_set(storageInfo->storageSpecifier.loginPassword,&ftpServer.password);
+        }
+      }
+      if ((Error_getCode(error) == ERROR_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
+      {
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              &defaultFTPPassword
+                             );
+        if (error == ERROR_NONE)
+        {
+          Password_set(storageInfo->storageSpecifier.loginPassword,&defaultFTPPassword);
         }
       }
       if (Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL)
