@@ -5353,7 +5353,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       if (createInfo->jobOptions->testCreatedArchivesFlag)
       {
-// TODO:
+// TODO: race condition without a short delay?
 Misc_udelay(1000*1000);
         printInfo(1,"Test '%s'...",String_cString(printableStorageName));
         error = simpleTestArchive(&createInfo->storageInfo,storageMsg.archiveName);
