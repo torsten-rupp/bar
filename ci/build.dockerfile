@@ -1,14 +1,17 @@
 FROM ubuntu:18.04
-ENV container docker
+
+# set marker in environment for running inside a docker
+ENV CONTAINER=docker
 
 # disable interactive installion
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # update
 RUN apt-get -y update
 
 # install packages
 RUN apt-get -y install \
+  attr \
   bc \
   bzip2 \
   curl \
@@ -23,6 +26,7 @@ RUN apt-get -y install \
   lua5.3 \
   m4 \
   mariadb-client \
+  ncurses-bin \
   patch \
   pkg-config \
   postgresql \
@@ -36,6 +40,8 @@ RUN apt-get -y install \
   xz-utils \
   zip \
   ;
+
+# install packages for building
 RUN apt-get -y install \
   gcc \
   g++ \
@@ -53,6 +59,45 @@ RUN apt-get -y install \
   valgrind \
   lcov \
   binutils \
+  uuid-dev \
+  ;
+
+# install packages for tests
+RUN apt-get -y install \
+  apache2 \
+  openssh-server \
+  vsftpd \
   ;
 
 RUN mkdir /.cache;
+
+# add test user
+RUN useradd -m test -p `openssl passwd -crypt test`;
+
+# enable ftp: fix race-condition in vsftpd start script, enable write
+RUN sed '/^\s*start-stop-daemon.*/a sleep 3' -i /etc/init.d/vsftpd
+RUN sed 's/#write_enable=YES/write_enable=YES/g' -i /etc/vsftpd.conf
+
+# enable ssh: create keys
+RUN mkdir /home/test/.ssh
+RUN ssh-keygen -b 2048 -t rsa -f /home/test/.ssh/id_rsa -q -N ""
+RUN chmod 777 /home/test
+RUN chmod 700 /home/test/.ssh
+RUN chown -R test:test /home/test/.ssh
+
+# enable WebDAV
+RUN a2enmod dav
+RUN a2enmod dav_fs
+RUN echo ServerName test >> /etc/apache2/apache2.conf
+COPY apache2/test.conf /etc/apache2/sites-enabled/test.conf
+RUN sed 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=test/g' -i /etc/apache2/envvars
+RUN sed 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=test/g' -i /etc/apache2/envvars
+RUN (cd /var/www; rm -rf html; ln -s /home/test html)
+#RUN chmod 777 /home/test
+
+# start services
+ENTRYPOINT \
+  /etc/init.d/apache2 start && \
+  /etc/init.d/ssh start && \
+  /etc/init.d/vsftpd start && \
+  /bin/bash
