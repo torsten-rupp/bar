@@ -1720,9 +1720,23 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     storageHandle->ftp.curlHandle = curl_easy_init();
     if (storageHandle->ftp.curlHandle == NULL)
     {
-      curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       free(storageHandle->ftp.readAheadBuffer.data);
       return ERROR_FTP_SESSION_FAIL;
+    }
+
+    // set FTP login
+    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
+                           storageHandle->storageInfo->storageSpecifier.loginName,
+                           storageHandle->storageInfo->storageSpecifier.loginPassword,
+                           FTP_TIMEOUT
+                          );
+    if (curlCode != CURLE_OK)
+    {
+      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      free(storageHandle->ftp.readAheadBuffer.data);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
 
     // get pathname, basename
@@ -1741,23 +1755,6 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_appendChar(url,'/');
     String_append(url,baseName);
-
-    // set FTP connect
-    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.loginName,
-                           storageHandle->storageInfo->storageSpecifier.loginPassword,
-                           FTP_TIMEOUT
-                          );
-    if (curlCode != CURLE_OK)
-    {
-      String_delete(url);
-      String_delete(baseName);
-      String_delete(directoryName);
-      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-      free(storageHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
-    }
 
     // check if file exists (Note: by default curl use passive FTP)
     curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
