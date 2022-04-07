@@ -5144,7 +5144,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
       // pre-process
-      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
+      error = Storage_preProcess(&createInfo->storageInfo,
+                                 storageMsg.
+                                 archiveName,
+                                 createInfo->createdDateTime,
+                                 FALSE  // initialFlag
+                                );
       if (error != ERROR_NONE)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
@@ -5346,9 +5351,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
       printInfo(1,"OK (%"PRIu64" bytes)\n",storageSize);
 
-// TODO: test
       if (createInfo->jobOptions->testCreatedArchivesFlag)
       {
+// TODO:
+Misc_udelay(1000*1000);
         printInfo(1,"Test '%s'...",String_cString(printableStorageName));
         error = simpleTestArchive(&createInfo->storageInfo,storageMsg.archiveName);
         if (error != ERROR_NONE)
