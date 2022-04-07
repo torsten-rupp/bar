@@ -57,7 +57,7 @@ CERTTOOL               = @CERTTOOL@
 OPENSSL                = @OPENSSL@
 KEYTOOL                = @KEYTOOL@
 
-DOCKER_RUN_FLAGS       = run -i -t --net=host
+DOCKER_RUN_FLAGS       = run -i -t
 
 TXT2MAN                = @TXT2MAN@
 UNOCONV                = @UNOCONV@
@@ -97,7 +97,8 @@ ZIP                    = zip
 
 #------------------------ specific variables/settings ------------------------
 
-SHELL                  = bash
+# shell in Makefile must be bash with pipe-fail handling
+SHELL                  = bash -o pipefail
 
 VERSION_MAJOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
@@ -299,6 +300,8 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  update_docker"
 	@$(ECHO) "  purge_docker"
+	@$(ECHO) ""
+	@$(ECHO) "  build_docker"
 	@$(ECHO) ""
 	@$(ECHO) "  rpm_docker"
 	@$(ECHO) "  deb_docker"
@@ -833,10 +836,31 @@ update_docker:
 	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
 	#
 	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
+	#
+	# build image
+	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build .)
 
 .PHONY: purge_docker
 purge_docker:
 	$(DOCKER) rm $$($(DOCKER) ps -a -q)
+
+.PHONY: build_docker
+build_docker:
+	# Note: no image operations in docker, because /dev/loop* and mount only
+	#       work with --privileges=true which may cause dangerous/instable
+	#       behaviour
+	$(DOCKER) $(DOCKER_RUN_FLAGS) \
+          --rm \
+          -p 2222:22 \
+          -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+          -e TEST_BASE_DIR=/home/test \
+          -e TEST_IMAGE_OPERATIONS=no \
+          -v $(HOME):$(HOME) \
+          -v $(PWD):/media/home \
+          -w $(PWD) \
+          --name=bar-build \
+          bar:build \
+          /bin/bash
 
 .PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
 rpm_docker:
@@ -854,6 +878,7 @@ win32_docker:
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
+            --net=host \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
             --name=bar-win32 \
@@ -870,6 +895,7 @@ win32_docker-x86_64:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            --net=host \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
             --name=bar-win32-x86_64 \
@@ -918,6 +944,7 @@ $(DISTRIBUTION_NAME).rpm: \
             --rm \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
+            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-centos:6 setarch i686 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
@@ -932,6 +959,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
@@ -997,6 +1025,7 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-debian:8 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
@@ -1010,6 +1039,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-debian-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
@@ -1054,6 +1084,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
             --rm \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
+            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
@@ -1098,6 +1129,7 @@ functionInstallTestRPM = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
       -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+      --net=host \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_rpm.sh \
@@ -1108,6 +1140,7 @@ functionInstallTestDEB = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
       -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+      --net=host \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_deb.sh \

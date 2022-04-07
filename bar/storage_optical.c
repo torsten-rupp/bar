@@ -2346,17 +2346,6 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   // initialize variables
   AutoFree_init(&autoFreeList);
   error = ERROR_UNKNOWN;
-  switch (storageDirectoryListHandle->storageSpecifier.type)
-  {
-    case STORAGE_TYPE_CD : storageDirectoryListHandle->type = STORAGE_TYPE_CD;  break;
-    case STORAGE_TYPE_DVD: storageDirectoryListHandle->type = STORAGE_TYPE_DVD; break;
-    case STORAGE_TYPE_BD : storageDirectoryListHandle->type = STORAGE_TYPE_BD;  break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
 
   // open directory listing
   #ifdef HAVE_ISO9660

@@ -3690,10 +3690,7 @@ LOCAL void persistenceThreadCode(void)
   {
     while (!isQuit())
     {
-      if (   Index_isInitialized()
-//TODO: remove
-//          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
-         )
+      if (Index_isInitialized())
       {
         error = ERROR_NONE;
 
@@ -3748,8 +3745,6 @@ LOCAL void persistenceThreadCode(void)
                 "Index database not available - disabled purge expired"
                );
   }
-
-  // free resources
 }
 
 /*---------------------------------------------------------------------*/
@@ -4269,6 +4264,7 @@ LOCAL void autoIndexThreadCode(void)
                 || (storageSpecifier.type == STORAGE_TYPE_SCP       )
                 || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
                 || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
+                || (storageSpecifier.type == STORAGE_TYPE_WEBDAVS   )
                )
             {
               // get base directory
@@ -14960,8 +14956,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                       );
   if (error != ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%S",storageName);
+    (void)Storage_done(&storageInfo);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -22074,16 +22070,18 @@ Errors Server_batch(int inputDescriptor,
     {
       HALT_FATAL_ERROR("Cannot initialize update index thread!");
     }
+
     Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize index update thread!");
     }
+
+    Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&persistenceThread,"BAR purge expired",globalOptions.niceLevel,persistenceThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
-    Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
   }
 
   // run in batch mode
@@ -22164,7 +22162,6 @@ Errors Server_batch(int inputDescriptor,
   StringMap_delete(argumentMap);
   String_delete(name);
 #else /* 0 */
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 String_setCString(commandString,"1 SET crypt-password password='muster'");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"2 ADD_INCLUDE_PATTERN type=REGEX pattern=test/[^/]*");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&clientInfo,commandString);
@@ -22188,6 +22185,7 @@ processCommand(&clientInfo,commandString);
     }
     Thread_done(&autoIndexThread);
     Semaphore_done(&autoIndexThreadTrigger);
+
     if (!Thread_join(&updateIndexThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop index thread!");

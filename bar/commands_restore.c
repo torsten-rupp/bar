@@ -4165,7 +4165,7 @@ Errors Command_restore(const StringList                *storageNameList,
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,"Restore fail: %s\n",Error_getText(error));
+    printInfo(1,tr("Restore fail: %s\n"),Error_getText(error));
   }
 
   return error;

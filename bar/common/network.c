@@ -902,9 +902,12 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                    ) != 0
            )
         {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,ssh2ErrorText);
+          error = ERRORX_(SSH_SESSION_FAIL,ssh2Error,"%s",ssh2ErrorText);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
-          return ERROR_SSH_SESSION_FAIL;
+          return error;
         }
         #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
 // NYI/???: does not work?
@@ -912,7 +915,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
 
 #if 1
-        // authorize with key
+        // authorize with key/password
         result = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {

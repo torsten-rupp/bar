@@ -4400,6 +4400,7 @@ AC_CHECK_HEADERS(\
                  uuid/uuid.h \
                  valgrind/callgrind.h
                 )
+AC_CHECK_HEADER(sqlite3.h,,AC_ERROR([mandatory sqlite3.h is not available]))
 
 # defines, constants, types, variables
 AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))

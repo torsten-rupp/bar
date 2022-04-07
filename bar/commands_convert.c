@@ -2404,7 +2404,7 @@ error = convertInfo.failError;
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,"Convert fail: %s\n",Error_getText(error));
+    printInfo(1,tr("Convert fail: %s\n"),Error_getText(error));
   }
 
   return failError;

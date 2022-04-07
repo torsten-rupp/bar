@@ -860,8 +860,6 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
 
   UNUSED_VARIABLE(fileSize);
 
-  // init variables
-  storageHandle->device.write.fileName = String_new();
 
   // check if file exists
   if (   !forceFlag
@@ -871,9 +869,11 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
       && StorageDevice_exists(storageHandle->storageInfo,fileName)
      )
   {
-    String_delete(storageHandle->device.write.fileName);
     return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
   }
+
+  // init variables
+  storageHandle->device.write.fileName = String_new();
 
   // create file name
   String_set(storageHandle->device.write.fileName,storageHandle->storageInfo->device.write.directory);

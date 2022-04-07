@@ -1061,7 +1061,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       }
 
       // allocate FTP server
-      if (!allocateServer(storageInfo->ftp.serverId,serverConnectionPriority,60*1000L))
+      if (!allocateServer(storageInfo->ftp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
       {
         Configuration_doneFTPServerSettings(&ftpServer);
         doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
@@ -1070,7 +1070,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
 
       // check FTP login, get correct password
       error = ERROR_FTP_AUTHENTICATION;
-      if ((Error_getCode(error) == ERROR_FTP_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+      if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
@@ -1078,7 +1078,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                               storageInfo->storageSpecifier.loginPassword
                              );
       }
-      if ((Error_getCode(error) == ERROR_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
+      if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
@@ -1090,7 +1090,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
           Password_set(storageInfo->storageSpecifier.loginPassword,&ftpServer.password);
         }
       }
-      if ((Error_getCode(error) == ERROR_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
+      if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
@@ -1102,11 +1102,11 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
           Password_set(storageInfo->storageSpecifier.loginPassword,&defaultFTPPassword);
         }
       }
-      if (Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL)
+      if (Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION)
       {
         // initialize interactive/default password
         retries = 0;
-        while ((Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL) && (retries < MAX_PASSWORD_REQUESTS))
+        while ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
         {
           if (initFTPLogin(storageInfo->storageSpecifier.hostName,
                            storageInfo->storageSpecifier.loginName,
@@ -1131,7 +1131,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                  || !Password_isEmpty(&ftpServer.password)
                  || !Password_isEmpty(&defaultFTPPassword)
                 )
-                  ? ERRORX_(INVALID_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                  ? ERRORX_(INVALID_FTP_PASSWORD,0,"a %s",String_cString(storageInfo->storageSpecifier.hostName))
                   : ERRORX_(NO_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
       }
 
@@ -1517,6 +1517,19 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       return ERROR_FTP_SESSION_FAIL;
     }
 
+    // set FTP connect
+    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
+                           storageHandle->storageInfo->storageSpecifier.loginName,
+                           storageHandle->storageInfo->storageSpecifier.loginPassword,
+                           FTP_TIMEOUT
+                          );
+    if (curlCode != CURLE_OK)
+    {
+      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    }
+
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),fileName);
     baseName      = File_getBaseName(String_new(),fileName);
@@ -1533,22 +1546,6 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_appendChar(url,'/');
     String_append(url,baseName);
-
-    // set FTP connect
-    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.loginName,
-                           storageHandle->storageInfo->storageSpecifier.loginPassword,
-                           FTP_TIMEOUT
-                          );
-    if (curlCode != CURLE_OK)
-    {
-      String_delete(url);
-      String_delete(baseName);
-      String_delete(directoryName);
-      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
-    }
 
     // check to stop if exists/append/overwrite
     switch (storageHandle->storageInfo->jobOptions->archiveFileMode)
@@ -2408,8 +2405,6 @@ LOCAL Errors StorageFTP_makeDirectory(const StorageInfo *storageInfo,
   assert(!String_isEmpty(directoryName));
 
   #if   defined(HAVE_CURL)
-    // init variables
-
     // open Curl handles
     curlMultiHandle = curl_multi_init();
     if (curlMultiHandle == NULL)
@@ -2642,7 +2637,7 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
     }
 
     // allocate FTP server
-    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,60*1000L))
+    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
     {
       return ERROR_TOO_MANY_CONNECTIONS;
     }
@@ -2763,7 +2758,6 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // init variables
     AutoFree_init(&autoFreeList);
     Password_init(&password);
-    storageDirectoryListHandle->type              = STORAGE_TYPE_FTP;
     StringList_init(&storageDirectoryListHandle->ftp.lineList);
     storageDirectoryListHandle->ftp.fileName      = String_new();
     storageDirectoryListHandle->ftp.entryReadFlag = FALSE;
@@ -2784,7 +2778,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
 
     // allocate FTP server
-    if (!allocateServer(storageDirectoryListHandle->ftp.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageDirectoryListHandle->ftp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -2927,7 +2921,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   #if   defined(HAVE_CURL)
     freeServer(storageDirectoryListHandle->ftp.serverId);
@@ -2947,7 +2941,7 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   endOfDirectoryFlag = TRUE;
   #if   defined(HAVE_CURL)
@@ -2993,7 +2987,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)

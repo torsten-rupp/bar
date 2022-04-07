@@ -248,8 +248,8 @@ LOCAL void signalHandler(int signalNumber)
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
@@ -717,8 +717,8 @@ LOCAL void doneAll(void)
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
     sigaction(SIGUSR1,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
@@ -4521,6 +4521,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     Array_debugDone();
     String_debugDone();
     List_debugDone();
+    fprintf(stderr,"DEBUG: exitcode %d\n",errorToExitcode(error));
   #endif /* not NDEBUG */
 
   return errorToExitcode(error);

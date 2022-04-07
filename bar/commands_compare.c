@@ -1441,7 +1441,14 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         if (error != ERROR_NONE)
         {
           (void)File_close(&fileHandle);
-          return error;
+          if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
+          {
+            break;
+          }
+          else
+          {
+            continue;
+          }
         }
         printInfo(2,"    \b\b\b\b");
 
@@ -1545,7 +1552,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          printInfo(1,"FAIL!\n");
+          printInfo(1,"xxx11 FAIL!\n");
         }
       }
     }
@@ -2360,7 +2367,7 @@ error = compareInfo.failError;
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,"Compare fail: %s\n",Error_getText(error));
+    printInfo(1,tr("Compare fail: %s\n"),Error_getText(error));
   }
 
   return error;

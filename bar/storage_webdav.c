@@ -517,7 +517,9 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
   assert(size > 0);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   assert(storageHandle->webdav.sendBuffer.data != NULL);
 
@@ -571,7 +573,9 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
   assert(size > 0);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
 
 //TODO: progress callback?
@@ -792,6 +796,8 @@ LOCAL void doneDownloadUpload(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   assert(storageHandle->webdav.curlHandle != NULL);
   assert(storageHandle->webdav.curlMultiHandle != NULL);
+
+  UNUSED_VARIABLE(storageHandle);
 }
 
 /***********************************************************************\
@@ -905,14 +911,19 @@ LOCAL bool StorageWebDAV_equalSpecifiers(const StorageSpecifier *storageSpecifie
                                         )
 {
   assert(storageSpecifier1 != NULL);
-  assert(storageSpecifier1->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageSpecifier1->type == STORAGE_TYPE_WEBDAV)
+         || (storageSpecifier1->type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(storageSpecifier2 != NULL);
-  assert(storageSpecifier2->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageSpecifier2->type == STORAGE_TYPE_WEBDAV)
+         || (storageSpecifier2->type == STORAGE_TYPE_WEBDAVS)
+        );
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
   if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
-  return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
+  return    (storageSpecifier1->type == storageSpecifier2->type)
+         && String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
          && String_equals(archiveName1,archiveName2);
 }
@@ -925,7 +936,9 @@ LOCAL String StorageWebDAV_getName(String                 string,
   ConstString storageFileName;
 
   assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
+  assert(  (storageSpecifier->type == STORAGE_TYPE_WEBDAV)
+         ||(storageSpecifier->type == STORAGE_TYPE_WEBDAVS)
+        );
 
   // get file to use
   if      (archiveName != NULL)
@@ -974,7 +987,9 @@ LOCAL void StorageWebDAV_getPrintableName(String                 string,
 
   assert(string != NULL);
   assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageSpecifier->type == STORAGE_TYPE_WEBDAV)
+         || (storageSpecifier->type == STORAGE_TYPE_WEBDAVS)
+        );
 
   // get file to use
   if      (!String_isEmpty(fileName))
@@ -1021,7 +1036,9 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
 
   assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageSpecifier->type == STORAGE_TYPE_WEBDAV)
+         || (storageSpecifier->type == STORAGE_TYPE_WEBDAVS)
+        );
 
   #ifdef HAVE_CURL
     UNUSED_VARIABLE(serverConnectionPriority);
@@ -1048,7 +1065,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     }
 
     // allocate WebDAV server
-    if (!allocateServer(storageInfo->webdav.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageInfo->webdav.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -1057,14 +1074,14 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
 
     // check WebDAV login, get correct password
     error = ERROR_WEBDAV_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
                                storageInfo->storageSpecifier.loginPassword
                               );
     }
-    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&webDAVServer.password))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION) && !Password_isEmpty(&webDAVServer.password))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
@@ -1075,7 +1092,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
         Password_set(storageInfo->storageSpecifier.loginPassword,&webDAVServer.password);
       }
     }
-    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL) && !Password_isEmpty(&defaultWebDAVPassword))
+    if ((Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION) && !Password_isEmpty(&defaultWebDAVPassword))
     {
       error = checkWebDAVLogin(storageInfo->storageSpecifier.hostName,
                                storageInfo->storageSpecifier.loginName,
@@ -1086,12 +1103,12 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
         Password_set(storageInfo->storageSpecifier.loginPassword,&defaultWebDAVPassword);
       }
     }
-    if (Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL)
+    if (Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION)
     {
       // initialize interactive/default password
       retries = 0;
       Password_init(&password);
-      while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
+      while ((Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initWebDAVLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.loginName,
@@ -1114,7 +1131,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
       }
       Password_done(&password);
     }
-    if (Error_getCode(error) == ERROR_CODE_WEBDAV_SESSION_FAIL)
+    if (Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION)
     {
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
                || !Password_isEmpty(&webDAVServer.password)
@@ -1151,7 +1168,9 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
 LOCAL Errors StorageWebDAV_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   // free WebDAV server connection
   #ifdef HAVE_CURL
@@ -1168,7 +1187,9 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(const StorageInfo *storageInf
   bool serverAllocationPending;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   serverAllocationPending = FALSE;
   #ifdef HAVE_CURL
@@ -1194,7 +1215,9 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   error = ERROR_NONE;
 
@@ -1245,7 +1268,9 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   error = ERROR_NONE;
 
@@ -1297,7 +1322,9 @@ LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archi
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(!String_isEmpty(archiveName));
 
   existsFlag = FALSE;
@@ -1442,7 +1469,9 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(!String_isEmpty(fileName));
 
 //TODO: exists test?
@@ -1462,7 +1491,20 @@ UNUSED_VARIABLE(forceFlag);
     storageHandle->webdav.sendBuffer.data      = NULL;
     storageHandle->webdav.sendBuffer.index     = 0L;
     storageHandle->webdav.sendBuffer.length    = 0L;
+  #endif /* HAVE_CURL */
 
+  // check if file exists
+  if (   !forceFlag
+      && (storageHandle->storageInfo->jobOptions != NULL)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && StorageWebDAV_exists(storageHandle->storageInfo,fileName)
+     )
+  {
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
+  }
+
+  #ifdef HAVE_CURL
     // open Curl handles
     storageHandle->webdav.curlMultiHandle = curl_multi_init();
     if (storageHandle->webdav.curlMultiHandle == NULL)
@@ -1708,7 +1750,9 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_CURL
@@ -1851,7 +1895,9 @@ LOCAL void StorageWebDAV_close(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   #ifdef HAVE_CURL
     DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,StorageHandleWebDAV);
@@ -1876,7 +1922,9 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   #ifdef HAVE_CURL
     return storageHandle->webdav.index >= storageHandle->webdav.size;
@@ -1908,7 +1956,9 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -2088,7 +2138,9 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(buffer != NULL);
 
   error = ERROR_UNKNOWN;
@@ -2201,7 +2253,9 @@ LOCAL uint64 StorageWebDAV_getSize(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   size = 0LL;
   #ifdef HAVE_CURL
@@ -2224,7 +2278,9 @@ LOCAL Errors StorageWebDAV_tell(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -2264,7 +2320,9 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_CURL
@@ -2403,7 +2461,9 @@ LOCAL Errors StorageWebDAV_rename(const StorageInfo *storageInfo,
   Errors error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
 UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
@@ -2429,7 +2489,9 @@ LOCAL Errors StorageWebDAV_makeDirectory(const StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(!String_isEmpty(directoryName));
 
   error = ERROR_UNKNOWN;
@@ -2515,7 +2577,9 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(!String_isEmpty(archiveName));
 
   error = ERROR_UNKNOWN;
@@ -2613,7 +2677,9 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(fileInfo != NULL);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
@@ -2632,7 +2698,7 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
     }
 
     // allocate webDAV server
-    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,60*1000L))
+    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
     {
       return ERROR_TOO_MANY_CONNECTIONS;
     }
@@ -2750,7 +2816,9 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageSpecifier->type == STORAGE_TYPE_WEBDAV)
+         || (storageSpecifier->type == STORAGE_TYPE_WEBDAVS)
+        );
   assert(pathName != NULL);
   assert(jobOptions != NULL);
 
@@ -2763,7 +2831,6 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     // init variables
     AutoFree_init(&autoFreeList);
-    storageDirectoryListHandle->type               = STORAGE_TYPE_WEBDAV;
     storageDirectoryListHandle->webdav.rootNode    = NULL;
     storageDirectoryListHandle->webdav.lastNode    = NULL;
     storageDirectoryListHandle->webdav.currentNode = NULL;
@@ -2781,7 +2848,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     }
 
     // allocate WebDAV server
-    if (!allocateServer(storageDirectoryListHandle->webdav.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageDirectoryListHandle->webdav.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -2976,7 +3043,9 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
 LOCAL void StorageWebDAV_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     mxmlDelete(storageDirectoryListHandle->webdav.rootNode);
@@ -2990,7 +3059,9 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
   bool endOfDirectoryFlag;
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   endOfDirectoryFlag = TRUE;
 
@@ -3024,7 +3095,9 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
   #endif /* HAVE_CURL */
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
+  assert(   (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV)
+         || (storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAVS)
+        );
 
   error = ERROR_UNKNOWN;
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
@@ -3038,7 +3111,6 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                                                        MXML_DESCEND
                                                                       );
     }
-
     if (   (storageDirectoryListHandle->webdav.currentNode != NULL)
         && (mxmlGetType(storageDirectoryListHandle->webdav.currentNode) == MXML_ELEMENT)
         && (mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode) != NULL)

@@ -44,8 +44,8 @@ WINE_C_DRIVE       = @WINE_C_DRIVE@
 
 #--------------------------------- tool chain --------------------------------
 
-# shell in Makefile must be bash
-SHELL                      = bash
+# shell in Makefile must be bash with pipe-fail handling
+SHELL                      = bash -o pipefail
 
 CTAGS_FLAGS                =
 

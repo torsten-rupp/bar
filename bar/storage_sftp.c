@@ -389,7 +389,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     }
 
     // allocate SSH server
-    if (!allocateServer(storageInfo->sftp.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageInfo->sftp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -891,7 +891,9 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                                )
 {
   #ifdef HAVE_SSH2
-    Errors error;
+    Errors                  error;
+    String                  directoryName;
+    LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -964,6 +966,43 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                       "%s",
                       sshErrorText
                      );
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
+      return error;
+    }
+
+    // create directory if not existing
+    directoryName = File_getDirectoryName(String_new(),fileName);
+    if (   !String_isEmpty(directoryName)
+        && (libssh2_sftp_lstat(storageHandle->sftp.sftp,
+                               String_cString(directoryName),
+                               &sftpAttributes
+                              ) != 0
+           )
+       )
+    {
+      // create directory
+      if (libssh2_sftp_mkdir(storageHandle->sftp.sftp,
+                             String_cString(directoryName),
+                              LIBSSH2_SFTP_S_IRWXU
+                             |LIBSSH2_SFTP_S_IRGRP|LIBSSH2_SFTP_S_IXGRP
+                             |LIBSSH2_SFTP_S_IROTH|LIBSSH2_SFTP_S_IXOTH
+                            ) != 0
+         )
+      {
+         char *sshErrorText;
+
+         libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+         error = ERRORX_(SSH,
+                         libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                         "%s",
+                         sshErrorText
+                        );
+      }
+    }
+    String_delete(directoryName);
+    if (error != ERROR_NONE)
+    {
       Network_disconnect(&storageHandle->sftp.socketHandle);
       DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
       return error;
@@ -1637,10 +1676,12 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
       sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
       if (sftp != NULL)
       {
-        // delete file
+        // create directory
         if (libssh2_sftp_mkdir(sftp,
                                String_cString(directoryName),
-                               0755
+                                LIBSSH2_SFTP_S_IRWXU
+                               |LIBSSH2_SFTP_S_IRGRP|LIBSSH2_SFTP_S_IXGRP
+                               |LIBSSH2_SFTP_S_IROTH|LIBSSH2_SFTP_S_IXOTH
                               ) == 0
            )
         {
@@ -1675,7 +1716,7 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
     }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(directoryName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
@@ -1903,7 +1944,6 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   #ifdef HAVE_SSH2
     // init variables
     AutoFree_init(&autoFreeList);
-    storageDirectoryListHandle->type               = STORAGE_TYPE_SFTP;
     storageDirectoryListHandle->sftp.pathName      = String_new();
     storageDirectoryListHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
     if (storageDirectoryListHandle->sftp.buffer == NULL)
@@ -1921,8 +1961,6 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     String_set(storageDirectoryListHandle->sftp.pathName,pathName);
 
     // get SSH server settings
-
-    // get SSH server settings
     storageDirectoryListHandle->sftp.serverId = Configuration_initSSHServerSettings(&sshServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
@@ -1936,7 +1974,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     }
 
     // allocate SSH server
-    if (!allocateServer(storageDirectoryListHandle->sftp.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageDirectoryListHandle->sftp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;

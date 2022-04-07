@@ -18812,6 +18812,14 @@ fi
 
 done
 
+ac_fn_c_check_header_mongrel "$LINENO" "sqlite3.h" "ac_cv_header_sqlite3_h" "$ac_includes_default"
+if test "x$ac_cv_header_sqlite3_h" = xyes; then :
+
+else
+  as_fn_error $? "mandatory sqlite3.h is not available" "$LINENO" 5
+fi
+
+
 
 # defines, constants, types, variables
 ac_fn_c_check_type "$LINENO" "uint" "ac_cv_type_uint" "$ac_includes_default"

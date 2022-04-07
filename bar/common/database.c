@@ -1827,6 +1827,7 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
   mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
   // connect
+  error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     if (mysql_real_connect(handle,
@@ -1851,6 +1852,7 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
                      );
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     mysql_close(handle);
@@ -1946,6 +1948,7 @@ LOCAL Errors mysqlDropDatabase(const char     *serverName,
   mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
   // connect
+  error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     if (mysql_real_connect(handle,
@@ -1970,6 +1973,7 @@ LOCAL Errors mysqlDropDatabase(const char     *serverName,
                      );
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     mysql_close(handle);
@@ -2351,6 +2355,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
   Errors         error;
 
   // connect (with database 'template1')
+  error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
@@ -2376,6 +2381,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                      );
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2458,6 +2464,7 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
   Errors         error;
 
   // connect (with database 'template1')
+  error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
@@ -2483,6 +2490,7 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
                      );
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;

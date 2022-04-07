@@ -6152,6 +6152,7 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
+  archiveHandle->dryRun                  = FALSE;
   archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
 
@@ -6243,11 +6244,11 @@ UNUSED_VARIABLE(storageInfo);
     if (!storageInfo->jobOptions->noStopOnErrorFlag)
     {
       AutoFree_cleanup(&autoFreeList);
-      return ERROR_NOT_AN_ARCHIVE_FILE;
+      return ERRORX_(NOT_AN_ARCHIVE_FILE,0,"%s",String_cString(archiveName));
     }
     else
     {
-      printWarning("No BAR header found! This may be a broken archive or not an archive");
+      printWarning(tr("No BAR header found! This may be a broken archive or not an archive"));
     }
   }
   ungetNextChunkHeader(archiveHandle,&chunkHeader);
@@ -13596,6 +13597,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               DeltaSource_closeEntry(&archiveEntryInfo->file.deltaSourceHandle);
             }
 
+            Compress_done(&archiveEntryInfo->file.byteCompressInfo);
             Compress_done(&archiveEntryInfo->file.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
@@ -13608,8 +13610,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
             Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
             Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-            Compress_done(&archiveEntryInfo->file.byteCompressInfo);
 
             free(archiveEntryInfo->file.deltaBuffer);
             free(archiveEntryInfo->file.byteBuffer);
@@ -13635,6 +13635,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               DeltaSource_closeEntry(&archiveEntryInfo->image.deltaSourceHandle);
             }
 
+            Compress_done(&archiveEntryInfo->image.byteCompressInfo);
             Compress_done(&archiveEntryInfo->image.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
@@ -13645,8 +13646,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
             Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
             Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-            Compress_done(&archiveEntryInfo->image.byteCompressInfo);
 
             free(archiveEntryInfo->image.deltaBuffer);
             free(archiveEntryInfo->image.byteBuffer);
@@ -13708,6 +13707,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               DeltaSource_closeEntry(&archiveEntryInfo->hardLink.deltaSourceHandle);
             }
 
+            Compress_done(&archiveEntryInfo->hardLink.byteCompressInfo);
             Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
@@ -13722,8 +13722,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-            Compress_done(&archiveEntryInfo->hardLink.byteCompressInfo);
 
             free(archiveEntryInfo->hardLink.deltaBuffer);
             free(archiveEntryInfo->hardLink.byteBuffer);
@@ -14702,7 +14700,6 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 
   assert(archiveHandle != NULL);
 
-fprintf(stderr,"%s:%d: %p\n",__FILE__,__LINE__,archiveHandle->archiveCryptInfo);
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
   {
@@ -14894,8 +14891,6 @@ fprintf(stderr,"%s:%d: %p\n",__FILE__,__LINE__,archiveHandle->archiveCryptInfo);
     }
   }
   (void)Archive_seek(archiveHandle,offset);
-//archiveHandle->archiveCryptInfo = NULL;
-fprintf(stderr,"%s:%d: %p\n",__FILE__,__LINE__,archiveHandle->archiveCryptInfo);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -15473,11 +15468,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                              fragmentOffset,
                              fragmentSize
                             );
-          }
-          if (error != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            break;
           }
 
           pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));

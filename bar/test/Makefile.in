@@ -39,8 +39,8 @@ endif
 
 #--------------------------------- tool chain --------------------------------
 
-# shell in Makefile must be bash
-SHELL = bash
+# shell in Makefile must be bash with pipe-fail handling
+SHELL = bash -o pipefail
 
 ifeq ($(PLATFORM),LINUX)
   EXE_PREFIX =
@@ -63,6 +63,12 @@ TEST_BAR_INDEX_GCOV     ?= $(BAR_DIR)/bar-index-gcov@EXEEXT@
 TEST_BAR_INDEX_GPROF    ?= $(BAR_DIR)/bar-index-gprof@EXEEXT@
 TEST_BAR_INDEX_VALGRIND ?= $(BAR_DIR)/bar-index-valgrind@EXEEXT@
 TEST_DESTROYER          ?= $(BAR_DIR)/destroyer@EXEEXT@
+
+TEST_BAR_HAS_DEBUG_FUNCTIONS := `test $(TEST_BAR) --debug-server`
+
+.PHONY: xxx
+xxx:
+	echo TEST_BAR_HAS_DEBUG_FUNCTIONS=$(TEST_BAR_HAS_DEBUG_FUNCTIONS)
 
 #---------------------------------- commands----------------------------------
 
@@ -247,11 +253,20 @@ endif
 # additional options
 OPTIONS ?= $(O)
 
+# image operations
+ifeq (@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@,1)
+ifeq (@HAVE_SUDO_COMMAND_LOSETUP@,1)
+ifeq (@HAVE_SUDO_COMMAND_MKFS@,1)
+TEST_IMAGE_OPERATIONS ?= yes
+endif
+endif
+endif
+
 # ext block sizes
 EXT_BLOCK_SIZES ?= default 1024 2048 4096
 
 # intermediate files directory
-INTERMEDIATE_DIR := $(addprefix $(if $(TEST_BASE_DIR),$(TEST_BASE_DIR)/),intermediate)
+INTERMEDIATE_DIR := $(abspath $(addprefix $(if $(TEST_BASE_DIR),$(TEST_BASE_DIR)/),intermediate))
 
 # test settings
 TEST_CONFIG                      = $(INTERMEDIATE_DIR)/bar.cfg
@@ -276,6 +291,7 @@ TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/bar.pid
 TEST_SERVER_JOBS_DIRECTORY       = $(TEST_SERVER_DIRECTORY)/jobs
 TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
 TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
+
 
 TEST_MASTER_PORT                 = 39909
 TEST_MASTER_SSL_PORT             = 39910
@@ -306,7 +322,7 @@ TEST_CONFIGS                     = $(TEST_CONFIG) \
 # hosts, ports, passwords, keys for tests
 TEST_HOST                        ?= localhost
 TEST_LOGIN_NAME                  ?= $(LOGNAME)
-TEST_PASSWORD                    =
+TEST_PASSWORD                    ?= test
 TEST_EMULATION                   =
 
 TEST_HOST_FTP                    ?= $(TEST_HOST)
@@ -362,9 +378,9 @@ TEST_POSTGRESQL_USER             = test
 TEST_POSTGRESQL_PASSWORD         = test
 
 # databases
-TEST_INDEX_DATABASE_SQLITE       =  sqlite:$(INTERMEDIATE_DIR)/index.db
-TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
-TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
+TEST_INDEX_DATABASE_SQLITE       =  sqlite$($(:))$(INTERMEDIATE_DIR)/index.db
+TEST_INDEX_DATABASE_MARIADB      =  mariadb$($(:))$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
+TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql$($(:))$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
 TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
 
 TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MARIADB) $(TEST_INDEX_DATABASE_POSTGRESQL)
@@ -592,7 +608,8 @@ $(BAR_DIR)/destroyer@EXEEXT@:
 
 # ----------------------------------------------------------------------------
 
-COLUMNS := $(shell tput cols || $(ECHO) 80)
+# terminal columns
+COLUMNS := $(shell tput cols 2>/dev/null || $(ECHO) 80)
 
 # log redirection
 LOG = $(if $(QUIET),</dev/null 1>/dev/null)
@@ -954,12 +971,6 @@ TEST_FILES_CLEAN = \
   $(TEST_FILES_INTERMEDIATE) \
   $(TEST_FILES_RESTORE)
 
-x:
-	echo $(TEST_FILES_CLEAN)
-	echo $(TEST_SPECIAL_ATTRIBUTES)
-	echo $(findstring yes,$(TEST_SPECIAL_ATTRIBUTES))
-	echo $(if $(findstring yes,$(TEST_SPECIAL_ATTRIBUTES)),a,b)
-
 # test keys
 TEST_KEYS = $(TEST_KEY_CRYPT_PUBLIC) \
             $(TEST_KEY_CRYPT_PRIVATE) \
@@ -1003,6 +1014,7 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(call functionTestNames,test_storage_scp            )
 .PHONY: $(call functionTestNames,test_storage_sftp           )
 .PHONY: $(call functionTestNames,test_storage_webdav         )
+.PHONY: $(call functionTestNames,test_storage_webdavs        )
 .PHONY: $(call functionTestNames,test_hugefiles        test10)
 .PHONY: $(call functionTestNames,test_optical          test11)
 .PHONY: $(call functionTestNames,test_device           test12)
@@ -1092,21 +1104,25 @@ test_data_dist_clean: \
 	if test -f data/immutable.dat; then $(SUDO) -n $(CHATTR) -i data/immutable.dat; fi
 	$(RMRF) data
 
-test1 test_basic:
+test1 test_basic: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 1: basic)
 	@$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-verify-signatures $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-verify-signatures $(OPTIONS)" \
@@ -1114,26 +1130,24 @@ test1 test_basic:
           ;
 	@$(call functionInfoEnd,OK)
 
-test1-debug test_basic-debug: \
-  $(TEST_BAR_DEBUG)
+test1-debug test_basic-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_basic
 
-test1-gcov test_basic-gcov: \
-  $(TEST_BAR_GCOV)
+test1-gcov test_basic-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_basic
 
-test1-gprof test_basic-gprof: \
-  $(TEST_BAR_GPROF)
+test1-gprof test_basic-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_basic
 
-test1-valgrind test_basic-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test1-valgrind test_basic-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_basic
 
-test2 test_compress:
+test2 test_compress: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
@@ -1144,6 +1158,7 @@ test2 test_compress:
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
@@ -1154,6 +1169,7 @@ test2 test_compress:
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
@@ -1166,26 +1182,24 @@ test2 test_compress:
         done
 	@$(call functionInfoEnd,OK)
 
-test2-debug test_compress-debug: \
-  $(TEST_BAR_DEBUG)
+test2-debug test_compress-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_compress
 
-test2-gcov test_compress-gcov: \
-  $(TEST_BAR_GCOV)
+test2-gcov test_compress-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_compress
 
-test2-gprof test_compress-gprof: \
-  $(TEST_BAR_GPROF)
+test2-gprof test_compress-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_compress
 
-test2-valgrind test_compress-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test2-valgrind test_compress-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_compress
 
-test_delta_compress:
+test_delta_compress: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: delta compress)
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
@@ -1196,6 +1210,7 @@ test_delta_compress:
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none $(OPTIONS)" \
@@ -1208,27 +1223,25 @@ test_delta_compress:
         done
 	@$(call functionInfoEnd,OK)
 
-test_delta_compress-debug: \
-  $(TEST_BAR_DEBUG)
+test_delta_compress-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_delta_compress
 
-test_delta_compress-gcov: \
-  $(TEST_BAR_GCOV)
+test_delta_compress-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_delta_compress
 
-test_delta_compress-gprof: \
-  $(TEST_BAR_GPROF)
+test_delta_compress-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_delta_compress
 
-test_delta_compress-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_delta_compress-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_delta_compress
 
 test3 test_crypt: \
+  $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 3: crypt)
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
@@ -1239,6 +1252,7 @@ test3 test_crypt: \
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --skip-verify-signatures $(OPTIONS)" \
@@ -1249,6 +1263,7 @@ test3 test_crypt: \
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --skip-verify-signatures $(OPTIONS)" \
@@ -1269,30 +1284,28 @@ test3 test_crypt: \
 #          test_file_operations \
 #          ;
 
-test3-debug test_crypt-debug:  \
-  $(TEST_BAR_DEBUG)
+test3-debug test_crypt-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_crypt
 
-test3-gcov test_crypt-gcov:  \
-  $(TEST_BAR_GCOV)
+test3-gcov test_crypt-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" test_crypt
 
-test3-gprof test_crypt-gprof:  \
-  $(TEST_BAR_GPROF)
+test3-gprof test_crypt-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) test_crypt
 
-test3-valgrind test_crypt-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test3-valgrind test_crypt-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_crypt
 
 test4 test_asymmetric_crypt: \
+  $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 4: asymmetric crypt)
-	@for crypt in $(CRYPT_NAMES); do \
+	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1300,9 +1313,10 @@ test4 test_asymmetric_crypt: \
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1310,9 +1324,10 @@ test4 test_asymmetric_crypt: \
             exit $$rc; \
           fi; \
           $(MAKE) \
+						BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1321,15 +1336,15 @@ test4 test_asymmetric_crypt: \
           fi; \
         done
 	# wrong public key
-	@for crypt in $(CRYPT_NAMES); do \
+	for crypt in $(CRYPT_NAMES); do \
           if test ! $$crypt = "none"; then \
             $(RMF) $(INTERMEDIATE_DIR)/test.bar; \
-            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) --skip-verify-signatures -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(LOG); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_OTHER_PUBLIC) --skip-verify-signatures -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(LOG); \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit $$rc; \
             fi; \
-            $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(INTERMEDIATE_DIR)/test.bar $(LOG)); \
+            $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-verify-signatures $(INTERMEDIATE_DIR)/test.bar $(LOG)); \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit $$rc; \
@@ -1338,86 +1353,85 @@ test4 test_asymmetric_crypt: \
         done
 	@$(call functionInfoEnd,OK)
 
-test4-debug test_asymmetric_crypt-debug: \
-  $(TEST_BAR_DEBUG)
+test4-debug test_asymmetric_crypt-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_asymmetric_crypt
 
-test4-gcov test_asymmetric_crypt-gcov: \
-  $(TEST_BAR_GCOV)
+test4-gcov test_asymmetric_crypt-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_asymmetric_crypt
 
-test4-gprof test_asymmetric_crypt-gprof: \
-  $(TEST_BAR_GPROF)
+test4-gprof test_asymmetric_crypt-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_asymmetric_crypt
 
-test4-valgrind test_asymmetric_crypt-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test4-valgrind test_asymmetric_crypt-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_asymmetric_crypt
 
 test5 test_signatures: \
+  $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 5: signatures)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	# wrong signature key, no signature key
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES)) $(LOG)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --info $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES)) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --info $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --info --skip-verify-signatures $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --info --force-verify-signatures $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info --force-verify-signatures $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_PRIVATE) --info --force-verify-signatures $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info --force-verify-signatures $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --info --force-verify-signatures $(INTERMEDIATE_DIR)/test.bar)) $(LOG)
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoEnd,OK)
 
-test5-debug test_signatures-debug: \
-  $(TEST_BAR_DEBUG)
+test5-debug test_signatures-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_signatures
 
-test5-gcov test_signatures-gcov: \
-  $(TEST_BAR_GCOV)
+test5-gcov test_signatures-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_signatures
 
-test5-gprof test_signatures-gprof: \
-  $(TEST_BAR_GPROF)
+test5-gprof test_signatures-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_signatures
 
-test5-valgrind test_signatures-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test5-valgrind test_signatures-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_signatures
 
 test6 test_split: \
-  data/zero512k.dat
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 6: split)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test-####" \
           BAR_PATTERN="test-*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test-####" \
           BAR_PATTERN="test-*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test-####" \
           BAR_PATTERN="test-*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
@@ -1435,25 +1449,23 @@ test6 test_split: \
         )
 	@$(call functionInfoEnd,OK)
 
-test6-debug test_split-debug: \
-  $(TEST_BAR_DEBUG)
+test6-debug test_split-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_split
 
-test6-gcov test_split-gcov: \
-  $(TEST_BAR_GCOV)
+test6-gcov test_split-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_split
 
-test6-gprof test_split-gprof: \
-  $(TEST_BAR_GPROF)
+test6-gprof test_split-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_split
 
-test6-valgrind test_split-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test6-valgrind test_split-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_split
 
-test7 test_convert:
+test7 test_convert: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 7: convert)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
@@ -1461,26 +1473,22 @@ test7 test_convert:
           ;
 	@$(call functionInfoEnd,OK)
 
-test7-debug test_convert-debug: \
-  $(TEST_BAR_DEBUG)
+test7-debug test_convert-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_convert
 
-test7-gcov test_convert-gcov: \
-  $(TEST_BAR_GCOV)
+test7-gcov test_convert-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_convert
 
-test7-gprof test_convert-gprof: \
-  $(TEST_BAR_GPROF)
+test7-gprof test_convert-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_convert
 
-test7-valgrind test_convert-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test7-valgrind test_convert-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_convert
 
-test8 test_image:
+test8 test_image: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 8: image)
-	if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
-	  for compress in $(IMAGE_COMPRESS_NAMES); do \
+	for compress in $(IMAGE_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_FILE="test" \
               BAR_PATTERN="test" \
@@ -1505,49 +1513,44 @@ test8 test_image:
           $(call functionInfoEnd,OK); \
         else \
           $(call functionInfoEnd,FAIL (error: no sudo-commands)); \
-        fi; \
+        fi
 
-test8-debug test_image-debug: \
-  $(TEST_BAR_DEBUG)
+test8-debug test_image-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_image
 
-test8-gcov test_image-gcov: \
-  $(TEST_BAR_GCOV)
+test8-gcov test_image-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_image
 
-test8-gprof test_image-gprof: \
-  $(TEST_BAR_GPROF)
+test8-gprof test_image-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_image
 
-test8-valgrind test_image-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test8-valgrind test_image-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_image
 
-test9 test_storage:
+test9 test_storage: \
+  $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 9: storage..."
 	@$(MAKE) test_storage_file \
 	         test_storage_ftp \
 	         test_storage_scp \
 	         test_storage_sftp \
-	         test_storage_webdav
+	         test_storage_webdav \
+	         test_storage_webdavs
 
-test9-debug test_storage-debug: \
-  $(TEST_BAR_DEBUG)
+test9-debug test_storage-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage
 
-test9-gcov test_storage-gcov: \
-  $(TEST_BAR_GCOV)
+test9-gcov test_storage-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage
 
-test9-gprof test_storage-gprof: \
-  $(TEST_BAR_GPROF)
+test9-gprof test_storage-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage
 
-test9-valgrind test_storage-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test9-valgrind test_storage-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage
 
-test_storage_file:
+test_storage_file: \
+  $(TEST_BAR)
 	$(MAKE) \
           BAR_STORAGE="file://$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -1569,23 +1572,20 @@ test_storage_file:
           ;
 # delta test?
 
-test_storage_file-debug: \
-  $(TEST_BAR_DEBUG)
+test_storage_file-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_file
 
-test_storage_file-gcov: \
-  $(TEST_BAR_GCOV)
+test_storage_file-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_file
 
-test_storage_file-gprof: \
-  $(TEST_BAR_GPROF)
+test_storage_file-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_file
 
-test_storage_file-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_storage_file-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_file
 
-test_storage_ftp:
+test_storage_ftp: \
+  $(TEST_BAR)
 	@$(ECHO) Info : TEST_HOST_FTP=$(TEST_HOST_FTP)
 	@$(call functionVerifyParameter,TEST_HOST_FTP,parameter TEST_HOST_FTP nor TEST_HOST set)
 	@$(call functionVerifyParameter,TEST_LOGIN_NAME_FTP,parameter TEST_LOGIN_NAME_FTP nor TEST_LOGIN_NAME set)
@@ -1597,7 +1597,7 @@ test_storage_ftp:
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_LOGIN_NAME_FTP)' --ftp-password='$(TEST_PASSWORD_FTP)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
-	$(MAKE) \
+	echo $(MAKE) \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1612,29 +1612,28 @@ test_storage_ftp:
           test_directory_operations \
           ;
 
-test_storage_ftp-debug: \
-  $(TEST_BAR_DEBUG)
+test_storage_ftp-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_ftp
 
-test_storage_ftp-gcov: \
-  $(TEST_BAR_GCOV)
+test_storage_ftp-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_ftp
 
-test_storage_ftp-gprof: \
-  $(TEST_BAR_GPROF)
+test_storage_ftp-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_ftp
 
-test_storage_ftp-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_storage_ftp-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_ftp
 
-test_storage_scp:
+test_storage_scp: \
+  $(TEST_BAR)
 	@$(ECHO) Info : TEST_HOST_SCP=$(TEST_HOST_SCP)
 	@$(call functionVerifyParameter,TEST_HOST_SCP,parameter TEST_HOST_SCP nor TEST_HOST set)
 	@$(call functionVerifyParameter,TEST_LOGIN_NAME_SCP,parameter TEST_LOGIN_NAME_SCP nor TEST_LOGIN_NAME set)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SCP,parameter TEST_PASSWORD_SCP nor TEST_PASSWORD set)
 	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SCP,parameter TEST_PUBLIC_KEY_SCP nor TEST_PUBLIC_KEY_SSH set)
 	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SCP,parameter TEST_PRIVATE_KEY_SCP nor TEST_PRIVATE_KEY_SSH set)
+	# Note: with scp protocol directory cannot be created. Create it in advance
+	install -d $(INTERMEDIATE_DIR)
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
           BAR_FILE="test" \
@@ -1664,23 +1663,20 @@ test_storage_scp:
           test_file_operations_base \
           ;
 
-test_storage_scp-debug: \
-  $(TEST_BAR_DEBUG)
+test_storage_scp-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_scp
 
-test_storage_scp-gcov: \
-  $(TEST_BAR_GCOV)
+test_storage_scp-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_scp
 
-test_storage_scp-gprof: \
-  $(TEST_BAR_GPROF)
+test_storage_scp-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_scp
 
-test_storage_scp-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_storage_scp-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_scp
 
-test_storage_sftp:
+test_storage_sftp: \
+  $(TEST_BAR)
 	@$(ECHO) Info : TEST_HOST_SFTP=$(TEST_HOST_SFTP)
 	@$(call functionVerifyParameter,TEST_HOST_SFTP,parameter TEST_HOST_SFTP nor TEST_HOST set)
 	@$(call functionVerifyParameter,TEST_LOGIN_NAME_SFTP,parameter TEST_LOGIN_NAME_SFTP nor TEST_LOGIN_NAME set)
@@ -1692,10 +1688,10 @@ test_storage_sftp:
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-verify-signatures --max-threads=1 --verbose=4 $(OPTIONS)" \
           test_file_operations_base \
           ;
-	$(MAKE) \
+	echo $(MAKE) \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1717,7 +1713,7 @@ test_storage_sftp:
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
-	$(MAKE) \
+	echo $(MAKE) \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1732,23 +1728,20 @@ test_storage_sftp:
           test_directory_operations \
           ;
 
-test_storage_sftp-debug: \
-  $(TEST_BAR_DEBUG)
+test_storage_sftp-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_sftp
 
-test_storage_sftp-gcov: \
-  $(TEST_BAR_GCOV)
+test_storage_sftp-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_sftp
 
-test_storage_sftp-gprof: \
-  $(TEST_BAR_GPROF)
+test_storage_sftp-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_sftp
 
-test_storage_sftp-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_storage_sftp-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_sftp
 
-test_storage_webdav:
+test_storage_webdav: \
+  $(TEST_BAR)
 	@$(ECHO) Info : TEST_HOST_WEBDAV=$(TEST_HOST_WEBDAV)
 	@$(call functionVerifyParameter,TEST_HOST_WEBDAV,parameter TEST_HOST_WEBDAV nor TEST_HOST set)
 	@$(call functionVerifyParameter,TEST_LOGIN_NAME_WEBDAV,parameter TEST_LOGIN_NAME_WEBDAV nor TEST_LOGIN_NAME set)
@@ -1760,7 +1753,7 @@ test_storage_webdav:
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
-	$(MAKE) \
+	echo $(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1775,23 +1768,60 @@ test_storage_webdav:
           test_directory_operations \
           ;
 
-test_storage_webdav-debug: \
-  $(TEST_BAR_DEBUG)
+test_storage_webdav-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_webdav
 
-test_storage_webdav-gcov: \
-  $(TEST_BAR_GCOV)
+test_storage_webdav-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_webdav
 
-test_storage_webdav-gprof: \
-  $(TEST_BAR_GPROF)
+test_storage_webdav-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_webdav
 
-test_storage_webdav-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_storage_webdav-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
 
-test10 test_hugefiles:
+test_storage_webdavs: \
+  $(TEST_BAR)
+	@$(ECHO) Info : TEST_HOST_WEBDAV=$(TEST_HOST_WEBDAV)
+	@$(call functionVerifyParameter,TEST_HOST_WEBDAV,parameter TEST_HOST_WEBDAV nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_LOGIN_NAME_WEBDAV,parameter TEST_LOGIN_NAME_WEBDAV nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
+	$(MAKE) \
+          BAR_STORAGE="webdavs://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          test_file_operations_base \
+          ;
+	echo $(MAKE) \
+          BAR_STORAGE="webdavs://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-verify-signatures $(OPTIONS)" \
+          test_file_operations_base \
+          ;
+	$(MAKE) \
+          BAR_STORAGE="webdavs://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
+          test_directory_operations \
+          ;
+
+test_storage_webdavs-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_webdavs
+
+test_storage_webdavs-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_webdavs
+
+test_storage_webdavs-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_webdavs
+
+test_storage_webdavs-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
+
+test10 test_hugefiles: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 10: huge files)
 	for compress in $(COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
@@ -1807,23 +1837,20 @@ test10 test_hugefiles:
         done
 	@$(call functionInfoEnd,OK)
 
-test10-debug test_hugefiles-debug: \
-  $(TEST_BAR_DEBUG)
+test10-debug test_hugefiles-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_hugefiles
 
-test10-gcov test_hugefiles-gcov: \
-  $(TEST_BAR_GCOV)
+test10-gcov test_hugefiles-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_hugefiles
 
-test10-gprof test_hugefiles-gprof: \
-  $(TEST_BAR_GPROF)
+test10-gprof test_hugefiles-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_hugefiles
 
-test10-valgrind test_hugefiles-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test10-valgrind test_hugefiles-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_hugefiles
 
-test11 test_optical:
+test11 test_optical: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 11: optical)
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1833,23 +1860,20 @@ test11 test_optical:
           ;
 	@$(call functionInfoEnd,OK)
 
-test11-debug test_optical-debug: \
-  $(TEST_BAR_DEBUG)
+test11-debug test_optical-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_optical
 
-test11-gcov test_optical-gcov: \
-  $(TEST_BAR_GCOV)
+test11-gcov test_optical-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_optical
 
-test11-gprof test_optical-gprof: \
-  $(TEST_BAR_GPROF)
+test11-gprof test_optical-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_optical
 
-test11-valgrind test_optical-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test11-valgrind test_optical-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_optical
 
-test12 test_device:
+test12 test_device: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 12: device)
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1859,23 +1883,21 @@ test12 test_device:
           ;
 	@$(call functionInfoEnd,OK)
 
-test12-debug test_device-debug: \
-  $(TEST_BAR_DEBUG)
+test12-debug test_device-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_device
 
-test12-gcov test_device-gcov: \
-  $(TEST_BAR_GCOV)
+test12-gcov test_device-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_device
 
-test12-gprof test_device-gprof: \
-  $(TEST_BAR_GPROF)
+test12-gprof test_device-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_device
 
-test12-valgrind test_device-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test12-valgrind test_device-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_device
 
-test13 test_index:
+test13 test_index: \
+  $(TEST_BAR) \
+  $(TEST_BAR_INDEX)
 	@$(call functionInfoBegin,Test 13: index)
 	for testIndexDatabase in $(TEST_INDEX_DATABASES); do \
           $(MAKE) \
@@ -1892,27 +1914,20 @@ test13 test_index:
         done
 	@$(call functionInfoEnd,OK)
 
-test13-debug test_index-debug: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_BAR_INDEX_DEBUG)
+test13-debug test_index-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
 
-test13-gcov test_index-gcov: \
-  $(TEST_BAR_GCOV) \
-  $(TEST_BAR_INDEX_GCOV)
+test13-gcov test_index-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
 
-test13-gprof test_index-gprof: \
-  $(TEST_BAR_GPROF) \
-  $(TEST_BAR_INDEX_GPROF)
+test13-gprof test_index-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
 
-test13-valgrind test_index-valgrind: \
-  $(TEST_BAR_VALGRIND) \
-  $(TEST_BAR_INDEX_VALGRIND)
+test13-valgrind test_index-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)"  test_index
 
-test14 test_server:
+test14 test_server: \
+  $(TEST_BAR)
 	@$(call functionInfoBegin,Test 14: server)
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1928,23 +1943,20 @@ test14 test_server:
           ;
 	@$(call functionInfoEnd,OK)
 
-test14-debug test_server-debug: \
-  $(TEST_BAR_DEBUG)
+test14-debug test_server-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_server
 
-test14-gcov test_server-gcov: \
-  $(TEST_BAR_GCOV)
+test14-gcov test_server-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_server
 
-test14-gprof test_server-gprof: \
-  $(TEST_BAR_GPROF)
+test14-gprof test_server-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_server
 
-test14-valgrind test_server-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test14-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_server
 
 test15_master test_master: \
+  $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
 	@$(call functionInfoBegin,Test 14: master)
@@ -1956,23 +1968,20 @@ test15_master test_master: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_master-debug test_master-debug: \
-  $(TEST_BAR_DEBUG)
+test15_master-debug test_master-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master
 
-test15_master-gcov test_master-gcov: \
-  $(TEST_BAR_GCOV)
+test15_master-gcov test_master-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master
 
-test15_master-gprof test_master-gprof: \
-  $(TEST_BAR_GPROF)
+test15_master-gprof test_master-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master
 
-test15_master-valgrind test_master-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test15_master-valgrind test_master-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master
 
 test15_slave test_slave: \
+  $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
 	@$(call functionInfoBegin,Test 14: slave)
@@ -1984,23 +1993,20 @@ test15_slave test_slave: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_slave-debug test_slave-debug: \
-  $(TEST_BAR_DEBUG)
+test15_slave-debug test_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_slave
 
-test15_slave-gcov test_slave-gcov: \
-  $(TEST_BAR_GCOV)
+test15_slave-gcov test_slave-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_slave
 
-test15_slave-gprof test_slave-gprof: \
-  $(TEST_BAR_GPROF)
+test15_slave-gprof test_slave-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_slave
 
-test15_slave-valgrind test_slave-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test15_slave-valgrind test_slave-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_slave
 
 test_combined: \
+  $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test combined)
 	for compress in $(COMBINED_COMPRESS_NAMES); do \
@@ -2008,7 +2014,7 @@ test_combined: \
             $(MAKE) \
               BAR_FILE=test-#### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K $(OPTIONS)" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K $(OPTIONS)" \
               test_file_operations \
               ; \
             rc=$$?; \
@@ -2019,7 +2025,7 @@ test_combined: \
               $(MAKE) \
                 BAR_FILE=test-#### \
                 BAR_PATTERN="test-*" \
-                BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
+                BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
                 test_image_operations_raw \
                 ; \
               rc=$$?; \
@@ -2039,70 +2045,17 @@ test_combined: \
         fi
 	@$(call functionInfoEnd,OK)
 
-test_combined-debug: \
-  $(TEST_BAR_DEBUG)
+test_combined-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_combined
 
-test_combined-gcov: \
-  $(TEST_BAR_GCOV)
+test_combined-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_combined
 
-test_combined-gprof: \
-  $(TEST_BAR_GPROF)
+test_combined-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_combined
 
-test_combined-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_combined-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_combined
-
-test_all:
-	@$(MAKE) --no-print-directory -s \
-	  QUIET=1 \
-          test_basic \
-          test_compress \
-          test_crypt \
-          test_asymmetric_crypt \
-          test_split \
-          test_image \
-          test_storage \
-          test_hugefiles \
-          test_optical \
-          test_combined \
-          test_arguments \
-          test_config \
-          test_misc
-
-test_smoke:
-	@$(MAKE) --no-print-directory -s \
-	  QUIET=1 \
-	  CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
-	  COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
-	  TEST_INDEX_DATABASES="$(MIN_TEST_INDEX_DATABASES)" \
-          test_basic \
-          test_compress \
-          test_crypt \
-          test_asymmetric_crypt \
-          test_split \
-          test_index \
-          test_arguments \
-          test_config \
-          test_misc
-
-test_smoke-debug:  \
-  $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)"  test_smoke
-
-test_smoke-gcov:  \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)"  test_smoke
-
-test_smoke-gprof:  \
-  $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) test_smoke
-
-test_smoke-valgrind: \
-  $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_smoke
 
 test_arguments: \
   $(TEST_BAR) \
@@ -2119,8 +2072,7 @@ test_arguments: \
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --create $(INTERMEDIATE_DIR)/test.bar data/zero.dat $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --test $(INTERMEDIATE_DIR)/test.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compare $(INTERMEDIATE_DIR)/test.bar $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --extract $(INTERMEDIATE_DIR)/test.bar --destination $(call homerx
-	ile,restore) $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --extract $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	@#
 	# help
 	@$(call functionCleanTestFiles)
@@ -2140,11 +2092,11 @@ test_arguments: \
 	# destinations (ignore errors)
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) test.bar 2>/dev/null $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) ftp://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) scp://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) sftp://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) webdav://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) webdavs://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --ftp-password=$(TEST_PASSWORD_FTP) ftp://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --scp-password=$(TEST_PASSWORD_SCP) scp://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --sftp-password=$(TEST_PASSWORD_SFTP) sftp://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_PASSWORD_WEBDAV) webdav://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_PASSWORD_WEBDAV) webdavs://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) cd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) dvd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) bd://test/test.bar 2>/dev/null  $(LOG))
@@ -2153,15 +2105,15 @@ test_arguments: \
 	# normal/full/incremental/differential
 	@$(call functionCleanTestFiles)
 	@$(RMF) $(INTERMEDIATE_DIR)/test-full.bid
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-full.bar --full --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-full.bar --full --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	test ! -f $(INTERMEDIATE_DIR)/test-full.bid $(LOG)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-full.bar --full --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-full.bar --full --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	$(INSTALL) -d $(INTERMEDIATE_DIR)/new; $(CP) data/random1024.dat $(INTERMEDIATE_DIR)/random1024-new.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-differential.bar --differential --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-differential.bar --differential --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l $(INTERMEDIATE_DIR)/test-differential.bar --no-header-footer 2>/dev/null|$(WC) -l` = "1" $(LOG)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-incremental.bar --incremental --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-incremental.bar --incremental --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l $(INTERMEDIATE_DIR)/test-incremental.bar --no-header-footer 2>/dev/null|$(WC) -l` = "1" $(LOG)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-incremental-empty.bar --incremental --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test-incremental-empty.bar --incremental --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l $(INTERMEDIATE_DIR)/test-incremental-empty.bar --no-header-footer 2>/dev/null|$(WC) -l` = "0" $(LOG)
 	@$(RMF) $(INTERMEDIATE_DIR)/random1024-new.dat
 	@$(RMF) $(INTERMEDIATE_DIR)/test-full.bid
@@ -2170,17 +2122,17 @@ test_arguments: \
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data/zero.dat $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l $(INTERMEDIATE_DIR)/test*.bar $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l "$(INTERMEDIATE_DIR)/$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l "$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t $(INTERMEDIATE_DIR)/test*.bar $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t "$(INTERMEDIATE_DIR)/$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t "$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d $(INTERMEDIATE_DIR)/test*.bar $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d "$(INTERMEDIATE_DIR)/$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d "$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l $(INTERMEDIATE_DIR)/not-existing-file-test*.bar $(LOG))
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l "$(INTERMEDIATE_DIR)/$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
+	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l "$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t $(INTERMEDIATE_DIR)/not-existing-file-test*.bar $(LOG))
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t "$(INTERMEDIATE_DIR)/$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
+	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t "$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d $(INTERMEDIATE_DIR)/not-existing-file-test*.bar $(LOG))
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d "$(INTERMEDIATE_DIR)/$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
+	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d "$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
 	@#
 	# compress
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compress-algorithm=none $(LOG))
@@ -2372,13 +2324,9 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --permissions=0644 $(LOG))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --permissions=foofoo $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files $(LOG))
-	test -r $(INTERMEDIATE_DIR)/restore/data/zero128.dat
-	test -w $(INTERMEDIATE_DIR)/restore/data/zero128.dat
-	test ! -x $(INTERMEDIATE_DIR)/restore/data/zero128.dat
+	test ! `stat --printf=%a $(INTERMEDIATE_DIR)/restore/data/zero128.dat` = 555
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore -# 'data/zero128.dat' --restore-entry-mode=overwrite --permissions=rx:rx:rx $(LOG))
-	test -r $(INTERMEDIATE_DIR)/restore/data/zero128.dat
-	test ! -w $(INTERMEDIATE_DIR)/restore/data/zero128.dat
-	test -x $(INTERMEDIATE_DIR)/restore/data/zero128.dat
+	test `stat --printf=%a $(INTERMEDIATE_DIR)/restore/data/zero128.dat` = 555
 	#
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --permissions=644 $(LOG))
 	@#
@@ -2449,13 +2397,11 @@ endif
 	@$(RMRF) $(INTERMEDIATE_DIR)/keys
 	@#
 	# mount/umount
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount-device-command='sudo mount -p 0 %device %directory' --unmount-command='sudo umount %directory' $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount-device-command='sudo mount %device %directory' --unmount-command='sudo umount %directory' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount='foo$(COMMA)$(COMMA)yes' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount='foo$(COMMA)yes' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount='foo' $(LOG))
-ifeq (@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@,1)
-ifeq (@HAVE_SUDO_COMMAND_LOSETUP@,1)
-ifeq (@HAVE_SUDO_COMMAND_MKFS@,1)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionTestDeviceReset)
 	@$(call functionCleanTestFiles)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
@@ -2463,13 +2409,11 @@ ifeq (@HAVE_SUDO_COMMAND_MKFS@,1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
 	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --mount-device-command='sudo mount -p 0 %device %directory' --unmount-command='sudo umount %directory' --mount $(MOUNT_POINT0)$(COMMA)$(LOOP0) $(TEST_FILES) $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --mount-device-command='sudo mount %device %directory' --unmount-command='sudo umount %directory' --mount $(MOUNT_POINT0)$(COMMA)$(LOOP0) $(TEST_FILES) $(LOG))
 	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
-endif
-endif
 endif
 	@#
 	# log file
@@ -2510,7 +2454,7 @@ endif
 	@$(call functionCleanTestFiles)
 	$(ECHO) "mount-device = foo" >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --mount-device=foo $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg) $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
 		$(ECHO) "mount-device = foo"; \
 	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
@@ -2564,20 +2508,16 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoEnd,OK)
 
-test_arguments-debug: \
-  $(TEST_BAR_DEBUG)
+test_arguments-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_arguments
 
-test_arguments-gcov: \
-  $(TEST_BAR_GCOV)
+test_arguments-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_arguments
 
-test_arguments-gprof: \
-  $(TEST_BAR_GPROF)
+test_arguments-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_arguments
 
-test_arguments-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_arguments-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_arguments
 
 test_config: \
@@ -2591,11 +2531,12 @@ test_config: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/test.cfg) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/test1.cfg) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --save-configuration=$(INTERMEDIATE_DIR)/test2.cfg) $(LOG)
-	$(call functionTestCheckExitcode,0,0,set -x; test \
-	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --debug-print-configuration-sha256)` \
-	  = \
-	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test2.cfg --debug-print-configuration-sha256)`\
-	 )
+#TODO
+#	$(call functionTestCheckExitcode,0,0,set -x; test \
+#	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --debug-print-configuration-sha256)` \
+#	  = \
+#	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test2.cfg --debug-print-configuration-sha256)`\
+#	 )
 	@#
 	# test configuration data
 	( \
@@ -2612,20 +2553,16 @@ test_config: \
 	$(call functionDoneTestFiles)
 	$(call functionInfoEnd,OK)
 
-test_config-debug: \
-  $(TEST_BAR_DEBUG)
+test_config-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_config
 
-test_config-gcov: \
-  $(TEST_BAR_GCOV)
+test_config-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_config
 
-test_config-gprof: \
-  $(TEST_BAR_GPROF)
+test_config-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_config
 
-test_config-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_config-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_config
 
 test_misc:
@@ -2635,7 +2572,7 @@ test_misc:
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
 	  $(call functionTestCheckExitcode,127,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG))); \
   fi
-ifneq ($(HAVE_SUDO_COMMANDS),)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@#
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
@@ -2658,21 +2595,66 @@ ifneq ($(HAVE_SUDO_COMMANDS),)
 endif
 	@$(call functionInfoEnd,OK)
 
-test_misc-debug: \
-  $(TEST_BAR_DEBUG)
+test_misc-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_misc
 
-test_misc-gcov: \
-  $(TEST_BAR_GCOV)
+test_misc-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_misc
 
-test_misc-gprof: \
-  $(TEST_BAR_GPROF)
+test_misc-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_misc
 
-test_misc-valgrind: \
-  $(TEST_BAR_VALGRIND)
+test_misc-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_misc
+
+test_all:
+	@$(MAKE) --no-print-directory -s \
+	  QUIET=1 \
+          test_basic \
+          test_compress \
+          test_crypt \
+          test_asymmetric_crypt \
+          test_split \
+          test_image \
+          test_storage \
+          test_hugefiles \
+          test_optical \
+          test_combined \
+          test_arguments \
+          test_config \
+          test_misc
+
+#	  QUIET=1 \
+
+test_smoke: \
+  $(TEST_BAR)
+	@$(MAKE) --no-print-directory -s \
+	  CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
+	  COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+	  TEST_INDEX_DATABASES="$(MIN_TEST_INDEX_DATABASES)" \
+          $(addsuffix $(TEST_BINARY_EXTENSION), \
+                      test_basic \
+											test_compress \
+											test_crypt \
+											test_asymmetric_crypt \
+											test_split \
+											test_index \
+											test_arguments \
+											test_config \
+											test_misc \
+					)
+
+test_smoke-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BINARY_EXTENSION=-debug test_smoke
+
+test_smoke-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" TEST_BINARY_EXTENSION=-gcov test_smoke
+
+test_smoke-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) TEST_BINARY_EXTENSION=-gprof test_smoke
+
+test_smoke-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BINARY_EXTENSION=-valgrind test_smoke
 
 # ----------------------------------------------------------------------------
 
@@ -2774,7 +2756,7 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --overwrite-archive-files >/dev/null
+          $(TEST_BAR_VALGRIND) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --overwrite-archive-files >/dev/null
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_CONFIGS) \
@@ -2916,9 +2898,6 @@ memcheck8: \
 	$(ECHO) '1 UNKNOWN' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
 	$(ECHO) '1 QUIT' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
 
-#valgrind --tool=callgrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
-#valgrind --tool=cachegrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
-
 # ----------------------------------------------------------------------------
 
 # testcode runs:
@@ -2931,10 +2910,10 @@ TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --full \
@@ -2945,10 +2924,10 @@ TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --differential \
@@ -2960,10 +2939,10 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --incremental \
@@ -2972,24 +2951,24 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) \
                      -l $(INTERMEDIATE_DIR)/test-*.bar
 TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) \
                      -d $(INTERMEDIATE_DIR)/test-*.bar
 TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
-                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --destination=$(INTERMEDIATE_DIR)/restore \
                      -x $(INTERMEDIATE_DIR)/test-*.bar
 
@@ -3579,10 +3558,9 @@ $(TEST_SLAVE_JOBS_DIRECTORY):
 
 $(TEST_SERVER_DATABASE): \
   $(TEST_BAR_INDEX)
-	@$(call functionVerifyParameter,TEST_SERVER_DATABASE)
 	@
 	$(INSTALL) -d $(@D)
-	$(TEST_BAR_INDEX) --force --create $(TEST_SERVER_DATABASE) "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
+	$(TEST_BAR_INDEX) --force --create sqlite:$@ "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
 
 data/zero128.dat:
 
@@ -3628,6 +3606,7 @@ test_file_operations_base: \
 	@#
 	# normal tests
 	@$(call functionInfoHeader,test file operations base)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
@@ -3692,26 +3671,18 @@ test_file_operations_delta: \
 	@$(call functionInfoHeader,test file operations delta)
 ifeq (@HAVE_XDELTA3@,1)
 	@#
-	# delta tests
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
+	# create delta base
 	@$(call functionCleanTestFiles)
 	($(CD) data/delta1; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-A.bar random512k.dat hardlink.dat hardlink1.dat hardlink2.dat $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
 	@#
-	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN-B.bar) $(INTERMEDIATE_DIR)/restore/random512k.dat restore/hardlink.dat restore/hardlink1.dat restore/hardlink2.dat
+	# delta tests
+	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar $(addprefix $(INTERMEDIATE_DIR)/restore/,random512k.dat hardlink.dat hardlink1.dat hardlink2.dat)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-B.bar random512k.dat hardlink.dat hardlink1.dat hardlink2.dat --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --force-delta-compression --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='../../$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='../../$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
-	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
-	$(DIFF) data/delta2/hardlink.dat $(INTERMEDIATE_DIR)/restore/hardlink.dat
-	$(DIFF) data/delta2/hardlink1.dat $(INTERMEDIATE_DIR)/restore/hardlink1.dat
-	$(DIFF) data/delta2/hardlink2.dat $(INTERMEDIATE_DIR)/restore/hardlink2.dat
-	@#
-	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN-B.bar) $(INTERMEDIATE_DIR)/restore/random512k.dat restore/hardlink.dat restore/hardlink1.dat restore/hardlink2.dat
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' random512k.dat hardlink.dat hardlink1.dat hardlink2.dat $(BAR_OPTIONS) --force-delta-compression --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN-A.bar' $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
@@ -3720,9 +3691,10 @@ ifeq (@HAVE_XDELTA3@,1)
 	$(DIFF) data/delta2/hardlink2.dat  $(INTERMEDIATE_DIR)/restore/hardlink2.dat
 	@#
 ifeq (@HAVE_BZ2@,1)
-	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar $(INTERMEDIATE_DIR)/restore/random512k.dat restore/hardlink.dat restore/hardlink1.dat restore/hardlink2.dat
+	# delta tests with bzip2
+	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar $(addprefix $(INTERMEDIATE_DIR)/restore/,random512k.dat hardlink.dat hardlink1.dat hardlink2.dat)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' random512k.dat hardlink.dat hardlink1.dat hardlink2.dat $(BAR_OPTIONS) --force-delta-compression --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN-A.bar' $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
@@ -3732,9 +3704,10 @@ ifeq (@HAVE_BZ2@,1)
 endif
 	@#
 ifeq (@HAVE_LZMA@,1)
-	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar $(INTERMEDIATE_DIR)/restore/random512k.dat restore/hardlink.dat restore/hardlink1.dat restore/hardlink2.dat
+	# delta tests with lzma
+	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar $(addprefix $(INTERMEDIATE_DIR)/restore/,random512k.dat hardlink.dat hardlink1.dat hardlink2.dat)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' random512k.dat hardlink.dat hardlink1.dat hardlink2.dat $(BAR_OPTIONS) --force-delta-compression --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN-A.bar' $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar --delta-source='$(INTERMEDIATE_DIR)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
@@ -3752,6 +3725,7 @@ test_file_operations_dryrun: \
 	@#
 	# normal tests
 	@$(call functionInfoHeader,test file operations dryrun)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
@@ -3766,15 +3740,16 @@ test_file_operations_incremental: \
 	@#
 	# incremental tests
 	@$(call functionInfoHeader,test file operations incremental)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE-full.bar) --full --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-full.bar --full --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
 	$(INSTALL) -d $(INTERMEDIATE_DIR)/new; $(CP) data/random1024.dat $(INTERMEDIATE_DIR)/new/random1024-new.dat
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE-incremental.bar) --incremental --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE.bid) $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-full.bar $(INTERMEDIATE_DIR)/$(BAR_PATTERN-incremental.bar) $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-full.bar $(INTERMEDIATE_DIR)/$(BAR_PATTERN-incremental.bar) $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-full.bar $(INTERMEDIATE_DIR)/$(BAR_PATTERN-incremental.bar) $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=$(INTERMEDIATE_DIR)/$(BAR_FILE).bid $(TEST_FILES) $(INTERMEDIATE_DIR)/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-full.bar $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-full.bar $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-full.bar $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
@@ -3784,6 +3759,7 @@ test_file_operations_differential: \
 	@#
 	# differential tests
 	@$(call functionInfoHeader,test file operations differential)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
@@ -3804,6 +3780,7 @@ test_file_operations_destroyed: \
 	@#
 	# tests which must cause errors
 	@$(call functionInfoHeader,test file operations destroyed)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
@@ -3820,7 +3797,7 @@ test_file_operations_destroyed: \
 	@#
 	@$(call functionCleanTestFiles)
 #TODO: --debug-create-archive-errors=1000
-	$(call functionTestCheckExitcode,1,1,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 --debug-create-archive-errors=1000) $(LOG))
+	$(if $(findstring $(TEST_BAR_DEBUG),$(TEST_BAR)),$(call functionTestCheckExitcode,1,1,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 --debug-create-archive-errors=1000) $(LOG)))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
@@ -3840,6 +3817,7 @@ test_convert_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@$(call functionInfoHeader,test file operations convert)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
@@ -3875,19 +3853,19 @@ ifeq (@HAVE_GCRYPT@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --verbose=1 $(LOG))
 	# convert asymmetric encrypted new key
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --crypt-new-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PRIVATE) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --crypt-new-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-public-key=$(TEST_KEY_CRYPT_OTHER_PUBLIC) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-private-key=$(TEST_KEY_CRYPT_OTHER_PRIVATE) --verbose=1 $(LOG))
 	# convert signature
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info    $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PRIVATE) --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info    $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info    $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_OTHER_PRIVATE) --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info    $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --verbose=1 $(LOG))
 	# wrong key
-	#($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG)))
+	#($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG)))
 endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
@@ -3903,6 +3881,7 @@ test_image_operations_raw:  \
 	$(INSTALL) -d intermediate
 	@$(call functionTestDeviceReset)
 	@
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# raw zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
@@ -3943,6 +3922,7 @@ test_image_operations_raw:  \
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
+endif
 
 .PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
 test_image_operations_ext: \
@@ -3953,6 +3933,7 @@ test_image_operations_ext: \
 # Ext2
 test_image_operations_ext2: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT2@,)
 	# ext2
 	$(INSTALL) -d intermediate
@@ -4180,10 +4161,12 @@ endif
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 # Ext3
 test_image_operations_ext3: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT3@,)
 	# ext3
 	$(INSTALL) -d intermediate
@@ -4409,10 +4392,12 @@ endif
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 # Ext4
 test_image_operations_ext4: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT4@,)
 	# ext4
 	$(INSTALL) -d intermediate
@@ -4648,6 +4633,7 @@ endif
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 .PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
 test_image_operations_fat: \
@@ -4658,6 +4644,7 @@ test_image_operations_fat: \
 # FAT 12
 test_image_operations_fat12: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
 	$(INSTALL) -d intermediate
@@ -4715,10 +4702,12 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 # FAT 16
 test_image_operations_fat16: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
 	$(INSTALL) -d intermediate
@@ -4776,10 +4765,12 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 # FAT 32
 test_image_operations_fat32: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
 	$(INSTALL) -d intermediate
@@ -4837,6 +4828,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 .PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
 test_image_operations_reiser: \
@@ -4856,6 +4848,7 @@ endif
 # ReiserFS version 3 (Note: Linux only support block size 4096)
 test_image_operations_reiserfs3: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
 	$(INSTALL) -d intermediate
@@ -4948,6 +4941,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
+endif
 
 # Reiser4 (Note: not supported anymore)
 test_image_operations_reiser4:
@@ -4958,6 +4952,7 @@ endif
 .PHONY: test_image_operations_dryrun
 test_image_operations_dryrun: \
   $(TEST_CONFIGS)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# delta tests
 	@$(call functionInfoHeader,test image operation dryrun)
 	@#
@@ -4990,11 +4985,13 @@ test_image_operations_dryrun: \
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@$(call functionInfoFooter)
+endif
 
 .PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image test_image_operations_create
 test_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# normal tests
 	@$(call functionInfoHeader,test image operation base)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5019,10 +5016,12 @@ test_image_operations_base: \
 	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
+endif
 
 test_image_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# delta tests
 	@$(call functionInfoHeader,test image operation delta)
 	@$(call functionVerifyParameter,IMAGE0_A)
@@ -5070,8 +5069,10 @@ endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(INTERMEDIATE_DIR)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@$(call functionInfoFooter)
+endif
 
 test_image_operations_check:
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# check file systems and compare file content
 	@$(call functionInfoHeader,test image operation check)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5095,8 +5096,10 @@ test_image_operations_check:
 	@$(call functionDeviceUmount,$(DEVICE0),$(MOUNT_POINT0))
 	@$(call functionDeviceUmount,$(DEVICE1),$(MOUNT_POINT1))
 	@$(call functionInfoFooter)
+endif
 
 test_image_operations_diff_image:
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# compare devices
 	@$(call functionInfoHeader,test image operation diff image)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5119,10 +5122,12 @@ test_image_operations_diff_image:
 	@$(RMF) $(DUMP0) $(DUMP1)
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
+endif
 
 test_image_operations_create: \
   $(TEST_BAR) \
   $(TEST_FILES)
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# normal tests
 	@$(call functionInfoHeader,test image operation create only)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5137,6 +5142,7 @@ test_image_operations_create: \
 	@$(call functionTestDeviceDelete,$(DEVICE0))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
+endif
 
 .PHONY: test_hugefiles_operations
 test_hugefiles_operations: \
@@ -5144,6 +5150,7 @@ test_hugefiles_operations: \
   $(TEST_HUGEFILES)
 	# normal tests
 	@$(call functionInfoHeader,test huge file opertations)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
@@ -5316,6 +5323,7 @@ test_index_operations_base: \
   $(TEST_FILES_SIMPLE)
 	# bar index operations
 	@$(call functionInfoHeader,test index opertations)
+	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
 	# maintain index
@@ -5335,7 +5343,7 @@ test_index_operations_base: \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
            -C $(SUB_DIR) \
-           -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-add-storage $(INTERMEDIATE_DIR)/test0.bar \
@@ -5350,7 +5358,7 @@ test_index_operations_base: \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
            -C $(SUB_DIR) \
-           -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-refresh-storage $(INTERMEDIATE_DIR)/test0.bar \
@@ -5364,7 +5372,7 @@ test_index_operations_base: \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
            -C $(SUB_DIR) \
-           -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-remove-storage $(INTERMEDIATE_DIR)/test0.bar \
@@ -5402,7 +5410,7 @@ test_index_operations_base: \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
            -C $(SUB_DIR) \
-           -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-add-storage $(INTERMEDIATE_DIR)/test0.bar \
@@ -5440,7 +5448,7 @@ test_index_operations_base: \
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-           -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-add-storage $(INTERMEDIATE_DIR)/test1.bar \
@@ -5452,7 +5460,7 @@ test_index_operations_base: \
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(T\EST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-           -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-remove-storage $(INTERMEDIATE_DIR)/test0.bar \
@@ -5490,7 +5498,7 @@ test_index_operations_base: \
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(T\EST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-           -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar \
+           -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-remove-storage $(INTERMEDIATE_DIR)/test1.bar \
@@ -5578,19 +5586,183 @@ test_index_operations-valgrind: \
   $(TEST_BAR_INDEX_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index_operations
 
-# send command to server
+# send command to server via socket: <host name>,<id>,<command>
 functionServerCommandSocket = \
-  $(ECHO) $1: $1 $1; $(ECHO) $1 $1|$(NETCAT) -w1 $1|$(TAIL) -n +2
+  $(ECHO) $1: $2 $3; $(ECHO) $2 $3|$(NETCAT) -w1 $1|$(TAIL) -n +2
+# send command to batch server: <id>,<command>
 functionServerCommandBatch = \
-  $(ECHO) $1 $1
+  $(ECHO) $1 $2
+# send command to slave via socket: <host name>,<id>,<command>
 functionSlaveCommandSocket = \
-  $(ECHO) $1: $1 $1; $(ECHO) $1 $1|$(NETCAT) -w1 $1|$(TAIL) -n +2
+  $(ECHO) $1: $2 $3; $(ECHO) $2 $3|$(NETCAT) -w1 $1|$(TAIL) -n +2
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
 test_server_operations: \
   test_server_operations_batch \
   test_server_operations_socket \
   test_master_slave_operations_create
+
+test_server_operations_batch: \
+  $(TEST_BAR) \
+  $(TEST_CONFIGS) \
+  $(TEST_SERVER_JOBS_DIRECTORY) \
+  $(TEST_FILES) \
+  $(TEST_SERVER_DATABASE)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@#
+	# create test archive
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
+	@$(call functionTestDeviceReset)
+	$(call functionCreateFileZero,$(IMAGE0),32,1M)
+	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
+endif
+	@#
+	# run batch server
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
+          if test $$? -eq 0; then \
+          ( \
+            $(call functionServerCommandBatch,   1,VERSION); \
+            $(call functionServerCommandBatch,   2,STATUS); \
+            \
+            $(call functionServerCommandBatch, 100,SERVER_LIST); \
+            $(call functionServerCommandBatch, 101,SERVER_OPTION_GET name=tmp-directory); \
+            $(call functionServerCommandBatch, 102,SERVER_OPTION_SET name=tmp-directory value=/tmp); \
+            $(call functionServerCommandBatch, 103,SERVER_OPTION_FLUSH); \
+            \
+            $(call functionServerCommandBatch, 200,DEVICE_LIST); \
+            $(call functionServerCommandBatch, 201,ROOT_LIST); \
+            $(call functionServerCommandBatch, 202,FILE_INFO name=/tmp); \
+            $(call functionServerCommandBatch, 203,FILE_LIST directory=/tmp); \
+            $(call functionServerCommandBatch, 204,FILE_ATTRIBUTE_GET name=/tmp attribute=NOBACKUP); \
+            $(call functionServerCommandBatch, 205,DIRECTORY_INFO name=/tmp timeouot=10); \
+            $(call functionServerCommandBatch, 206,TEST_SCRIPT name=test script=date); \
+            \
+            $(call functionServerCommandBatch, 300,MAINTENANCE_LIST); \
+            $(call functionServerCommandBatch, 301,MAINTENANCE_LIST_ADD date=*-*-* weekDays=* beginTime=07:00 endTime=10:00); \
+            $(call functionServerCommandBatch, 302,MAINTENANCE_LIST_UPDATE id=1 date=*-*-* weekDays=* beginTime=08:00 endTime=11:00); \
+            $(call functionServerCommandBatch, 303,MAINTENANCE_LIST_REMOVE id=1); \
+            \
+            $(call functionServerCommandBatch, 400,JOB_LIST); \
+            $(call functionServerCommandBatch, 401,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 402,JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 403,JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
+            $(call functionServerCommandBatch, 404,JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 405,JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 406,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(call functionServerCommandBatch, 500,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 501,INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 501,MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 502,MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 503,EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 504,EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 505,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 506,EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 507,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 508,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 509,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 custoText="test" noStorage=yes enabled=no); \
+            $(call functionServerCommandBatch, 511,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 512,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
+            $(call functionServerCommandBatch, 513,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch, 514,ARCHIVE_LIST name=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            \
+            $(call functionServerCommandBatch, 600,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
+            \
+            $(call functionServerCommandBatch, 700,MAINTENANCE time=600); \
+            $(call functionServerCommandBatch, 701,PAUSE time=300 modeMask=CREATE); \
+            $(SLEEP) 2; \
+            $(call functionServerCommandBatch, 800,CONTINUE); \
+            \
+            $(call functionServerCommandBatch, 900,DECRYPT_PASSWORD_CLEAR); \
+            $(call functionServerCommandBatch, 901,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
+            $(call functionServerCommandBatch, 902,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
+            $(call functionServerCommandBatch, 903,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
+            $(call functionServerCommandBatch, 904,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
+            $(call functionServerCommandBatch, 905,CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=test); \
+            $(call functionServerCommandBatch, 906,PASSWORDS_CLEAR); \
+            \
+            $(call functionServerCommandBatch,1000,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(call functionServerCommandBatch,1100,STORAGE_LIST_ADD indexIds=1$(COMMA)2$(COMMA)3); \
+            $(call functionServerCommandBatch,1101,STORAGE_LIST); \
+            $(call functionServerCommandBatch,1102,STORAGE_LIST_CLEAR); \
+            $(call functionServerCommandBatch,1103,ENTRY_LIST_ADD entryIds=1$(COMMA)2$(COMMA)3); \
+            $(call functionServerCommandBatch,1104,ENTRY_LIST); \
+            $(call functionServerCommandBatch,1105,ENTRY_LIST_CLEAR); \
+            \
+            $(call functionServerCommandBatch,1200,INDEX_STORAGE_ADD pattern=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(SLEEP) 2; \
+            $(call functionServerCommandBatch,1300,INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+            \
+            $(call functionServerCommandBatch,1400,INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+            \
+            $(call functionServerCommandBatch,1500,INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
+            $(call functionServerCommandBatch,1500,INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
+            $(call functionServerCommandBatch,1501,INDEX_STORAGE_LIST entityId=* name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+            $(call functionServerCommandBatch,1501,INDEX_STORAGE_LIST entityId=* name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+            \
+            $(call functionServerCommandBatch,1600,INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
+            $(call functionServerCommandBatch,1601,INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
+            $(call functionServerCommandBatch,1602,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
+            $(call functionServerCommandBatch,1603,INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
+            \
+            $(call functionServerCommandBatch,1700,INDEX_HISTORY_LIST); \
+            \
+            $(call functionServerCommandBatch,1800,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch,1801,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(call functionServerCommandBatch,1802,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandBatch,1803,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandBatch,1804,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandBatch,1804,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
+            $(call functionServerCommandBatch,1805,JOB_FLUSH); \
+            $(call functionServerCommandBatch,1806,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch,1807,JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            for i in `seq 1 12`; do \
+            	$(call functionServerCommandBatch,1898,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+            	$(SLEEP) 10; \
+            done; \
+            $(call functionServerCommandBatch,1899,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(SLEEP) 2; \
+            \
+            $(call functionServerCommandBatch,1900,DEBUG_PRINT_STATISTICS); \
+            $(call functionServerCommandBatch,1901,DEBUG_PRINT_MEMORY_INFO); \
+            $(call functionServerCommandBatch,1902,DEBUG_DUMP_MEMORY_INFO); \
+            \
+            $(call functionServerCommandBatch,9999,QUIT); \
+          ) | \
+          ( \
+            $(CD) $(UP_DIR); \
+            $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+            \
+            $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
+            $(RMF) $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+              -C $(SUB_DIR) \
+              --config=$(TEST_SERVER_CONFIG) \
+              --index-database=sqlite:$(TEST_SERVER_DATABASE) \
+              --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
+              --log-file=$(TEST_SERVER_LOG_FILE) \
+              --log-post-command="cat %file" \
+              --log=all \
+              --max-threads=1 \
+              --batch \
+              --debug-server \
+              --debug-server-fixed-ids \
+              $(ADDITIONAL_OPTIONS); \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
+	$(call functionTestDeviceDelete,$(LOOP0))
+	$(RMF) $(IMAGE0)
+endif
+	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_FILE).bar
+	@$(call functionDoneTestFiles)
 
 test_server_operations_socket_server: \
   $(TEST_BAR) \
@@ -5600,172 +5772,182 @@ test_server_operations_socket_server: \
   $(TEST_SERVER_DATABASE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	( \
-          $(CD) $(UP_DIR); \
-          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-          : start server; \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_DIRECTORY); \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
-          $(INSTALL) bar.cfg $(SUB_DIR)/$(TEST_SERVER_CONFIG); \
-          $(RMF) $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-            -C $(SUB_DIR) \
-            $(TEST_OPTIONS) \
-            --config=$(TEST_SERVER_CONFIG) \
-            --daemon \
-            $(if $(TEST_DETACH),,-D) \
-            --pid-file=$(TEST_SERVER_PID_FILE) \
-            --server-port=$(TEST_SERVER_PORT) \
-            --index-database=$(TEST_SERVER_DATABASE) \
-            --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
-            --log-file=$(TEST_SERVER_LOG_FILE) \
-            --log-post-command="cat %file" \
-            --log=all \
-            --max-threads=1 \
-            --debug-server \
-            --debug-server-fixed-ids \
-            $(ADDITIONAL_OPTIONS) \
-            2>/dev/null; \
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
-            $(SLEEP) 10; \
-          else \
-            exit 1; \
-          fi; \
-        ) $(LOG)
+          ( \
+            $(CD) $(UP_DIR); \
+            $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+            \
+            : start server; \
+            $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_DIRECTORY); \
+            $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
+            $(INSTALL) bar.cfg $(SUB_DIR)/$(TEST_SERVER_CONFIG); \
+            $(RMF) $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+              -C $(SUB_DIR) \
+              $(TEST_OPTIONS) \
+              --config=$(TEST_SERVER_CONFIG) \
+              --daemon \
+              $(if $(TEST_DETACH),,-D) \
+              --pid-file=$(TEST_SERVER_PID_FILE) \
+              --server-port=$(TEST_SERVER_PORT) \
+              --index-database=sqlite:$(TEST_SERVER_DATABASE) \
+              --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
+              --log-file=$(TEST_SERVER_LOG_FILE) \
+              --log-post-command="cat %file" \
+              --log=all \
+              --max-threads=1 \
+              --debug-server \
+              --debug-server-fixed-ids \
+              $(ADDITIONAL_OPTIONS) \
+              2>/dev/null; \
+            if test $$? -eq 0; then \
+              $(SLEEP) 10; \
+            else \
+              exit 1; \
+            fi; \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
 
 test_server_operations_socket_client: \
   $(TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	( \
-          $(call functionServerCommandSocket,   1,localhost $(TEST_SERVER_PORT),VERSION); \
-          $(call functionServerCommandSocket,   2,localhost $(TEST_SERVER_PORT),STATUS); \
-          \
-          $(call functionServerCommandSocket, 100,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-          $(call functionServerCommandSocket, 101,localhost $(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
-          $(call functionServerCommandSocket, 102,localhost $(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
-          $(call functionServerCommandSocket, 103,localhost $(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
-          \
-          $(call functionServerCommandSocket, 200,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
-          $(call functionServerCommandSocket, 201,localhost $(TEST_SERVER_PORT),ROOT_LIST); \
-          $(call functionServerCommandSocket, 202,localhost $(TEST_SERVER_PORT),FILE_INFO name=data); \
-          $(call functionServerCommandSocket, 203,localhost $(TEST_SERVER_PORT),FILE_LIST directory=data); \
-          $(call functionServerCommandSocket, 204,localhost $(TEST_SERVER_PORT),FILE_ATTRIBUTE_GET name=data attribute=NOBACKUP); \
-          $(call functionServerCommandSocket, 205,localhost $(TEST_SERVER_PORT),DIRECTORY_INFO name=data timeouot=10); \
-          $(call functionServerCommandSocket, 206,localhost $(TEST_SERVER_PORT),TEST_SCRIPT name=test script=date); \
-          \
-          $(call functionServerCommandSocket, 300,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST); \
-          $(call functionServerCommandSocket, 301,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST_ADD 'date=*-*-*' 'weekDays=*' beginTime=07:00 endTime=10:00); \
-          $(call functionServerCommandSocket, 302,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST_UPDATE id=1 'date=*-*-*' 'weekDays=*' beginTime=08:00 endTime=11:00); \
-          $(call functionServerCommandSocket, 303,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST_REMOVE id=1); \
-          \
-          $(call functionServerCommandSocket, 400,localhost $(TEST_SERVER_PORT),JOB_LIST) ; \
-          $(call functionServerCommandSocket, 401,localhost $(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 402,localhost $(TEST_SERVER_PORT),JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 403,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
-          $(call functionServerCommandSocket, 404,localhost $(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 405,localhost $(TEST_SERVER_PORT),JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 406,localhost $(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(call functionServerCommandSocket, 500,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 501,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 502,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 504,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 505,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 506,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 507,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 509,localhost $(TEST_SERVER_PORT),SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 510,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 customText="test" noStorage=yes enabled=no); \
-          $(call functionServerCommandSocket, 511,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 512,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
-          $(call functionServerCommandSocket, 513,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 514,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-          \
-          $(call functionServerCommandSocket, 600,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
-          $(call functionServerCommandSocket, 601,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
-          $(call functionServerCommandSocket, 602,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
-          $(call functionServerCommandSocket, 602,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
-          $(call functionServerCommandSocket, 603,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-          $(call functionServerCommandSocket, 604,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=$(INTERMEDIATE_DIR)/not_existing); \
-          $(call functionServerCommandSocket, 605,localhost $(TEST_SERVER_PORT),SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
-          $(call functionServerCommandSocket, 606,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
-          $(call functionServerCommandSocket, 607,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 customText="test" noStorage=yes enabled=yes); \
-          $(SLEEP) 10; \
-          $(call functionServerCommandSocket, 608,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
-          $(call functionServerCommandSocket, 609,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
-          $(SLEEP) 10; \
-          $(call functionServerCommandSocket, 610,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
-          $(call functionServerCommandSocket, 611,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-          $(call functionServerCommandSocket, 612,localhost $(TEST_SERVER_PORT),SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-          $(call functionServerCommandSocket, 613,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-          $(call functionServerCommandSocket, 614,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-          \
-          $(call functionServerCommandSocket, 700,localhost $(TEST_SERVER_PORT),MAINTENANCE time=600); \
-          $(call functionServerCommandSocket, 701,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=create); \
-          $(SLEEP) 2; \
-          $(call functionServerCommandSocket, 702,localhost $(TEST_SERVER_PORT),CONTINUE); \
-          \
-          $(call functionServerCommandSocket, 800,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
-          $(call functionServerCommandSocket, 801,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 802,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 803,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 804,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 805,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 806,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
-          \
-          $(call functionServerCommandSocket, 900,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(call functionServerCommandSocket,1000,localhost $(TEST_SERVER_PORT),STORAGE_LIST_ADD indexIds=1$(COMMA)2$(COMMA)3); \
-          $(call functionServerCommandSocket,1001,localhost $(TEST_SERVER_PORT),STORAGE_LIST); \
-          $(call functionServerCommandSocket,1002,localhost $(TEST_SERVER_PORT),STORAGE_LIST_CLEAR); \
-          $(call functionServerCommandSocket,1003,localhost $(TEST_SERVER_PORT),ENTRY_LIST_ADD entryIds=1$(COMMA)2$(COMMA)3); \
-          $(call functionServerCommandSocket,1004,localhost $(TEST_SERVER_PORT),ENTRY_LIST); \
-          $(call functionServerCommandSocket,1005,localhost $(TEST_SERVER_PORT),ENTRY_LIST_CLEAR); \
-          \
-          $(call functionServerCommandSocket,1100,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-          $(SLEEP) 2; \
-          $(call functionServerCommandSocket,1200,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
-          \
-          $(call functionServerCommandSocket,1300,localhost $(TEST_SERVER_PORT),INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
-          \
-          $(call functionServerCommandSocket,1400,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandSocket,1401,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandSocket,1402,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          $(call functionServerCommandSocket,1403,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          \
-          $(call functionServerCommandSocket,1500,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandSocket,1501,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandSocket,1502,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-          $(call functionServerCommandSocket,1503,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
-          \
-          $(call functionServerCommandSocket,1600,localhost $(TEST_SERVER_PORT),INDEX_HISTORY_LIST); \
-          \
-          $(call functionServerCommandSocket,1700,localhost $(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket,1701,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
-          $(call functionServerCommandSocket,1702,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
-          $(call functionServerCommandSocket,1703,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-          $(call functionServerCommandSocket,1704,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-          $(call functionServerCommandSocket,1704,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
-          $(call functionServerCommandSocket,1705,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
-          $(call functionServerCommandSocket,1706,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket,1707,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
-          for i in `seq 1 12`; do \
-            $(call functionServerCommandSocket,1798,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
+          if test $$? -eq 0; then \
+          ( \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),   1,VERSION); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),   2,STATUS); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 100,SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 101,SERVER_OPTION_GET name=tmp-directory); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 102,SERVER_OPTION_SET name=tmp-directory value=/tmp); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 103,SERVER_OPTION_FLUSH); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 200,DEVICE_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 201,ROOT_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 202,FILE_INFO name=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 203,FILE_LIST directory=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 204,FILE_ATTRIBUTE_GET name=data attribute=NOBACKUP); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 205,DIRECTORY_INFO name=data timeouot=10); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 206,TEST_SCRIPT name=test script=date); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 300,MAINTENANCE_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 301,MAINTENANCE_LIST_ADD 'date=*-*-*' 'weekDays=*' beginTime=07:00 endTime=10:00); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 302,MAINTENANCE_LIST_UPDATE id=1 'date=*-*-*' 'weekDays=*' beginTime=08:00 endTime=11:00); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 303,MAINTENANCE_LIST_REMOVE id=1); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 400,JOB_LIST) ; \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 401,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 402,JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 403,JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 404,JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 405,JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 406,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 500,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 501,INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 502,MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 503,MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 504,EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 505,EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 506,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 507,EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 508,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 509,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 customText="test" noStorage=yes enabled=no); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 511,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 512,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 513,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 514,ARCHIVE_LIST name=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 600,JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 601,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 602,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 602,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 603,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 604,EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=$(INTERMEDIATE_DIR)/not_existing); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 605,SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 606,EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 607,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 customText="test" noStorage=yes enabled=yes); \
             $(SLEEP) 10; \
-          done; \
-          $(call functionServerCommandSocket,1799,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(SLEEP) 2; \
-          \
-          $(call functionServerCommandSocket,1800,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandSocket,1801,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandSocket,1802,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
-          \
-          $(call functionServerCommandSocket,9999,localhost $(TEST_SERVER_PORT),QUIT); \
-        ) $(LOG)
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 608,SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 609,SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
+            $(SLEEP) 10; \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 610,SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 611,EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 612,SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 613,EXCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 614,INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 700,MAINTENANCE time=600); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 701,PAUSE time=300 modeMask=create); \
+            $(SLEEP) 2; \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 702,CONTINUE); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 800,DECRYPT_PASSWORD_CLEAR); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 801,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 802,FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 803,SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 804,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 805,CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 806,PASSWORDS_CLEAR); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 900,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1000,STORAGE_LIST_ADD indexIds=1$(COMMA)2$(COMMA)3); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1001,STORAGE_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1002,STORAGE_LIST_CLEAR); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1003,ENTRY_LIST_ADD entryIds=1$(COMMA)2$(COMMA)3); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1004,ENTRY_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1005,ENTRY_LIST_CLEAR); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1100,INDEX_STORAGE_ADD pattern=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(SLEEP) 2; \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1200,INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1300,INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1400,INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1401,INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1402,INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1403,INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1500,INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1501,INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1502,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1503,INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1600,INDEX_HISTORY_LIST); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1700,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1701,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1702,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1703,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1704,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1704,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1705,JOB_FLUSH); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1706,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1707,JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            for i in `seq 1 12`; do \
+              $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),1798,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+              $(SLEEP) 10; \
+            done; \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1799,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(SLEEP) 2; \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1800,DEBUG_PRINT_STATISTICS); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1801,DEBUG_PRINT_MEMORY_INFO); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),1802,DEBUG_DUMP_MEMORY_INFO); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),9999,QUIT); \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
 
 test_server_operations_socket: \
   $(TEST_BAR) \
@@ -5775,174 +5957,25 @@ test_server_operations_socket: \
 	# create test archive, test device
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionTestDeviceReset)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
+endif
 	@#
 	@$(KILLALL) -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
 	@$(MAKE) test_server_operations_socket_server TEST_DETACH=1
 	@$(MAKE) test_server_operations_socket_client
 	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
 	@#
-	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_FILE).bar
+ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
-	@$(call functionDoneTestFiles)
-
-test_server_operations_batch: \
-  $(TEST_BAR) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@#
-	# create test archive
-	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
-	@$(call functionTestDeviceReset)
-	$(call functionCreateFileZero,$(IMAGE0),32,1M)
-	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
-	@#
-	# run batch server
-	( \
-          $(SLEEP) 5; \
-          \
-          $(call functionServerCommandBatch,   1,VERSION); \
-          $(call functionServerCommandBatch,   2,STATUS); \
-          \
-          $(call functionServerCommandBatch, 100,SERVER_LIST); \
-          $(call functionServerCommandBatch, 101,SERVER_OPTION_GET name=tmp-directory); \
-          $(call functionServerCommandBatch, 102,SERVER_OPTION_SET name=tmp-directory value=/tmp); \
-          $(call functionServerCommandBatch, 103,SERVER_OPTION_FLUSH); \
-          \
-          $(call functionServerCommandBatch, 200,DEVICE_LIST); \
-          $(call functionServerCommandBatch, 201,ROOT_LIST); \
-          $(call functionServerCommandBatch, 202,FILE_INFO name=/tmp); \
-          $(call functionServerCommandBatch, 203,FILE_LIST directory=/tmp); \
-          $(call functionServerCommandBatch, 204,FILE_ATTRIBUTE_GET name=/tmp attribute=NOBACKUP); \
-          $(call functionServerCommandBatch, 205,DIRECTORY_INFO name=/tmp timeouot=10); \
-          $(call functionServerCommandBatch, 206,TEST_SCRIPT name=test script=date); \
-          \
-          $(call functionServerCommandBatch, 300,MAINTENANCE_LIST); \
-          $(call functionServerCommandBatch, 301,MAINTENANCE_LIST_ADD date=*-*-* weekDays=* beginTime=07:00 endTime=10:00); \
-          $(call functionServerCommandBatch, 302,MAINTENANCE_LIST_UPDATE id=1 date=*-*-* weekDays=* beginTime=08:00 endTime=11:00); \
-          $(call functionServerCommandBatch, 303,MAINTENANCE_LIST_REMOVE id=1); \
-          \
-          $(call functionServerCommandBatch, 400,JOB_LIST); \
-          $(call functionServerCommandBatch, 401,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 402,JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 403,JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
-          $(call functionServerCommandBatch, 404,JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 405,JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 406,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(call functionServerCommandBatch, 500,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 501,INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 501,MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 502,MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 503,EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 504,EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 505,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 506,EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 507,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 508,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 509,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 custoText="test" noStorage=yes enabled=no); \
-          $(call functionServerCommandBatch, 511,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 512,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
-          $(call functionServerCommandBatch, 513,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 514,ARCHIVE_LIST name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-          \
-          $(call functionServerCommandBatch, 600,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
-          \
-          $(call functionServerCommandBatch, 700,MAINTENANCE time=600); \
-          $(call functionServerCommandBatch, 701,PAUSE time=300 modeMask=CREATE); \
-          $(SLEEP) 2; \
-          $(call functionServerCommandBatch, 800,CONTINUE); \
-          \
-          $(call functionServerCommandBatch, 900,DECRYPT_PASSWORD_CLEAR); \
-          $(call functionServerCommandBatch, 901,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 902,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 903,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 904,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 905,CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 906,PASSWORDS_CLEAR); \
-          \
-          $(call functionServerCommandBatch,1000,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(call functionServerCommandBatch,1100,STORAGE_LIST_ADD indexIds=1$(COMMA)2$(COMMA)3); \
-          $(call functionServerCommandBatch,1101,STORAGE_LIST); \
-          $(call functionServerCommandBatch,1102,STORAGE_LIST_CLEAR); \
-          $(call functionServerCommandBatch,1103,ENTRY_LIST_ADD entryIds=1$(COMMA)2$(COMMA)3); \
-          $(call functionServerCommandBatch,1104,ENTRY_LIST); \
-          $(call functionServerCommandBatch,1105,ENTRY_LIST_CLEAR); \
-          \
-          $(call functionServerCommandBatch,1200,INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-          $(SLEEP) 2; \
-          $(call functionServerCommandBatch,1300,INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
-          \
-          $(call functionServerCommandBatch,1400,INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
-          \
-          $(call functionServerCommandBatch,1500,INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandBatch,1500,INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandBatch,1501,INDEX_STORAGE_LIST entityId=* name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          $(call functionServerCommandBatch,1501,INDEX_STORAGE_LIST entityId=* name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          \
-          $(call functionServerCommandBatch,1600,INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandBatch,1601,INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandBatch,1602,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-          $(call functionServerCommandBatch,1603,INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
-          \
-          $(call functionServerCommandBatch,1700,INDEX_HISTORY_LIST); \
-          \
-          $(call functionServerCommandBatch,1800,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch,1801,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
-          $(call functionServerCommandBatch,1802,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
-          $(call functionServerCommandBatch,1803,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-          $(call functionServerCommandBatch,1804,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-          $(call functionServerCommandBatch,1804,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
-          $(call functionServerCommandBatch,1805,JOB_FLUSH); \
-          $(call functionServerCommandBatch,1806,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch,1807,JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
-          for i in `seq 1 12`; do \
-            $(call functionServerCommandBatch,1898,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
-            $(SLEEP) 10; \
-          done; \
-          $(call functionServerCommandBatch,1899,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(SLEEP) 2; \
-          \
-          $(call functionServerCommandBatch,1900,DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandBatch,1901,DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandBatch,1902,DEBUG_DUMP_MEMORY_INFO); \
-          \
-          $(call functionServerCommandBatch,9999,QUIT); \
-        ) | \
-        ( \
-          $(CD) $(UP_DIR); \
-          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
-          $(RMF) $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-            -C $(SUB_DIR) \
-            --config=$(TEST_SERVER_CONFIG) \
-            --index-database=$(TEST_SERVER_DATABASE) \
-            --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
-            --log-file=$(TEST_SERVER_LOG_FILE) \
-            --log-post-command="cat %file" \
-            --log=all \
-            --max-threads=1 \
-            --batch \
-            --debug-server \
-            --debug-server-fixed-ids \
-            $(ADDITIONAL_OPTIONS) \
-            2>/dev/null; \
-        ) $(LOG)
+endif
 	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_FILE).bar
-	$(call functionTestDeviceDelete,$(LOOP0))
-	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 
-.PHONY: test_master_slave_operations test_master_slave_operations_create
+.PHONY: test_master_slave_operations test_master_slave_operations_master test_master_slave_operations_slave test_master_slave_operations_create
 test_master_slave_operations: \
   test_master_slave_operations_create \
 
@@ -5950,39 +5983,45 @@ test_master_slave_operations_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
-	( \
-          $(CD) $(UP_DIR); \
-          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-          : start master server; \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_DIRECTORY); \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY); \
-          $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_MASTER_CONFIG); \
-          $(RMF) $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-            -C $(SUB_DIR) \
-            $(TEST_OPTIONS) \
-            --config=$(TEST_MASTER_CONFIG) \
-            --daemon \
-            $(if $(TEST_DETACH),,-D) \
-            --pid-file=$(TEST_MASTER_PID_FILE) \
-            --server-mode=master \
-            --server-port=$(TEST_MASTER_PORT) \
-            --index-database=$(TEST_MASTER_DATABASE) \
-            --jobs-directory=$(TEST_MASTER_JOBS_DIRECTORY) \
-            --log-file=$(TEST_MASTER_LOG_FILE) \
-            --log=all \
-            --max-threads=1 \
-            --debug-server \
-            --debug-server-fixed-ids \
-            $(ADDITIONAL_OPTIONS) \
-            2>/dev/null; \
+	@#
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
-            $(SLEEP) 10; \
-          else \
-            exit 1; \
-          fi; \
-        ) $(LOG)
+          ( \
+            $(CD) $(UP_DIR); \
+            $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+            \
+            : start master server; \
+            $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_DIRECTORY); \
+            $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY); \
+            $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_MASTER_CONFIG); \
+            $(RMF) $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+              -C $(SUB_DIR) \
+              $(TEST_OPTIONS) \
+              --config=$(TEST_MASTER_CONFIG) \
+              --daemon \
+              $(if $(TEST_DETACH),,-D) \
+              --pid-file=$(TEST_MASTER_PID_FILE) \
+              --server-mode=master \
+              --server-port=$(TEST_MASTER_PORT) \
+              --index-database=sqlite:$(TEST_MASTER_DATABASE) \
+              --jobs-directory=$(TEST_MASTER_JOBS_DIRECTORY) \
+              --log-file=$(TEST_MASTER_LOG_FILE) \
+              --log=all \
+              --max-threads=1 \
+              --debug-server \
+              --debug-server-fixed-ids \
+              $(ADDITIONAL_OPTIONS) \
+              2>/dev/null; \
+            if test $$? -eq 0; then \
+              $(SLEEP) 10; \
+            else \
+              exit 1; \
+            fi; \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
 
 test_master_slave_operations_slave: \
   $(TEST_BAR) \
@@ -5993,69 +6032,74 @@ test_master_slave_operations_slave: \
 	@$(call functionVerifyParameter,TEST_SLAVE_USERNAME)
 	@$(call functionVerifyParameter,TEST_SLAVE_PASSWORD)
 	@#
-	( \
-          $(CD) $(UP_DIR); \
-          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-          : start slave server; \
-          if test -n "$(TEST_SLAVE_HOST)"; then \
-            $(call functionSlaveExecute,$(KILLALL) $(call functionExec,$(TEST_BAR)) 2>/dev/null) || true; \
-            $(call functionSlaveCopy,$(call functionExec,$(TEST_BAR)),$(call functionExec,$(TEST_BAR))); \
-            $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_DIRECTORY)); \
-            $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY)); \
-            $(call functionSlaveCopy,bar.cfg,$(TEST_SLAVE_CONFIG)); \
-            $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME)); \
-            $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-              -C $(SUB_DIR) \
-              $(TEST_OPTIONS) \
-              --config=$(TEST_SLAVE_CONFIG) \
-              --daemon \
-              $(if $(TEST_DETACH),,-D) \
-              --pid-file=$(TEST_SLAVE_PID_FILE) \
-              --server-mode=slave \
-              --server-port=$(TEST_SLAVE_PORT) \
-              --index-database=$(TEST_SLAVE_DATABASE) \
-              --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
-              --log-file=$(TEST_SLAVE_LOG_FILE) \
-              --log-post-command="cat %file" \
-              --log=all \
-              --max-threads=1 \
-              --debug-server \
-              --debug-server-fixed-ids \
-              $(ADDITIONAL_OPTIONS) \
-              2>/dev/null; \
-            ); \
-          else \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_DIRECTORY); \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_JOBS_DIRECTORY); \
-            $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_SLAVE_CONFIG); \
-            $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
-            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-              -C $(SUB_DIR) \
-              $(TEST_OPTIONS) \
-              --no-default-config --config=$(TEST_SLAVE_CONFIG) \
-              --daemon \
-              $(if $(TEST_DETACH),,-D) \
-              --pid-file=$(TEST_SLAVE_PID_FILE) \
-              --server-mode=slave \
-              --server-port=$(TEST_SLAVE_PORT) \
-              --index-database=$(TEST_SLAVE_DATABASE) \
-              --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
-              --log-file=$(TEST_SLAVE_LOG_FILE) \
-              --log-post-command="cat %file" \
-              --log=all \
-              --max-threads=1 \
-              --debug-server \
-              --debug-server-fixed-ids \
-              $(ADDITIONAL_OPTIONS) \
-              2>/dev/null; \
-          fi; \
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
-            $(SLEEP) 10; \
-          else \
-            exit 1; \
-          fi; \
-        ) $(LOG)
+          ( \
+            $(CD) $(UP_DIR); \
+            $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+            \
+            : start slave server; \
+            if test -n "$(TEST_SLAVE_HOST)"; then \
+              $(call functionSlaveExecute,$(KILLALL) $(call functionExec,$(TEST_BAR)) 2>/dev/null) || true; \
+              $(call functionSlaveCopy,$(call functionExec,$(TEST_BAR)),$(call functionExec,$(TEST_BAR))); \
+              $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_DIRECTORY)); \
+              $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY)); \
+              $(call functionSlaveCopy,bar.cfg,$(TEST_SLAVE_CONFIG)); \
+              $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME)); \
+              $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+                -C $(SUB_DIR) \
+                $(TEST_OPTIONS) \
+                --config=$(TEST_SLAVE_CONFIG) \
+                --daemon \
+                $(if $(TEST_DETACH),,-D) \
+                --pid-file=$(TEST_SLAVE_PID_FILE) \
+                --server-mode=slave \
+                --server-port=$(TEST_SLAVE_PORT) \
+                --index-database=sqlite:$(TEST_SLAVE_DATABASE) \
+                --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
+                --log-file=$(TEST_SLAVE_LOG_FILE) \
+                --log-post-command="cat %file" \
+                --log=all \
+                --max-threads=1 \
+                --debug-server \
+                --debug-server-fixed-ids \
+                $(ADDITIONAL_OPTIONS) \
+                2>/dev/null; \
+              ); \
+            else \
+              $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_DIRECTORY); \
+              $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_JOBS_DIRECTORY); \
+              $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_SLAVE_CONFIG); \
+              $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
+              $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+                -C $(SUB_DIR) \
+                $(TEST_OPTIONS) \
+                --no-default-config --config=$(TEST_SLAVE_CONFIG) \
+                --daemon \
+                $(if $(TEST_DETACH),,-D) \
+                --pid-file=$(TEST_SLAVE_PID_FILE) \
+                --server-mode=slave \
+                --server-port=$(TEST_SLAVE_PORT) \
+                --index-database=sqlite:$(TEST_SLAVE_DATABASE) \
+                --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
+                --log-file=$(TEST_SLAVE_LOG_FILE) \
+                --log-post-command="cat %file" \
+                --log=all \
+                --max-threads=1 \
+                --debug-server \
+                --debug-server-fixed-ids \
+                $(ADDITIONAL_OPTIONS) \
+                2>/dev/null; \
+            fi; \
+            if test $$? -eq 0; then \
+              $(SLEEP) 10; \
+            else \
+              exit 1; \
+            fi; \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
 
 test_master_slave_operations_create: \
   $(TEST_BAR)
@@ -6067,27 +6111,32 @@ test_master_slave_operations_create: \
 	$(MAKE) test_master_slave_operations_slave TEST_DETACH=1
 	$(MAKE) test_master_slave_operations_master TEST_DETACH=1
 	@#
-	( \
-          $(call functionServerCommandSocket,   1,localhost $(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket,   2,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
-          $(call functionServerCommandSocket,   3,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
-          $(call functionServerCommandSocket,   5,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
-          $(call functionServerCommandSocket,   6,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
-          $(call functionServerCommandSocket,   6,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-          $(call functionServerCommandSocket,   7,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-          $(call functionServerCommandSocket,   8,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
-          \
-          $(call functionServerCommandSocket, 100,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          \
-          $(call functionServerCommandSocket, 200,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
-          for i in `seq 1 12`; do \
-            $(call functionServerCommandSocket, 300,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
-            $(SLEEP) 10; \
-          done; \
-          \
-          $(call functionServerCommandSocket,9999,localhost $(TEST_MASTER_PORT),QUIT); \
-          $(call functionSlaveCommandSocket, 9999,localhost $(TEST_SLAVE_PORT), QUIT); \
-        ) $(LOG)
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
+          if test $$? -eq 0; then \
+          ( \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   1,   2,   3,   5,   6,   6,   7,   8, 100, 200,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            for i in `seq 1 12`; do \
+              $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 300,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+              $(SLEEP) 10; \
+            done; \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),9999,QUIT); \
+            $(call functionSlaveCommandSocket, localhost $(TEST_SLAVE_PORT), 9999,QUIT); \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
 	@#
 	$(call functionWaitProcess,$(TEST_MASTER_PID_FILE),60)
 	$(call functionWaitProcess,$(TEST_SLAVE_PID_FILE),60)
