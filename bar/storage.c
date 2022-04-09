@@ -1017,6 +1017,7 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
         result = StorageSFTP_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         result = StorageWebDAV_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_CD:
@@ -1381,6 +1382,35 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
     storageSpecifier->type = STORAGE_TYPE_WEBDAV;
   }
+  else if (String_startsWithCString(storageName,"webdavs://"))
+  {
+    if (   String_matchCString(storageName,10,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
+        || String_matchCString(storageName,10,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
+        || String_matchCString(storageName,10,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
+       )
+    {
+      String_sub(string,storageName,10,nextIndex-10);
+      String_trimEnd(string,"/");
+      if (!Storage_parseWebDAVSpecifier(string,
+                                        storageSpecifier->hostName,
+                                        storageSpecifier->loginName,
+                                        storageSpecifier->loginPassword
+                                       )
+         )
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INVALID_WEBDAV_SPECIFIER;
+      }
+      String_sub(archiveName,storageName,nextIndex,STRING_END);
+    }
+    else
+    {
+      // webdav://<file name>
+      String_sub(archiveName,storageName,10,STRING_END);
+    }
+
+    storageSpecifier->type = STORAGE_TYPE_WEBDAVS;
+  }
   else if (String_startsWithCString(storageName,"cd://"))
   {
     if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // cd://<device>:<file name>
@@ -1674,6 +1704,7 @@ String Storage_getName(String                 string,
       StorageSFTP_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       StorageWebDAV_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_CD:
@@ -1746,6 +1777,7 @@ String Storage_getPrintableName(String                 string,
       StorageSFTP_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       StorageWebDAV_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_CD:
@@ -1909,6 +1941,7 @@ uint Storage_getServerSettings(Server                 *server,
       }
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find file server
@@ -1920,7 +1953,7 @@ uint Storage_getServerSettings(Server                 *server,
 
         if (existingServerNode != NULL)
         {
-          // get WebDAV server settings
+          // get webDAV server settings
           serverId = existingServerNode->id;
           Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_WEBDAV);
           server->webDAV.loginName = String_duplicate(existingServerNode->webDAV.loginName);
@@ -2082,6 +2115,7 @@ uint Storage_getServerSettings(Server                 *server,
         error = StorageSFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_CD:
@@ -2174,6 +2208,7 @@ uint Storage_getServerSettings(Server                 *server,
         error = StorageSFTP_done(storageInfo);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_done(storageInfo);
         break;
       case STORAGE_TYPE_CD:
@@ -2241,6 +2276,7 @@ bool Storage_isServerAllocationPending(const StorageInfo *storageInfo)
         serverAllocationPending = StorageSFTP_isServerAllocationPending(storageInfo);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         serverAllocationPending = StorageWebDAV_isServerAllocationPending(storageInfo);
         break;
       case STORAGE_TYPE_CD:
@@ -2324,6 +2360,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
         error = StorageSFTP_preProcess(storageInfo,archiveName,time,initialFlag);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_preProcess(storageInfo,archiveName,time,initialFlag);
         break;
       case STORAGE_TYPE_CD:
@@ -2389,6 +2426,7 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
         error = StorageSFTP_postProcess(storageInfo,archiveName,time,finalFlag);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_postProcess(storageInfo,archiveName,time,finalFlag);
         break;
       case STORAGE_TYPE_CD:
@@ -2464,6 +2502,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_CD:
@@ -2531,6 +2570,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
         existsFlag = StorageSFTP_exists(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         existsFlag = StorageWebDAV_exists(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -2597,6 +2637,7 @@ bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName)
         isFileFlag = StorageSFTP_isFile(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         isFileFlag = StorageWebDAV_isFile(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -2663,6 +2704,7 @@ bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName)
         isDirectoryFlag = StorageSFTP_isDirectory(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         isDirectoryFlag = StorageWebDAV_isDirectory(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -2729,6 +2771,7 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
         isReadableFlag = StorageSFTP_isReadable(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         isReadableFlag = StorageWebDAV_isReadable(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -2795,6 +2838,7 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
         isWritableFlag = StorageSFTP_isWritable(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         isWritableFlag = StorageWebDAV_isWritable(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -2864,6 +2908,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         error = StorageSFTP_getTmpName(archiveName,storageInfo);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_getTmpName(archiveName,storageInfo);
         break;
       case STORAGE_TYPE_CD:
@@ -2954,6 +2999,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         error = StorageSFTP_create(storageHandle,archiveName,archiveSize,forceFlag);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_create(storageHandle,archiveName,archiveSize,forceFlag);
         break;
       case STORAGE_TYPE_CD:
@@ -3048,6 +3094,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         error = StorageSFTP_open(storageHandle,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_open(storageHandle,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -3123,6 +3170,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         StorageSFTP_close(storageHandle);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         StorageWebDAV_close(storageHandle);
         break;
       case STORAGE_TYPE_CD:
@@ -3194,6 +3242,7 @@ bool Storage_eof(StorageHandle *storageHandle)
         eofFlag = StorageSFTP_eof(storageHandle);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         eofFlag = StorageWebDAV_eof(storageHandle);
         break;
       case STORAGE_TYPE_CD:
@@ -3264,6 +3313,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         error = StorageSFTP_read(storageHandle,buffer,bufferSize,bytesRead);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_read(storageHandle,buffer,bufferSize,bytesRead);
         break;
       case STORAGE_TYPE_CD:
@@ -3332,6 +3382,7 @@ Errors Storage_write(StorageHandle *storageHandle,
         error = StorageSFTP_write(storageHandle,buffer,bufferLength);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_write(storageHandle,buffer,bufferLength);
         break;
       case STORAGE_TYPE_CD:
@@ -3399,6 +3450,7 @@ Errors Storage_transferFromFile(FileHandle    *fromFileHandle,
         error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = transferFileToStorage(fromFileHandle,storageHandle);
         break;
       case STORAGE_TYPE_CD:
@@ -3472,6 +3524,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         error = StorageSFTP_tell(storageHandle,offset);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_tell(storageHandle,offset);
         break;
       case STORAGE_TYPE_CD:
@@ -3541,6 +3594,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         error = StorageSFTP_seek(storageHandle,offset);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_seek(storageHandle,offset);
         break;
       case STORAGE_TYPE_CD:
@@ -3606,6 +3660,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
         size = StorageSFTP_getSize(storageHandle);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         size = StorageWebDAV_getSize(storageHandle);
         break;
       case STORAGE_TYPE_CD:
@@ -3834,6 +3889,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         error = StorageSFTP_rename(storageInfo,fromArchiveName,toArchiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_rename(storageInfo,fromArchiveName,toArchiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -3905,6 +3961,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         error = StorageSFTP_delete(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         error = StorageWebDAV_delete(storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
@@ -3979,6 +4036,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           error = StorageSFTP_makeDirectory(storageInfo,directoryName);
           break;
         case STORAGE_TYPE_WEBDAV:
+        case STORAGE_TYPE_WEBDAVS:
           error = StorageWebDAV_makeDirectory(storageInfo,directoryName);
           break;
         case STORAGE_TYPE_CD:
@@ -4076,6 +4134,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               error = StorageSFTP_delete(storageInfo,directoryName);
               break;
             case STORAGE_TYPE_WEBDAV:
+            case STORAGE_TYPE_WEBDAVS:
               error = StorageWebDAV_delete(storageInfo,directoryName);
               break;
             case STORAGE_TYPE_CD:
@@ -4161,6 +4220,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         errors = StorageSFTP_getInfo(storageInfo,archiveName,fileInfo);
         break;
       case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
         errors = StorageWebDAV_getInfo(storageInfo,archiveName,fileInfo);
         break;
       case STORAGE_TYPE_CD:
@@ -4244,6 +4304,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       error = StorageSFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,directory,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       error = StorageWebDAV_openDirectoryList(storageDirectoryListHandle,storageSpecifier,directory,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_CD:
@@ -4305,6 +4366,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       StorageSFTP_closeDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       StorageWebDAV_closeDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_CD:
@@ -4355,6 +4417,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       endOfDirectoryFlag = StorageSFTP_endOfDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       endOfDirectoryFlag = StorageWebDAV_endOfDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_CD:
@@ -4406,6 +4469,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       error = StorageSFTP_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
       error = StorageWebDAV_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_CD:

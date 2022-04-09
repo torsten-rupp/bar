@@ -156,6 +156,7 @@ typedef enum
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP,
   STORAGE_TYPE_WEBDAV,
+  STORAGE_TYPE_WEBDAVS,
   STORAGE_TYPE_CD,
   STORAGE_TYPE_DVD,
   STORAGE_TYPE_BD,
@@ -251,13 +252,6 @@ typedef struct
         uint                      serverId;                  // id of allocated server
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } ftp;
-
-      // WebDAV storage
-      struct
-      {
-        uint                      serverId;                  // id of allocated server
-        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
-      } webdav;
     #endif /* HAVE_CURL */
 
     #ifdef HAVE_SSH2
@@ -275,7 +269,9 @@ typedef struct
         Key                       privateKey;                  // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } ssh;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // scp storage
       struct
       {
@@ -286,7 +282,9 @@ typedef struct
         Key                       privateKey;                // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } scp;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // sftp storage
       struct
       {
@@ -298,6 +296,17 @@ typedef struct
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
+
+    #ifdef HAVE_CURL
+      // webDAV/webDAVs storage
+      struct
+      {
+        uint                      serverId;                  // id of allocated server
+        Key                       publicKey;                 // ssh public key data (ssh,scp,sftp)
+        Key                       privateKey;                // ssh private key data (ssh,scp,sftp)
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
+      } webdav;
+    #endif /* HAVE_CURL */
 
     // cd/dvd/bd storage
     struct
@@ -473,7 +482,7 @@ typedef struct
     #endif /* HAVE_SSH2 */
 
     #if defined(HAVE_CURL)
-      // WebDAV storage
+      // webDAV/webDAVs storage
       struct
       {
         CURLM                   *curlMultiHandle;

@@ -26,7 +26,7 @@ TAR="tar"
 UNZIP="unzip"
 XZ="xz"
 
-ZLIB_VERSION=1.2.11
+ZLIB_VERSION=1.2.12
 BZIP2_VERSION=1.0.8
 LZMA_VERSION=5.2.5
 LZO_VERSION=2.10
@@ -45,7 +45,7 @@ LIBICONV_VERSION=1.16
 OPENSSL_VERSION=1.1.1i
 LIBSSH2_VERSION=1.9.0
 C_ARES_VERSION=1.17.1
-CURL_VERSION=7.74.0
+CURL_VERSION=7.77.0
 PCRE_VERSION=8.45
 #TODO: remove
 SQLITE_YEAR=2019
@@ -495,7 +495,7 @@ if test $cleanFlag -eq 0; then
     (
      cd "$destination/extern"
 
-     $ECHO_NO_NEW_LINE "Get zlib..."
+     $ECHO_NO_NEW_LINE "Get zlib ($ZLIB_VERSION)..."
      fileName="zlib-$ZLIB_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/zlib-$ZLIB_VERSION.tar.gz; then
@@ -580,7 +580,7 @@ if test $cleanFlag -eq 0; then
     (
      cd "$destination/extern"
 
-     $ECHO_NO_NEW_LINE "Get lzma..."
+     $ECHO_NO_NEW_LINE "Get lzma ($LZMA_VERSION)..."
      fileName="xz-$LZMA_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/xz-$LZMA_VERSION.tar.gz; then
@@ -664,7 +664,7 @@ if test $cleanFlag -eq 0; then
     (
      cd "$destination/extern"
 
-     $ECHO_NO_NEW_LINE "Get lz4..."
+     $ECHO_NO_NEW_LINE "Get lz4 ($LZ4_VERSION)..."
      fileName="lz4-$LZ4_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/lz4-$LZ4_VERSION.tar.gz; then
@@ -706,7 +706,7 @@ if test $cleanFlag -eq 0; then
     (
      cd "$destination/extern"
 
-     $ECHO_NO_NEW_LINE "Get zstd..."
+     $ECHO_NO_NEW_LINE "Get zstd ($ZSTD_VERSION)..."
      fileName="zstd-$ZSTD_VERSION.zip"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/zstd-$ZSTD_VERSION.zip; then

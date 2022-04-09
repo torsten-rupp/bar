@@ -85,19 +85,15 @@ RUN chmod 777 /home/test
 RUN chmod 700 /home/test/.ssh
 RUN chown -R test:test /home/test/.ssh
 
-# enable WebDAV
+# enable webDAV/webDAVs
+RUN a2enmod ssl
+RUN a2enmod rewrite
 RUN a2enmod dav
 RUN a2enmod dav_fs
+RUN a2ensite 000-default
+RUN a2ensite default-ssl
 RUN echo ServerName test >> /etc/apache2/apache2.conf
-COPY apache2/test.conf /etc/apache2/sites-enabled/test.conf
+COPY apache2-test.conf /etc/apache2/sites-enabled/test.conf
 RUN sed 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=test/g' -i /etc/apache2/envvars
 RUN sed 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=test/g' -i /etc/apache2/envvars
 RUN (cd /var/www; rm -rf html; ln -s /home/test html)
-#RUN chmod 777 /home/test
-
-# start services
-ENTRYPOINT \
-  /etc/init.d/apache2 start && \
-  /etc/init.d/ssh start && \
-  /etc/init.d/vsftpd start && \
-  /bin/bash

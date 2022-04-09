@@ -2453,6 +2453,7 @@ remoteBarFlag=FALSE;
     case STORAGE_TYPE_SCP:
     case STORAGE_TYPE_SFTP:
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
@@ -4175,7 +4176,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryListHeader(ConstString storageName)
+LOCAL void printDirectoryListHeader(ConstString printableStorageName)
 {
   const TextMacro MACROS[] =
   {
@@ -4196,9 +4197,9 @@ LOCAL void printDirectoryListHeader(ConstString storageName)
     line = String_new();
 
     // header
-    if (storageName != NULL)
+    if (printableStorageName != NULL)
     {
-      printConsole(stdout,0,"List directory '%s':\n",String_cString(storageName));
+      printConsole(stdout,0,"List directory '%s':\n",String_cString(printableStorageName));
       printConsole(stdout,0,"\n");
     }
 

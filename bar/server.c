@@ -4269,6 +4269,7 @@ LOCAL void autoIndexThreadCode(void)
                 || (storageSpecifier.type == STORAGE_TYPE_SCP       )
                 || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
                 || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
+                || (storageSpecifier.type == STORAGE_TYPE_WEBDAVS   )
                )
             {
               // get base directory
