@@ -854,6 +854,10 @@ build_docker:
           -p 2222:22 \
           -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
           -e TEST_BASE_DIR=/home/test \
+          -e TEST_LOGIN_NAME=test \
+          -e TEST_PASSWORD=test \
+          -e TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub \
+          -e TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa \
           -e TEST_IMAGE_OPERATIONS=no \
           -v $(HOME):$(HOME) \
           -v $(PWD):/media/home \

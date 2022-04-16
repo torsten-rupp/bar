@@ -38,7 +38,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
@@ -142,6 +141,153 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
   return n;
 }
 #endif /* HAVE_SSH2 */
+
+/***********************************************************************\
+* Name   : sftpRead
+* Purpose: sftp read data
+* Input  : session    - ssh session
+*          sftp       - sftp session
+*          sftpHandle - sftp handle
+*          buffer     - data
+*          bufferSize - size of data
+* Output : readBytes - number of bytes read
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors sftpRead(SocketHandle        *socketHandle,
+                      LIBSSH2_SFTP        *sftp,
+                      LIBSSH2_SFTP_HANDLE *sftpHandle,
+                      void                *buffer,
+                      ulong               bufferSize,
+                      ulong               *bytesRead
+                     )
+{
+  Errors  error;
+  uint    retries;
+  ssize_t n;
+
+  error   = ERROR_UNKNOWN;
+  retries = 0;
+  do
+  {
+    n = libssh2_sftp_read(sftpHandle,
+                          (char*)buffer,
+                          bufferSize
+                         );
+    if (n >= 0)
+    {
+      (*bytesRead) = (ulong)n;
+      error        = ERROR_NONE;
+    }
+    else
+    {
+      if      ((n == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_READ_WRITE_RETRIES))
+      {
+        Misc_udelay(100LL*US_PER_MS);
+        retries++;
+      }
+      else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
+      }
+      else
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,n,"%s",sshErrorText);
+      }
+    }
+  }
+  while (   (n < 0)
+         && (retries < MAX_READ_WRITE_RETRIES)
+        );
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : sftpWrite
+* Purpose: sftp write data
+* Input  : session    - ssh session
+*          sftp       - sftp session
+*          sftpHandle - sftp handle
+*          buffer     - data
+*          length     - data length
+* Output : bytesWritten - number of written bytes
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
+                       LIBSSH2_SFTP        *sftp,
+                       LIBSSH2_SFTP_HANDLE *sftpHandle,
+                       const void          *buffer,
+                       ulong               length,
+                       ulong               *bytesWritten
+                     )
+{
+  Errors  error;
+  uint    retries;
+  ssize_t n;
+
+  error   = ERROR_UNKNOWN;
+  retries = 0;
+  do
+  {
+    n = libssh2_sftp_write(sftpHandle,
+                           buffer,
+                           length
+                          );
+    if (n > 0)
+    {
+      (*bytesWritten) = (ulong) n;
+      error           = ERROR_NONE;
+    }
+    else if (n == 0)
+    {
+      // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
+      if (!waitSSHSessionSocket(socketHandle))
+      {
+        error = ERROR_NETWORK_SEND;
+        break;
+      }
+    }
+    else
+    {
+      if      ((n == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_READ_WRITE_RETRIES))
+      {
+        Misc_udelay(100LL*US_PER_MS);
+        retries++;
+      }
+      else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
+      }
+      else
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,n,"%s",sshErrorText);
+      }
+    }
+  }
+  while (   (n < 0)
+         && (retries < MAX_READ_WRITE_RETRIES)
+        );
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
 
 /*---------------------------------------------------------------------*/
 
@@ -1249,7 +1395,6 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
       ulong   length;
       uint64  startTimestamp,endTimestamp;
       uint64  startTotalReceivedBytes,endTotalReceivedBytes;
-      ssize_t n;
 
       assert(storageHandle->sftp.sftpHandle != NULL);
       assert(storageHandle->sftp.readAheadBuffer.data != NULL);
@@ -1266,7 +1411,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
           // copy data from read-ahead buffer
           index      = (ulong)(storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset);
           bytesAvail = MIN(bufferSize,storageHandle->sftp.readAheadBuffer.length-index);
-          memcpy(buffer,storageHandle->sftp.readAheadBuffer.data+index,bytesAvail);
+          memCopyFast(buffer,bytesAvail,storageHandle->sftp.readAheadBuffer.data+index,bytesAvail);
 
           // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
@@ -1306,17 +1451,19 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
           if (length <= MAX_BUFFER_SIZE)
           {
             // read into read-ahead buffer
-            n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
-                                  (char*)storageHandle->sftp.readAheadBuffer.data,
-                                  MIN((size_t)(storageHandle->sftp.size-storageHandle->sftp.index),MAX_BUFFER_SIZE)
-                                 );
-            if (n < 0)
+            error = sftpRead(&storageHandle->sftp.socketHandle,
+                             storageHandle->sftp.sftp,
+                             storageHandle->sftp.sftpHandle,
+                             storageHandle->sftp.readAheadBuffer.data,
+                             MIN((size_t)(storageHandle->sftp.size-storageHandle->sftp.index),MAX_BUFFER_SIZE),
+                             &bytesAvail
+                            );
+            if (error != ERROR_NONE)
             {
-              error = ERROR_(IO,errno);
               break;
             }
             storageHandle->sftp.readAheadBuffer.offset = storageHandle->sftp.index;
-            storageHandle->sftp.readAheadBuffer.length = (ulong)n;
+            storageHandle->sftp.readAheadBuffer.length = bytesAvail;
 
             // copy data from read-ahead buffer
             bytesAvail = MIN(length,storageHandle->sftp.readAheadBuffer.length);
@@ -1331,16 +1478,17 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
           else
           {
             // read direct
-            n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
-                                  buffer,
-                                  length
-                                 );
-            if (n < 0)
+            error = sftpRead(&storageHandle->sftp.socketHandle,
+                             storageHandle->sftp.sftp,
+                             storageHandle->sftp.sftpHandle,
+                             buffer,
+                             length,
+                             &bytesAvail
+                            );
+            if (error != ERROR_NONE)
             {
-              error = ERROR_(IO,errno);
               break;
             }
-            bytesAvail = (ulong)n;
 
             // adjust buffer, bufferSize, bytes read, index
             buffer = (byte*)buffer+(ulong)bytesAvail;
@@ -1403,25 +1551,25 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
     {
-      ulong   writtenBytes;
+      ulong   bytesWritten;
       ulong   length;
       uint64  startTimestamp,endTimestamp;
       uint64  startTotalSentBytes,endTotalSentBytes;
-      ssize_t n;
+      ulong   n;
 
       assert(storageHandle->sftp.sftpHandle != NULL);
 
-      writtenBytes = 0L;
-      while (writtenBytes < bufferLength)
+      bytesWritten = 0L;
+      while (bytesWritten < bufferLength)
       {
         // get max. number of bytes to send in one step
         if (storageHandle->storageInfo->sftp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->storageInfo->sftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
+          length = MIN(storageHandle->storageInfo->sftp.bandWidthLimiter.blockSize,bufferLength-bytesWritten);
         }
         else
         {
-          length = bufferLength-writtenBytes;
+          length = bufferLength-bytesWritten;
         }
         assert(length > 0L);
 
@@ -1430,46 +1578,24 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
         startTotalSentBytes = storageHandle->sftp.totalSentBytes;
 
         // send data
-        do
+        error = sftpWrite(&storageHandle->sftp.socketHandle,
+                          storageHandle->sftp.sftp,
+                          storageHandle->sftp.sftpHandle,
+                          buffer,
+                          length,
+                          &n
+                         );
+        if (error != ERROR_NONE)
         {
-          n = libssh2_sftp_write(storageHandle->sftp.sftpHandle,
-                                 buffer,
-                                 length
-                                );
-          if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+          break;
         }
-        while (n == LIBSSH2_ERROR_EAGAIN);
+        buffer = (byte*)buffer+n;
+        bytesWritten += n;
 
         // get end time, end received bytes
         endTimestamp      = Misc_getTimestamp();
         endTotalSentBytes = storageHandle->sftp.totalSentBytes;
         assert(endTotalSentBytes >= startTotalSentBytes);
-
-// ??? is it possible in blocking-mode that write() return 0 and this is not an error?
-#if 1
-        if      (n == 0)
-        {
-          // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-          if (!waitSSHSessionSocket(&storageHandle->sftp.socketHandle))
-          {
-            error = ERROR_NETWORK_SEND;
-            break;
-          }
-        }
-        else if (n < 0)
-        {
-          error = ERROR_NETWORK_SEND;
-          break;
-        }
-#else /* 0 */
-        if (n <= 0)
-        {
-          error = ERROR_NETWORK_SEND;
-          break;
-        }
-#endif /* 0 */
-        buffer = (byte*)buffer+n;
-        writtenBytes += (ulong)n;
 
         /* limit used band width if requested (note: when the system time is
            changing endTimestamp may become smaller than startTimestamp;
@@ -1486,7 +1612,7 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
           }
         }
       }
-      storageHandle->sftp.size += writtenBytes;
+      storageHandle->sftp.size += bytesWritten;
     }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);

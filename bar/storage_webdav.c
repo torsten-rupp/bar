@@ -37,7 +37,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"

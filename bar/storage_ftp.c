@@ -33,7 +33,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
@@ -573,7 +572,6 @@ LOCAL bool parseFTPDirectoryLine(String         line,
                        )
           )
   {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(line));
     // format:  <permission flags> * * * <size> <year>-<month>-<day> <hour>:<minute> <file name>
 
     permissionStringLength = stringLength(permissionString);

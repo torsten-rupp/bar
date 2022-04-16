@@ -61,6 +61,9 @@
 // max. number of password input requests
 #define MAX_PASSWORD_REQUESTS 3
 
+// max. number of read/write retries
+#define MAX_READ_WRITE_RETRIES 3
+
 // different timeouts [ms]
 #define ALLOCATE_SERVER_TIMEOUT (3*60*MS_PER_SECOND)
 #define SSH_TIMEOUT             (30*MS_PER_SECOND)
