@@ -31,6 +31,7 @@ RUN apt-get -y install \
   patch \
   pkg-config \
   postgresql \
+  psmisc \
   rsync \
   subversion \
   sudo \

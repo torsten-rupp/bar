@@ -963,6 +963,8 @@ TEST_FILES_INTERMEDIATE = \
   $(INTERMEDIATE_DIR)/dev1 \
   $(INTERMEDIATE_DIR)/index.db \
   $(INTERMEDIATE_DIR)/output.txt \
+  $(INTERMEDIATE_DIR)/master/jobs/* \
+  $(INTERMEDIATE_DIR)/slave/jobs/* \
 
 TEST_FILES_RESTORE = \
   $(INTERMEDIATE_DIR)/restore \
@@ -1954,6 +1956,31 @@ test14-gprof test_server-gprof:
 
 test14-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_server
+
+test15_master_slave test_master_slave: \
+  $(TEST_BAR) \
+  $(TEST_MASTER_CONFIG) \
+  $(TEST_MASTER_JOBS_DIRECTORY)
+	@$(call functionInfoBegin,Test 14: master)
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
+          test_master_slave_operations \
+          ;
+	@$(call functionInfoEnd,OK)
+
+test15_master_slave-debug test_master_slave-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master_slave
+
+test15_master_slave-gcov test_master_slave-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master_slave
+
+test15_master_slave-gprof test_master_slave-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master_slave
+
+test15_master_slave-valgrind test_master_slave-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master_slave
 
 test15_master test_master: \
   $(TEST_BAR) \
@@ -5588,13 +5615,17 @@ test_index_operations-valgrind: \
 
 # send command to server via socket: <host name>,<id>,<command>
 functionServerCommandSocket = \
-  $(ECHO) $1: $2 $3; $(ECHO) $2 $3|$(NETCAT) -w1 $1|$(TAIL) -n +2
+  $(ECHO) $1: $2 $3; \
+  $(ECHO) $2 $3|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id doneFlag errorCode s; do $(ECHO) $$id $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done; \
+  if test $$? -ne 0; then exit 1; fi
 # send command to batch server: <id>,<command>
 functionServerCommandBatch = \
   $(ECHO) $1 $2
 # send command to slave via socket: <host name>,<id>,<command>
 functionSlaveCommandSocket = \
-  $(ECHO) $1: $2 $3; $(ECHO) $2 $3|$(NETCAT) -w1 $1|$(TAIL) -n +2
+  $(ECHO) $1: $2 $3; \
+  $(ECHO) $2 $3|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id doneFlag errorCode s; do $(ECHO) $$id $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done; \
+  if test $$? -ne 0; then exit 1; fi
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
 test_server_operations: \
@@ -5975,10 +6006,7 @@ endif
 	$(RMF) $(INTERMEDIATE_DIR)/$(BAR_FILE).bar
 	@$(call functionDoneTestFiles)
 
-.PHONY: test_master_slave_operations test_master_slave_operations_master test_master_slave_operations_slave test_master_slave_operations_create
-test_master_slave_operations: \
-  test_master_slave_operations_create \
-
+.PHONY: test_master_slave_operations_master test_master_slave_operations_slave test_master_slave_operations_create test_master_slave_operations
 test_master_slave_operations_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
@@ -5990,7 +6018,6 @@ test_master_slave_operations_master: \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             \
-            : start master server; \
             $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_DIRECTORY); \
             $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY); \
             $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_MASTER_CONFIG); \
@@ -6011,14 +6038,14 @@ test_master_slave_operations_master: \
               --max-threads=1 \
               --debug-server \
               --debug-server-fixed-ids \
-              $(ADDITIONAL_OPTIONS) \
-              2>/dev/null; \
+              $(ADDITIONAL_OPTIONS); \
             if test $$? -eq 0; then \
               $(SLEEP) 10; \
             else \
               exit 1; \
             fi; \
           ) $(LOG); \
+          $(ECHO) Master server started; \
         else \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
@@ -6038,7 +6065,6 @@ test_master_slave_operations_slave: \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             \
-            : start slave server; \
             if test -n "$(TEST_SLAVE_HOST)"; then \
               $(call functionSlaveExecute,$(KILLALL) $(call functionExec,$(TEST_BAR)) 2>/dev/null) || true; \
               $(call functionSlaveCopy,$(call functionExec,$(TEST_BAR)),$(call functionExec,$(TEST_BAR))); \
@@ -6063,8 +6089,7 @@ test_master_slave_operations_slave: \
                 --max-threads=1 \
                 --debug-server \
                 --debug-server-fixed-ids \
-                $(ADDITIONAL_OPTIONS) \
-                2>/dev/null; \
+                $(ADDITIONAL_OPTIONS); \
               ); \
             else \
               $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_DIRECTORY); \
@@ -6088,8 +6113,7 @@ test_master_slave_operations_slave: \
                 --max-threads=1 \
                 --debug-server \
                 --debug-server-fixed-ids \
-                $(ADDITIONAL_OPTIONS) \
-                2>/dev/null; \
+                $(ADDITIONAL_OPTIONS); \
             fi; \
             if test $$? -eq 0; then \
               $(SLEEP) 10; \
@@ -6097,11 +6121,53 @@ test_master_slave_operations_slave: \
               exit 1; \
             fi; \
           ) $(LOG); \
+          $(ECHO) Slave server started; \
         else \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
 
 test_master_slave_operations_create: \
+  $(TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@#
+	@$(call functionCleanTestFiles)
+	@#
+	@$(KILLALL) -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
+	$(MAKE) test_master_slave_operations_slave TEST_DETACH=yes
+	$(MAKE) test_master_slave_operations_master TEST_DETACH=yes
+	@#
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
+          if test $$? -eq 0; then \
+          ( \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   1,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   2,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   3,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   4,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   5,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   6,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   7,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   8,JOB_FLUSH); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 100,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 200,JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            for i in `seq 1 12`; do \
+              $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 201,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+              $(SLEEP) 10; \
+            done; \
+            \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),9999,QUIT); \
+            $(call functionSlaveCommandSocket, localhost $(TEST_SLAVE_PORT), 9999,QUIT); \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
+	@#
+	$(call functionWaitProcess,$(TEST_MASTER_PID_FILE),60)
+	$(call functionWaitProcess,$(TEST_SLAVE_PID_FILE),60)
+	@$(call functionDoneTestFiles)
+
+test_master_slave_operations: \
   $(TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -6114,20 +6180,20 @@ test_master_slave_operations_create: \
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
           ( \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   1,   2,   3,   5,   6,   6,   7,   8, 100, 200,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   1,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   2,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   3,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   4,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(INTERMEDIATE_DIR)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   5,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   6,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   7,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),   8,JOB_FLUSH); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 100,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 200,JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
             for i in `seq 1 12`; do \
-              $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 300,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+              $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT), 201,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
               $(SLEEP) 10; \
             done; \
             \
