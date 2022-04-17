@@ -973,8 +973,8 @@ TEST_FILES_INTERMEDIATE = \
   $(INTERMEDIATE_DIR)/dev1 \
   $(INTERMEDIATE_DIR)/index.db \
   $(INTERMEDIATE_DIR)/output.txt \
-  $(INTERMEDIATE_DIR)/master \
-  $(INTERMEDIATE_DIR)/slave \
+  $(INTERMEDIATE_DIR)/master/jobs/* \
+  $(INTERMEDIATE_DIR)/slave/jobs/* \
   $(INTERMEDIATE_DIR)/tmp \
 
 TEST_FILES_RESTORE = \
