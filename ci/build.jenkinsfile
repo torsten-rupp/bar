@@ -21,6 +21,8 @@ TEST_STEPS = ["basic",
               "storage_sftp",
               "storage_webdav",
               "index",
+              "server",
+              "master_slave",
               "arguments",
               "config",
               "misc"
@@ -105,25 +107,6 @@ def build()
                 sh "sudo /etc/init.d/vsftpd start"
 
                 TEST_STEPS.each { step -> sh "make test_${steps}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'" }
-/*
-                sh "make test_basic"           +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_compress"        +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_delta_compress"  +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_crypt"           +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_asymmetric_crypt"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_signatures"      +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_split"           +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_convert"         +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_storage_file"    +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_storage_ftp"     +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_storage_scp"     +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_storage_sftp"    +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_storage_webdav"  +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_index"           +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_arguments"       +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_config"          +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-                sh "make test_misc"            +binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-*/
 
                 // stop services
                 sh "sudo /etc/init.d/vsftpd stop || true"
@@ -160,25 +143,6 @@ def build()
 
             sh "make -C bar gcov_clean"
             TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
-/*
-            sh "make -C bar gcov_basic"           +" "+TEST_SETTINGS
-            sh "make -C bar gcov_compress"        +" "+TEST_SETTINGS
-            sh "make -C bar gcov_delta_compress"  +" "+TEST_SETTINGS
-            sh "make -C bar gcov_crypt"           +" "+TEST_SETTINGS
-            sh "make -C bar gcov_asymmetric_crypt"+" "+TEST_SETTINGS
-            sh "make -C bar gcov_signatures"      +" "+TEST_SETTINGS
-            sh "make -C bar gcov_split"           +" "+TEST_SETTINGS
-            sh "make -C bar gcov_convert"         +" "+TEST_SETTINGS
-            sh "make -C bar gcov_storage_file"    +" "+TEST_SETTINGS
-            sh "make -C bar gcov_storage_ftp"     +" "+TEST_SETTINGS
-            sh "make -C bar gcov_storage_scp"     +" "+TEST_SETTINGS
-            sh "make -C bar gcov_storage_sftp"    +" "+TEST_SETTINGS
-            sh "make -C bar gcov_storage_webdav"  +" "+TEST_SETTINGS
-            sh "make -C bar gcov_index"           +" "+TEST_SETTINGS
-            sh "make -C bar gcov_arguments"       +" "+TEST_SETTINGS
-            sh "make -C bar gcov_config"          +" "+TEST_SETTINGS
-            sh "make -C bar gcov_misc"            +" "+TEST_SETTINGS
-*/
             sh "make -C bar gcov_html"
 
             // stop services
@@ -217,24 +181,6 @@ def build()
 
             sh "make -C bar gprof_clean"
             TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
-/*
-            sh "make -C bar gprof_basic"           +" "+TEST_SETTINGS
-            sh "make -C bar gprof_compress"        +" "+TEST_SETTINGS
-            sh "make -C bar gprof_delta_compress"  +" "+TEST_SETTINGS
-            sh "make -C bar gprof_crypt"           +" "+TEST_SETTINGS
-            sh "make -C bar gprof_asymmetric_crypt"+" "+TEST_SETTINGS
-            sh "make -C bar gprof_signatures"      +" "+TEST_SETTINGS
-            sh "make -C bar gprof_split"           +" "+TEST_SETTINGS
-            sh "make -C bar gprof_convert"         +" "+TEST_SETTINGS
-            sh "make -C bar gprof_storage_file"    +" "+TEST_SETTINGS
-            sh "make -C bar gprof_storage_ftp"     +" "+TEST_SETTINGS
-            sh "make -C bar gprof_storage_scp"     +" "+TEST_SETTINGS
-            sh "make -C bar gprof_storage_webdav"  +" "+TEST_SETTINGS
-            sh "make -C bar gprof_index"           +" "+TEST_SETTINGS
-            sh "make -C bar gprof_arguments"       +" "+TEST_SETTINGS
-            sh "make -C bar gprof_config"          +" "+TEST_SETTINGS
-            sh "make -C bar gprof_misc"            +" "+TEST_SETTINGS
-*/
 
             // stop services
             sh "sudo /etc/init.d/vsftpd stop || true"
