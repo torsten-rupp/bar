@@ -65,10 +65,10 @@ def build()
     {
       case "SMOKE":
       default:
-        stateName="Smoke tests"
+        stateName="Smoke tests2"
         break;
       case "FULL":
-        stateName="Tests"
+        stateName="Tests3"
         break;
     }
     stage(stateName)
