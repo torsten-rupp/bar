@@ -5729,7 +5729,7 @@ endif
             $(call functionServerCommandBatch, 103,SERVER_OPTION_FLUSH); \
             \
             $(call functionServerCommandBatch, 200,DEVICE_LIST); \
-            $(call functionServerCommandBatch, 201,ROOT_LIST); \
+            $(call functionServerCommandBatch, 201,ROOT_LIST allMounts=yes); \
             $(call functionServerCommandBatch, 202,FILE_INFO name=/tmp); \
             $(call functionServerCommandBatch, 203,FILE_LIST directory=/tmp); \
             $(call functionServerCommandBatch, 204,FILE_ATTRIBUTE_GET name=/tmp attribute=NOBACKUP); \
