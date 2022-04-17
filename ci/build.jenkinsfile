@@ -65,17 +65,13 @@ def build()
     {
       case "SMOKE":
       default:
-        stage("Smoke tests")
-        {
-        }
+        stateName="Smoke tests"
         break;
       case "FULL":
-        stage("Tests2")
-        {
-        }
+        stateName="Tests"
         break;
     }
-    stage("Tests")
+    stage(stateName)
     {
       // run tests
       script
