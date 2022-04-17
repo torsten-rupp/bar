@@ -5924,7 +5924,7 @@ test_server_operations_socket_client: \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 103,SERVER_OPTION_FLUSH); \
             \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 200,DEVICE_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 201,ROOT_LIST); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 201,ROOT_LIST allMounts=yes); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 202,FILE_INFO name=data); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 203,FILE_LIST directory=data); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 204,FILE_ATTRIBUTE_GET name=data attribute=NOBACKUP); \
