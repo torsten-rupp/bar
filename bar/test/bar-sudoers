@@ -1,0 +1,40 @@
+# allow BAR tests
+Cmnd_Alias BAR_CHATTR=\
+  /usr/bin/chattr * data/*, \
+  /usr/bin/chattr * configure-*
+Cmnd_Alias BAR_LOSETUP=\
+  /sbin/losetup -d /dev/loop[01], \
+  /sbin/losetup /dev/loop[01] *intermediate/dev[01].dat, \
+  /sbin/losetup /dev/loop[01] *intermediate/dev0[ab].dat
+Cmnd_Alias BAR_CHMOD=\
+  /bin/chmod o+rw /dev/loop[01]
+Cmnd_Alias BAR_DD=\
+  /bin/dd if=/dev/loop[01] of=-
+Cmnd_Alias BAR_MKFS=\
+  /sbin/mkfs -t * /dev/loop[01]
+Cmnd_Alias BAR_MOUNT=\
+  /bin/mount /dev/loop[01] *intermediate/dev[01]
+Cmnd_Alias BAR_UMOUNT=\
+  /bin/umount intermediate/dev[01]
+Cmnd_Alias BAR_CP=\
+  /bin/cp -r -p data/* *intermediate/dev[01]
+Cmnd_Alias BAR_DIFF=\
+  /usr/bin/diff -r *intermediate/dev0 *intermediate/dev1
+Cmnd_Alias BAR_MOUNT_TEST_DEV=\
+  /bin/mount -p 0 /dev/loop0 *intermediate/dev0
+Cmnd_Alias BAR_UMOUNT_TEST_DEV=\
+  /bin/umount *intermediate/dev0
+
+ALL ALL=NOPASSWD:\
+X,\
+  BAR_CHATTR,\
+  BAR_LOSETUP,\
+  BAR_CHMOD,\
+  BAR_DD,\
+  BAR_MKFS,\
+  BAR_MOUNT,\
+  BAR_UMOUNT,\
+  BAR_CP, \
+  BAR_DIFF, \
+  BAR_MOUNT_TEST_DEV, \
+  BAR_UMOUNT_TEST_DEV

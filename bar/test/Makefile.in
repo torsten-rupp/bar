@@ -378,9 +378,9 @@ TEST_POSTGRESQL_USER             = test
 TEST_POSTGRESQL_PASSWORD         = test
 
 # databases
-TEST_INDEX_DATABASE_SQLITE       =  sqlite$($(:))$(INTERMEDIATE_DIR)/index.db
-TEST_INDEX_DATABASE_MARIADB      =  mariadb$($(:))$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
-TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql$($(:))$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
+TEST_INDEX_DATABASE_SQLITE       =  sqlite:$(INTERMEDIATE_DIR)/index.db
+TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
+TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
 TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
 
 TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MARIADB) $(TEST_INDEX_DATABASE_POSTGRESQL)
@@ -715,7 +715,7 @@ functionCreateFileRandom = \
 # call functionTestDeviceCreate,<loop device>,<image file>
 functionTestDeviceCreate = \
   ( \
-    $(SUDO) -n $(LOSETUP) -d $1 || true; \
+    $(SUDO) -n $(LOSETUP) -d $1 2>/dev/null || true; \
     $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
     $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
     $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
@@ -924,6 +924,14 @@ endif
 
 TEST_FILES_COMPLEX = $(addprefix data/,$(TEST_FILE_NAMES_COMPLEX))
 
+TEST_FILE_NAMES = \
+  $(TEST_FILE_NAMES_SIMPLE) \
+  $(TEST_FILE_NAMES_COMPLEX)
+
+TEST_FILES = \
+  $(TEST_FILES_SIMPLE) \
+  $(TEST_FILES_COMPLEX)
+
 # large test files
 TEST_FILES_LARGE_NAMES = \
   zero128M.dat \
@@ -941,20 +949,15 @@ TEST_FILES_HUGE_NAMES2 = \
   hardlink512M1.dat \
   hardlink512M2.dat \
 
+TEST_FILES_HUGE_NAMES = \
+  $(TEST_FILES_HUGE_NAMES1) \
+  $(TEST_FILES_HUGE_NAMES2) \
+
 TEST_FILES_HUGE1 = $(addprefix data/,$(TEST_FILES_HUGE_NAMES1))
 TEST_FILES_HUGE2 = $(addprefix data/,$(TEST_FILES_HUGE_NAMES2))
 TEST_FILES_HUGE  = \
   $(TEST_FILES_HUGE1) \
   $(TEST_FILES_HUGE2)
-
-TEST_FILE_NAMES = \
-  $(TEST_FILE_NAMES_SIMPLE) \
-  $(TEST_FILE_NAMES_COMPLEX)
-
-TEST_FILES = \
-  $(TEST_FILES_SIMPLE) \
-  $(TEST_FILES_COMPLEX) \
-  $(TEST_FILES_LARGE)
 
 # temporary test files
 TEST_FILES_INTERMEDIATE = \
@@ -2283,11 +2286,8 @@ endif
           -x fifo \
           -x sub_ignore_dir \
           -x nodump.dat \
-          -x zero5G.dat \
-          -x random5G.dat \
-          -x hardlinkdata512M.dat \
-          -x hardlink512M1.dat \
-          -x hardlink512M2.dat \
+          $(foreach fileName,$(TEST_FILES_LARGE_NAMES),-x $(fileName)) \
+          $(foreach fileName,$(TEST_FILES_HUGE_NAMES),-x $(fileName)) \
           -x gmon.out \
           $(if $(findstring yes,$(TEST_SPARSE_FILES)),,-x sparse.dat) \
           $(if $(findstring yes,$(TEST_SPECIAL_ATTRIBUTES)),,-x append-only.dat) \
@@ -2310,17 +2310,14 @@ endif
 	$(RMRF) $(INTERMEDIATE_DIR)/restore
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=stop --no-stop-on-error --no-stop-on-attribute-error --no-fragments-check $(LOG))
-	$(RMF) $(INTERMEDIATE_DIR)/restore/data/readonly.dat restore/data/file400.dat restore/data/readonly512k.dat
+	$(RMF) $(INTERMEDIATE_DIR)/restore/data/readonly.dat $(INTERMEDIATE_DIR)/restore/data/file400.dat $(INTERMEDIATE_DIR)/restore/data/readonly512k.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=overwrite $(LOG))
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/zero128.dat -# data/zero128M.dat --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=rename $(LOG))
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero128-0.dat
-	test -f $(INTERMEDIATE_DIR)/restore/data/zero128M-0.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/zero128.dat -# data/zero128M.dat --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=rename $(LOG))
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero128-0.dat
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero128-1.dat
-	test -f $(INTERMEDIATE_DIR)/restore/data/zero128M-0.dat
-	test -f $(INTERMEDIATE_DIR)/restore/data/zero128M-1.dat
 	#
 	$(call functionTestCheckExitcode,0,0,$(ECHO) $(INTERMEDIATE_DIR)/test*.bar | $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l --storage-list-stdin $(LOG))
 	$(ECHO) '$(INTERMEDIATE_DIR)/test*.bar' > $(INTERMEDIATE_DIR)/storage.list
@@ -2640,6 +2637,7 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
+	$(INSTALL) -d $(MOUNT_POINT0)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
           $(TEST_OPTIONS) \
           --mount $(MOUNT_POINT0),$(LOOP0) \
@@ -2649,6 +2647,7 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
           -c $(INTERMEDIATE_DIR)/test.bar $(LOOP0)/zero*.dat \
           $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG) \
         )
+	$(RMDIR) $(MOUNT_POINT0)
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
@@ -3699,11 +3698,8 @@ test_file_operations_base: \
           -x fifo \
           -x sub_ignore_dir \
           -x nodump.dat \
-          -x zero5G.dat \
-          -x random5G.dat \
-          -x hardlinkdata512M.dat \
-          -x hardlink512M1.dat \
-          -x hardlink512M2.dat \
+          $(foreach fileName,$(TEST_FILES_LARGE_NAMES),-x $(fileName)) \
+          $(foreach fileName,$(TEST_FILES_HUGE_NAMES),-x $(fileName)) \
           -x gmon.out \
           $(if $(findstring yes,$(TEST_SPARSE_FILES)),,-x sparse.dat) \
           $(if $(findstring yes,$(TEST_SPECIAL_ATTRIBUTES)),,-x append-only.dat) \
