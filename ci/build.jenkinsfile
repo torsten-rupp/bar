@@ -61,6 +61,20 @@ def build()
       }
     }
 
+    switch (params.TEST_TYPE)
+    {
+      case "SMOKE":
+      default:
+        stage("Smoke tests")
+        {
+        }
+        break;
+      case "FULL":
+        stage("Tests2")
+        {
+        }
+        break;
+    }
     stage("Tests")
     {
       // run tests
