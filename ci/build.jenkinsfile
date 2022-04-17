@@ -61,17 +61,36 @@ def build()
       }
     }
 
-    switch (params.TEST_TYPE)
+    switch (params.BINARY_TYPE)
     {
-      case "SMOKE":
-      default:
-        stateName="Smoke tests2"
+      case "DEBUG":
+        binaryExtension="-debug";
         break;
-      case "FULL":
-        stateName="Tests3"
+      case "VALGRIND":
+        binaryExtension="-valgrind";
+        break;
+      case "GCOV":
+        binaryExtension="-gcov";
+        break;
+      case "GPROF":
+        binaryExtension="-gprof";
+        break;
+      default:
+        binaryExtension="";
         break;
     }
-    stage(stateName)
+    stage("Smoke tests")
+    {
+      // run tests
+      script
+      {
+        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+        {
+          sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
+        }
+      }
+    }
+    stage("Tests")
     {
       // run tests
       script
@@ -80,34 +99,8 @@ def build()
             || (env.BRANCH_NAME == "master")
            )
         {
-          switch (params.BINARY_TYPE)
-          {
-            case "DEBUG":
-              binaryExtension="-debug";
-              break;
-            case "VALGRIND":
-              binaryExtension="-valgrind";
-              break;
-            case "GCOV":
-              binaryExtension="-gcov";
-              break;
-            case "GPROF":
-              binaryExtension="-gprof";
-              break;
-            default:
-              binaryExtension="";
-              break;
-          }
-          sh "echo binaryExtension="+binaryExtension
           switch (params.TEST_TYPE)
           {
-            case "SMOKE":
-            default:
-              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-              {
-                sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-              }
-              break;
             case "FULL":
               docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               {
@@ -124,13 +117,8 @@ def build()
                 sh "sudo /etc/init.d/apache2 stop || true"
               }
               break;
-          }
-        }
-        else
-        {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-          {
-            sh "make test_smoke-debug "+TEST_SETTINGS+" O='--verbose=1'"
+            default:
+              break;
           }
         }
       }
