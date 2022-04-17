@@ -694,6 +694,9 @@
 /* zstd installed */
 #undef HAVE_ZSTD
 
+/* SSH2 has libssh2_keepalive_config() */
+#undef HAVE_ZSTD_CCTX_RESET
+
 /* _fseeki64() available */
 #undef HAVE__FSEEKI64
 

@@ -4600,6 +4600,8 @@ AC_CHECK_FUNCTION(waitpid,AC_DEFINE(HAVE_WAITPID,1,[waitpid() available]))
 
 AC_CHECK_FUNCTION(zlibVersion,,AC_ERROR([mandatory function zlibVersion() is not available]),zlib.h)
 
+AC_CHECK_FUNCTION(ZSTD_CCtx_reset,AC_DEFINE(HAVE_ZSTD_CCTX_RESET,1,[SSH2 has libssh2_keepalive_config()]))
+
 AC_CHECK_FUNCTION(libssh2_userauth_publickey_frommemory,AC_DEFINE(HAVE_SSH2_USERAUTH_PUBLICKEY_FROMMEMORY,1,[SSH2 has libssh2_userauth_publickey_frommemory() function]))
 AC_CHECK_FUNCTION(libssh2_channel_send_keepalive,       AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,       1,[SSH2 has libssh2_channel_send_keepalive()]))
 AC_CHECK_FUNCTION(libssh2_keepalive_config,             AC_DEFINE(HAVE_SSH2_KEEPALIVE_CONFIG,             1,[SSH2 has libssh2_keepalive_config()]))

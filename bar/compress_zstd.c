@@ -350,19 +350,31 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
+      #ifdef HAVE_ZSTD_CCTX_RESET
+        zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
+        if (ZSTD_isError(zstdResult))
+        {
+          return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
+        }
+        zstdResult = ZSTD_CCtx_setPledgedSrcSize(compressInfo->zstd.cStream,ZSTD_CONTENTSIZE_UNKNOWN);
+        if (ZSTD_isError(zstdResult))
+        {
+          return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
+        }
+      #else /* not HAVE_ZSTD_CCTX_RESET */
+        zstdResult = ZSTD_resetCStream(compressInfo->zstd.cStream,0);
       if (ZSTD_isError(zstdResult))
       {
         return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
       }
-      zstdResult = ZSTD_CCtx_setPledgedSrcSize(compressInfo->zstd.cStream,ZSTD_CONTENTSIZE_UNKNOWN);
-      if (ZSTD_isError(zstdResult))
-      {
-        return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
-      }
+      #endif /* HAVE_ZSTD_CCTX_RESET */
       break;
     case COMPRESS_MODE_INFLATE:
-      zstdResult = ZSTD_DCtx_reset(compressInfo->zstd.dStream, ZSTD_reset_session_only);
+      #ifdef HAVE_ZSTD_CCTX_RESET
+        zstdResult = ZSTD_DCtx_reset(compressInfo->zstd.dStream, ZSTD_reset_session_only);
+      #else /* not HAVE_ZSTD_CCTX_RESET */
+        zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream);
+      #endif /* HAVE_ZSTD_CCTX_RESET */
       if (ZSTD_isError(zstdResult))
       {
         return ERROR_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult));

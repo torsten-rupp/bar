@@ -1159,7 +1159,7 @@ test2 test_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
 	for compress in $(COMPRESS_NAMES); do \
-echo          $(MAKE) \
+          $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -1170,7 +1170,7 @@ echo          $(MAKE) \
           if test $$rc -ne 0; then \
             exit $$rc; \
           fi; \
-echo          $(MAKE) \
+          $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
