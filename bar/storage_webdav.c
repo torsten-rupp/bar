@@ -2035,7 +2035,6 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
           do
           {
             curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d %ld receive=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.receiveBuffer.length,length,runningHandles);
           }
           while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                  && (runningHandles > 0)
@@ -2049,8 +2048,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
         {
           break;
         }
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__,length);
-        else if ((storageHandle->webdav.receiveBuffer.length < length) && (runningHandles <= 0))
+        else if (storageHandle->webdav.receiveBuffer.length < length)
         {
           const CURLMsg *curlMsg;
           int           n,i;
@@ -2200,13 +2198,25 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
           error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
         }
       }
-      if (error != ERROR_NONE)
+      if      (error != ERROR_NONE)
       {
         break;
       }
-      if (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
+      else if (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
       {
-        error = ERRORX_(NETWORK_SEND,0,"%s",errorBuffer);
+        const CURLMsg *curlMsg;
+        int           n,i;
+
+        curlMsg = curl_multi_info_read(storageHandle->webdav.curlMultiHandle,&n);
+        for (i = 0; i < n; i++)
+        {
+          if ((curlMsg[i].easy_handle == storageHandle->webdav.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+          {
+            error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
+            break;
+          }
+          curlMsg++;
+        }
         break;
       }
 //fprintf(stderr,"%s, %d: sent %d\n",__FILE__,__LINE__,storageHandle->webdav.sendBuffer.length);
@@ -2397,13 +2407,25 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
               error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
             }
           }
-          if (error != ERROR_NONE)
+          if      (error != ERROR_NONE)
           {
             break;
           }
-          if (storageHandle->webdav.receiveBuffer.length < length)
+          else if (storageHandle->webdav.receiveBuffer.length < length)
           {
-            error = ERROR_IO;
+            const CURLMsg *curlMsg;
+            int           n,i;
+
+            curlMsg = curl_multi_info_read(storageHandle->webdav.curlMultiHandle,&n);
+            for (i = 0; i < n; i++)
+            {
+              if ((curlMsg[i].easy_handle == storageHandle->webdav.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+              {
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
+                break;
+              }
+              curlMsg++;
+            }
             break;
           }
           storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;

@@ -200,7 +200,6 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
 
   // get a suitable timeout
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
-//fprintf(stderr,"%s, %d: curlTimeout=%ld \n",__FILE__,__LINE__,curlTimeout);
 
   // wait
   curlmCode = curl_multi_poll(curlMultiHandle,
@@ -211,7 +210,6 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
   switch (curlmCode)
   {
     case CURLM_OK:
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,fdCount);
       // OK
       error = ERROR_NONE;
       break;

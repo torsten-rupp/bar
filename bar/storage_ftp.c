@@ -2000,7 +2000,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
         storageHandle->ftp.transferedBytes = 0L;
         runningHandles = 1;
-        while (   (storageHandle->ftp.transferedBytes == 0)
+        while (   (storageHandle->ftp.transferedBytes == 0L)
                && (error == ERROR_NONE)
                && (runningHandles > 0)
               )
@@ -2025,13 +2025,25 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
-        if (error != ERROR_NONE)
+        if      (error != ERROR_NONE)
         {
           break;
         }
-        if (storageHandle->ftp.transferedBytes <= 0L)
+        else if (storageHandle->ftp.transferedBytes <= 0L)
         {
-          error = ERROR_IO;
+          const CURLMsg *curlMsg;
+          int           n,i;
+
+          curlMsg = curl_multi_info_read(storageHandle->ftp.curlMultiHandle,&n);
+          for (i = 0; i < n; i++)
+          {
+            if ((curlMsg[i].easy_handle == storageHandle->ftp.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+            {
+              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
+              break;
+            }
+            curlMsg++;
+          }
           break;
         }
         storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
@@ -2079,13 +2091,25 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
-        if (error != ERROR_NONE)
+        if      (error != ERROR_NONE)
         {
           break;
         }
-        if (storageHandle->ftp.transferedBytes <= 0L)
+        else if (storageHandle->ftp.transferedBytes <= 0L)
         {
-          error = ERROR_IO;
+          const CURLMsg *curlMsg;
+          int           n,i;
+
+          curlMsg = curl_multi_info_read(storageHandle->ftp.curlMultiHandle,&n);
+          for (i = 0; i < n; i++)
+          {
+            if ((curlMsg[i].easy_handle == storageHandle->ftp.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+            {
+              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
+              break;
+            }
+            curlMsg++;
+          }
           break;
         }
         bytesAvail = storageHandle->ftp.transferedBytes;
