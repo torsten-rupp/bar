@@ -54,52 +54,55 @@ def tests()
       // run tests
       script
       {
-        switch (params.BINARY_TYPE)
+        if (params.TESTS)
         {
-          case "DEBUG":
-            binaryExtension="-debug";
-            break;
-          case "VALGRIND":
-            binaryExtension="-valgrind";
-            break;
-          case "GCOV":
-            binaryExtension="-gcov";
-            break;
-          case "GPROF":
-            binaryExtension="-gprof";
-            break;
-          default:
-            binaryExtension="";
-            break;
-        }
-        sh "echo binaryExtension="+binaryExtension
-        switch (params.TEST_TYPE)
-        {
-          case "SMOKE":
-          default:
-            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-            {
-              sh "rm -f bar-test.log"
-              sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-            }
-            break;
-          case "FULL":
-            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-            {
-              // start services
-              sh "sudo /etc/init.d/apache2 start"
-              sh "sudo /etc/init.d/ssh start"
-              sh "sudo /etc/init.d/vsftpd start"
+          switch (params.BINARY_TYPE)
+          {
+            case "DEBUG":
+              binaryExtension="-debug";
+              break;
+            case "VALGRIND":
+              binaryExtension="-valgrind";
+              break;
+            case "GCOV":
+              binaryExtension="-gcov";
+              break;
+            case "GPROF":
+              binaryExtension="-gprof";
+              break;
+            default:
+              binaryExtension="";
+              break;
+          }
+          sh "echo binaryExtension="+binaryExtension
+          switch (params.TEST_TYPE)
+          {
+            case "SMOKE":
+            default:
+              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              {
+                sh "rm -f bar-test.log"
+                sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
+              }
+              break;
+            case "FULL":
+              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              {
+                // start services
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
 
-              sh "rm -f bar-test.log"
-              TEST_STEPS.each { step -> sh "make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1' | tee -a bar-test.log" }
+                sh "rm -f bar-test.log"
+                TEST_STEPS.each { step -> sh "make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1' | tee -a bar-test.log" }
 
-              // stop services
-              sh "sudo /etc/init.d/vsftpd stop || true"
-              sh "sudo /etc/init.d/ssh stop || true"
-              sh "sudo /etc/init.d/apache2 stop || true"
-            }
-            break;
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
+              }
+              break;
+          }
         }
       }
     }
