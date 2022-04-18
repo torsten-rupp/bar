@@ -361,7 +361,7 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
   {
     bytesSent = MIN(n,(size_t)(storageHandle->ftp.length-storageHandle->ftp.transferedBytes)/size)*size;
 
-    memcpy(buffer,storageHandle->ftp.buffer,bytesSent);
+    memCopyFast(buffer,bytesSent,storageHandle->ftp.buffer,bytesSent);
 
     storageHandle->ftp.buffer          = (byte*)storageHandle->ftp.buffer+bytesSent;
     storageHandle->ftp.transferedBytes += (ulong)bytesSent;
@@ -406,7 +406,7 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   {
     bytesReceived = n*size;
 
-    memcpy(storageHandle->ftp.buffer,buffer,bytesReceived);
+    memCopyFast(storageHandle->ftp.buffer,bytesReceived,buffer,bytesReceived);
 //fprintf(stderr,"%s, %d: curlFTPWriteDataCallback size=%d n=%d bytesReceived=%d %x\n",__FILE__,__LINE__,size,n,bytesReceived,bytesReceived);
 //debugDumpMemory(storageHandle->ftp.buffer,128,0);
     storageHandle->ftp.buffer          = (byte*)storageHandle->ftp.buffer+bytesReceived;
@@ -414,7 +414,6 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   }
   else
   {
-//fprintf(stderr,"%s, %d: curlFTPWriteDataCallback PAUSE: size*n=%d transferedBytes=%d length=%d\n",__FILE__,__LINE__,size*n,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
     bytesReceived = CURL_WRITEFUNC_PAUSE;
   }
 
@@ -1961,7 +1960,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       // copy data from read-ahead buffer
       index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
       bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
-      memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
+      memCopyFast(buffer,bytesAvail,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
       // adjust buffer, bufferSize, bytes read, index
       buffer = (byte*)buffer+bytesAvail;
@@ -2051,7 +2050,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
         // copy data from read-ahead buffer
         bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
-        memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
+        memCopyFast(buffer,bytesAvail,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
 
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
@@ -2224,7 +2223,6 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
         do
         {
           curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d transfered=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->ftp.transferedBytes,storageHandle->ftp.length,runningHandles);
         }
         while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                && (runningHandles > 0)

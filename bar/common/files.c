@@ -3497,8 +3497,8 @@ Errors File_renameCString(const char *oldFileName,
       {
         return ERROR_INSUFFICIENT_MEMORY;
       }
-      strcpy(fileName,newFileName);
-      strcat(fileName,"-XXXXXX");
+      stringSet(fileName,sizeof(fileName),newFileName);
+      stringAppend(fileName,sizeof(fileName),"-XXXXXX");
 
       #ifdef HAVE_MKSTEMP
         handle = mkstemp(fileName);
