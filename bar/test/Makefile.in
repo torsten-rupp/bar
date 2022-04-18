@@ -5763,7 +5763,7 @@ endif
             $(call functionServerCommandBatch, 507,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch, 508,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch, 509,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandBatch, 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" noStorage=yes enabled=no); \
+            $(call functionServerCommandBatch, 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
             $(call functionServerCommandBatch, 511,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch, 512,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
             $(call functionServerCommandBatch, 513,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
@@ -5959,7 +5959,7 @@ test_server_operations_socket_client: \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 507,EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 508,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 509,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" noStorage=yes enabled=no); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 511,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 512,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 513,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
@@ -5973,7 +5973,7 @@ test_server_operations_socket_client: \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 606,EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=$(INTERMEDIATE_DIR)/not_existing); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 607,SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 608,EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 609,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 beginTime=0:30 endTime=*:50 customText="test" noStorage=yes enabled=yes); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 609,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=yes); \
             $(SLEEP) 10; \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 610,SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT), 611,SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
