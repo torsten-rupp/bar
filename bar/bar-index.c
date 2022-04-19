@@ -1760,15 +1760,21 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 "ANALYZE ?",
-                                 DATABASE_PARAMETERS
-                                 (
-                                   DATABASE_PARAMETER_STRING(name)
-                                 )
-                                );
+        {
+          char sqlString[256];
+
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "ANALYZE %s",
+                                                String_cString(name)
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
+                                  );
+        }
         break;
       case DATABASE_TYPE_MARIADB:
         // nothing to do
@@ -6829,7 +6835,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
       break;
     case DATABASE_TYPE_MARIADB:
       {
-        char sqlCommand[256];
+        char sqlString[256];
 
         printInfo("Vacuum...");
 
@@ -6839,7 +6845,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
+                                   stringFormat(sqlString,sizeof(sqlString),
                                                 "OPTIMIZE TABLE %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
                                                ),
