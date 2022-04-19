@@ -7800,9 +7800,9 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
           }
-          else if (sqliteResult == SQLITE_LOCKED)
+          else if ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
           {
-// TODO:
+            error = ERROR_DATABASE_BUSY;
           }
           else if (sqliteResult == SQLITE_INTERRUPT)
           {
@@ -7850,7 +7850,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                 break;
               }
             }
-  // TODO: required? queries do not have an result
+// TODO: required? queries do not have an result
             if (databaseStatementHandle->resultCount > 0)
             {
               if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
@@ -14085,10 +14085,17 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               NULL,  // changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                NULL,  // changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14266,10 +14273,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14395,10 +14409,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14497,10 +14518,23 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
 
   // finalize statementHandle
   finalizeStatement(&databaseStatementHandle);
@@ -15920,7 +15954,7 @@ void Database_debugPrintInfo(void)
       fprintf(stderr,"Database debug info:\n");
       LIST_ITERATE(&databaseList,databaseNode)
       {
-        switch (Database_getType(databaseHandle))
+        switch (databaseNode->databaseSpecifier.type)
         {
           case DATABASE_TYPE_SQLITE3:
             fprintf(stderr,
@@ -15941,7 +15975,16 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_MARIADB */
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+            #if defined(HAVE_MARIADB)
+              fprintf(stderr,
+                      "  opened 'postgresql:%s:%s': %u\n",
+                      String_cString(databaseNode->databaseSpecifier.postgresql.serverName),
+                      String_cString(databaseNode->databaseSpecifier.postgresql.userName),
+                      databaseNode->openCount
+                     );
+            #else /* HAVE_MARIADB */
+            #endif /* HAVE_MARIADB */
+            break;
             break;
         }
         LIST_ITERATE(&debugDatabaseHandleList,databaseHandle)

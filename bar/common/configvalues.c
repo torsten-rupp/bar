@@ -3140,7 +3140,7 @@ uint ConfigValue_firstValueIndex(const ConfigValue configValues[],
                     sectionName,
                     &firstValueIndex,
                     &lastValueIndex
-                   ) != CONFIG_VALUE_INDEX_NONE)
+                   ) == CONFIG_VALUE_INDEX_NONE)
     {
       return CONFIG_VALUE_INDEX_NONE;
     }

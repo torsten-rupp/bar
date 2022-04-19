@@ -6376,7 +6376,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
 LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String            name;
-  int               i;
+  uint              i;
   String            value;
   ConfigValueFormat configValueFormat;
 
@@ -9895,7 +9895,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
   const JobNode     *jobNode;
-  int               i;
+  uint              i;
   String            s;
   ConfigValueFormat configValueFormat;
 
@@ -9932,7 +9932,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
 
     // find config value
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
-    if (i < 0)
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Job_listUnlock();
@@ -10093,7 +10093,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   String       name;
   JobNode      *jobNode;
-  int          i;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10128,7 +10128,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 
     // find config value
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
-    if (i < 0)
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Job_listUnlock();
@@ -11555,6 +11555,11 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // add to exclude list
+    #ifndef NDEBUG
+      patternId = globalOptions.debug.serverFixedIdsFlag ? 1 : MISC_ID_NONE;
+    #else
+      patternId = MISC_ID_NONE;
+    #endif
     PatternList_append(&jobNode->job.excludePatternList,patternString,patternType,&patternId);
 
     // notify mpdified include/exclude lists
@@ -12580,6 +12585,11 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     }
 
     // add to exclude list
+    #ifndef NDEBUG
+      patternId = globalOptions.debug.serverFixedIdsFlag ? 1 : MISC_ID_NONE;
+    #else
+      patternId = MISC_ID_NONE;
+    #endif
     PatternList_append(&jobNode->job.options.compressExcludePatternList,patternString,patternType,&patternId);
 
     // set modified
@@ -13930,16 +13940,9 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 #warning todo
 #endif
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    i = 0;
-    while (   (JOB_CONFIG_VALUES[i].name != NULL)
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
-          )
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
-      i++;
-    }
-    if (JOB_CONFIG_VALUES[i].name == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -13994,7 +13997,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   String       name,value;
   JobNode      *jobNode;
   ScheduleNode *scheduleNode;
-  uint         i,i0,i1;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14053,19 +14056,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // parse
-    i = ConfigValue_findSection(JOB_CONFIG_VALUES,
-                                "schedule",
-                                &i0,
-                                &i1
-                               );
-    assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
-    UNUSED_VARIABLE(i);
-
-    i = ConfigValue_find(JOB_CONFIG_VALUES,
-                         i0,
-                         i1,
-                         String_cString(name)
-                        );
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
@@ -14180,15 +14171,9 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 #warning todo
 #endif
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    i = 0;
-    while (   (JOB_CONFIG_VALUES[i].name != NULL)
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
-          )
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
-      i++;
-    }
-    if (JOB_CONFIG_VALUES[i].name == NULL)
-    {
+// TODO:
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Job_listUnlock();
       String_delete(name);
@@ -18494,6 +18479,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(pattern);
     return;
   }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   foundFlag           = FALSE;
   updateRequestedFlag = FALSE;
@@ -18549,6 +18535,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                             Misc_getCurrentDateTime(),
                                             NULL  // errorMessage
                                            );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
               if (error == ERROR_NONE)
               {
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
