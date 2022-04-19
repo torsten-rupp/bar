@@ -7943,9 +7943,9 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   {
     return error;
   }
-  else if (retryCount > maxRetryCount)
+  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"");
+    return ERROR_DATABASE_TIMEOUT;
   }
   else
   {

@@ -5811,7 +5811,7 @@ endif
             $(call functionServerCommandBatch,1601,INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=yes); \
             $(call functionServerCommandBatch,1602,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
             $(call functionServerCommandBatch,1603,INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
-            $(call functionServerCommandBatch,1603,INDEX_ENTRY_FRAGMENT_LIST entryId=1); \
+            $(call functionServerCommandBatch,1603,INDEX_ENTRY_FRAGMENT_LIST entryId=21); \
             \
             $(call functionServerCommandBatch,1700,INDEX_HISTORY_LIST); \
             \
