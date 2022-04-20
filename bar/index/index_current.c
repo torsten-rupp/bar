@@ -923,11 +923,16 @@ LOCAL uint64 getImportStepsVersion7(DatabaseHandle *databaseHandle)
                (
                  DATABASE_COLUMN_KEY     ("id"),
                ),
+// TODO:
+#if 1
+               DATABASE_FILTERS_NONE,
+#else
                "deletedFlag!=TRUE \
                ",
                DATABASE_FILTERS
                (
                ),
+#endif
                NULL,  // groupBy
                NULL,  // orderBy
                0LL,

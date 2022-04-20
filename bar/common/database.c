@@ -1637,7 +1637,8 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
-    error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
+    error = ERRORX_(INTERRUPTED,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
@@ -1645,7 +1646,8 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
   }
   else if (sqliteResult != SQLITE_OK)
   {
-    error = ERRORX_(DATABASE,sqlite3_errcode(handle),
+    error = ERRORX_(DATABASE,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
@@ -1697,7 +1699,8 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
-    error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
+    error = ERRORX_(INTERRUPTED,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
@@ -1705,11 +1708,14 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
   }
   else if (sqliteResult != SQLITE_OK)
   {
-    error = ERRORX_(DATABASE,sqlite3_errcode(handle),
+    error = ERRORX_(DATABASE,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
                    );
+fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,sqlite3_errcode(handle),sqlite3_errmsg(handle));
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   }
   else
   {

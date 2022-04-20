@@ -1561,6 +1561,11 @@ AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
 AC_PATH_PROGS(DOCKER,docker)
+# required for tests
+AC_PATH_PROGS(KILLALL,killall)
+if test -z "$KILLALL"; then
+  AC_MSG_ERROR([Cannot find a 'killall' in PATH. Please check your PATH environment variable.])
+fi
 AC_PATH_PROGS(WINE, wine)
 AC_PATH_PROGS(WINEPATH, winepath)
 AC_PROVIDE(AC_PROG_WINEPATH)
