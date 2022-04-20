@@ -1159,6 +1159,7 @@ test1-gprof test_basic-gprof:
 test1-valgrind test_basic-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_basic
 
+# Note: limit computation effort with min. compress names for some operations
 test2 test_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
