@@ -1162,7 +1162,7 @@ test1-valgrind test_basic-valgrind:
 test2 test_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
-	for compress in $(COMPRESS_NAMES); do \
+	for compress in $(MIN_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1174,6 +1174,8 @@ test2 test_compress: \
           if test $$rc -ne 0; then \
             exit $$rc; \
           fi; \
+        done
+	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
