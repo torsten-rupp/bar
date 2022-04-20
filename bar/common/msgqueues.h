@@ -46,6 +46,7 @@ typedef struct
   pthread_cond_t          modified;
   bool                    modifiedFlag;
   bool                    endOfMsgFlag;
+  bool                    terminatedFlag;
   List                    list;
 } MsgQueue;
 
@@ -121,6 +122,18 @@ MsgQueue *MsgQueue_new(ulong                   maxMsgs,
 \***********************************************************************/
 
 void MsgQueue_delete(MsgQueue *msgQueue);
+
+/***********************************************************************\
+* Name   : MsgQueue_terminate
+* Purpose: terminate message queue: discard all message and set to
+*          terminated state
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void MsgQueue_terminate(MsgQueue *msgQueue);
 
 /***********************************************************************\
 * Name   : MsgQueue_clear

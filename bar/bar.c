@@ -248,8 +248,8 @@ LOCAL void signalHandler(int signalNumber)
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
@@ -694,7 +694,7 @@ LOCAL void doneAll(void)
   ThreadPool_doneAll();
   Thread_doneAll();
   Configuration_doneAll();
-  Common_initAll();
+  Common_doneAll();
 
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
 
@@ -717,8 +717,8 @@ LOCAL void doneAll(void)
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
     sigaction(SIGUSR1,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
@@ -1145,7 +1145,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
     {
       if ((logType == LOG_TYPE_ALWAYS) || ((globalOptions.logTypes & logType) != 0))
       {
-        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),globalOptions.logFormat);
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),FALSE,globalOptions.logFormat);
 
         // log to session log file
         if (logHandle != NULL)
@@ -1251,7 +1251,7 @@ void fatalLogMessage(const char *text, void *userData)
 
     if (logFile != NULL)
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),globalOptions.logFormat);
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),FALSE,globalOptions.logFormat);
 
       // append to log file
       (void)fprintf(logFile,"%s> ",String_cString(dateTime));
@@ -1427,8 +1427,8 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
       serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
       if (serverNode == NULL)
       {
-        Semaphore_unlock(&globalOptions.deviceList.lock);
-        return FALSE;
+        Semaphore_unlock(&globalOptions.serverList.lock);
+        return TRUE;
       }
 
       // get max. number of allowed concurrent connections
@@ -2643,7 +2643,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     {
       if      (!File_exists(directoryName))
       {
-        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSIONS,FALSE);
         if (error != ERROR_NONE)
         {
           printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
@@ -2840,7 +2840,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     {
       if      (!File_exists(directoryName))
       {
-        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSIONS,FALSE);
         if (error != ERROR_NONE)
         {
           printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
@@ -3170,7 +3170,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   JobOptions   jobOptions;
   Errors       error;
 
-  if (CmdOption_isSet(globalOptions.logFileName))
+  if (CmdOption_isSet(&globalOptions.logFileName))
   {
     // open log file
     openLog();
@@ -3185,7 +3185,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3197,7 +3197,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3209,7 +3209,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3223,7 +3223,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3247,7 +3247,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       printError(_("Cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
-      if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+      if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
       return error;
     }
   }
@@ -3589,7 +3589,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   Job_doneOptions(&jobOptions);
 
-  if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
+  if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
 
   return error;
 }
@@ -4521,6 +4521,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     Array_debugDone();
     String_debugDone();
     List_debugDone();
+    fprintf(stderr,"DEBUG: exitcode %d\n",errorToExitcode(error));
   #endif /* not NDEBUG */
 
   return errorToExitcode(error);

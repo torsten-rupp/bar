@@ -99,7 +99,7 @@ typedef struct ArchiveContentNode
       uint64             timeModified;
       uint32             userId;
       uint32             groupId;
-      FilePermission     permission;
+      FilePermissions    permissions;
       uint64             archiveSize;
       CompressAlgorithms deltaCompressAlgorithm;
       CompressAlgorithms byteCompressAlgorithm;
@@ -131,7 +131,7 @@ typedef struct ArchiveContentNode
       uint64          timeModified;
       uint32          userId;
       uint32          groupId;
-      FilePermission  permission;
+      FilePermissions permissions;
       CryptAlgorithms cryptAlgorithm;
       CryptTypes      cryptType;
     } directory;
@@ -142,7 +142,7 @@ typedef struct ArchiveContentNode
       uint64          timeModified;
       uint32          userId;
       uint32          groupId;
-      FilePermission  permission;
+      FilePermissions permissions;
       CryptAlgorithms cryptAlgorithm;
       CryptTypes      cryptType;
     } link;
@@ -153,7 +153,7 @@ typedef struct ArchiveContentNode
       uint64             timeModified;
       uint32             userId;
       uint32             groupId;
-      FilePermission     permission;
+      FilePermissions    permissions;
       uint64             archiveSize;
       CompressAlgorithms deltaCompressAlgorithm;
       CompressAlgorithms byteCompressAlgorithm;
@@ -169,7 +169,7 @@ typedef struct ArchiveContentNode
       ConstString      name;
       uint32           userId;
       uint32           groupId;
-      FilePermission   permission;
+      FilePermissions  permissions;
       CryptAlgorithms  cryptAlgorithm;
       CryptTypes       cryptType;
       FileSpecialTypes fileSpecialType;
@@ -322,7 +322,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
   printConsole(stdout,0,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
   printConsole(stdout,0,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
   printConsole(stdout,0,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
-  printConsole(stdout,0,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
+  printConsole(stdout,0,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,FALSE,NULL)));
   printConsole(stdout,0,"Signatures   : ");
   switch (allCryptSignatureState)
   {
@@ -490,7 +490,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
                          uint64             timeModified,
                          uint32             userId,
                          uint32             groupId,
-                         FilePermission     permission,
+                         FilePermissions    permissions,
                          uint64             archiveSize,
                          CompressAlgorithms deltaCompressAlgorithm,
                          CompressAlgorithms byteCompressAlgorithm,
@@ -523,7 +523,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -548,11 +548,11 @@ LOCAL void printFileInfo(uint               prefixWidth,
   }
   if (globalOptions.numericPermissionsFlag)
   {
-    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permissions & FILE_PERMISSION_ALL);
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permission);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -873,7 +873,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
 *          timeModified    - file modified time
 *          userId          - user id
 *          groupId         - group id
-*          permission      - permissions
+*          permissions     - permissions
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
 * Output : -
@@ -887,7 +887,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
                               uint64          timeModified,
                               uint32          userId,
                               uint32          groupId,
-                              FilePermission  permission,
+                              FilePermissions permissions,
                               CryptAlgorithms cryptAlgorithm,
                               CryptTypes      cryptType
                              )
@@ -908,7 +908,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -922,11 +922,11 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   }
   if (globalOptions.numericPermissionsFlag)
   {
-    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permissions & FILE_PERMISSION_ALL);
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permission);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -1013,7 +1013,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
                          uint64          timeModified,
                          uint32          userId,
                          uint32          groupId,
-                         FilePermission  permission,
+                         FilePermissions permissions,
                          CryptAlgorithms cryptAlgorithm,
                          CryptTypes      cryptType
                         )
@@ -1035,7 +1035,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -1049,11 +1049,11 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   }
   if (globalOptions.numericPermissionsFlag)
   {
-    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permissions & FILE_PERMISSION_ALL);
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permission);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -1148,7 +1148,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
                              uint64             timeModified,
                              uint32             userId,
                              uint32             groupId,
-                             FilePermission     permission,
+                             FilePermissions    permissions,
                              uint64             archiveSize,
                              CompressAlgorithms deltaCompressAlgorithm,
                              CompressAlgorithms byteCompressAlgorithm,
@@ -1181,7 +1181,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -1206,11 +1206,11 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   }
   if (globalOptions.numericPermissionsFlag)
   {
-    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionString,sizeof(permissionString),"%4o",permissions & FILE_PERMISSION_ALL);
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permission);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -1361,7 +1361,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
                             ConstString      fileName,
                             uint32           userId,
                             uint32           groupId,
-                            FilePermission   permission,
+                            FilePermissions  permissions,
                             CryptAlgorithms  cryptAlgorithm,
                             CryptTypes       cryptType,
                             FileSpecialTypes fileSpecialType,
@@ -1372,10 +1372,10 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
   String     cryptString;
   String     line;
   char       userName[12],groupName[12];
-  char       permissionString[10];
+  char       permissionsString[10];
   const char *prefixTemplate,*template;
   const char *type;
-  TextMacros (textMacros,9);
+  TextMacros (textMacros,10);
 
   assert(fileName != NULL);
 
@@ -1456,24 +1456,25 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
   }
   if (globalOptions.numericPermissionsFlag)
   {
-    stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+    stringFormat(permissionsString,sizeof(permissionsString),"%4o",permissions & FILE_PERMISSION_ALL);
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permission);
+    File_permissionToString(permissionsString,sizeof(permissionsString),permissions);
   }
 
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%storageName",storageName,     NULL);
-    TEXT_MACRO_X_CSTRING("%type",       type,            NULL);
-    TEXT_MACRO_X_CSTRING("%user",       userName,        NULL);
-    TEXT_MACRO_X_CSTRING("%group",      groupName,       NULL);
-    TEXT_MACRO_X_CSTRING("%permission", permissionString,NULL);
-    TEXT_MACRO_X_STRING ("%crypt",      cryptString,     NULL);
-    TEXT_MACRO_X_STRING ("%name",       fileName,        NULL);
-    TEXT_MACRO_X_INTEGER("%major",      major,           NULL);
-    TEXT_MACRO_X_INTEGER("%minor",      minor,           NULL);
+    TEXT_MACRO_X_STRING ("%storageName",storageName,      NULL);
+    TEXT_MACRO_X_CSTRING("%type",       type,             NULL);
+    TEXT_MACRO_X_CSTRING("%user",       userName,         NULL);
+    TEXT_MACRO_X_CSTRING("%group",      groupName,        NULL);
+    TEXT_MACRO_X_CSTRING("%permission", permissionsString,NULL);
+    TEXT_MACRO_X_CSTRING("%permissions",permissionsString,NULL);
+    TEXT_MACRO_X_STRING ("%crypt",      cryptString,      NULL);
+    TEXT_MACRO_X_STRING ("%name",       fileName,         NULL);
+    TEXT_MACRO_X_INTEGER("%major",      major,            NULL);
+    TEXT_MACRO_X_INTEGER("%minor",      minor,            NULL);
   }
 
   // print
@@ -1519,7 +1520,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
 *          timeModified           - file modified time
 *          userId                 - user id
 *          groupId                - group id
-*          permission             - permissions
+*          permissions            - permissions
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
 *          byteCompressAlgorithm  - used data compress algorithm
@@ -1540,7 +1541,7 @@ LOCAL void addListFileInfo(ConstString        storageName,
                            uint64             timeModified,
                            uint32             userId,
                            uint32             groupId,
-                           FilePermission     permission,
+                           FilePermissions    permissions,
                            uint64             archiveSize,
                            CompressAlgorithms deltaCompressAlgorithm,
                            CompressAlgorithms byteCompressAlgorithm,
@@ -1569,7 +1570,7 @@ LOCAL void addListFileInfo(ConstString        storageName,
   archiveContentNode->file.timeModified           = timeModified;
   archiveContentNode->file.userId                 = userId;
   archiveContentNode->file.groupId                = groupId;
-  archiveContentNode->file.permission             = permission;
+  archiveContentNode->file.permissions            = permissions;
   archiveContentNode->file.archiveSize            = archiveSize;
   archiveContentNode->file.deltaCompressAlgorithm = deltaCompressAlgorithm;
   archiveContentNode->file.byteCompressAlgorithm  = byteCompressAlgorithm;
@@ -1670,7 +1671,7 @@ LOCAL void addListDirectoryInfo(ConstString     storageName,
                                 uint64          timeModified,
                                 uint32          userId,
                                 uint32          groupId,
-                                FilePermission  permission,
+                                FilePermissions permissions,
                                 CryptAlgorithms cryptAlgorithm,
                                 CryptTypes      cryptType
                                )
@@ -1691,7 +1692,7 @@ LOCAL void addListDirectoryInfo(ConstString     storageName,
   archiveContentNode->directory.timeModified   = timeModified;
   archiveContentNode->directory.userId         = userId;
   archiveContentNode->directory.groupId        = groupId;
-  archiveContentNode->directory.permission     = permission;
+  archiveContentNode->directory.permissions    = permissions;
   archiveContentNode->directory.cryptAlgorithm = cryptAlgorithm;
   archiveContentNode->directory.cryptType      = cryptType;
 
@@ -1722,7 +1723,7 @@ LOCAL void addListLinkInfo(ConstString     storageName,
                            uint64          timeModified,
                            uint32          userId,
                            uint32          groupId,
-                           FilePermission  permission,
+                           FilePermissions permissions,
                            CryptAlgorithms cryptAlgorithm,
                            CryptTypes      cryptType
                           )
@@ -1744,7 +1745,7 @@ LOCAL void addListLinkInfo(ConstString     storageName,
   archiveContentNode->link.timeModified    = timeModified;
   archiveContentNode->link.userId          = userId;
   archiveContentNode->link.groupId         = groupId;
-  archiveContentNode->link.permission      = permission;
+  archiveContentNode->link.permissions     = permissions;
   archiveContentNode->link.cryptAlgorithm  = cryptAlgorithm;
   archiveContentNode->link.cryptType       = cryptType;
 
@@ -1782,7 +1783,7 @@ LOCAL void addListHardLinkInfo(ConstString        storageName,
                                uint64             timeModified,
                                uint32             userId,
                                uint32             groupId,
-                               FilePermission     permission,
+                               FilePermissions    permissions,
                                uint64             archiveSize,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
@@ -1811,7 +1812,7 @@ LOCAL void addListHardLinkInfo(ConstString        storageName,
   archiveContentNode->hardLink.timeModified           = timeModified;
   archiveContentNode->hardLink.userId                 = userId;
   archiveContentNode->hardLink.groupId                = groupId;
-  archiveContentNode->hardLink.permission             = permission;
+  archiveContentNode->hardLink.permissions            = permissions;
   archiveContentNode->hardLink.archiveSize            = archiveSize;
   archiveContentNode->hardLink.deltaCompressAlgorithm = deltaCompressAlgorithm;
   archiveContentNode->hardLink.byteCompressAlgorithm  = byteCompressAlgorithm;
@@ -1846,7 +1847,7 @@ LOCAL void addListSpecialInfo(ConstString      storageName,
                               ConstString      fileName,
                               uint32           userId,
                               uint32           groupId,
-                              FilePermission   permission,
+                              FilePermissions  permissions,
                               CryptAlgorithms  cryptAlgorithm,
                               CryptTypes       cryptType,
                               FileSpecialTypes fileSpecialType,
@@ -1869,7 +1870,7 @@ LOCAL void addListSpecialInfo(ConstString      storageName,
   archiveContentNode->special.name            = String_duplicate(fileName);
   archiveContentNode->special.userId          = userId;
   archiveContentNode->special.groupId         = groupId;
-  archiveContentNode->special.permission      = permission;
+  archiveContentNode->special.permissions     = permissions;
   archiveContentNode->special.cryptAlgorithm  = cryptAlgorithm;
   archiveContentNode->special.cryptType       = cryptType;
   archiveContentNode->special.fileSpecialType = fileSpecialType;
@@ -2285,7 +2286,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                       archiveContentNode->file.timeModified,
                       archiveContentNode->file.userId,
                       archiveContentNode->file.groupId,
-                      archiveContentNode->file.permission,
+                      archiveContentNode->file.permissions,
                       archiveContentNode->file.archiveSize,
                       archiveContentNode->file.deltaCompressAlgorithm,
                       archiveContentNode->file.byteCompressAlgorithm,
@@ -2320,7 +2321,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                            archiveContentNode->directory.timeModified,
                            archiveContentNode->directory.userId,
                            archiveContentNode->directory.groupId,
-                           archiveContentNode->directory.permission,
+                           archiveContentNode->directory.permissions,
                            archiveContentNode->directory.cryptAlgorithm,
                            archiveContentNode->directory.cryptType
                           );
@@ -2333,7 +2334,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                       archiveContentNode->link.timeModified,
                       archiveContentNode->link.userId,
                       archiveContentNode->link.groupId,
-                      archiveContentNode->link.permission,
+                      archiveContentNode->link.permissions,
                       archiveContentNode->link.cryptAlgorithm,
                       archiveContentNode->link.cryptType
                      );
@@ -2346,7 +2347,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                           archiveContentNode->hardLink.timeModified,
                           archiveContentNode->hardLink.userId,
                           archiveContentNode->hardLink.groupId,
-                          archiveContentNode->hardLink.permission,
+                          archiveContentNode->hardLink.permissions,
                           archiveContentNode->hardLink.archiveSize,
                           archiveContentNode->hardLink.deltaCompressAlgorithm,
                           archiveContentNode->hardLink.byteCompressAlgorithm,
@@ -2364,7 +2365,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                          archiveContentNode->special.name,
                          archiveContentNode->special.userId,
                          archiveContentNode->special.groupId,
-                         archiveContentNode->special.permission,
+                         archiveContentNode->special.permissions,
                          archiveContentNode->special.cryptAlgorithm,
                          archiveContentNode->special.cryptType,
                          archiveContentNode->special.fileSpecialType,
@@ -2452,6 +2453,7 @@ remoteBarFlag=FALSE;
     case STORAGE_TYPE_SCP:
     case STORAGE_TYPE_SFTP:
     case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_WEBDAVS:
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
@@ -2623,7 +2625,7 @@ NULL, // masterSocketHandle
                                       fileName,
                                       fileInfo.size,
                                       fileInfo.timeModified,
-                                      fileInfo.permission,
+                                      fileInfo.permissions,
                                       fileInfo.userId,
                                       fileInfo.groupId,
                                       archiveEntryInfo.file.chunkFileData.info.size,
@@ -2652,7 +2654,7 @@ NULL, // masterSocketHandle
                                     fileInfo.timeModified,
                                     fileInfo.userId,
                                     fileInfo.groupId,
-                                    fileInfo.permission,
+                                    fileInfo.permissions,
                                     archiveEntryInfo.file.chunkFileData.info.size,
                                     deltaCompressAlgorithm,
                                     byteCompressAlgorithm,
@@ -2839,7 +2841,7 @@ NULL, // masterSocketHandle
                                            fileInfo.timeModified,
                                            fileInfo.userId,
                                            fileInfo.groupId,
-                                           fileInfo.permission,
+                                           fileInfo.permissions,
                                            cryptAlgorithm,
                                            cryptType
                                           );
@@ -2858,7 +2860,7 @@ NULL, // masterSocketHandle
                                          fileInfo.timeModified,
                                          fileInfo.userId,
                                          fileInfo.groupId,
-                                         fileInfo.permission,
+                                         fileInfo.permissions,
                                          cryptAlgorithm,
                                          cryptType
                                         );
@@ -2931,7 +2933,7 @@ NULL, // masterSocketHandle
                                       fileInfo.timeModified,
                                       fileInfo.userId,
                                       fileInfo.groupId,
-                                      fileInfo.permission,
+                                      fileInfo.permissions,
                                       cryptAlgorithm,
                                       cryptType
                                      );
@@ -2951,7 +2953,7 @@ NULL, // masterSocketHandle
                                     fileInfo.timeModified,
                                     fileInfo.userId,
                                     fileInfo.groupId,
-                                    fileInfo.permission,
+                                    fileInfo.permissions,
                                     cryptAlgorithm,
                                     cryptType
                                    );
@@ -3038,7 +3040,7 @@ NULL, // masterSocketHandle
                                             fileInfo.timeModified,
                                             fileInfo.userId,
                                             fileInfo.groupId,
-                                            fileInfo.permission,
+                                            fileInfo.permissions,
                                             archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
                                             deltaCompressAlgorithm,
                                             byteCompressAlgorithm,
@@ -3065,7 +3067,7 @@ NULL, // masterSocketHandle
                                           fileInfo.timeModified,
                                           fileInfo.userId,
                                           fileInfo.groupId,
-                                          fileInfo.permission,
+                                          fileInfo.permissions,
                                           archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
                                           deltaCompressAlgorithm,
                                           byteCompressAlgorithm,
@@ -3141,7 +3143,7 @@ NULL, // masterSocketHandle
                                          fileName,
                                          fileInfo.userId,
                                          fileInfo.groupId,
-                                         fileInfo.permission,
+                                         fileInfo.permissions,
                                          cryptAlgorithm,
                                          cryptType,
                                          fileInfo.specialType,
@@ -3162,7 +3164,7 @@ NULL, // masterSocketHandle
                                        fileName,
                                        fileInfo.userId,
                                        fileInfo.groupId,
-                                       fileInfo.permission,
+                                       fileInfo.permissions,
                                        cryptAlgorithm,
                                        cryptType,
                                        fileInfo.specialType,
@@ -3547,7 +3549,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 uint64               fileSize;
                 uint64               dateTime;
                 uint32               userId,groupId;
-                FilePermission       permission;
+                FilePermissions      permissions;
                 uint64               archiveFileSize;
                 CompressAlgorithms   deltaCompressAlgorithm;
                 CompressAlgorithms   byteCompressAlgorithm;
@@ -3568,7 +3570,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 parseOK |= StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL);
                 parseOK |= StringMap_getUInt(argumentMap,"userId",&userId,0);
                 parseOK |= StringMap_getUInt(argumentMap,"groupId",&groupId,0);
-                parseOK |= StringMap_getUInt(argumentMap,"permission",&permission,0);
+                parseOK |= StringMap_getUInt(argumentMap,"permissions",&permissions,0);
                 parseOK |= StringMap_getUInt64(argumentMap,"archiveFileSize",&archiveFileSize,0LL);
                 parseOK |= StringMap_getEnum(argumentMap,"deltaCompressAlgorithm",&deltaCompressAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,COMPRESS_ALGORITHM_UNKNOWN);
                 parseOK |= StringMap_getEnum(argumentMap,"byteCompressAlgorithm",&byteCompressAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,COMPRESS_ALGORITHM_UNKNOWN);
@@ -3593,7 +3595,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                       fileName,
                                       fileSize,
                                       dateTime,
-                                      permission,
+                                      permissions,
                                       userId,
                                       groupId,
                                       archiveFileSize,
@@ -3622,7 +3624,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     dateTime,
                                     userId,
                                     groupId,
-                                    permission,
+                                    permissions,
                                     archiveFileSize,
                                     deltaCompressAlgorithm,
                                     byteCompressAlgorithm,
@@ -3744,7 +3746,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 String          directoryName;
                 uint64          dateTime;
                 uint32          userId,groupId;
-                FilePermission  permission;
+                FilePermissions permissions;
                 CryptAlgorithms cryptAlgorithm;
                 CryptTypes      cryptType;
 
@@ -3757,7 +3759,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 parseOK |= StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL);
                 parseOK |= StringMap_getUInt(argumentMap,"userId",&userId,0);
                 parseOK |= StringMap_getUInt(argumentMap,"groupId",&groupId,0);
-                parseOK |= StringMap_getUInt(argumentMap,"permission",&permission,0);
+                parseOK |= StringMap_getUInt(argumentMap,"permissions",&permissions,0);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptAlgorithm",&cryptAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_ALGORITHM_UNKNOWN);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptType",&cryptType,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_TYPE_NONE);
 
@@ -3776,7 +3778,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                            dateTime,
                                            userId,
                                            groupId,
-                                           permission,
+                                           permissions,
                                            cryptAlgorithm,
                                            cryptType
                                           );
@@ -3795,7 +3797,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                          dateTime,
                                          userId,
                                          groupId,
-                                         permission,
+                                         permissions,
                                          cryptAlgorithm,
                                          cryptType
                                         );
@@ -3816,7 +3818,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 String          linkName,fileName;
                 uint64          dateTime;
                 uint32          userId,groupId;
-                FilePermission  permission;
+                FilePermissions permissions;
                 CryptAlgorithms cryptAlgorithm;
                 CryptTypes      cryptType;
 
@@ -3831,7 +3833,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 parseOK |= StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL);
                 parseOK |= StringMap_getUInt(argumentMap,"userId",&userId,0);
                 parseOK |= StringMap_getUInt(argumentMap,"groupId",&groupId,0);
-                parseOK |= StringMap_getUInt(argumentMap,"permission",&permission,0);
+                parseOK |= StringMap_getUInt(argumentMap,"permissions",&permissions,0);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptAlgorithm",&cryptAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_ALGORITHM_UNKNOWN);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptType",&cryptType,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_TYPE_NONE);
 
@@ -3851,7 +3853,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                       dateTime,
                                       userId,
                                       groupId,
-                                      permission,
+                                      permissions,
                                       cryptAlgorithm,
                                       cryptType
                                      );
@@ -3871,7 +3873,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     dateTime,
                                     userId,
                                     groupId,
-                                    permission,
+                                    permissions,
                                     cryptAlgorithm,
                                     cryptType
                                    );
@@ -3894,7 +3896,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 uint64               fileSize;
                 uint64               dateTime;
                 uint32               userId,groupId;
-                FilePermission       permission;
+                FilePermissions      permissions;
                 uint64               archiveFileSize;
                 CompressAlgorithms   deltaCompressAlgorithm;
                 CompressAlgorithms   byteCompressAlgorithm;
@@ -3915,7 +3917,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 parseOK |= StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL);
                 parseOK |= StringMap_getUInt(argumentMap,"userId",&userId,0);
                 parseOK |= StringMap_getUInt(argumentMap,"groupId",&groupId,0);
-                parseOK |= StringMap_getUInt(argumentMap,"permission",&permission,0);
+                parseOK |= StringMap_getUInt(argumentMap,"permissions",&permissions,0);
                 parseOK |= StringMap_getUInt64(argumentMap,"archiveFileSize",&archiveFileSize,0LL);
                 parseOK |= StringMap_getEnum(argumentMap,"deltaCompressAlgorithm",&deltaCompressAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,COMPRESS_ALGORITHM_UNKNOWN);
                 parseOK |= StringMap_getEnum(argumentMap,"byteCompressAlgorithm",&byteCompressAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,COMPRESS_ALGORITHM_UNKNOWN);
@@ -3942,7 +3944,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                           dateTime,
                                           userId,
                                           groupId,
-                                          permission,
+                                          permissions,
                                           archiveFileSize,
                                           deltaCompressAlgorithm,
                                           byteCompressAlgorithm,
@@ -3969,7 +3971,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                         dateTime,
                                         userId,
                                         groupId,
-                                        permission,
+                                        permissions,
                                         archiveFileSize,
                                         deltaCompressAlgorithm,
                                         byteCompressAlgorithm,
@@ -3997,7 +3999,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               {
                 String           fileName;
                 uint32           userId,groupId;
-                FilePermission   permission;
+                FilePermissions  permissions;
                 CryptAlgorithms  cryptAlgorithm;
                 CryptTypes       cryptType;
                 FileSpecialTypes fileSpecialType;
@@ -4012,7 +4014,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 parseOK |= StringMap_getString(argumentMap,"name",fileName,NULL);
                 parseOK |= StringMap_getUInt(argumentMap,"userId",&userId,0);
                 parseOK |= StringMap_getUInt(argumentMap,"groupId",&groupId,0);
-                parseOK |= StringMap_getUInt(argumentMap,"permission",&permission,0);
+                parseOK |= StringMap_getUInt(argumentMap,"permissions",&permissions,0);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptAlgorithm",&cryptAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_ALGORITHM_UNKNOWN);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptType",&cryptType,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_TYPE_NONE);
                 parseOK |= StringMap_getEnum(argumentMap,"fileSpecialType",&fileSpecialType,(StringMapParseEnumFunction)StringMap_parseEnumNumber,FILE_SPECIAL_TYPE_OTHER);
@@ -4033,7 +4035,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                          fileName,
                                          userId,
                                          groupId,
-                                         permission,
+                                         permissions,
                                          cryptAlgorithm,
                                          cryptType,
                                          fileSpecialType,
@@ -4054,7 +4056,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                        fileName,
                                        userId,
                                        groupId,
-                                       permission,
+                                       permissions,
                                        cryptAlgorithm,
                                        cryptType,
                                        fileSpecialType,
@@ -4174,7 +4176,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryListHeader(ConstString storageName)
+LOCAL void printDirectoryListHeader(ConstString printableStorageName)
 {
   const TextMacro MACROS[] =
   {
@@ -4195,9 +4197,9 @@ LOCAL void printDirectoryListHeader(ConstString storageName)
     line = String_new();
 
     // header
-    if (storageName != NULL)
+    if (printableStorageName != NULL)
     {
-      printConsole(stdout,0,"List directory '%s':\n",String_cString(storageName));
+      printConsole(stdout,0,"List directory '%s':\n",String_cString(printableStorageName));
       printConsole(stdout,0,"\n");
     }
 
@@ -4315,8 +4317,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   String             dateTimeString;
   String             line;
   char               userName[12],groupName[12];
-  char               permissionString[10];
-  TextMacros         (textMacros,7);
+  char               permissionsString[10];
+  TextMacros         (textMacros,8);
   char               sizeString[32];
 
   assert(storageDirectoryListHandle != NULL);
@@ -4421,7 +4423,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           #endif /* NDEBUG */
           break;
       }
-      Misc_formatDateTime(String_clear(dateTimeString),directoryEntryNode->fileInfo.timeModified,NULL);
+      Misc_formatDateTime(String_clear(dateTimeString),directoryEntryNode->fileInfo.timeModified,FALSE,NULL);
       if (globalOptions.numericUIDGIDFlag)
       {
         stringFormat(userName,sizeof(userName),"%d",directoryEntryNode->fileInfo.userId);
@@ -4434,17 +4436,18 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       }
       if (globalOptions.numericPermissionsFlag)
       {
-        stringFormat(permissionString,sizeof(permissionString),"%4o",directoryEntryNode->fileInfo.permission & FILE_PERMISSION_ALL);
+        stringFormat(permissionsString,sizeof(permissionsString),"%4o",directoryEntryNode->fileInfo.permissions & FILE_PERMISSION_ALL);
       }
       else
       {
-        File_permissionToString(permissionString,sizeof(permissionString),directoryEntryNode->fileInfo.permission);
+        File_permissionToString(permissionsString,sizeof(permissionsString),directoryEntryNode->fileInfo.permissions);
       }
-      TEXT_MACRO_X_STRING ("%dateTime",  dateTimeString,              NULL);
-      TEXT_MACRO_X_CSTRING("%user",      userName,                    NULL);
-      TEXT_MACRO_X_CSTRING("%group",     groupName,                   NULL);
-      TEXT_MACRO_X_STRING ("%permission",permissionString,            NULL);
-      TEXT_MACRO_X_STRING ("%name",      directoryEntryNode->fileName,NULL);
+      TEXT_MACRO_X_STRING ("%dateTime",   dateTimeString,              NULL);
+      TEXT_MACRO_X_CSTRING("%user",       userName,                    NULL);
+      TEXT_MACRO_X_CSTRING("%group",      groupName,                   NULL);
+      TEXT_MACRO_X_STRING ("%permission" ,permissionsString,           NULL);
+      TEXT_MACRO_X_STRING ("%permissions",permissionsString,           NULL);
+      TEXT_MACRO_X_STRING ("%name",       directoryEntryNode->fileName,NULL);
     }
 
     // print

@@ -36,7 +36,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
@@ -1874,7 +1873,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
     error = File_makeDirectory(directoryName,
                                FILE_DEFAULT_USER_ID,
                                FILE_DEFAULT_GROUP_ID,
-                               FILE_DEFAULT_PERMISSION,
+                               FILE_DEFAULT_PERMISSIONS,
                                FALSE
                               );
     if (error != ERROR_NONE)
@@ -2346,17 +2345,6 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   // initialize variables
   AutoFree_init(&autoFreeList);
   error = ERROR_UNKNOWN;
-  switch (storageDirectoryListHandle->storageSpecifier.type)
-  {
-    case STORAGE_TYPE_CD : storageDirectoryListHandle->type = STORAGE_TYPE_CD;  break;
-    case STORAGE_TYPE_DVD: storageDirectoryListHandle->type = STORAGE_TYPE_DVD; break;
-    case STORAGE_TYPE_BD : storageDirectoryListHandle->type = STORAGE_TYPE_BD;  break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
 
   // open directory listing
   #ifdef HAVE_ISO9660
@@ -2570,7 +2558,7 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
               fileInfo->timeLastChanged = 0LL;
               fileInfo->userId          = iso9660Stat->xa.user_id;
               fileInfo->groupId         = iso9660Stat->xa.group_id;
-              fileInfo->permission      = iso9660Stat->xa.attributes;
+              fileInfo->permissions     = iso9660Stat->xa.attributes;
               fileInfo->major           = 0;
               fileInfo->minor           = 0;
               memClear(&fileInfo->cast,sizeof(FileCast));

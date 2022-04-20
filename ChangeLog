@@ -1,4 +1,4 @@
-2022-03-30 0.22
+2022-04-01 0.22
   * added option --save-configuration: format and
     save configuration file
   * added support for external index database engines
@@ -8,6 +8,7 @@
     threads
   * added option --test-created-archives
   * added option --sparse
+  * added option --no-stop-on-owner-error
   * added begin/end time for continous schedules
   * place pid file into /run by default
   * fixed reading cryption keys via config file
@@ -21,25 +22,36 @@
   * create log file in non-server mode if command line
     option --log-file is specified
   * rename archives: use an increasing number suffix
+  * support ssh password login
+  * support webdavs
+  * upgrade zlib 1.2.12
   * upgrade bzip2 1.0.8
-  * upgrade MMXL 3.2
-  * upgrade zStandard 1.4.8
-  * upgrade gpp-error 1.41
-  * upgrade gcrypt 1.8.7
-  * upgrade nettle 3.7
+  * upgrade MMXL 3.3
+  * upgrade zStandard 1.5.2
+  * upgrade gpp-error 1.45
+  * upgrade gcrypt 1.10.1
+  * upgrade nettle 3.7.3
   * upgrade gmp 6.2.1
   * upgrade libidn2 2.3.0
-  * upgrade GnuTLS 3.7.0
+  * upgrade GnuTLS 3.7.4
+  * upgrade libssh2 1.10.0
+  * upgrade libidn2 2.3.2
   * upgrade libicon 1.16
-  * upgrade OpenSSL 1.1.1i
-  * upgrade c-areas 1.17.1
-  * upgrade curl 7.74.0
+  * upgrade OpenSSL 1.1.1n
+  * upgrade c-areas 1.18.1
+  * upgrade curl 7.77.0
   * upgrade pcre 8.44
   * upgrade SQLite 3.34
   * upgrade binutils 2.35
   * fix abort restore job if client connection is lost
   * renamed bar-sqlite3 to bar-index and support MariaDB
     and PostgreSQL
+  * fixed parsing permissions, fixed set permissions on
+    restore
+  * fixed band width calculation: use last specified
+    matching date/time
+  * fixed concurrent network connections handling
+  * improved tests
   * BARControl: added create directory/delete file in
     file requester
   * BARControl: fixed display of entry progress: count

@@ -263,7 +263,7 @@ LOCAL Errors validateCertificate(const void *certData,
     if (time(NULL) < certActivationTime)
     {
       gnutls_x509_crt_deinit(cert);
-      return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+      return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,FALSE,DATE_TIME_FORMAT_LOCALE));
     }
   }
   certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
@@ -272,7 +272,7 @@ LOCAL Errors validateCertificate(const void *certData,
     if (time(NULL) > certExpireTime)
     {
       gnutls_x509_crt_deinit(cert);
-      return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+      return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,FALSE,DATE_TIME_FORMAT_LOCALE));
     }
   }
 #if 0
@@ -863,8 +863,6 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         int result;
 
         assert(loginName != NULL);
-        assert(sshPublicKeyData != NULL);
-        assert(sshPrivateKeyData != NULL);
 
         // check login name
         if (String_isEmpty(loginName))
@@ -904,9 +902,12 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                    ) != 0
            )
         {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,ssh2ErrorText);
+          error = ERRORX_(SSH_SESSION_FAIL,ssh2Error,"%s",ssh2ErrorText);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
-          return ERROR_SSH_SESSION_FAIL;
+          return error;
         }
         #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
 // NYI/???: does not work?
@@ -914,19 +915,29 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
 
 #if 1
-        // authorize with key
+        // authorize with key/password
         result = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
-          result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                         String_cString(loginName),
-                                                         String_length(loginName),
-                                                         sshPublicKeyData,
-                                                         sshPublicKeyLength,
-                                                         sshPrivateKeyData,
-                                                         sshPrivateKeyLength,
-                                                         plainPassword
-                                                        );
+          if ((sshPublicKeyData != NULL) && (sshPrivateKeyData != NULL))
+          {
+            result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                           String_cString(loginName),
+                                                           String_length(loginName),
+                                                           sshPublicKeyData,
+                                                           sshPublicKeyLength,
+                                                           sshPrivateKeyData,
+                                                           sshPrivateKeyLength,
+                                                           plainPassword
+                                                          );
+          }
+          else
+          {
+            result = libssh2_userauth_password(socketHandle->ssh2.session,
+                                               String_cString(loginName),
+                                               plainPassword
+                                              );
+          }
         }
         if (result != 0)
         {
@@ -1508,7 +1519,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           {
             gnutls_x509_crt_deinit(cert);
             disconnectDescriptor(serverSocketHandle->handle);
-            return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+            return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,FALSE,DATE_TIME_FORMAT_LOCALE));
           }
         }
         certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
@@ -1518,7 +1529,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           {
             gnutls_x509_crt_deinit(cert);
             disconnectDescriptor(serverSocketHandle->handle);
-            return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+            return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,FALSE,DATE_TIME_FORMAT_LOCALE));
           }
         }
 #if 0

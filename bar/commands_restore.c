@@ -578,7 +578,7 @@ LOCAL Errors createParentDirectory(RestoreInfo  *restoreInfo,
         error = File_makeDirectory(parentDirectoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION,
+                                   FILE_DEFAULT_PERMISSIONS,
                                    TRUE
                                   );
         if (error != ERROR_NONE)
@@ -1064,6 +1064,10 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       if (isComplete)
       {
         // set file time, file permission
+        if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+        {
+          fileInfo.permissions = globalOptions.permissions;
+        }
         error = File_setInfo(&fileInfo,destinationFileName);
         if (error != ERROR_NONE)
         {
@@ -1095,7 +1099,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                              );
         if (error != ERROR_NONE)
         {
-          if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+          if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
               && !File_isNetworkFileSystem(destinationFileName)
              )
           {
@@ -1897,7 +1901,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       error = File_makeDirectory(destinationFileName,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
-                                 fileInfo.permission,
+                                 fileInfo.permissions,
                                  FALSE
                                 );
       if (error != ERROR_NONE)
@@ -1915,6 +1919,10 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     if (!restoreInfo->jobOptions->dryRun)
     {
       // set file time, file permission
+      if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+      {
+        fileInfo.permissions = globalOptions.permissions;
+      }
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -1946,7 +1954,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                            );
       if (error != ERROR_NONE)
       {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+        if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
             && !File_isNetworkFileSystem(destinationFileName)
            )
         {
@@ -2241,6 +2249,10 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     if (!restoreInfo->jobOptions->dryRun)
     {
       // set file time, file permissions
+      if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+      {
+        fileInfo.permissions = globalOptions.permissions;
+      }
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -2272,7 +2284,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                            );
       if (error != ERROR_NONE)
       {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+        if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
             && !File_isNetworkFileSystem(destinationFileName)
            )
         {
@@ -2857,6 +2869,10 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (isComplete)
           {
             // set file time, file permissions
+            if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+            {
+              fileInfo.permissions = globalOptions.permissions;
+            }
             error = File_setInfo(&fileInfo,destinationFileName);
             if (error != ERROR_NONE)
             {
@@ -2888,7 +2904,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                  );
             if (error != ERROR_NONE)
             {
-              if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+              if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
                   && !File_isNetworkFileSystem(destinationFileName)
                  )
               {
@@ -3292,6 +3308,10 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     if (!restoreInfo->jobOptions->dryRun)
     {
       // set file time, file permissions
+      if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+      {
+        fileInfo.permissions = globalOptions.permissions;
+      }
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -3323,7 +3343,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                            );
       if (error != ERROR_NONE)
       {
-        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+        if (   !restoreInfo->jobOptions->noStopOnOwnerErrorFlag
             && !File_isNetworkFileSystem(destinationFileName)
            )
         {
@@ -4045,6 +4065,10 @@ Errors Command_restore(const StringList                *storageNameList,
           if (!jobOptions->dryRun)
           {
             // set file time, file permission of incomplete entries
+            if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+            {
+              ((FileInfo*)fragmentNode->userData)->permissions = globalOptions.permissions;
+            }
             error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);
             if (error != ERROR_NONE)
             {
@@ -4074,7 +4098,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                  );
             if (error != ERROR_NONE)
             {
-              if (   !jobOptions->noStopOnAttributeErrorFlag
+              if (   !jobOptions->noStopOnOwnerErrorFlag
                   && !File_isNetworkFileSystem(fragmentNode->name)
                  )
               {
@@ -4141,7 +4165,7 @@ Errors Command_restore(const StringList                *storageNameList,
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,"Restore fail: %s\n",Error_getText(error));
+    printInfo(1,tr("Restore fail: %s\n"),Error_getText(error));
   }
 
   return error;

@@ -1453,7 +1453,7 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
   format    = (argc >= 2) ? (const char *)argv[1] : NULL;
 
   // convert to Unix timestamp
-  Misc_formatDateTimeCString(text,sizeof(text),timestamp,format);
+  Misc_formatDateTimeCString(text,sizeof(text),timestamp,FALSE,format);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -1482,7 +1482,7 @@ LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
   UNUSED_VARIABLE(argv);
 
   // convert to Unix timestamp
-  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),DATE_TIME_FORMAT_DEFAULT);
+  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),FALSE,DATE_TIME_FORMAT_DEFAULT);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -1637,7 +1637,8 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
-    error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
+    error = ERRORX_(INTERRUPTED,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
@@ -1645,7 +1646,8 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
   }
   else if (sqliteResult != SQLITE_OK)
   {
-    error = ERRORX_(DATABASE,sqlite3_errcode(handle),
+    error = ERRORX_(DATABASE,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
@@ -1697,7 +1699,8 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
-    error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
+    error = ERRORX_(INTERRUPTED,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
@@ -1705,11 +1708,14 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
   }
   else if (sqliteResult != SQLITE_OK)
   {
-    error = ERRORX_(DATABASE,sqlite3_errcode(handle),
+    error = ERRORX_(DATABASE,
+                    sqlite3_errcode(handle),
                     "%s: %s",
                     sqlite3_errmsg(handle),
                     sqlString
                    );
+fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,sqlite3_errcode(handle),sqlite3_errmsg(handle));
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   }
   else
   {
@@ -1798,16 +1804,15 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
                                  const char     *characterSet
                                 )
 {
-  MYSQL      *handle;
+  MYSQL  *handle;
   union
   {
     bool b;
     uint u;
-  }          optionValue;
-  const char *deployPassword;
-  char       sqlString[256];
-  int        mysqlResult;
-  Errors     error;
+  }      optionValue;
+  char   sqlString[256];
+  int    mysqlResult;
+  Errors error;
 
   assert(serverName != NULL);
   assert(userName != NULL);
@@ -1828,28 +1833,37 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
   mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
   // connect
-  deployPassword = Password_deploy(password);
-  if (mysql_real_connect(handle,
-                         serverName,
-                         userName,
-                         deployPassword,
-                         NULL,  // databaseName
-                         0,  // port
-                         NULL, // unix socket
-                         0  // client flag
-                        ) == NULL
-     )
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
   {
-    error = ERRORX_(DATABASE,
-                    mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
-                   );
-    Password_undeploy(password,deployPassword);
+    if (mysql_real_connect(handle,
+                           serverName,
+                           userName,
+                           plainPassword,
+                           NULL,  // databaseName
+                           0,  // port
+                           NULL, // unix socket
+                           0  // client flag
+                          ) != NULL
+       )
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      mysql_errno(handle),
+                      "%s",
+                      mysql_error(handle)
+                     );
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
     mysql_close(handle);
     return error;
   }
-  Password_undeploy(password,deployPassword);
 
   stringFormat(sqlString,sizeof(sqlString),
                "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
@@ -1912,16 +1926,15 @@ LOCAL Errors mysqlDropDatabase(const char     *serverName,
                                const char     *databaseName
                               )
 {
-  MYSQL      *handle;
+  MYSQL  *handle;
   union
   {
     bool b;
     uint u;
-  }          optionValue;
-  const char *deployPassword;
-  char       sqlString[256];
-  int        mysqlResult;
-  Errors     error;
+  }      optionValue;
+  char   sqlString[256];
+  int    mysqlResult;
+  Errors error;
 
   assert(serverName != NULL);
   assert(userName != NULL);
@@ -1941,28 +1954,37 @@ LOCAL Errors mysqlDropDatabase(const char     *serverName,
   mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
   // connect
-  deployPassword = Password_deploy(password);
-  if (mysql_real_connect(handle,
-                         serverName,
-                         userName,
-                         deployPassword,
-                         NULL,  // databaseName
-                         0,  // port
-                         NULL, // unix socket
-                         0  // client flag
-                        ) == NULL
-     )
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
   {
-    error = ERRORX_(DATABASE,
-                    mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
-                   );
-    Password_undeploy(password,deployPassword);
+    if (mysql_real_connect(handle,
+                           serverName,
+                           userName,
+                           plainPassword,
+                           NULL,  // databaseName
+                           0,  // port
+                           NULL, // unix socket
+                           0  // client flag
+                          ) != NULL
+       )
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      mysql_errno(handle),
+                      "%s",
+                      mysql_error(handle)
+                     );
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
     mysql_close(handle);
     return error;
   }
-  Password_undeploy(password,deployPassword);
 
   stringFormat(sqlString,sizeof(sqlString),
                "DROP DATABASE %s",
@@ -2332,7 +2354,6 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     values[i]   = value
 
   const char     *keywords[6+1],*values[6+1];
-  const char     *deployPassword;
   PGconn         *handle;
   ConnStatusType postgreSQLConnectionStatus;
   char           sqlString[256];
@@ -2340,28 +2361,37 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
   Errors         error;
 
   // connect (with database 'template1')
-  deployPassword = Password_deploy(password);
-  POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
-  POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
-  POSTGRESQL_CONNECT_PARAMETER(2,"password",       deployPassword);
-  POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
-  POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
-  POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
+  {
+    POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
+    POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
+    POSTGRESQL_CONNECT_PARAMETER(2,"password",       plainPassword);
+    POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
+    POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
+    POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
 // TODO:
 //            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
-  POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
+    POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
 
-  handle = PQconnectdbParams(keywords,values,0);
-  if (handle == NULL)
+    handle = PQconnectdbParams(keywords,values,0);
+    if (handle != NULL)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      0,
+                      "connect"
+                     );
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
   {
-    error = ERRORX_(DATABASE,
-                    0,
-                    "connect"
-                   );
-    Password_undeploy(password,deployPassword);
     return error;
   }
-  Password_undeploy(password,deployPassword);
 
   postgreSQLConnectionStatus = PQstatus(handle);
   if (postgreSQLConnectionStatus != CONNECTION_OK)
@@ -2433,7 +2463,6 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     values[i]   = value
 
   const char     *keywords[6+1],*values[6+1];
-  const char     *deployPassword;
   PGconn         *handle;
   ConnStatusType postgreSQLConnectionStatus;
   char           sqlString[256];
@@ -2441,28 +2470,37 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
   Errors         error;
 
   // connect (with database 'template1')
-  deployPassword = Password_deploy(password);
-  POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
-  POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
-  POSTGRESQL_CONNECT_PARAMETER(2,"password",       deployPassword);
-  POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
-  POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
-  POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
+  {
+    POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
+    POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
+    POSTGRESQL_CONNECT_PARAMETER(2,"password",       plainPassword);
+    POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
+    POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
+    POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
 // TODO:
 //            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
-  POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
+    POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
 
-  handle = PQconnectdbParams(keywords,values,0);
-  if (handle == NULL)
+    handle = PQconnectdbParams(keywords,values,0);
+    if (handle != NULL)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      0,
+                      "connect"
+                     );
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
   {
-    error = ERRORX_(DATABASE,
-                    0,
-                    "connect"
-                   );
-    Password_undeploy(password,deployPassword);
     return error;
   }
-  Password_undeploy(password,deployPassword);
 
   postgreSQLConnectionStatus = PQstatus(handle);
   if (postgreSQLConnectionStatus != CONNECTION_OK)
@@ -2543,7 +2581,6 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
   String         string;
   uint           connectParameterCount;
   const char     *keywords[6+1],*values[6+1];
-  const char     *deployPassword;
   ConnStatusType postgreConnectionSQLStatus;
   Errors         error;
 
@@ -2553,28 +2590,35 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
 
   // connect
   string = String_toLower(String_newCString(databaseName));  // Note: PostgreSQL require lower case database name :-(
-  deployPassword = Password_deploy(password);
-  POSTGRESQL_INIT_CONNECT_PARAMETER();
-  POSTGRESQL_CONNECT_PARAMETER("host",           serverName);
-  POSTGRESQL_CONNECT_PARAMETER("user",           userName);
-  POSTGRESQL_CONNECT_PARAMETER("password",       deployPassword);
-  POSTGRESQL_CONNECT_PARAMETER("dbname",         !stringIsEmpty(databaseName) ? String_cString(string) : "postgres");
-  POSTGRESQL_CONNECT_PARAMETER("connect_timeout","60");
-  POSTGRESQL_CONNECT_PARAMETER("client_encoding","UTF-8");
-  POSTGRESQL_DONE_CONNECT_PARAMETER();
-
-  (*handle) = PQconnectdbParams(keywords,values,0);
-  if ((*handle) == NULL)
+  PASSWORD_DEPLOY_DO(plainPassword,password)
   {
-    error = ERRORX_(DATABASE,
-                    0,
-                    "connect"
-                   );
-    Password_undeploy(password,deployPassword);
+    POSTGRESQL_INIT_CONNECT_PARAMETER();
+    POSTGRESQL_CONNECT_PARAMETER("host",           serverName);
+    POSTGRESQL_CONNECT_PARAMETER("user",           userName);
+    POSTGRESQL_CONNECT_PARAMETER("password",       plainPassword);
+    POSTGRESQL_CONNECT_PARAMETER("dbname",         !stringIsEmpty(databaseName) ? String_cString(string) : "postgres");
+    POSTGRESQL_CONNECT_PARAMETER("connect_timeout","60");
+    POSTGRESQL_CONNECT_PARAMETER("client_encoding","UTF-8");
+    POSTGRESQL_DONE_CONNECT_PARAMETER();
+
+    (*handle) = PQconnectdbParams(keywords,values,0);
+    if ((*handle) != NULL)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      0,
+                      "connect"
+                     );
+    }
+  }
+  if (error != ERROR_NONE)
+  {
     String_delete(string);
     return error;
   }
-  Password_undeploy(password,deployPassword);
   String_delete(string);
 
   postgreConnectionSQLStatus = PQstatus(*handle);
@@ -3099,7 +3143,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           error = File_makeDirectory(directoryName,
                                      FILE_DEFAULT_USER_ID,
                                      FILE_DEFAULT_GROUP_ID,
-                                     FILE_DEFAULT_PERMISSION,
+                                     FILE_DEFAULT_PERMISSIONS,
                                      FALSE
                                     );
           if (error != ERROR_NONE)
@@ -3211,10 +3255,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           {
             bool b;
             uint u;
-          }          optionValue;
-          const char *deployPassword;
-          ulong      serverVersion;
-          char       sqlString[256];
+          }     optionValue;
+          ulong serverVersion;
+          char  sqlString[256];
 
           if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mariadb.databaseName);
 
@@ -3233,29 +3276,36 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
           // connect
-          deployPassword = Password_deploy(&databaseSpecifier->mariadb.password);
-          if (mysql_real_connect(databaseHandle->mariadb.handle,
-                                 String_cString(databaseSpecifier->mariadb.serverName),
-                                 String_cString(databaseSpecifier->mariadb.userName),
-                                 deployPassword,
-                                 NULL,  // databaseName
-                                 0,  // port
-                                 NULL, // unix socket
-                                 0  // client flag
-                                ) == NULL
-             )
+          PASSWORD_DEPLOY_DO(plainPassword,&databaseSpecifier->mariadb.password)
           {
-            error = ERRORX_(DATABASE,
-                            mysql_errno(databaseHandle->mariadb.handle),
-                            "%s",
-                            mysql_error(databaseHandle->mariadb.handle)
-                           );
-            Password_undeploy(&databaseSpecifier->mariadb.password,deployPassword);
+            if (mysql_real_connect(databaseHandle->mariadb.handle,
+                                   String_cString(databaseSpecifier->mariadb.serverName),
+                                   String_cString(databaseSpecifier->mariadb.userName),
+                                   plainPassword,
+                                   NULL,  // databaseName
+                                   0,  // port
+                                   NULL, // unix socket
+                                   0  // client flag
+                                  ) != NULL
+               )
+            {
+              error = ERROR_NONE;
+            }
+            else
+            {
+              error = ERRORX_(DATABASE,
+                              mysql_errno(databaseHandle->mariadb.handle),
+                              "%s",
+                              mysql_error(databaseHandle->mariadb.handle)
+                             );
+            }
+          }
+          if (error != ERROR_NONE)
+          {
             mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
-          Password_undeploy(&databaseSpecifier->mariadb.password,deployPassword);
 
           // check min. version
           serverVersion = mysql_get_server_version(databaseHandle->mariadb.handle);
@@ -6523,7 +6573,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                     statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
                     statement.parameterFormats[i] = 1;
                   #else
-                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
+                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
                     statement.parameterValues[i]  = statement.bind[i].data;
                     statement.parameterLengths[i] = stringLength(statement.bind[i].data);
                     statement.parameterFormats[i] = 0;
@@ -7046,7 +7096,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -7472,7 +7522,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -7756,9 +7806,9 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
           }
-          else if (sqliteResult == SQLITE_LOCKED)
+          else if ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
           {
-// TODO:
+            error = ERROR_DATABASE_BUSY;
           }
           else if (sqliteResult == SQLITE_INTERRUPT)
           {
@@ -7806,7 +7856,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                 break;
               }
             }
-  // TODO: required? queries do not have an result
+// TODO: required? queries do not have an result
             if (databaseStatementHandle->resultCount > 0)
             {
               if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
@@ -7899,9 +7949,9 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   {
     return error;
   }
-  else if (retryCount > maxRetryCount)
+  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"");
+    return ERROR_DATABASE_TIMEOUT;
   }
   else
   {
@@ -9310,7 +9360,7 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
           error = File_makeDirectory(directoryName,
                                      FILE_DEFAULT_USER_ID,
                                      FILE_DEFAULT_GROUP_ID,
-                                     FILE_DEFAULT_PERMISSION,
+                                     FILE_DEFAULT_PERMISSIONS,
                                      FALSE
                                     );
           if (error != ERROR_NONE)
@@ -13476,7 +13526,7 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       String_format(string,"%lf",databaseValue->d);
       break;
     case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTime(string,databaseValue->dateTime,NULL);
+      Misc_formatDateTime(string,databaseValue->dateTime,FALSE,NULL);
       break;
     case DATABASE_DATATYPE_STRING:
       String_format(string,"%S",databaseValue->string);
@@ -13526,7 +13576,7 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%lf",databaseValue->d);
       break;
     case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,NULL);
+      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,FALSE,NULL);
       break;
     case DATABASE_DATATYPE_STRING:
       stringFormat(buffer,bufferSize,"%s",String_cString(databaseValue->string));
@@ -14052,10 +14102,17 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               NULL,  // changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                NULL,  // changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14233,10 +14290,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14362,10 +14426,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14464,10 +14535,23 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
-  error = executePreparedQuery(&databaseStatementHandle,
-                               changedRowCount,
-                               WAIT_FOREVER
-                              );
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                WAIT_FOREVER
+                               );
+  });
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
 
   // finalize statementHandle
   finalizeStatement(&databaseStatementHandle);
@@ -15887,7 +15971,7 @@ void Database_debugPrintInfo(void)
       fprintf(stderr,"Database debug info:\n");
       LIST_ITERATE(&databaseList,databaseNode)
       {
-        switch (Database_getType(databaseHandle))
+        switch (databaseNode->databaseSpecifier.type)
         {
           case DATABASE_TYPE_SQLITE3:
             fprintf(stderr,
@@ -15908,7 +15992,16 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_MARIADB */
             break;
           case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+            #if defined(HAVE_MARIADB)
+              fprintf(stderr,
+                      "  opened 'postgresql:%s:%s': %u\n",
+                      String_cString(databaseNode->databaseSpecifier.postgresql.serverName),
+                      String_cString(databaseNode->databaseSpecifier.postgresql.userName),
+                      databaseNode->openCount
+                     );
+            #else /* HAVE_MARIADB */
+            #endif /* HAVE_MARIADB */
+            break;
             break;
         }
         LIST_ITERATE(&debugDatabaseHandleList,databaseHandle)

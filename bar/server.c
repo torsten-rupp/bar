@@ -1949,7 +1949,7 @@ fprintf(stderr,"%s:%d: no schedule found\n",__FILE__,__LINE__);
                        LOG_TYPE_WARNING,
                        "Scheduled job '%s' for execution at %s",
                        String_cString(jobNode->name),
-                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,NULL)
+                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,FALSE,NULL)
                       );
 
             // store last schedule check time
@@ -2308,7 +2308,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                "Deleted storage #%lld: '%s', created at %s",
                Index_getDatabaseId(storageId),
                String_cString(storageName),
-               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
               );
   }
   else
@@ -2472,7 +2472,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                "Deleted entity #%lld: job '%s', created at %s",
                Index_getDatabaseId(entityId),
                String_cString(jobName),
-               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
               );
   }
   else
@@ -3145,7 +3145,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,FALSE,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
@@ -3164,7 +3164,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,FALSE,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
@@ -3621,7 +3621,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                     Index_getDatabaseId(moveToEntityId),
                     String_cString(moveToJobName),
                     Archive_archiveTypeToString(archiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
                     String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName))
                    );
       }
@@ -3634,7 +3634,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                     Index_getDatabaseId(moveToEntityId),
                     String_cString(moveToJobName),
                     Archive_archiveTypeToString(archiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
                     String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName)),
                     Error_getText(error)
                    );
@@ -3690,10 +3690,7 @@ LOCAL void persistenceThreadCode(void)
   {
     while (!isQuit())
     {
-      if (   Index_isInitialized()
-//TODO: remove
-//          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
-         )
+      if (Index_isInitialized())
       {
         error = ERROR_NONE;
 
@@ -3748,8 +3745,6 @@ LOCAL void persistenceThreadCode(void)
                 "Index database not available - disabled purge expired"
                );
   }
-
-  // free resources
 }
 
 /*---------------------------------------------------------------------*/
@@ -4269,6 +4264,7 @@ LOCAL void autoIndexThreadCode(void)
                 || (storageSpecifier.type == STORAGE_TYPE_SCP       )
                 || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
                 || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
+                || (storageSpecifier.type == STORAGE_TYPE_WEBDAVS   )
                )
             {
               // get base directory
@@ -4508,7 +4504,7 @@ LOCAL void autoIndexThreadCode(void)
                           "INDEX",
                           "Auto deleted index for '%s', last checked %s",
                           String_cString(printableStorageName),
-                          String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,NULL))
+                          String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,FALSE,NULL))
                          );
             }
           }
@@ -6380,7 +6376,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
 LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String            name;
-  int               i;
+  uint              i;
   String            value;
   ConfigValueFormat configValueFormat;
 
@@ -9481,7 +9477,12 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
     else
     {
       // create directory
-      error = File_makeDirectory(name,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,TRUE);
+      error = File_makeDirectory(name,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 TRUE
+                                );
       if (error == ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -9894,7 +9895,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
   const JobNode     *jobNode;
-  int               i;
+  uint              i;
   String            s;
   ConfigValueFormat configValueFormat;
 
@@ -9931,7 +9932,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
 
     // find config value
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
-    if (i < 0)
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Job_listUnlock();
@@ -10092,7 +10093,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   String       name;
   JobNode      *jobNode;
-  int          i;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10127,7 +10128,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 
     // find config value
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
-    if (i < 0)
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Job_listUnlock();
@@ -11554,6 +11555,11 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // add to exclude list
+    #ifndef NDEBUG
+      patternId = globalOptions.debug.serverFixedIdsFlag ? 1 : MISC_ID_NONE;
+    #else
+      patternId = MISC_ID_NONE;
+    #endif
     PatternList_append(&jobNode->job.excludePatternList,patternString,patternType,&patternId);
 
     // notify mpdified include/exclude lists
@@ -12579,6 +12585,11 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     }
 
     // add to exclude list
+    #ifndef NDEBUG
+      patternId = globalOptions.debug.serverFixedIdsFlag ? 1 : MISC_ID_NONE;
+    #else
+      patternId = MISC_ID_NONE;
+    #endif
     PatternList_append(&jobNode->job.options.compressExcludePatternList,patternString,patternType,&patternId);
 
     // set modified
@@ -13929,16 +13940,9 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 #warning todo
 #endif
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    i = 0;
-    while (   (JOB_CONFIG_VALUES[i].name != NULL)
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
-          )
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
-      i++;
-    }
-    if (JOB_CONFIG_VALUES[i].name == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -13993,7 +13997,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   String       name,value;
   JobNode      *jobNode;
   ScheduleNode *scheduleNode;
-  uint         i,i0,i1;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14052,19 +14056,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // parse
-    i = ConfigValue_findSection(JOB_CONFIG_VALUES,
-                                "schedule",
-                                &i0,
-                                &i1
-                               );
-    assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
-    UNUSED_VARIABLE(i);
-
-    i = ConfigValue_find(JOB_CONFIG_VALUES,
-                         i0,
-                         i1,
-                         String_cString(name)
-                        );
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
@@ -14179,15 +14171,9 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 #warning todo
 #endif
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    i = 0;
-    while (   (JOB_CONFIG_VALUES[i].name != NULL)
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
-          )
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
-      i++;
-    }
-    if (JOB_CONFIG_VALUES[i].name == NULL)
-    {
+// TODO:
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Job_listUnlock();
       String_delete(name);
@@ -14955,8 +14941,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                       );
   if (error != ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%S",storageName);
+    (void)Storage_done(&storageInfo);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -18493,6 +18479,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(pattern);
     return;
   }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   foundFlag           = FALSE;
   updateRequestedFlag = FALSE;
@@ -18548,6 +18535,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                             Misc_getCurrentDateTime(),
                                             NULL  // errorMessage
                                            );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
               if (error == ERROR_NONE)
               {
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
@@ -21162,7 +21150,7 @@ Errors Server_socket(void)
       error = File_makeDirectory(globalOptions.jobsDirectory,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION,
+                                 FILE_DEFAULT_PERMISSIONS,
                                  FALSE
                                 );
       if (error != ERROR_NONE)
@@ -22069,16 +22057,18 @@ Errors Server_batch(int inputDescriptor,
     {
       HALT_FATAL_ERROR("Cannot initialize update index thread!");
     }
+
     Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize index update thread!");
     }
+
+    Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&persistenceThread,"BAR purge expired",globalOptions.niceLevel,persistenceThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
-    Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
   }
 
   // run in batch mode
@@ -22159,7 +22149,6 @@ Errors Server_batch(int inputDescriptor,
   StringMap_delete(argumentMap);
   String_delete(name);
 #else /* 0 */
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 String_setCString(commandString,"1 SET crypt-password password='muster'");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"2 ADD_INCLUDE_PATTERN type=REGEX pattern=test/[^/]*");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&clientInfo,commandString);
@@ -22183,6 +22172,7 @@ processCommand(&clientInfo,commandString);
     }
     Thread_done(&autoIndexThread);
     Semaphore_done(&autoIndexThreadTrigger);
+
     if (!Thread_join(&updateIndexThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop index thread!");

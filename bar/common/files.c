@@ -1954,7 +1954,7 @@ Errors __File_openCString(const char *__fileName__,
         error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION,
+                                   FILE_DEFAULT_PERMISSIONS,
                                    TRUE
                                   );
         if (error != ERROR_NONE)
@@ -2092,7 +2092,7 @@ Errors __File_openCString(const char *__fileName__,
         error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION,
+                                   FILE_DEFAULT_PERMISSIONS,
                                    TRUE
                                   );
         if (error != ERROR_NONE)
@@ -2146,7 +2146,7 @@ Errors __File_openCString(const char *__fileName__,
         error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION,
+                                   FILE_DEFAULT_PERMISSIONS,
                                    TRUE
                                   );
         if (error != ERROR_NONE)
@@ -3186,50 +3186,50 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
 /*---------------------------------------------------------------------*/
 
-FilePermission File_stringToPermission(const char *string)
+FilePermissions File_stringToPermission(const char *string)
 {
-  FilePermission permission;
-  uint           n;
+  FilePermissions permissions;
+  uint            n;
 
   assert(string != NULL);
 
-  permission = FILE_PERMISSION_NONE;
+  permissions = FILE_PERMISSION_NONE;
 
   n = stringLength(string);
-  if ((n >= 1) && (toupper(string[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
-  if ((n >= 2) && (toupper(string[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-  if ((n >= 3) && (toupper(string[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-  if ((n >= 3) && (toupper(string[2]) == 'S')) permission |= FILE_PERMISSION_USER_SET_ID;
-  if ((n >= 4) && (toupper(string[3]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
-  if ((n >= 5) && (toupper(string[4]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
-  if ((n >= 6) && (toupper(string[5]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
-  if ((n >= 6) && (toupper(string[5]) == 'S')) permission |= FILE_PERMISSION_GROUP_SET_ID;
-  if ((n >= 7) && (toupper(string[6]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
-  if ((n >= 8) && (toupper(string[7]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
-  if ((n >= 9) && (toupper(string[8]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
-  if ((n >= 9) && (toupper(string[8]) == 'T')) permission |= FILE_PERMISSION_STICKY_BIT;
+  if ((n >= 1) && (toupper(string[0]) == 'R')) permissions |= FILE_PERMISSION_USER_READ;
+  if ((n >= 2) && (toupper(string[1]) == 'W')) permissions |= FILE_PERMISSION_USER_WRITE;
+  if ((n >= 3) && (toupper(string[2]) == 'X')) permissions |= FILE_PERMISSION_USER_EXECUTE;
+  if ((n >= 3) && (toupper(string[2]) == 'S')) permissions |= FILE_PERMISSION_USER_SET_ID;
+  if ((n >= 4) && (toupper(string[3]) == 'R')) permissions |= FILE_PERMISSION_GROUP_READ;
+  if ((n >= 5) && (toupper(string[4]) == 'W')) permissions |= FILE_PERMISSION_GROUP_WRITE;
+  if ((n >= 6) && (toupper(string[5]) == 'X')) permissions |= FILE_PERMISSION_GROUP_EXECUTE;
+  if ((n >= 6) && (toupper(string[5]) == 'S')) permissions |= FILE_PERMISSION_GROUP_SET_ID;
+  if ((n >= 7) && (toupper(string[6]) == 'R')) permissions |= FILE_PERMISSION_OTHER_READ;
+  if ((n >= 8) && (toupper(string[7]) == 'W')) permissions |= FILE_PERMISSION_OTHER_WRITE;
+  if ((n >= 9) && (toupper(string[8]) == 'X')) permissions |= FILE_PERMISSION_OTHER_EXECUTE;
+  if ((n >= 9) && (toupper(string[8]) == 'T')) permissions |= FILE_PERMISSION_STICKY_BIT;
 
-  return permission;
+  return permissions;
 }
 
-const char *File_permissionToString(char *string, uint stringSize, FilePermission permission)
+const char *File_permissionToString(char *string, uint stringSize, FilePermissions permissions)
 {
   assert(string != NULL);
   assert(stringSize > 0);
 
   memset(string,'-',stringSize-1);
-  if ((stringSize >= 1) && ((permission & FILE_PERMISSION_USER_READ    ) != 0)) string[0] = 'r';
-  if ((stringSize >= 2) && ((permission & FILE_PERMISSION_USER_WRITE   ) != 0)) string[1] = 'w';
-  if ((stringSize >= 3) && ((permission & FILE_PERMISSION_USER_EXECUTE ) != 0)) string[2] = 'x';
-  if ((stringSize >= 3) && ((permission & FILE_PERMISSION_USER_SET_ID  ) != 0)) string[2] = 's';
-  if ((stringSize >= 4) && ((permission & FILE_PERMISSION_GROUP_READ   ) != 0)) string[3] = 'r';
-  if ((stringSize >= 5) && ((permission & FILE_PERMISSION_GROUP_WRITE  ) != 0)) string[4] = 'w';
-  if ((stringSize >= 6) && ((permission & FILE_PERMISSION_GROUP_EXECUTE) != 0)) string[5] = 'x';
-  if ((stringSize >= 6) && ((permission & FILE_PERMISSION_GROUP_SET_ID ) != 0)) string[5] = 's';
-  if ((stringSize >= 7) && ((permission & FILE_PERMISSION_OTHER_READ   ) != 0)) string[6] = 'r';
-  if ((stringSize >= 8) && ((permission & FILE_PERMISSION_OTHER_WRITE  ) != 0)) string[7] = 'w';
-  if ((stringSize >= 9) && ((permission & FILE_PERMISSION_OTHER_EXECUTE) != 0)) string[8] = 'x';
-  if ((stringSize >= 9) && ((permission & FILE_PERMISSION_STICKY_BIT   ) != 0)) string[8] = 't';
+  if ((stringSize >= 1) && ((permissions & FILE_PERMISSION_USER_READ    ) != 0)) string[0] = 'r';
+  if ((stringSize >= 2) && ((permissions & FILE_PERMISSION_USER_WRITE   ) != 0)) string[1] = 'w';
+  if ((stringSize >= 3) && ((permissions & FILE_PERMISSION_USER_EXECUTE ) != 0)) string[2] = 'x';
+  if ((stringSize >= 3) && ((permissions & FILE_PERMISSION_USER_SET_ID  ) != 0)) string[2] = 's';
+  if ((stringSize >= 4) && ((permissions & FILE_PERMISSION_GROUP_READ   ) != 0)) string[3] = 'r';
+  if ((stringSize >= 5) && ((permissions & FILE_PERMISSION_GROUP_WRITE  ) != 0)) string[4] = 'w';
+  if ((stringSize >= 6) && ((permissions & FILE_PERMISSION_GROUP_EXECUTE) != 0)) string[5] = 'x';
+  if ((stringSize >= 6) && ((permissions & FILE_PERMISSION_GROUP_SET_ID ) != 0)) string[5] = 's';
+  if ((stringSize >= 7) && ((permissions & FILE_PERMISSION_OTHER_READ   ) != 0)) string[6] = 'r';
+  if ((stringSize >= 8) && ((permissions & FILE_PERMISSION_OTHER_WRITE  ) != 0)) string[7] = 'w';
+  if ((stringSize >= 9) && ((permissions & FILE_PERMISSION_OTHER_EXECUTE) != 0)) string[8] = 'x';
+  if ((stringSize >= 9) && ((permissions & FILE_PERMISSION_STICKY_BIT   ) != 0)) string[8] = 't';
   string[stringSize-1] = NUL;
 
   return string;
@@ -3495,8 +3495,8 @@ Errors File_renameCString(const char *oldFileName,
       {
         return ERROR_INSUFFICIENT_MEMORY;
       }
-      strcpy(fileName,newFileName);
-      strcat(fileName,"-XXXXXX");
+      stringSet(fileName,stringLength(newFileName)+7+1,newFileName);
+      stringAppend(fileName,stringLength(newFileName)+7+1,"-XXXXXX");
 
       #ifdef HAVE_MKSTEMP
         handle = mkstemp(fileName);
@@ -3956,7 +3956,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   fileInfo->timeLastChanged = fileStat.st_ctime;
   fileInfo->userId          = fileStat.st_uid;
   fileInfo->groupId         = fileStat.st_gid;
-  fileInfo->permission      = (FilePermission)fileStat.st_mode;
+  fileInfo->permissions     = (FilePermissions)fileStat.st_mode;
   #ifdef HAVE_MAJOR
     fileInfo->major         = major(fileStat.st_rdev);
   #else
@@ -4041,6 +4041,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   return ERROR_NONE;
 }
 
+// TODO: swap fileInfo, fileName
 Errors File_setInfo(const FileInfo *fileInfo,
                     ConstString    fileName
                    )
@@ -4082,7 +4083,7 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
 
       // set last permissions
       #ifdef HAVE_CHMOD
-        if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
+        if (chmod(fileName,(mode_t)fileInfo->permissions) != 0)
         {
           return getLastError(ERROR_CODE_IO,fileName);
         }
@@ -4100,7 +4101,7 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
         return getLastError(ERROR_CODE_IO,fileName);
       }
       #ifdef HAVE_CHMOD
-        if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
+        if (chmod(fileName,(mode_t)fileInfo->permissions) != 0)
         {
           return getLastError(ERROR_CODE_IO,fileName);
         }
@@ -4534,14 +4535,14 @@ uint64 File_getFileTimeModified(ConstString fileName)
   return (uint64)fileStat.st_mtime;
 }
 
-Errors File_setPermission(ConstString    fileName,
-                          FilePermission permission
+Errors File_setPermission(ConstString     fileName,
+                          FilePermissions permissions
                          )
 {
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
 
-  if (chmod(String_cString(fileName),(mode_t)permission) != 0)
+  if (chmod(String_cString(fileName),(mode_t)permissions) != 0)
   {
     return getLastError(ERROR_CODE_IO,String_cString(fileName));
   }
@@ -4604,11 +4605,11 @@ UNUSED_VARIABLE(groupId);
   #endif /* PLATFORM_... */
 }
 
-Errors File_makeDirectory(ConstString    pathName,
-                          uint32         userId,
-                          uint32         groupId,
-                          FilePermission permission,
-                          bool           ignoreExistingFlag
+Errors File_makeDirectory(ConstString     pathName,
+                          uint32          userId,
+                          uint32          groupId,
+                          FilePermissions permissions,
+                          bool            ignoreExistingFlag
                          )
 {
   #define PERMISSION_DIRECTORY (FILE_PERMISSION_USER_EXECUTE|FILE_PERMISSION_GROUP_EXECUTE|FILE_PERMISSION_OTHER_EXECUTE)
@@ -4702,12 +4703,12 @@ Errors File_makeDirectory(ConstString    pathName,
       #endif /* HAVE_CHOWN */
     }
 
-    // set permission
-    if (permission != FILE_DEFAULT_PERMISSION)
+    // set permissions
+    if (permissions != FILE_DEFAULT_PERMISSIONS)
     {
       #ifdef HAVE_CHMOD
         if (chmod(String_cString(directoryName),
-                  ((mode_t)permission|PERMISSION_DIRECTORY) & ~currentCreationMask
+                  ((mode_t)permissions|PERMISSION_DIRECTORY) & ~currentCreationMask
                  ) != 0
            )
         {
@@ -4816,13 +4817,13 @@ Errors File_makeDirectory(ConstString    pathName,
           #endif /* HAVE_CHOWN */
         }
 
-        // set permission
-        if (permission != FILE_DEFAULT_PERMISSION)
+        // set permissions
+        if (permissions != FILE_DEFAULT_PERMISSIONS)
         {
           // set permission
           #ifdef HAVE_CHMOD
             if (chmod(String_cString(directoryName),
-                      ((mode_t)permission|PERMISSION_DIRECTORY) & ~currentCreationMask
+                      ((mode_t)permissions|PERMISSION_DIRECTORY) & ~currentCreationMask
                      ) != 0
                )
             {
@@ -4856,11 +4857,11 @@ Errors File_makeDirectory(ConstString    pathName,
   #undef PERMISSION_DIRECTORY
 }
 
-Errors File_makeDirectoryCString(const char     *pathName,
-                                 uint32         userId,
-                                 uint32         groupId,
-                                 FilePermission permission,
-                                 bool           ignoreExistingFlag
+Errors File_makeDirectoryCString(const char      *pathName,
+                                 uint32          userId,
+                                 uint32          groupId,
+                                 FilePermissions permissions,
+                                 bool            ignoreExistingFlag
                                 )
 {
   String string;
@@ -4871,7 +4872,7 @@ Errors File_makeDirectoryCString(const char     *pathName,
 
 // TODO: move code from File_makeDirectory and call in File_makeDirectory this function
   string = File_setFileNameCString(File_newFileName(),pathName);
-  error = File_makeDirectory(string,userId,groupId,permission,ignoreExistingFlag);
+  error = File_makeDirectory(string,userId,groupId,permissions,ignoreExistingFlag);
   File_deleteFileName(string);
 
   return error;

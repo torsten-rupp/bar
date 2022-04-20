@@ -1123,7 +1123,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   byte          *buffer;
   uint          archiveIndex;
   ArchiveHandle archiveHandle;
-  Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
@@ -1139,7 +1138,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   archiveIndex = 0;
 
   // test entries
-  failError = ERROR_NONE;
   while (   ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(testInfo)
@@ -1165,7 +1163,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                    String_cString(entryMsg.archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
-        if (failError == ERROR_NONE) failError = error;
+        if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
         break;
       }
 
@@ -1184,7 +1183,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                  String_cString(entryMsg.archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      freeEntryMsg(&entryMsg,NULL);
       break;
     }
 
@@ -1257,13 +1257,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     }
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
-    }
-
-    // store fail error
-    if (failError != ERROR_NONE)
-    {
-      if (testInfo->failError == ERROR_NONE) testInfo->failError = failError;
+      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      freeEntryMsg(&entryMsg,NULL);
+      break;
     }
 
     // free resources
@@ -1740,7 +1736,7 @@ error = testInfo.failError;
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,"Test fail: %s\n",Error_getText(error));
+    printInfo(1,tr("Test fail: %s\n"),Error_getText(error));
   }
 
   return error;

@@ -2,6 +2,29 @@
 
 DOCKER_IMAGE_NAME='dockerregistry.macio.de:5000/backup_archiver:latest'
 
+TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db TEST_LOGIN_NAME=test TEST_PASSWORD=test TEST_BASE_DIR=/home/test TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa TEST_IMAGE_OPERATIONS=no"
+
+TEST_STEPS = ["basic",
+              "compress",
+              "delta_compress",
+              "crypt",
+              "asymmetric_crypt",
+              "signatures",
+              "split",
+              "convert",
+              "storage_file",
+              "storage_ftp",
+              "storage_scp",
+              "storage_sftp",
+              "storage_webdav",
+              "index",
+              "server",
+              "master_slave",
+              "arguments",
+              "config",
+              "misc"
+             ];
+
 // tests
 def tests()
 {
@@ -9,7 +32,7 @@ def tests()
   {
     stage("Build")
     {
-      docker.image(DOCKER_IMAGE_NAME).inside
+      docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
       {
         checkout scm
         script
@@ -19,10 +42,9 @@ def tests()
           sh "./download-third-party-packages.sh"
           sh "./configure"
 
-          // make
-//TODO
-//          sh "make -j`nproc --ignore=1`"
-          sh "make"
+          // make (Note: avoid race condition in depend by not create dependencies in parallel)
+          sh "make depend"
+          sh "make -j`nproc --ignore=1`"
         }
       }
     }
@@ -32,51 +54,116 @@ def tests()
       // run tests
       script
       {
-        switch (params.BINARY_TYPE)
+        if (params.TESTS)
         {
-          case "DEBUG":
-            binaryExtension="-debug";
-            break;
-          case "VALGRIND":
-            binaryExtension="-valgrind";
-            break;
-          case "GCOV":
-            binaryExtension="-gcov";
-            break;
-          case "GPROF":
-            binaryExtension="-gprof";
-            break;
-          default:
-            binaryExtension="";
-            break;
+          switch (params.BINARY_TYPE)
+          {
+            case "DEBUG":
+              binaryExtension="-debug";
+              break;
+            case "VALGRIND":
+              binaryExtension="-valgrind";
+              break;
+            case "GCOV":
+              binaryExtension="-gcov";
+              break;
+            case "GPROF":
+              binaryExtension="-gprof";
+              break;
+            default:
+              binaryExtension="";
+              break;
+          }
+          sh "echo binaryExtension="+binaryExtension
+          switch (params.TEST_TYPE)
+          {
+            case "SMOKE":
+            default:
+              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              {
+                sh "rm -f bar-test.log"
+                sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
+              }
+              break;
+            case "FULL":
+              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              {
+                // start services
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
+
+                sh "rm -f bar-test.log"
+                TEST_STEPS.each { step -> sh "make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1' | tee -a bar-test.log" }
+
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
+              }
+              break;
+          }
         }
-        sh "echo binaryExtension="+binaryExtension
-        switch (params.TEST_TYPE)
+      }
+    }
+
+    stage("Code coverage")
+    {
+      script
+      {
+        if (params.CODE_COVERAGE)
         {
-          case "SMOKE":
-          default:
-            docker.image(DOCKER_IMAGE_NAME).inside
-            {
-              sh "rm -f bar-test.log"
-              sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-            }
-            break;
-          case "FULL":
-            docker.image(DOCKER_IMAGE_NAME).inside
-            {
-              sh "rm -f bar-test.log"
-              sh "make test_basic"           +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_compress"        +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_delta_compress"  +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_crypt"           +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_asymmetric_crypt"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_signatures"      +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_split"           +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_convert"         +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_arguments"       +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-              sh "make test_misc"            +binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
-            }
-            break;
+          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          {
+            // start services
+            sh "sudo /etc/init.d/apache2 start"
+            sh "sudo /etc/init.d/ssh start"
+            sh "sudo /etc/init.d/vsftpd start"
+
+            sh "make -C bar gcov_clean"
+            TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
+            sh "make -C bar gcov_html"
+
+            // stop services
+            sh "sudo /etc/init.d/vsftpd stop || true"
+            sh "sudo /etc/init.d/ssh stop || true"
+            sh "sudo /etc/init.d/apache2 stop || true"
+          }
+
+          publishHTML([allowMissing:          false,
+                       alwaysLinkToLastBuild: false,
+                       keepAll:               true,
+                       reportDir:             'bar/coverage',
+                       reportFiles:           'index.html',
+                       reportName:            'Code Coverage Report',
+                       reportTitles:          'BAR Code Coverage'
+                      ]
+                     )
+        }
+      }
+    }
+
+    stage("Profiling")
+    {
+      script
+      {
+        if (params.PROFILING)
+        {
+          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          {
+            // start services
+            sh "sudo /etc/init.d/apache2 start"
+            sh "sudo /etc/init.d/ssh start"
+            sh "sudo /etc/init.d/vsftpd start"
+
+            sh "make -C bar gprof_clean"
+            TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
+
+            // stop services
+            sh "sudo /etc/init.d/vsftpd stop || true"
+            sh "sudo /etc/init.d/ssh stop || true"
+            sh "sudo /etc/init.d/apache2 stop || true"
+          }
         }
       }
     }
@@ -108,6 +195,9 @@ try
 {
   node('docker')
   {
+    // build
+
+    // execute tests
     tests()
   }
 }

@@ -156,6 +156,7 @@ typedef enum
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP,
   STORAGE_TYPE_WEBDAV,
+  STORAGE_TYPE_WEBDAVS,
   STORAGE_TYPE_CD,
   STORAGE_TYPE_DVD,
   STORAGE_TYPE_BD,
@@ -251,13 +252,6 @@ typedef struct
         uint                      serverId;                  // id of allocated server
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } ftp;
-
-      // WebDAV storage
-      struct
-      {
-        uint                      serverId;                  // id of allocated server
-        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
-      } webdav;
     #endif /* HAVE_CURL */
 
     #ifdef HAVE_SSH2
@@ -275,7 +269,9 @@ typedef struct
         Key                       privateKey;                  // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } ssh;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // scp storage
       struct
       {
@@ -286,7 +282,9 @@ typedef struct
         Key                       privateKey;                // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } scp;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // sftp storage
       struct
       {
@@ -298,6 +296,17 @@ typedef struct
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
+
+    #ifdef HAVE_CURL
+      // webDAV/webDAVs storage
+      struct
+      {
+        uint                      serverId;                  // id of allocated server
+        Key                       publicKey;                 // ssh public key data (ssh,scp,sftp)
+        Key                       privateKey;                // ssh private key data (ssh,scp,sftp)
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
+      } webdav;
+    #endif /* HAVE_CURL */
 
     // cd/dvd/bd storage
     struct
@@ -417,28 +426,6 @@ typedef struct
         ulong                   length;                      // length of data to write/read
         ulong                   transferedBytes;             // number of data bytes read/written
       } ftp;
-
-      // WebDAV storage
-      struct
-      {
-        CURLM                   *curlMultiHandle;
-        CURL                    *curlHandle;
-        uint64                  index;                       // current read/write index in file [0..n-1]
-        uint64                  size;                        // size of file [bytes]
-        struct                                               // receive buffer
-        {
-          byte   *data;                                      // data received
-          ulong  size;                                       // buffer size [bytes]
-          uint64 offset;                                     // data offset
-          ulong  length;                                     // length of data received
-        } receiveBuffer;
-        struct                                               // send buffer
-        {
-          const byte *data;                                  // data to send
-          ulong      index;                                  // data index
-          ulong      length;                                 // length of data to send
-        } sendBuffer;
-      } webdav;
     #endif /* HAVE_CURL */
 
     #ifdef HAVE_SSH2
@@ -453,7 +440,9 @@ typedef struct
         uint64                  totalReceivedBytes;          // total received bytes
         StorageBandWidthLimiter bandWidthLimiter;            // band width limiter data
       } ssh;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // scp storage
       struct
       {
@@ -472,7 +461,9 @@ typedef struct
           ulong  length;
         } readAheadBuffer;
       } scp;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // sftp storage
       struct
       {
@@ -493,6 +484,31 @@ typedef struct
         } readAheadBuffer;
       } sftp;
     #endif /* HAVE_SSH2 */
+
+    #if defined(HAVE_CURL)
+      // webDAV/webDAVs storage
+      struct
+      {
+        CURLM                   *curlMultiHandle;
+        CURL                    *curlHandle;
+        String                  url;
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // receive buffer
+        {
+          byte   *data;                                      // data received
+          ulong  size;                                       // buffer size [bytes]
+          uint64 offset;                                     // data offset
+          ulong  length;                                     // length of data received
+        } receiveBuffer;
+        struct                                               // send buffer
+        {
+          const byte *data;                                  // data to send
+          ulong      index;                                  // data index
+          ulong      length;                                 // length of data to send
+        } sendBuffer;
+      } webdav;
+    #endif /* HAVE_CURL */
 
     // cd/dvd/bd storage
     struct
@@ -548,7 +564,6 @@ typedef struct
 {
   StorageSpecifier storageSpecifier;                         // storage specifier data
 
-  StorageTypes type;
   union
   {
     struct
@@ -569,10 +584,28 @@ typedef struct
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
-        FilePermission          permission;
+        FilePermissions         permissions;
         bool                    entryReadFlag;               // TRUE if entry read
       } ftp;
     #endif /* HAVE_CURL */
+
+    #ifdef HAVE_SSH2
+      struct
+      {
+        uint                    serverId;                    // id of allocated server
+        String                  pathName;                    // directory name
+
+        SocketHandle            socketHandle;
+        LIBSSH2_SESSION         *session;
+        LIBSSH2_CHANNEL         *channel;
+        LIBSSH2_SFTP            *sftp;
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;
+        char                    *buffer;                     // buffer for reading file names
+        ulong                   bufferLength;
+        LIBSSH2_SFTP_ATTRIBUTES attributes;
+        bool                    entryReadFlag;               // TRUE if entry read
+      } sftp;
+    #endif /* HAVE_SSH2 */
 
     #if defined(HAVE_CURL) && defined(HAVE_MXML)
       struct
@@ -591,28 +624,12 @@ typedef struct
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
-        FilePermission          permission;
+        FilePermissions          permission;
         bool                    entryReadFlag;               // TRUE if entry read
 */
       } webdav;
     #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
-    #ifdef HAVE_SSH2
-      struct
-      {
-        String                  pathName;                    // directory name
-
-        SocketHandle            socketHandle;
-        LIBSSH2_SESSION         *session;
-        LIBSSH2_CHANNEL         *channel;
-        LIBSSH2_SFTP            *sftp;
-        LIBSSH2_SFTP_HANDLE     *sftpHandle;
-        char                    *buffer;                     // buffer for reading file names
-        ulong                   bufferLength;
-        LIBSSH2_SFTP_ATTRIBUTES attributes;
-        bool                    entryReadFlag;               // TRUE if entry read
-      } sftp;
-    #endif /* HAVE_SSH2 */
     struct
     {
       String                    pathName;                    // directory name

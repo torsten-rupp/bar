@@ -9,7 +9,7 @@ Homepage:
 Package: backup-archiver
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Archiver program for compressed and encrypted archives.
+Description: Archiver program for compressed and encrypted archives
  BAR is backup archiver program. It can create compressed, encrypted
  and splitted archives of files and harddisk images which can be
  stored on a harddisk, cd, dvd, bd or directly on a server via ftp,

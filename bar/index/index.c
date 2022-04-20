@@ -2177,9 +2177,8 @@ LOCAL void indexThreadCode(void)
       }
     #endif /* INDEX_SUPPORT_DELETE */
 
-    // sleep and check quit flag/trigger (min. 10s)
-    Misc_udelay(10*US_PER_SECOND);
-    sleepTime = 10;
+    // sleep and check quit flag/trigger
+    sleepTime = 0;
     SEMAPHORE_LOCKED_DO(&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       while (   !indexQuitFlag

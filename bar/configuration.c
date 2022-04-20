@@ -700,10 +700,13 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   }
 
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+  if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
+  else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
+  else if (stringStartsWith(value,"r:"       )) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (stringStartsWith(value,"glob:"    )) { patternType = PATTERN_TYPE_GLOB;           value += 5; }
+  else if (stringStartsWith(value,"g:"       )) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
   error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
@@ -738,10 +741,13 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
   UNUSED_VARIABLE(defaultValue);
 
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+  if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
+  else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
+  else if (stringStartsWith(value,"r:"       )) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (stringStartsWith(value,"glob:"    )) { patternType = PATTERN_TYPE_GLOB;           value += 5; }
+  else if (stringStartsWith(value,"g:"       )) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
   error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
@@ -800,15 +806,10 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
   {
   }
-  else if (String_parseCString(value,"%S",NULL,mountName))
-  {
-    String_clear(deviceName);
-  }
   else
   {
-    String_delete(deviceName);
-    String_delete(mountName);
-    return FALSE;
+    String_setCString(mountName,value);
+    String_clear(deviceName);
   }
 
   if (!String_isEmpty(mountName))
@@ -855,10 +856,13 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
   storageName = String_new();
 
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_REGEX;          }
-  else if (strncmp(value,"x:",2) == 0) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
-  else if (strncmp(value,"g:",2) == 0) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_GLOB;           }
-  else                                 { String_setCString(storageName,value  ); patternType = PATTERN_TYPE_GLOB;           }
+  if      (stringStartsWith(value,"extended:")) { String_setCString(storageName,value+9); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
+  else if (stringStartsWith(value,"x:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
+  else if (stringStartsWith(value,"regex:"   )) { String_setCString(storageName,value+6); patternType = PATTERN_TYPE_REGEX;          }
+  else if (stringStartsWith(value,"r:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_REGEX;          }
+  else if (stringStartsWith(value,"glob:"    )) { String_setCString(storageName,value+5); patternType = PATTERN_TYPE_GLOB;           }
+  else if (stringStartsWith(value,"g:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_GLOB;           }
+  else                                          { String_setCString(storageName,value  ); patternType = PATTERN_TYPE_GLOB;           }
 
   // append to delta source list
   DeltaSourceList_append((DeltaSourceList*)variable,storageName,patternType,NULL);
@@ -1621,6 +1625,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.noSignatureFlag                                 = FALSE;
   globalOptions.noBAROnMediumFlag                               = FALSE;
   globalOptions.noStopOnErrorFlag                               = FALSE;
+  globalOptions.noStopOnOwnerErrorFlag                          = FALSE;
   globalOptions.noStopOnAttributeErrorFlag                      = FALSE;
   globalOptions.dryRun                                          = FALSE;
 
@@ -1696,7 +1701,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.destination                                     = String_new();
   globalOptions.owner.userId                                    = FILE_DEFAULT_USER_ID;
   globalOptions.owner.groupId                                   = FILE_DEFAULT_GROUP_ID;
-  globalOptions.permissions                                     = FILE_DEFAULT_PERMISSION;
+  globalOptions.permissions                                     = FILE_DEFAULT_PERMISSIONS;
 
   globalOptions.patternType                                     = PATTERN_TYPE_GLOB;
 
@@ -2046,7 +2051,9 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
   replace       = String_new();
 
   // parse
-  if      (String_scanCString(value,"extended:%S,%S",patternString,replace))
+  if      (   String_scanCString(value,"extended:%S,%S",patternString,replace)
+           || String_scanCString(value,"x:%S,%S",patternString,replace)
+          )
   {
     if (!Pattern_isValid(patternString,PATTERN_TYPE_EXTENDED_REGEX))
     {
@@ -2054,7 +2061,9 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
       return FALSE;
     }
   }
-  else if (String_scanCString(value,"regex:%S,%S",patternString,replace))
+  else if (   String_scanCString(value,"regex:%S,%S",patternString,replace)
+           || String_scanCString(value,"r:%S,%S",patternString,replace)
+          )
   {
     if (!Pattern_isValid(patternString,PATTERN_TYPE_REGEX))
     {
@@ -2062,7 +2071,9 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
       return FALSE;
     }
   }
-  else if (String_scanCString(value,"glob:%S,%S",patternString,replace))
+  else if (   String_scanCString(value,"glob:%S,%S",patternString,replace)
+           || String_scanCString(value,"g:%S,%S",patternString,replace)
+          )
   {
     if (!Pattern_isValid(patternString,PATTERN_TYPE_GLOB))
     {
@@ -2161,9 +2172,9 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
 
 LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  char           user[4],group[4],world[4];
-  uint           n;
-  FilePermission permission;
+  char           user[3+1],group[3+1],world[3+1];
+  uint           i;
+  FilePermissions permission;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2176,40 +2187,52 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
   permission = FILE_PERMISSION_NONE;
   if      (String_scanCString(value,"%o",permission))
   {
-    permission = (FilePermission)atol(value);
+    permission = (FilePermissions)atol(value);
   }
   else if (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
   {
-    n = stringLength(user);
-    if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
-    else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-    else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-    n = stringLength(group);
-    if      ((n >= 1) && (toupper(group[0]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
-    else if ((n >= 2) && (toupper(group[1]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
-    else if ((n >= 3) && (toupper(group[2]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
-    n = stringLength(world);
-    if      ((n >= 1) && (toupper(world[0]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
-    else if ((n >= 2) && (toupper(world[1]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
-    else if ((n >= 3) && (toupper(world[2]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
+    for (i = 0; i < stringLength(user); i++)
+    {
+      if (toupper(user[i]) == 'R') permission |= FILE_PERMISSION_USER_READ;
+      if (toupper(user[i]) == 'W') permission |= FILE_PERMISSION_USER_WRITE;
+      if (toupper(user[i]) == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
+    }
+    for (i = 0; i < stringLength(group); i++)
+    {
+      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
+      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
+      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    }
+    for (i = 0; i < stringLength(world); i++)
+    {
+      if (toupper(world[i]) == 'R') permission |= FILE_PERMISSION_OTHER_READ;
+      if (toupper(world[i]) == 'W') permission |= FILE_PERMISSION_OTHER_WRITE;
+      if (toupper(world[i]) == 'X') permission |= FILE_PERMISSION_OTHER_EXECUTE;
+    }
   }
   else if (String_scanCString(value,"%4s:%4s",user,group))
   {
-    n = stringLength(user);
-    if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
-    else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-    else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-    n = stringLength(group);
-    if      ((n >= 1) && (toupper(group[0]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
-    else if ((n >= 2) && (toupper(group[1]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
-    else if ((n >= 3) && (toupper(group[2]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    for (i = 0; i < stringLength(user); i++)
+    {
+      if (toupper(user[i]) == 'R') permission |= FILE_PERMISSION_USER_READ;
+      if (toupper(user[i]) == 'W') permission |= FILE_PERMISSION_USER_WRITE;
+      if (toupper(user[i]) == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
+    }
+    for (i = 0; i < stringLength(group); i++)
+    {
+      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
+      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
+      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    }
   }
-  else if (String_scanCString(value,"%4s",user))
+  else if (stringLength(value) == 3)
   {
-    n = stringLength(user);
-    if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
-    else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-    else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+    for (i = 0; i < stringLength(value); i++)
+    {
+      if (toupper(value[i]) == 'R') permission |= FILE_PERMISSION_USER_READ;
+      if (toupper(value[i]) == 'W') permission |= FILE_PERMISSION_USER_WRITE;
+      if (toupper(value[i]) == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
+    }
   }
   else
   {
@@ -2218,7 +2241,7 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
   }
 
   // store owner values
-  (*((FilePermission*)variable)) = permission;
+  (*((FilePermissions*)variable)) = permission;
 
   return TRUE;
 }
@@ -2271,6 +2294,7 @@ LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
+// TODO: parse algorithmus+salt
   // calculate hash
   Crypt_initHash(&cryptHash,PASSWORD_HASH_ALGORITHM);
   Crypt_updateHash(&cryptHash,value,stringLength(value));
@@ -2386,33 +2410,37 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
-    if (dataLength > 0)
+    if (dataLength == 0)
     {
-      // allocate key memory
-      data = allocSecure(dataLength);
-      if (data == NULL)
-      {
-        stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
-        return FALSE;
-      }
-
-      // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
-      {
-        stringSet(errorMessage,errorMessageSize,"decode base64 fail");
-        freeSecure(data);
-        return FALSE;
-      }
-
-      // set key data
-      if (key->data != NULL) freeSecure(key->data);
-      key->data   = data;
-      key->length = dataLength;
+      stringSet(errorMessage,errorMessageSize,"decode base64 fail");
+      return FALSE;
     }
+
+    // allocate key memory
+    data = allocSecure(dataLength);
+    if (data == NULL)
+    {
+      stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
+      return FALSE;
+    }
+
+    // decode base64
+    if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
+    {
+      stringSet(errorMessage,errorMessageSize,"decode base64 fail");
+      freeSecure(data);
+      return FALSE;
+    }
+
+    // set key data
+    if (key->data != NULL) freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
   }
   else
   {
     // get plain key data
+// TODO: output a warnign?
 
     // get key data length
     dataLength = stringLength(value);
@@ -2741,7 +2769,7 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance date '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance date '%s'",value);
     return FALSE;
   }
 
@@ -2862,7 +2890,7 @@ LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable,
   // parse
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
     return FALSE;
   }
 
@@ -2990,7 +3018,7 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance time '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance time '%s'",value);
     return FALSE;
   }
 
@@ -3498,7 +3526,7 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
     return FALSE;
   }
 
@@ -3619,7 +3647,7 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, co
   // parse
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
     return FALSE;
   }
 
@@ -3747,7 +3775,7 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
   String_delete(s0);
   if (errorFlag)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
     return FALSE;
   }
 
@@ -3922,7 +3950,7 @@ LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, co
   {
     if (!String_parseCString(value,"%d",NULL,&minKeep))
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence min. keep '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse persistence min. keep '%s'",value);
       return FALSE;
     }
   }
@@ -4026,7 +4054,7 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, co
   {
     if (!String_parseCString(value,"%d",NULL,&maxKeep))
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. keep '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse persistence max. keep '%s'",value);
       return FALSE;
     }
   }
@@ -4130,7 +4158,7 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, con
   {
     if (!String_parseCString(value,"%d",NULL,&maxAge))
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. age '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Cannot parse persistence max. age '%s'",value);
       return FALSE;
     }
   }
@@ -4968,9 +4996,9 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
 
 LOCAL bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  char           user[4],group[4],world[4];
-  uint           n;
-  FilePermission permission;
+  char           user[3+1],group[3+1],world[3+1];
+  uint           i;
+  FilePermissions permission;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -4982,40 +5010,52 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
   permission = FILE_PERMISSION_NONE;
   if      (String_scanCString(value,"%o",permission))
   {
-    permission = (FilePermission)atol(value);
+    permission = (FilePermissions)atol(value);
   }
   else if (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
   {
-    n = stringLength(user);
-    if      ((n >= 1) && (toupper(user[0])  == 'R')) permission |= FILE_PERMISSION_USER_READ;
-    else if ((n >= 2) && (toupper(user[1])  == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-    else if ((n >= 3) && (toupper(user[2])  == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-    n = stringLength(group);
-    if      ((n >= 1) && (toupper(group[0]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
-    else if ((n >= 2) && (toupper(group[1]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
-    else if ((n >= 3) && (toupper(group[2]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
-    n = stringLength(world);
-    if      ((n >= 1) && (toupper(world[0]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
-    else if ((n >= 2) && (toupper(world[1]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
-    else if ((n >= 3) && (toupper(world[2]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
+    for (i = 0; i < stringLength(user); i++)
+    {
+      if (toupper(user[i])  == 'R') permission |= FILE_PERMISSION_USER_READ;
+      if (toupper(user[i])  == 'W') permission |= FILE_PERMISSION_USER_WRITE;
+      if (toupper(user[i])  == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
+    }
+    for (i = 0; i < stringLength(group); i++)
+    {
+      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
+      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
+      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    }
+    for (i = 0; i < stringLength(world); i++)
+    {
+      if (toupper(world[i]) == 'R') permission |= FILE_PERMISSION_OTHER_READ;
+      if (toupper(world[i]) == 'W') permission |= FILE_PERMISSION_OTHER_WRITE;
+      if (toupper(world[i]) == 'X') permission |= FILE_PERMISSION_OTHER_EXECUTE;
+    }
   }
   else if (String_scanCString(value,"%4s:%4s",user,group))
   {
-    n = stringLength(user);
-    if      ((n >= 1) && (toupper(user[0])  == 'R')) permission |= FILE_PERMISSION_USER_READ;
-    else if ((n >= 2) && (toupper(user[1])  == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-    else if ((n >= 3) && (toupper(user[2])  == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-    n = stringLength(group);
-    if      ((n >= 1) && (toupper(group[0]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
-    else if ((n >= 2) && (toupper(group[1]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
-    else if ((n >= 3) && (toupper(group[2]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    for (i = 0; i < stringLength(user); i++)
+    {
+      if (toupper(user[i])  == 'R') permission |= FILE_PERMISSION_USER_READ;
+      if (toupper(user[i])  == 'W') permission |= FILE_PERMISSION_USER_WRITE;
+      if (toupper(user[i])  == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
+    }
+    for (i = 0; i < stringLength(group); i++)
+    {
+      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
+      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
+      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    }
   }
-  else if (String_scanCString(value,"%4s",user))
+  else if (stringLength(value) == 3)
   {
-    n = stringLength(user);
-    if      ((n >= 1) && (toupper(user[0])  == 'R')) permission |= FILE_PERMISSION_USER_READ;
-    else if ((n >= 2) && (toupper(user[1])  == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-    else if ((n >= 3) && (toupper(user[2])  == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+    for (i = 0; i < stringLength(value); i++)
+    {
+      if (toupper(value[i])  == 'R') permission |= FILE_PERMISSION_USER_READ;
+      if (toupper(value[i])  == 'W') permission |= FILE_PERMISSION_USER_WRITE;
+      if (toupper(value[i])  == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
+    }
   }
   else
   {
@@ -5024,7 +5064,7 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
   }
 
   // store owner values
-  (*((FilePermission*)variable)) = permission;
+  (*((FilePermissions*)variable)) = permission;
 
   return TRUE;
 }
@@ -5052,7 +5092,7 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
   switch (operation)
   {
     case CONFIG_VALUE_OPERATION_INIT:
-      (*formatUserData) = (FilePermission*)data;
+      (*formatUserData) = (FilePermissions*)data;
       break;
     case CONFIG_VALUE_OPERATION_DONE:
       break;
@@ -5066,7 +5106,7 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
       break;
     case CONFIG_VALUE_OPERATION_FORMAT:
       {
-        const FilePermission *filePermission = (FilePermission*)(*formatUserData);
+        const FilePermissions *filePermission = (FilePermissions*)(*formatUserData);
         String               line            = (String)data;
 
         if (filePermission != NULL)
@@ -5113,10 +5153,14 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *userData, vo
   UNUSED_VARIABLE(name);
 
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = (PatternTypes)userData;                  }
+  if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
+  else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
+  else if (stringStartsWith(value,"r:"       )) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (stringStartsWith(value,"glob:"    )) { patternType = PATTERN_TYPE_GLOB;           value += 5; }
+  else if (stringStartsWith(value,"g:"       )) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else if (userData != NULL)                    { patternType = *((PatternTypes*)userData);              }
+  else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // unquote/unescape
   string = String_newCString(value);
@@ -5498,6 +5542,7 @@ LOCAL bool configValueMountParse(void *userData, void *variable, const char *nam
   }
   else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
   {
+    // nothing to do
   }
   else if (String_parseCString(value,"%S",NULL,mountName))
   {
@@ -5618,10 +5663,13 @@ LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const cha
   UNUSED_VARIABLE(errorMessageSize);
 
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+  if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
+  else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
+  else if (stringStartsWith(value,"r:"       )) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (stringStartsWith(value,"glob:"    )) { patternType = PATTERN_TYPE_GLOB;           value += 5; }
+  else if (stringStartsWith(value,"g:"       )) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // unquote/unescape
   string = String_newCString(value);
@@ -6354,7 +6402,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
   char                salt[32];
   CryptHash           cryptHash;
   CryptHashAlgorithms cryptHashAlgorithm;
-  long                offset;
+  long                nextIndex;
   String              string;
   uint                dataLength;
   void                *data;
@@ -6367,8 +6415,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-//fprintf(stderr,"%s, %d: name=%s value=%s\n",__FILE__,__LINE__,name,value);
-  if      (String_parseCString(value,"%64s:%32s:",&offset,cryptHashAlgorithmName,salt))
+  if      (String_parseCString(value,"%64s:%32s:",&nextIndex,cryptHashAlgorithmName,salt))
   {
     // <hash algorithm>:<salt>:<hash> -> get hash
 
@@ -6378,7 +6425,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
       return FALSE;
     }
 
-    dataLength = Misc_base64DecodeLengthCString(&value[offset]);
+    dataLength = Misc_base64DecodeLengthCString(&value[nextIndex]);
     if (dataLength > 0)
     {
       // allocate secure memory
@@ -6390,7 +6437,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
 
       // decode base64
 //TODO: use salt?
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[offset]))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[nextIndex]))
       {
         freeSecure(data);
         return FALSE;
@@ -6401,7 +6448,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
       data = NULL;
     }
   }
-  else if (String_parseCString(value,"%64s:",&offset,cryptHashAlgorithmName))
+  else if (String_parseCString(value,"%64s:",&nextIndex,cryptHashAlgorithmName))
   {
     // <hash algorithm>:<hash> -> get hash
 
@@ -6411,7 +6458,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
       return FALSE;
     }
 
-    dataLength = Misc_base64DecodeLengthCString(&value[offset]);
+    dataLength = Misc_base64DecodeLengthCString(&value[nextIndex]);
     if (dataLength > 0)
     {
       // allocate secure memory
@@ -6422,7 +6469,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
       }
 
       // decode base64
-      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[offset]))
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[nextIndex]))
       {
         freeSecure(data);
         return FALSE;
@@ -6738,11 +6785,11 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   error = File_getInfo(&fileInfo,fileName);
   if (error == ERROR_NONE)
   {
-    if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
+    if ((fileInfo.permissions & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
     {
       printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600)"),
                    String_cString(fileName),
-                   fileInfo.permission & FILE_PERMISSION_MASK
+                   fileInfo.permissions & FILE_PERMISSION_MASK
                   );
     }
   }
@@ -6776,22 +6823,41 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
 // TODO:
   // skip header
-  bool headerLineFlag = TRUE;
+  bool headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
   if (headerLineFlag)
   {
-    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
-                     && String_startsWithCString(line,"# ----");
+    if (String_startsWithCString(line,"# ----"))
+    {
+      headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+    }
+    else
+    {
+      headerLineFlag = FALSE;
+    }
   }
   if (headerLineFlag)
   {
-    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
-                     && String_startsWithCString(line,"# BAR configuration");
+    if (String_startsWithCString(line,"# BAR configuration"))
+    {
+      headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+    }
+    else
+    {
+      headerLineFlag = FALSE;
+    }
   }
   if (headerLineFlag)
   {
-    headerLineFlag =    File_getLine(&fileHandle,line,&lineNb,NULL)
-                     && String_startsWithCString(line,"# ----");
+    if (String_startsWithCString(line,"# ----"))
+    {
+      headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+    }
+    else
+    {
+      headerLineFlag = FALSE;
+    }
   }
+  if (!headerLineFlag) File_ungetLine(&fileHandle,line,&lineNb);
 
   // parse
   bool lineFlag;
@@ -6800,7 +6866,6 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
         )
   {
     // parse line
-//fprintf(stderr,"%s, %d: %d: %s\n",__FILE__,__LINE__,lineNb,String_cString(line));
     String_trim(line,STRING_WHITE_SPACES);
 
     if      (String_isEmpty(line))
@@ -7616,6 +7681,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("force-verify-signatures",           0,  0,2,globalOptions.forceVerifySignaturesFlag,                                                                          "force verify signatures of archives. Stop on error"                       ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",                  0,  1,2,globalOptions.noBAROnMediumFlag,                                                                                  "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",                  0,  1,2,globalOptions.noStopOnErrorFlag,                                                                                  "do not immediately stop on error"                                         ),
+  CMD_OPTION_BOOLEAN      ("no-stop-on-owner-error",            0,  1,2,globalOptions.noStopOnOwnerErrorFlag,                                                                             "do not immediately stop on owner error"                                   ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-attribute-error",        0,  1,2,globalOptions.noStopOnAttributeErrorFlag,                                                                         "do not immediately stop on attribute error"                               ),
 
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
@@ -8090,6 +8156,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &globalOptions.skipVerifySignaturesFlag,-1,                    "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",                 &globalOptions.noBAROnMediumFlag,-1,                           "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",                 &globalOptions.noStopOnErrorFlag,-1,                           "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-stop-on-owner-error",           &globalOptions.noStopOnOwnerErrorFlag,-1,                      "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-attribute-error",       &globalOptions.noStopOnAttributeErrorFlag,-1,                  "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("quiet",                            &globalOptions.quietFlag,-1,                                   "yes|no"),
   CONFIG_VALUE_COMMENT           ("verbose level [0..6]"),
@@ -8220,6 +8287,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",              JobNode,job.options.noSignatureFlag,             "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",          JobNode,job.options.noBAROnMediumFlag,           "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-owner-error",    JobNode,job.options.noStopOnOwnerErrorFlag,      "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
 
   CONFIG_VALUE_SPACE(),

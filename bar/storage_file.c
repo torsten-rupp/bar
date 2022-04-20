@@ -30,7 +30,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
@@ -364,7 +363,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     error = File_makeDirectory(directoryName,
                                FILE_DEFAULT_USER_ID,
                                FILE_DEFAULT_GROUP_ID,
-                               FILE_DEFAULT_PERMISSION,
+                               FILE_DEFAULT_PERMISSIONS,
                                FALSE
                               );
     if (error != ERROR_NONE)
@@ -403,14 +402,14 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
 
-  // init variables
-  storageHandle->mode = STORAGE_MODE_READ;
-
   // check if file exists
   if (!File_exists(fileName))
   {
     return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(fileName));
   }
+
+  // init variables
+  storageHandle->mode = STORAGE_MODE_READ;
 
   // open file
   error = File_open(&storageHandle->fileSystem.fileHandle,
@@ -561,7 +560,7 @@ LOCAL Errors StorageFile_makeDirectory(const StorageInfo *storageInfo,
   return File_makeDirectory(directoryName,
                             FILE_DEFAULT_USER_ID,
                             FILE_DEFAULT_GROUP_ID,
-                            FILE_DEFAULT_PERMISSION,
+                            FILE_DEFAULT_PERMISSIONS,
                             FALSE
                            );
 }
@@ -618,9 +617,6 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
-
-  // init variables
-  storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;
 
   // open directory
   error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,

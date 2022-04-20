@@ -920,7 +920,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                   entityId,
                   String_cString(jobUUID),
                   Archive_archiveTypeToString(archiveType),
-                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
                  );
 
       // prune UUID

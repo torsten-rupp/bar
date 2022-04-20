@@ -650,7 +650,7 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber)
 LOCAL void debugThreadInit(void)
 {
   #ifdef HAVE_SIGACTION
-    struct sigaction sa;
+    struct sigaction signalAction;
   #endif /* HAVE_SIGACTION */
 
   // add main thread
@@ -658,21 +658,21 @@ LOCAL void debugThreadInit(void)
 
   // install signal handlers for printing stack traces
   #ifdef HAVE_SIGACTION
-    sigfillset(&sa.sa_mask);
-    sa.sa_flags     = SA_SIGINFO;
-    sa.sa_sigaction = debugThreadSignalSegVHandler;
-    sigaction(SIGSEGV,&sa,&debugThreadSignalSegVPrevHandler);
+    sigfillset(&signalAction.sa_mask);
+    signalAction.sa_flags     = SA_SIGINFO;
+    signalAction.sa_sigaction = debugThreadSignalSegVHandler;
+    sigaction(SIGSEGV,&signalAction,&debugThreadSignalSegVPrevHandler);
 
-    sigfillset(&sa.sa_mask);
-    sa.sa_flags     = SA_SIGINFO;
-    sa.sa_sigaction = debugThreadSignalAbortHandler;
-    sigaction(SIGABRT,&sa,&debugThreadSignalAbortPrevHandler);
+    sigfillset(&signalAction.sa_mask);
+    signalAction.sa_flags     = SA_SIGINFO;
+    signalAction.sa_sigaction = debugThreadSignalAbortHandler;
+    sigaction(SIGABRT,&signalAction,&debugThreadSignalAbortPrevHandler);
 
     #ifdef HAVE_SIGQUIT
-      sigfillset(&sa.sa_mask);
-      sa.sa_flags     = SA_SIGINFO;
-      sa.sa_sigaction = debugThreadSignalQuitHandler;
-      sigaction(SIGQUIT,&sa,&debugThreadSignalQuitPrevHandler);
+      sigfillset(&signalAction.sa_mask);
+      signalAction.sa_flags     = SA_SIGINFO;
+      signalAction.sa_sigaction = debugThreadSignalQuitHandler;
+      sigaction(SIGQUIT,&signalAction,&debugThreadSignalQuitPrevHandler);
     #endif /* HAVE_SIGQUIT */
   #else /* not HAVE_SIGACTION */
     signal(SIGSEGV,debugThreadSignalSegVHandler);

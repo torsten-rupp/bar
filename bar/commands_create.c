@@ -602,7 +602,12 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   {
     if      (!File_exists(directoryName))
     {
-      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
+      error = File_makeDirectory(directoryName,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 FALSE
+                                );
       if (error != ERROR_NONE)
       {
         String_delete(directoryName);
@@ -3899,7 +3904,19 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
                       );
   if (error != ERROR_NONE)
   {
-    return error;
+// TODO: race condition in scp/sftp without a short delay?
+Misc_udelay(1000*1000);
+    error = Archive_open(&archiveHandle,
+                         storageInfo,
+                         archiveName,
+                         NULL,  // deltaSourceList,
+                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                         NULL // logHandle
+                        );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   // simple test: read and skip content of archive entries
@@ -4045,92 +4062,6 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
   (void)Archive_close(&archiveHandle);
 
   return error;
-}
-
-/***********************************************************************\
-* Name   : archiveTest
-* Purpose: call back for simpel archive test
-* Input  : storageInfo          - storage info
-*          uuidId               - index UUID id
-*          jobUUID              - job UUID
-*          scheduleUUID         - schedule UUID
-*          entityId             - index entity id
-*          storageId            - index storage id
-*          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
-*                                 for single part
-*          intermediateFileName - intermediate archive file name
-*          intermediateFileSize - intermediate archive size [bytes]
-*          userData             - user data
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors archiveTest(StorageInfo  *storageInfo,
-                         ConstString  jobUUID,
-                         ConstString  scheduleUUID,
-                         int          partNumber,
-                         ConstString  intermediateFileName,
-                         uint64       intermediateFileSize,
-                         void         *userData
-                        )
-{
-  CreateInfo *createInfo = (CreateInfo*)userData;
-  Errors     error;
-  String     archiveName;
-
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(intermediateFileName));
-  assert(createInfo != NULL);
-
-  UNUSED_VARIABLE(jobUUID);
-  UNUSED_VARIABLE(scheduleUUID);
-
-  // test archive
-  if (storageInfo->jobOptions->testCreatedArchivesFlag)
-  {
-    // get archive file name (expand macros)
-    archiveName = String_new();
-    error = Archive_formatName(archiveName,
-                               storageInfo->storageSpecifier.archiveName,
-                               EXPAND_MACRO_MODE_STRING,
-                               createInfo->archiveType,
-                               createInfo->scheduleTitle,
-                               createInfo->customText,
-                               createInfo->createdDateTime,
-                               partNumber
-                              );
-    if (error != ERROR_NONE)
-    {
-      String_delete(archiveName);
-      return error;
-    }
-    DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
-
-    #ifndef NDEBUG
-      printInfo(1,"Test '%s'...",String_cString(intermediateFileName));
-    #else /* not NDEBUG */
-      printInfo(1,"Test '%s'...",String_cString(archiveName));
-    #endif /* NDEBUG */
-
-    error = simpleTestArchive(storageInfo,intermediateFileName);
-    if (error != ERROR_NONE)
-    {
-      printInfo(0,"FAIL!\n");
-      String_delete(archiveName);
-      return error;
-    }
-
-    printInfo(1,"OK (%"PRIu64" bytes)\n",intermediateFileSize);
-    logMessage(createInfo->logHandle,
-               LOG_TYPE_STORAGE,
-               "Tested '%s' (%"PRIu64" bytes)",
-               String_cString(archiveName),
-               intermediateFileSize
-              );
-  }
-
-  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -4805,7 +4736,7 @@ NULL, // masterIO
         (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
         // log
-        Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
+        Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,FALSE,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
                    "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %"PRIu64" bytes",
@@ -5024,7 +4955,7 @@ NULL, // masterIO
         (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
         // log
-        Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
+        Misc_formatDateTime(dateTime,oldestCreatedDateTime,FALSE,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
                    "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %"PRIu64" bytes",
@@ -5189,14 +5120,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
          )
       {
-        String directoryName;
-        String baseName;
-        String prefixFileName;
-        String postfixFileName;
+        String directoryName,baseName;
+        String prefixFileName,postfixFileName;
         long   index;
         uint   n;
 
         // rename new archive
+        directoryName   = String_new();
+        baseName        = String_new();
         prefixFileName  = String_new();
         postfixFileName = String_new();
         File_splitFileName(storageMsg.archiveName,&directoryName,&baseName);
@@ -5230,7 +5161,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
       // pre-process
-      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
+      error = Storage_preProcess(&createInfo->storageInfo,
+                                 storageMsg.
+                                 archiveName,
+                                 createInfo->createdDateTime,
+                                 FALSE  // initialFlag
+                                );
       if (error != ERROR_NONE)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
@@ -5429,6 +5365,26 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                   );
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         break;
+      }
+      printInfo(1,"OK (%"PRIu64" bytes)\n",storageSize);
+
+      if (createInfo->jobOptions->testCreatedArchivesFlag)
+      {
+        printInfo(1,"Test '%s'...",String_cString(printableStorageName));
+        error = simpleTestArchive(&createInfo->storageInfo,storageMsg.archiveName);
+        if (error != ERROR_NONE)
+        {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+          printInfo(0,"FAIL!\n");
+          printError("Cannot test '%s' (error: %s)!",
+                     String_cString(printableStorageName),
+                     Error_getText(createInfo->failError)
+                    );
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+          break;
+        }
+        printInfo(1,"OK (%"PRIu64" bytes)\n",fileInfo.size);
       }
 
       // update index database and set state
@@ -5700,7 +5656,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // done
-      printInfo(1,"OK (%"PRIu64" bytes)\n",storageSize);
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
                  "%s '%s' (%"PRIu64" bytes)",
@@ -7512,7 +7467,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
-    StringList_done(&archiveEntryNameList);
 
     // seek to start offset
     error = File_seek(&fileHandle,fragmentOffset);
@@ -7614,6 +7568,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       {
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
+        StringList_done(&archiveEntryNameList);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7633,6 +7588,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
+        StringList_done(&archiveEntryNameList);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7647,6 +7603,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                   );
 
         (void)Archive_closeEntry(&archiveEntryInfo);
+        StringList_done(&archiveEntryNameList);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7663,11 +7620,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       printError("Cannot close archive hardlink entry (error: %s)!",
                  Error_getText(error)
                 );
+      StringList_done(&archiveEntryNameList);
       (void)File_close(&fileHandle);
       fragmentDone(createInfo,StringList_first(fileNameList,NULL));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+    StringList_done(&archiveEntryNameList);
 
     // get final compression ratio
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
@@ -8476,7 +8435,7 @@ Errors Command_create(ServerIO                     *masterIO,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(archiveGetSize,&createInfo),
-                         CALLBACK_(archiveTest,&createInfo),
+                         CALLBACK_(NULL,NULL),  // archiveTest
                          CALLBACK_(archiveStore,&createInfo),
                          CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle

@@ -2487,7 +2487,9 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
               "Removed deleted storage #%"PRIu64" from index: %s, created at %s",
               storageId,
               String_cString(name),
-              (createdDateTime != 0LL) ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)) : "unknown"
+              (createdDateTime != 0LL)
+                ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                : "unknown"
              );
 
   // free resources
@@ -2778,12 +2780,10 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
           }
         });
       }
-#if 1
       if (error == ERROR_NONE)
       {
         error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
       }
-#endif
     }
 
     return error;
@@ -5244,6 +5244,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                     Index_modeToString(indexMode,NULL)
                                    );
   }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }

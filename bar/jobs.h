@@ -58,7 +58,7 @@ struct JobOptions
   int                         directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
   String                      destination;                   // destination for restore
   Owner                       owner;                         // restore owner
-  FilePermission              permissions;                   // restore permissions
+  FilePermissions             permissions;                   // restore permissions
   PatternTypes                patternType;                   // pattern type
 
   CompressAlgorithmsDeltaByte compressAlgorithms;            // compress algorithms delta/byte
@@ -110,6 +110,7 @@ struct JobOptions
   bool                        noSignatureFlag;               // TRUE for not appending signatures
   bool                        noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                        noStopOnErrorFlag;             // TRUE for not stopping immediately on error
+  bool                        noStopOnOwnerErrorFlag;        // TRUE for not stopping immediately on owner error
   bool                        noStopOnAttributeErrorFlag;    // TRUE for not stopping immediately on attribute error
   bool                        dryRun;                        // TRUE for dry-run only
 };

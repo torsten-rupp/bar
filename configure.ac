@@ -1569,6 +1569,11 @@ AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
 AC_PATH_PROGS(DOCKER,docker)
+# required for tests
+AC_PATH_PROGS(KILLALL,killall)
+if test -z "$KILLALL"; then
+  AC_MSG_ERROR([Cannot find a 'killall' in PATH. Please check your PATH environment variable.])
+fi
 AC_PATH_PROGS(WINE, wine)
 AC_PATH_PROGS(WINEPATH, winepath)
 AC_PROVIDE(AC_PROG_WINEPATH)
@@ -4408,6 +4413,7 @@ AC_CHECK_HEADERS(\
                  uuid/uuid.h \
                  valgrind/callgrind.h
                 )
+AC_CHECK_HEADER(sqlite3.h,,AC_ERROR([mandatory sqlite3.h is not available]))
 
 # defines, constants, types, variables
 AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
@@ -4433,9 +4439,9 @@ fi
 case $host_os in
   linux-*)
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(idn_free,idn,[LIBRARIES="$LIBRARIES idn"],,idn-free.h)
+      AC_SEARCH_LIBRARIES(idn_free,idn2,[LIBRARIES="$LIBRARIES idn2"],,idn-free.h)
     else
-      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn"],,idn-free.h)
+      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn2,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"],,idn-free.h)
     fi
     ;;
   sunos | solaris*)
@@ -4593,6 +4599,7 @@ AC_CHECK_FUNCTION(inotify_init1,    AC_DEFINE(HAVE_INOTIFY_INIT1,    1,[inotify_
 AC_CHECK_FUNCTION(inotify_add_watch,AC_DEFINE(HAVE_INOTIFY_ADD_WATCH,1,[inotify_add_watch() available]))
 AC_CHECK_FUNCTION(inotify_rm_watch, AC_DEFINE(HAVE_INOTIFY_RM_WATCH, 1,[inotify_rm_watch() available]))
 
+AC_CHECK_FUNCTION(gmtime_r,   AC_DEFINE(HAVE_GMTIME_R,   1,[gmtime_r() available]))
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
 AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
@@ -4605,6 +4612,8 @@ AC_CHECK_FUNCTION(fork,   AC_DEFINE(HAVE_FORK,   1,[fork() available]))
 AC_CHECK_FUNCTION(waitpid,AC_DEFINE(HAVE_WAITPID,1,[waitpid() available]))
 
 AC_CHECK_FUNCTION(zlibVersion,,AC_ERROR([mandatory function zlibVersion() is not available]),zlib.h)
+
+AC_CHECK_FUNCTION(ZSTD_CCtx_reset,AC_DEFINE(HAVE_ZSTD_CCTX_RESET,1,[SSH2 has libssh2_keepalive_config()]))
 
 AC_CHECK_FUNCTION(libssh2_userauth_publickey_frommemory,AC_DEFINE(HAVE_SSH2_USERAUTH_PUBLICKEY_FROMMEMORY,1,[SSH2 has libssh2_userauth_publickey_frommemory() function]))
 AC_CHECK_FUNCTION(libssh2_channel_send_keepalive,       AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,       1,[SSH2 has libssh2_channel_send_keepalive()]))

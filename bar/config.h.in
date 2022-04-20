@@ -187,6 +187,9 @@
 /* get_current_dir_name() available */
 #undef HAVE_GET_CURRENT_DIR_NAME
 
+/* gmtime_r() available */
+#undef HAVE_GMTIME_R
+
 /* GNU TLS installed */
 #undef HAVE_GNU_TLS
 
@@ -690,6 +693,9 @@
 
 /* zstd installed */
 #undef HAVE_ZSTD
+
+/* SSH2 has libssh2_keepalive_config() */
+#undef HAVE_ZSTD_CCTX_RESET
 
 /* _fseeki64() available */
 #undef HAVE__FSEEKI64

@@ -75,6 +75,8 @@ typedef enum
 // length of machine id
 #define MISC_MACHINE_ID_LENGTH (128/8)
 
+#define MISC_ID_NONE 0
+
 // text macro patterns
 #define TEXT_MACRO_PATTERN_INTEGER   "[+-]{0,1}\\d+"
 #define TEXT_MACRO_PATTERN_INTEGER64 "[+-]{0,1}\\d+"
@@ -802,6 +804,17 @@ INLINE bool Misc_isLeapYear(uint year)
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Misc_isDayLightSavig
+* Purpose: check if day light saving is active for given date/time
+* Input  : dateTime - date/time
+* Output : -
+* Return : TRUE iff day light saving
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_isDayLightSaving(uint64 dateTime);
+
+/***********************************************************************\
 * Name   : Misc_makeDateTime
 * Purpose: create date/time from parts
 * Input  : year             - year, YYYY
@@ -843,14 +856,15 @@ uint64 Misc_parseDateTime(const char *string);
 *          buffer     - buffer
 *          bufferSize - buffer size
 *          dateTime   - date/time (seconds since 1970-1-1 00:00:00)
+*          utcFlag    - TRUE to format date/time in UTC. FALSE otherwise
 *          format     - format string (see strftime) or NULL for default
 * Output : -
 * Return : date/time string
 * Notes  : -
 \***********************************************************************/
 
-String Misc_formatDateTime(String string, uint64 dateTime, const char *format);
-const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format);
+String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const char *format);
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, bool utcFlag, const char *format);
 
 /***********************************************************************\
 * Name   : Misc_udelay
