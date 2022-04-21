@@ -24,7 +24,10 @@ xxxTEST_STEPS = ["basic",
               "config",
               "misc"
              ];
-TEST_STEPS = ["master_slave",
+TEST_STEPS = [
+              "index",
+              "server",
+"master_slave"
              ];
 
 // tests
