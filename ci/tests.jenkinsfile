@@ -25,7 +25,7 @@ xxxTEST_STEPS = ["basic",
               "misc"
              ];
 TEST_STEPS = [
-              "server",
+              "index",
 "master_slave"
              ];
 
