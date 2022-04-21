@@ -4798,8 +4798,8 @@ if test $ENABLE_CURL = "yes"; then
                     ],
                     [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
                     [ "])
-  if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7660; then
-    AC_ERROR([Required libcurl 7.66 (0x076600) or newer - found '$VERSION_CURL'])
+  if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7770; then
+    AC_ERROR([Required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
   fi
 fi
 if test $ENABLE_ISO9660 = "yes"; then

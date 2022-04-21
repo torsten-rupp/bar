@@ -107,4 +107,3 @@ COPY test-apache2.conf /etc/apache2/sites-enabled/test.conf
 RUN sed 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=test/g' -i /etc/apache2/envvars
 RUN sed 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=test/g' -i /etc/apache2/envvars
 RUN (cd /var/www; rm -rf html; ln -s /home/test html)
-#RUN install -d -o test -g test /var/run/apache2
