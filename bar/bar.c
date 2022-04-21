@@ -248,8 +248,8 @@ LOCAL void signalHandler(int signalNumber)
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
@@ -717,8 +717,8 @@ LOCAL void doneAll(void)
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
     sigaction(SIGUSR1,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
@@ -3922,34 +3922,34 @@ LOCAL Errors runDebug(void)
     if      (error == ERROR_NONE)
     {
       // done
-      (void)Index_setStorageState(indexHandle,
-                                  storageId,
-                                  INDEX_STATE_OK,
-                                  Misc_getCurrentDateTime(),
-                                  NULL  // errorMessage
-                                 );
+      error = Index_setStorageState(indexHandle,
+                                    storageId,
+                                    INDEX_STATE_OK,
+                                    Misc_getCurrentDateTime(),
+                                    NULL  // errorMessage
+                                   );
     }
     else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
     {
       // interrupt
-      (void)Index_setStorageState(indexHandle,
-                                  storageId,
-                                  INDEX_STATE_UPDATE_REQUESTED,
-                                  0LL,  // lastCheckedTimestamp
-                                  NULL  // errorMessage
-                                 );
+      error = Index_setStorageState(indexHandle,
+                                    storageId,
+                                    INDEX_STATE_UPDATE_REQUESTED,
+                                    0LL,  // lastCheckedTimestamp
+                                    NULL  // errorMessage
+                                   );
     }
     else
     {
       // error
-      (void)Index_setStorageState(indexHandle,
-                                  storageId,
-                                  INDEX_STATE_ERROR,
-                                  0LL,  // lastCheckedDateTime
-                                  "%s (error code: %d)",
-                                  Error_getText(error),
-                                  Error_getCode(error)
-                                 );
+      error = Index_setStorageState(indexHandle,
+                                    storageId,
+                                    INDEX_STATE_ERROR,
+                                    0LL,  // lastCheckedDateTime
+                                    "%s (error code: %d)",
+                                    Error_getText(error),
+                                    Error_getCode(error)
+                                   );
     }
     if (error != ERROR_NONE)
     {
@@ -4521,6 +4521,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     Array_debugDone();
     String_debugDone();
     List_debugDone();
+    fprintf(stderr,"DEBUG: exitcode %d\n",errorToExitcode(error));
   #endif /* not NDEBUG */
 
   return errorToExitcode(error);

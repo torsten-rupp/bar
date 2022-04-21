@@ -145,6 +145,7 @@ dnl --- check if linker support option
 dnl usage: AC_LINKER_OPTION(<option>,<variable>...)
 AC_DEFUN([AC_LINKER_OPTION],
 [
+  AC_REQUIRE([AC_PROG_CPP])
   AC_CACHE_CHECK(
     [if $LD support option $1],
     ac_cv_linker_option_`echo $1|tr -c -d a-zA-Z0-9_`,
@@ -883,6 +884,7 @@ AC_SUBST(TLS_DIR)                           dnl TLS/SSL directory
 AC_SUBST(MAN_DIR)                           dnl man page directory
 AC_SUBST(LOCALE_DIR)                        dnl locale directory
 
+AC_SUBST(CPP)                               dnl C preprocessor
 AC_SUBST(CC)                                dnl C compiler
 AC_SUBST(LD)                                dnl linker
 AC_SUBST(STRIP)                             dnl strip
@@ -1301,6 +1303,12 @@ if test -z "$BUILD_LD"; then
   AC_PATH_PROGS(BUILD_LD,$build-ld $build-ld ld gcc)
 fi
 
+if test -z "$CPP"; then
+  AC_PATH_PROGS(CPP,$host-cpp cpp)
+fi
+if test -z "$CPP"; then
+  AC_MSG_ERROR([Cannot find C preprocessor in PATH. Please check your PATH environment variable.])
+fi
 if test -z "$CC"; then
   AC_PATH_PROGS(CC,$host-gcc $host-cc gcc cc)
 fi
@@ -1561,6 +1569,11 @@ AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
 AC_PATH_PROGS(DOCKER,docker)
+# required for tests
+AC_PATH_PROGS(KILLALL,killall)
+if test -z "$KILLALL"; then
+  AC_MSG_ERROR([Cannot find a 'killall' in PATH. Please check your PATH environment variable.])
+fi
 AC_PATH_PROGS(WINE, wine)
 AC_PATH_PROGS(WINEPATH, winepath)
 AC_PROVIDE(AC_PROG_WINEPATH)
@@ -4400,6 +4413,7 @@ AC_CHECK_HEADERS(\
                  uuid/uuid.h \
                  valgrind/callgrind.h
                 )
+AC_CHECK_HEADER(sqlite3.h,,AC_ERROR([mandatory sqlite3.h is not available]))
 
 # defines, constants, types, variables
 AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
@@ -4598,6 +4612,8 @@ AC_CHECK_FUNCTION(fork,   AC_DEFINE(HAVE_FORK,   1,[fork() available]))
 AC_CHECK_FUNCTION(waitpid,AC_DEFINE(HAVE_WAITPID,1,[waitpid() available]))
 
 AC_CHECK_FUNCTION(zlibVersion,,AC_ERROR([mandatory function zlibVersion() is not available]),zlib.h)
+
+AC_CHECK_FUNCTION(ZSTD_CCtx_reset,AC_DEFINE(HAVE_ZSTD_CCTX_RESET,1,[SSH2 has libssh2_keepalive_config()]))
 
 AC_CHECK_FUNCTION(libssh2_userauth_publickey_frommemory,AC_DEFINE(HAVE_SSH2_USERAUTH_PUBLICKEY_FROMMEMORY,1,[SSH2 has libssh2_userauth_publickey_frommemory() function]))
 AC_CHECK_FUNCTION(libssh2_channel_send_keepalive,       AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,       1,[SSH2 has libssh2_channel_send_keepalive()]))

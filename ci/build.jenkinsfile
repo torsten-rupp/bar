@@ -5,6 +5,29 @@ DOCKER_IMAGE_NAME_RPM='dockerregistry.macio.de:5000/backup_archiver_rpm:latest'
 DOCKER_IMAGE_NAME_DEB='dockerregistry.macio.de:5000/backup_archiver_deb:latest'
 DOCKER_IMAGE_NAME_WIN32='dockerregistry.macio.de:5000/backup_archiver_win32:latest'
 
+TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db TEST_LOGIN_NAME=test TEST_PASSWORD=test TEST_BASE_DIR=/home/test TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa TEST_IMAGE_OPERATIONS=no"
+
+TEST_STEPS = ["basic",
+              "compress",
+              "delta_compress",
+              "crypt",
+              "asymmetric_crypt",
+              "signatures",
+              "split",
+              "convert",
+              "storage_file",
+              "storage_ftp",
+              "storage_scp",
+              "storage_sftp",
+              "storage_webdav",
+              "index",
+              "server",
+              "master_slave",
+              "arguments",
+              "config",
+              "misc"
+             ];
+
 // build
 def build()
 {
@@ -12,7 +35,7 @@ def build()
   {
     stage("Build")
     {
-      docker.image(DOCKER_IMAGE_NAME).inside
+      docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
       {
         checkout scm
         script
@@ -22,10 +45,9 @@ def build()
           sh "./download-third-party-packages.sh"
           sh "./configure"
 
-          // make
-//TODO
-//          sh "make -j`nproc --ignore=1`"
-          sh "make"
+          // make (Note: avoid race condition by not creating dependencies in parallel)
+          sh "make depend"
+          sh "make -j`nproc --ignore=1`"
           if (params.CODE_COVERAGE)
           {
             sh "make -C bar bar-gcov"
@@ -39,23 +61,37 @@ def build()
       }
     }
 
-    stage("Tests")
+    switch (params.BINARY_TYPE)
     {
-      // simple build (without external packages)
-      docker.image(DOCKER_IMAGE_NAME).inside
+      case "DEBUG":
+        binaryExtension="-debug";
+        break;
+      case "VALGRIND":
+        binaryExtension="-valgrind";
+        break;
+      case "GCOV":
+        binaryExtension="-gcov";
+        break;
+      case "GPROF":
+        binaryExtension="-gprof";
+        break;
+      default:
+        binaryExtension="";
+        break;
+    }
+    stage("Smoke tests")
+    {
+      // run tests
+      script
       {
-        checkout scm
-        script
+        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
         {
-          sh "./configure"
-
-          // make
-//TODO
-//          sh "make -j`nproc --ignore=1`"
-          sh "make"
+          sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
         }
       }
-
+    }
+    stage("Tests")
+    {
       // run tests
       script
       {
@@ -63,56 +99,26 @@ def build()
             || (env.BRANCH_NAME == "master")
            )
         {
-          switch (params.BINARY_TYPE)
-          {
-            case "DEBUG":
-              binaryExtension="-debug";
-              break;
-            case "VALGRIND":
-              binaryExtension="-valgrind";
-              break;
-            case "GCOV":
-              binaryExtension="-gcov";
-              break;
-            case "GPROF":
-              binaryExtension="-gprof";
-              break;
-            default:
-              binaryExtension="";
-              break;
-          }
-          sh "echo binaryExtension="+binaryExtension
           switch (params.TEST_TYPE)
           {
-            case "SMOKE":
-            default:
-              docker.image(DOCKER_IMAGE_NAME).inside
-              {
-                sh "make test_smoke"+binaryExtension+" O='--verbose=1'"
-              }
-              break;
             case "FULL":
-              docker.image(DOCKER_IMAGE_NAME).inside
+              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               {
-                sh "make test_basic"           +binaryExtension+" O='--verbose=1'"
-                sh "make test_compress"        +binaryExtension+" O='--verbose=1'"
-                sh "make test_delta_compress"  +binaryExtension+" O='--verbose=1'"
-                sh "make test_crypt"           +binaryExtension+" O='--verbose=1'"
-                sh "make test_asymmetric_crypt"+binaryExtension+" O='--verbose=1'"
-                sh "make test_signatures"      +binaryExtension+" O='--verbose=1'"
-                sh "make test_split"           +binaryExtension+" O='--verbose=1'"
-                sh "make test_convert"         +binaryExtension+" O='--verbose=1'"
-                sh "make test_arguments"       +binaryExtension+" O='--verbose=1'"
-                sh "make test_misc"            +binaryExtension+" O='--verbose=1'"
+                // start services
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
+
+                TEST_STEPS.each { step -> sh "make test_${steps}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'" }
+
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
               }
               break;
-          }
-        }
-        else
-        {
-          docker.image(DOCKER_IMAGE_NAME).inside
-          {
-            sh "make test_smoke-debug O='--verbose=1'"
+            default:
+              break;
           }
         }
       }
@@ -126,21 +132,21 @@ def build()
             || (env.BRANCH_NAME == "master")
            )
         {
-          docker.image(DOCKER_IMAGE_NAME).inside
+          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
+            // start services
+            sh "sudo /etc/init.d/apache2 start"
+            sh "sudo /etc/init.d/ssh start"
+            sh "sudo /etc/init.d/vsftpd start"
+
             sh "make -C bar gcov_clean"
-            sh "make -C bar gcov_basic"
-            sh "make -C bar gcov_compress"
-            sh "make -C bar gcov_delta_compress"
-            sh "make -C bar gcov_crypt"
-            sh "make -C bar gcov_asymmetric_crypt"
-            sh "make -C bar gcov_signatures"
-            sh "make -C bar gcov_split"
-            sh "make -C bar gcov_convert"
-            sh "make -C bar gcov_index TEST_INDEX_DATABASES=sqlite:intermediate/index.db"
-            sh "make -C bar gcov_arguments"
-            sh "make -C bar gcov_misc"
+            TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
             sh "make -C bar gcov_html"
+
+            // stop services
+            sh "sudo /etc/init.d/vsftpd stop || true"
+            sh "sudo /etc/init.d/ssh stop || true"
+            sh "sudo /etc/init.d/apache2 stop || true"
           }
 
           publishHTML([allowMissing:          false,
@@ -164,23 +170,29 @@ def build()
             || (env.BRANCH_NAME == "master")
            )
         {
-          docker.image(DOCKER_IMAGE_NAME).inside
+          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
+            // start services
+            sh "sudo /etc/init.d/apache2 start"
+            sh "sudo /etc/init.d/ssh start"
+            sh "sudo /etc/init.d/vsftpd start"
+
             sh "make -C bar gprof_clean"
-            sh "make -C bar gprof_basic"
-            sh "make -C bar gprof_compress"
-            sh "make -C bar gprof_delta_compress"
-            sh "make -C bar gprof_crypt"
-            sh "make -C bar gprof_asymmetric_crypt"
-            sh "make -C bar gprof_signatures"
-            sh "make -C bar gprof_split"
-            sh "make -C bar gprof_convert"
-            sh "make -C bar gprof_arguments"
-            sh "make -C bar gprof_misc"
+            TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
+
+            // stop services
+            sh "sudo /etc/init.d/vsftpd stop || true"
+            sh "sudo /etc/init.d/ssh stop || true"
+            sh "sudo /etc/init.d/apache2 stop || true"
           }
         }
       }
     }
+  }
+  catch (error)
+  {
+    echo "ERROR: ${error.message}"
+    currentBuild.result = 'FAILED'
   }
   finally
   {

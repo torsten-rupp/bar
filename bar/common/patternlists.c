@@ -218,7 +218,14 @@ Errors PatternList_appendCString(PatternList  *patternList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  patternNode->id     = Misc_getId();
+  if (id != NULL)
+  {
+    patternNode->id = ((*id) == MISC_ID_NONE) ? Misc_getId() : *id;
+  }
+  else
+  {
+    patternNode->id = Misc_getId();
+  }
   patternNode->string = String_newCString(string);
 
   // init pattern

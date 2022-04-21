@@ -44,11 +44,12 @@ WINE_C_DRIVE       = @WINE_C_DRIVE@
 
 #--------------------------------- tool chain --------------------------------
 
-# shell in Makefile must be bash
-SHELL                      = bash
+# shell in Makefile must be bash with pipe-fail handling
+SHELL                      = bash -o pipefail
 
 CTAGS_FLAGS                =
 
+CPP                        = @CPP@
 CC                         = @CC@
 CC_FLAGS                   = @CC_FLAGS@ -g
 CC_WARN_FLAGS              = @CC_WARN_FLAGS@
@@ -436,14 +437,9 @@ BAR_SOURCES_OTHER           = forward.h \
                               storage_device.c \
                               storage_master.c \
                               \
-                              index/index_version1.c \
-                              index/index_version2.c \
-                              index/index_version3.c \
-                              index/index_version4.c \
                               index/index_version5.c \
                               index/index_version6.c \
                               index/index_version7.c \
-                              index/index_current.c \
                               \
                               archive_format.pl \
                               archive_format.def \
@@ -616,7 +612,9 @@ BAR_INDEX_SOURCES_OTHER     = index/index_definition.pl \
                               index/index_sqlite3.def \
                               index/index_mariadb.def \
                               index/index_postgresql.def \
-                              index/index_current.c \
+                              \
+                              index/index_version6.c \
+                              index/index_version7.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
                               $(SQLITE3_OBJECTS) \
@@ -1048,10 +1046,14 @@ bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
 	$(CHMOD) 775 $@
 
 # error definition
-errors.h: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -h $@
-errors.c: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -c $@
+errors.h: \
+  $(SOURCE_DIR)/../errors.def \
+  $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $(SOURCE_DIR)/../errors.def -h $@
+errors.c: \
+  $(SOURCE_DIR)/../errors.def \
+  $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $(SOURCE_DIR)/../errors.def -c $@
 release/errors.o: errors.c errors.h
 debug/errors.o: errors.c errors.h
 gcov/errors.o: errors.c errors.h

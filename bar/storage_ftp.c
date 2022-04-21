@@ -33,7 +33,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
@@ -362,7 +361,7 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
   {
     bytesSent = MIN(n,(size_t)(storageHandle->ftp.length-storageHandle->ftp.transferedBytes)/size)*size;
 
-    memcpy(buffer,storageHandle->ftp.buffer,bytesSent);
+    memCopyFast(buffer,bytesSent,storageHandle->ftp.buffer,bytesSent);
 
     storageHandle->ftp.buffer          = (byte*)storageHandle->ftp.buffer+bytesSent;
     storageHandle->ftp.transferedBytes += (ulong)bytesSent;
@@ -407,7 +406,7 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   {
     bytesReceived = n*size;
 
-    memcpy(storageHandle->ftp.buffer,buffer,bytesReceived);
+    memCopyFast(storageHandle->ftp.buffer,bytesReceived,buffer,bytesReceived);
 //fprintf(stderr,"%s, %d: curlFTPWriteDataCallback size=%d n=%d bytesReceived=%d %x\n",__FILE__,__LINE__,size,n,bytesReceived,bytesReceived);
 //debugDumpMemory(storageHandle->ftp.buffer,128,0);
     storageHandle->ftp.buffer          = (byte*)storageHandle->ftp.buffer+bytesReceived;
@@ -415,7 +414,6 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   }
   else
   {
-//fprintf(stderr,"%s, %d: curlFTPWriteDataCallback PAUSE: size*n=%d transferedBytes=%d length=%d\n",__FILE__,__LINE__,size*n,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
     bytesReceived = CURL_WRITEFUNC_PAUSE;
   }
 
@@ -573,7 +571,6 @@ LOCAL bool parseFTPDirectoryLine(String         line,
                        )
           )
   {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(line));
     // format:  <permission flags> * * * <size> <year>-<month>-<day> <hour>:<minute> <file name>
 
     permissionStringLength = stringLength(permissionString);
@@ -1061,7 +1058,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       }
 
       // allocate FTP server
-      if (!allocateServer(storageInfo->ftp.serverId,serverConnectionPriority,60*1000L))
+      if (!allocateServer(storageInfo->ftp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
       {
         Configuration_doneFTPServerSettings(&ftpServer);
         doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
@@ -1131,7 +1128,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                  || !Password_isEmpty(&ftpServer.password)
                  || !Password_isEmpty(&defaultFTPPassword)
                 )
-                  ? ERRORX_(INVALID_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                  ? ERRORX_(INVALID_FTP_PASSWORD,0,"a %s",String_cString(storageInfo->storageSpecifier.hostName))
                   : ERRORX_(NO_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
       }
 
@@ -1517,6 +1514,19 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       return ERROR_FTP_SESSION_FAIL;
     }
 
+    // set FTP connect
+    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
+                           storageHandle->storageInfo->storageSpecifier.loginName,
+                           storageHandle->storageInfo->storageSpecifier.loginPassword,
+                           FTP_TIMEOUT
+                          );
+    if (curlCode != CURLE_OK)
+    {
+      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    }
+
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),fileName);
     baseName      = File_getBaseName(String_new(),fileName);
@@ -1533,22 +1543,6 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_appendChar(url,'/');
     String_append(url,baseName);
-
-    // set FTP connect
-    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.loginName,
-                           storageHandle->storageInfo->storageSpecifier.loginPassword,
-                           FTP_TIMEOUT
-                          );
-    if (curlCode != CURLE_OK)
-    {
-      String_delete(url);
-      String_delete(baseName);
-      String_delete(directoryName);
-      (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-      (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
-    }
 
     // check to stop if exists/append/overwrite
     switch (storageHandle->storageInfo->jobOptions->archiveFileMode)
@@ -1966,7 +1960,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       // copy data from read-ahead buffer
       index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
       bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
-      memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
+      memCopyFast(buffer,bytesAvail,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
       // adjust buffer, bufferSize, bytes read, index
       buffer = (byte*)buffer+bytesAvail;
@@ -2005,7 +1999,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
         storageHandle->ftp.transferedBytes = 0L;
         runningHandles = 1;
-        while (   (storageHandle->ftp.transferedBytes == 0)
+        while (   (storageHandle->ftp.transferedBytes == 0L)
                && (error == ERROR_NONE)
                && (runningHandles > 0)
               )
@@ -2030,13 +2024,25 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
-        if (error != ERROR_NONE)
+        if      (error != ERROR_NONE)
         {
           break;
         }
-        if (storageHandle->ftp.transferedBytes <= 0L)
+        else if (storageHandle->ftp.transferedBytes <= 0L)
         {
-          error = ERROR_IO;
+          const CURLMsg *curlMsg;
+          int           n,i;
+
+          curlMsg = curl_multi_info_read(storageHandle->ftp.curlMultiHandle,&n);
+          for (i = 0; i < n; i++)
+          {
+            if ((curlMsg[i].easy_handle == storageHandle->ftp.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+            {
+              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
+              break;
+            }
+            curlMsg++;
+          }
           break;
         }
         storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
@@ -2044,7 +2050,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
         // copy data from read-ahead buffer
         bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
-        memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
+        memCopyFast(buffer,bytesAvail,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
 
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
@@ -2084,13 +2090,25 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
-        if (error != ERROR_NONE)
+        if      (error != ERROR_NONE)
         {
           break;
         }
-        if (storageHandle->ftp.transferedBytes <= 0L)
+        else if (storageHandle->ftp.transferedBytes <= 0L)
         {
-          error = ERROR_IO;
+          const CURLMsg *curlMsg;
+          int           n,i;
+
+          curlMsg = curl_multi_info_read(storageHandle->ftp.curlMultiHandle,&n);
+          for (i = 0; i < n; i++)
+          {
+            if ((curlMsg[i].easy_handle == storageHandle->ftp.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+            {
+              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
+              break;
+            }
+            curlMsg++;
+          }
           break;
         }
         bytesAvail = storageHandle->ftp.transferedBytes;
@@ -2205,7 +2223,6 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
         do
         {
           curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d transfered=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->ftp.transferedBytes,storageHandle->ftp.length,runningHandles);
         }
         while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                && (runningHandles > 0)
@@ -2408,8 +2425,6 @@ LOCAL Errors StorageFTP_makeDirectory(const StorageInfo *storageInfo,
   assert(!String_isEmpty(directoryName));
 
   #if   defined(HAVE_CURL)
-    // init variables
-
     // open Curl handles
     curlMultiHandle = curl_multi_init();
     if (curlMultiHandle == NULL)
@@ -2642,7 +2657,7 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
     }
 
     // allocate FTP server
-    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,60*1000L))
+    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
     {
       return ERROR_TOO_MANY_CONNECTIONS;
     }
@@ -2763,7 +2778,6 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // init variables
     AutoFree_init(&autoFreeList);
     Password_init(&password);
-    storageDirectoryListHandle->type              = STORAGE_TYPE_FTP;
     StringList_init(&storageDirectoryListHandle->ftp.lineList);
     storageDirectoryListHandle->ftp.fileName      = String_new();
     storageDirectoryListHandle->ftp.entryReadFlag = FALSE;
@@ -2784,7 +2798,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
 
     // allocate FTP server
-    if (!allocateServer(storageDirectoryListHandle->ftp.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageDirectoryListHandle->ftp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -2927,7 +2941,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   #if   defined(HAVE_CURL)
     freeServer(storageDirectoryListHandle->ftp.serverId);
@@ -2947,7 +2961,7 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   endOfDirectoryFlag = TRUE;
   #if   defined(HAVE_CURL)
@@ -2993,7 +3007,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)

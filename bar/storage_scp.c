@@ -42,7 +42,6 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
-// TODO: remove bar.h
 #include "bar.h"
 #include "bar_common.h"
 #include "errors.h"
@@ -400,7 +399,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     }
 
     // allocate SSH server
-    if (!allocateServer(storageInfo->scp.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageInfo->scp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -676,8 +675,6 @@ LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archive
   existsFlag = FALSE;
 
   #ifdef HAVE_SSH2
-    // init variables
-
     // connect
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
@@ -739,8 +736,6 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
   result = FALSE;
 
   #ifdef HAVE_SSH2
-    // init variables
-
     // connect
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
@@ -806,8 +801,6 @@ LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString ar
   result = FALSE;
 
   #ifdef HAVE_SSH2
-    // init variables
-
     // connect
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
@@ -964,21 +957,21 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     // open channel and file for writing
     #ifdef HAVE_SSH2_SCP_SEND64
       storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                          String_cString(fileName),
+                                                      String_cString(fileName),
 // ???
 0600,
-                                                          (libssh2_uint64_t)fileSize,
+                                                      (libssh2_uint64_t)fileSize,
 // ???
-                                                          0L,
-                                                          0L
-                                                         );
+                                                      0L,
+                                                      0L
+                                                     );
     #else /* not HAVE_SSH2_SCP_SEND64 */
       storageHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                        String_cString(archiveName),
+                                                    String_cString(archiveName),
 // ???
 0600,
-                                                        (size_t)fileSize
-                                                       );
+                                                    (size_t)fileSize
+                                                   );
     #endif /* HAVE_SSH2_SCP_SEND64 */
     if (storageHandle->scp.channel == NULL)
     {

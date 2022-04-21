@@ -3140,7 +3140,7 @@ uint ConfigValue_firstValueIndex(const ConfigValue configValues[],
                     sectionName,
                     &firstValueIndex,
                     &lastValueIndex
-                   ) != CONFIG_VALUE_INDEX_NONE)
+                   ) == CONFIG_VALUE_INDEX_NONE)
     {
       return CONFIG_VALUE_INDEX_NONE;
     }
@@ -5375,14 +5375,7 @@ LOCAL void updateSHA256Section(SHA256_           sha256,
 
 void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferSize)
 {
-// TODO: does not compile
-UNUSED_VARIABLE(configValues);
-UNUSED_VARIABLE(buffer);
-UNUSED_VARIABLE(bufferSize);
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-#if 0
   SHA256_ sha256;
-  uint    index;
 
   #if   defined(HAVE_OPENSSL)
     if (SHA256_Init(&sha256) != 1)
@@ -5392,7 +5385,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
     ITERATE_VALUE(configValues,index,0,CONFIG_VALUE_INDEX_MAX)
     {
-  fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,index);
+      fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,index);
     }
 
     if (SHA256_Final(sha256,sha256) != 1)
@@ -5419,7 +5412,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   #else
     HALT_INTERNAL_ERROR("no SHA256 implementation");
   #endif /* ... */
-#endif
 }
 
 #endif /* not NDEBUG */

@@ -61,10 +61,18 @@
 // max. number of password input requests
 #define MAX_PASSWORD_REQUESTS 3
 
+// max. number of read/write/lstat retries
+#define MAX_READ_RETRIES   3
+#define MAX_WRITE_RETRIES  3
+#define MAX_LSTATE_RETRIES 3
+
+#define RETRY_DELAY 100
+
 // different timeouts [ms]
-#define SSH_TIMEOUT           (30*MS_PER_SECOND)
-#define READ_TIMEOUT          (60*MS_PER_SECOND)
-#define WRITE_TIMEOUT         (60*MS_PER_SECOND)
+#define ALLOCATE_SERVER_TIMEOUT (3*60*MS_PER_SECOND)
+#define SSH_TIMEOUT             (30*MS_PER_SECOND)
+#define READ_TIMEOUT            (60*MS_PER_SECOND)
+#define WRITE_TIMEOUT           (60*MS_PER_SECOND)
 
 #define INITIAL_BUFFER_SIZE   (64*1024)
 #define INCREMENT_BUFFER_SIZE ( 8*1024)
@@ -192,7 +200,6 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
 
   // get a suitable timeout
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
-//fprintf(stderr,"%s, %d: curlTimeout=%ld \n",__FILE__,__LINE__,curlTimeout);
 
   // wait
   curlmCode = curl_multi_poll(curlMultiHandle,
@@ -203,7 +210,6 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
   switch (curlmCode)
   {
     case CURLM_OK:
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,fdCount);
       // OK
       error = ERROR_NONE;
       break;
@@ -4343,7 +4349,7 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
 
   DEBUG_REMOVE_RESOURCE_TRACE(storageDirectoryListHandle,StorageDirectoryListHandle);
 
-  switch (storageDirectoryListHandle->type)
+  switch (storageDirectoryListHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -4394,7 +4400,8 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
   DEBUG_CHECK_RESOURCE_TRACE(storageDirectoryListHandle);
 
   endOfDirectoryFlag = TRUE;
-  switch (storageDirectoryListHandle->type)
+
+  switch (storageDirectoryListHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -4449,7 +4456,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   DEBUG_CHECK_RESOURCE_TRACE(storageDirectoryListHandle);
 
   error = ERROR_UNKNOWN;
-  switch (storageDirectoryListHandle->type)
+  switch (storageDirectoryListHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;

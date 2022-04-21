@@ -3904,7 +3904,19 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
                       );
   if (error != ERROR_NONE)
   {
-    return error;
+// TODO: race condition in scp/sftp without a short delay?
+Misc_udelay(1000*1000);
+    error = Archive_open(&archiveHandle,
+                         storageInfo,
+                         archiveName,
+                         NULL,  // deltaSourceList,
+                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                         NULL // logHandle
+                        );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   // simple test: read and skip content of archive entries
@@ -5108,13 +5120,18 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
          )
       {
+        String directoryName,baseName;
+        String prefixFileName,postfixFileName;
+        long   index;
+        uint   n;
+
         // rename new archive
-        String directoryName   = String_new();
-        String baseName        = String_new();
-        String prefixFileName  = String_new();
-        String postfixFileName = String_new();
+        directoryName   = String_new();
+        baseName        = String_new();
+        prefixFileName  = String_new();
+        postfixFileName = String_new();
         File_splitFileName(storageMsg.archiveName,&directoryName,&baseName);
-        long index = String_findLastChar(baseName,STRING_END,'.');
+        index = String_findLastChar(baseName,STRING_END,'.');
         if (index >= 0)
         {
           String_sub(prefixFileName,baseName,STRING_BEGIN,index);
@@ -5124,7 +5141,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         {
           String_set(prefixFileName,baseName);
         }
-        uint n = 0;
+        n = 0;
         do
         {
           String_set(storageMsg.archiveName,directoryName);
@@ -5134,10 +5151,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           n++;
         }
         while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
-        String_delete(postfixFileName);
-        String_delete(prefixFileName);
         String_delete(baseName);
         String_delete(directoryName);
+        String_delete(postfixFileName);
+        String_delete(prefixFileName);
       }
 
       // get printable storage name
@@ -5353,8 +5370,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       if (createInfo->jobOptions->testCreatedArchivesFlag)
       {
-// TODO: race condition without a short delay?
-Misc_udelay(1000*1000);
         printInfo(1,"Test '%s'...",String_cString(printableStorageName));
         error = simpleTestArchive(&createInfo->storageInfo,storageMsg.archiveName);
         if (error != ERROR_NONE)

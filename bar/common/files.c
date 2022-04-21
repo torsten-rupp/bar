@@ -1000,8 +1000,6 @@ String File_getDirectoryName(String pathName, ConstString fileName)
 
   assert(pathName != NULL);
 
-//  return File_getDirectoryNameCString(pathName,String_cString(fileName));
-
   if (fileName != NULL)
   {
     n = String_findLastChar(fileName,STRING_END,FILE_PATH_SEPARATOR_CHAR);
@@ -3497,8 +3495,8 @@ Errors File_renameCString(const char *oldFileName,
       {
         return ERROR_INSUFFICIENT_MEMORY;
       }
-      strcpy(fileName,newFileName);
-      strcat(fileName,"-XXXXXX");
+      stringSet(fileName,stringLength(newFileName)+7+1,newFileName);
+      stringAppend(fileName,stringLength(newFileName)+7+1,"-XXXXXX");
 
       #ifdef HAVE_MKSTEMP
         handle = mkstemp(fileName);

@@ -75,6 +75,8 @@ typedef enum
 // length of machine id
 #define MISC_MACHINE_ID_LENGTH (128/8)
 
+#define MISC_ID_NONE 0
+
 // text macro patterns
 #define TEXT_MACRO_PATTERN_INTEGER   "[+-]{0,1}\\d+"
 #define TEXT_MACRO_PATTERN_INTEGER64 "[+-]{0,1}\\d+"

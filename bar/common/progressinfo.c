@@ -86,12 +86,17 @@ void ProgressInfo_init(ProgressInfo         *progressInfo,
     va_end(arguments);
   }
 
+  DEBUG_ADD_RESOURCE_TRACE(progressInfo,ProgressInfo);
+
   ProgressInfo_reset(progressInfo,stepCount);
 }
 
 void ProgressInfo_done(ProgressInfo *progressInfo)
 {
   assert(progressInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(progressInfo);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(progressInfo,ProgressInfo);
 
   if (progressInfo->doneFunction != NULL)
   {
@@ -107,6 +112,8 @@ void ProgressInfo_reset(ProgressInfo *progressInfo, uint64 stepCount)
 {
   if (progressInfo != NULL)
   {
+    DEBUG_CHECK_RESOURCE_TRACE(progressInfo);
+
     progressInfo->stepCount              = stepCount;
 
     progressInfo->startTimestamp         = Misc_getTimestamp();
@@ -147,6 +154,8 @@ void ProgressInfo_step(void *userData)
 
   if (progressInfo != NULL)
   {
+    DEBUG_CHECK_RESOURCE_TRACE(progressInfo);
+
     progressInfo->step++;
 
     if (progressInfo->stepCount > 0)

@@ -440,7 +440,9 @@ typedef struct
         uint64                  totalReceivedBytes;          // total received bytes
         StorageBandWidthLimiter bandWidthLimiter;            // band width limiter data
       } ssh;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // scp storage
       struct
       {
@@ -459,7 +461,9 @@ typedef struct
           ulong  length;
         } readAheadBuffer;
       } scp;
+    #endif /* HAVE_SSH2 */
 
+    #ifdef HAVE_SSH2
       // sftp storage
       struct
       {
@@ -560,7 +564,6 @@ typedef struct
 {
   StorageSpecifier storageSpecifier;                         // storage specifier data
 
-  StorageTypes type;
   union
   {
     struct

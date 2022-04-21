@@ -2184,7 +2184,6 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
   UNUSED_VARIABLE(defaultValue);
 
   // parse
-fprintf(stderr,"%s:%d: value=%s\n",__FILE__,__LINE__,value);
   permission = FILE_PERMISSION_NONE;
   if      (String_scanCString(value,"%o",permission))
   {

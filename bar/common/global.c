@@ -35,6 +35,7 @@
 #ifdef HAVE_BFD_H
   #include "common/stacktraces.h"
 #endif
+#include <signal.h>
 #include <assert.h>
 
 #if   defined(PLATFORM_LINUX)
@@ -596,6 +597,9 @@ void __abort(const char *__fileName__,
 #endif /* NDEBUG */
 {
   va_list arguments;
+  #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
+  #endif /* HAVE_SIGACTION */
 
   #ifndef NDEBUG
     assert(__fileName__ != NULL);
@@ -611,6 +615,17 @@ void __abort(const char *__fileName__,
   #else /* NDEBUG */
     fprintf(stderr," - program aborted\n");
   #endif /* not NDEBUG */
+
+  // remove signal abort handler
+  #ifdef HAVE_SIGACTION
+    sigfillset(&signalAction.sa_mask);
+    signalAction.sa_handler = SIG_DFL;
+    signalAction.sa_flags   = 0;
+    sigaction(SIGABRT,&signalAction,NULL);
+  #else /* not HAVE_SIGACTION */
+    signal(SIGABRT,SIG_DFL);
+  #endif /* HAVE_SIGACTION */
+
   abort();
 }
 void __abortAt(const char *fileName,
