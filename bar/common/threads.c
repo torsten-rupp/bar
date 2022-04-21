@@ -649,38 +649,40 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber)
 
 LOCAL void debugThreadInit(void)
 {
-  #ifdef HAVE_SIGACTION
-    struct sigaction signalAction;
-  #endif /* HAVE_SIGACTION */
+  #ifdef ENABLE_DEBUG_THREAD_CRASH_HANDLERS
+    #ifdef HAVE_SIGACTION
+      struct sigaction signalAction;
+    #endif /* HAVE_SIGACTION */
 
-  // add main thread
-  debugThreadStackTraceAddThread(pthread_self());
+    // add main thread
+    debugThreadStackTraceAddThread(pthread_self());
 
-  // install signal handlers for printing stack traces
-  #ifdef HAVE_SIGACTION
-    sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags     = SA_SIGINFO;
-    signalAction.sa_sigaction = debugThreadSignalSegVHandler;
-    sigaction(SIGSEGV,&signalAction,&debugThreadSignalSegVPrevHandler);
-
-    sigfillset(&signalAction.sa_mask);
-    signalAction.sa_flags     = SA_SIGINFO;
-    signalAction.sa_sigaction = debugThreadSignalAbortHandler;
-    sigaction(SIGABRT,&signalAction,&debugThreadSignalAbortPrevHandler);
-
-    #ifdef HAVE_SIGQUIT
+    // install signal handlers for printing stack traces
+    #ifdef HAVE_SIGACTION
       sigfillset(&signalAction.sa_mask);
       signalAction.sa_flags     = SA_SIGINFO;
-      signalAction.sa_sigaction = debugThreadSignalQuitHandler;
-      sigaction(SIGQUIT,&signalAction,&debugThreadSignalQuitPrevHandler);
-    #endif /* HAVE_SIGQUIT */
-  #else /* not HAVE_SIGACTION */
-    signal(SIGSEGV,debugThreadSignalSegVHandler);
-    signal(SIGABRT,debugThreadSignalAbortHandler);
-    #ifdef HAVE_SIGQUIT
-      signal(SIGQUIT,debugThreadSignalQuitHandler);
-    #endif /* HAVE_SIGQUIT */
-  #endif /* HAVE_SIGACTION */
+      signalAction.sa_sigaction = debugThreadSignalSegVHandler;
+      sigaction(SIGSEGV,&signalAction,&debugThreadSignalSegVPrevHandler);
+
+      sigfillset(&signalAction.sa_mask);
+      signalAction.sa_flags     = SA_SIGINFO;
+      signalAction.sa_sigaction = debugThreadSignalAbortHandler;
+      sigaction(SIGABRT,&signalAction,&debugThreadSignalAbortPrevHandler);
+
+      #ifdef HAVE_SIGQUIT
+        sigfillset(&signalAction.sa_mask);
+        signalAction.sa_flags     = SA_SIGINFO;
+        signalAction.sa_sigaction = debugThreadSignalQuitHandler;
+        sigaction(SIGQUIT,&signalAction,&debugThreadSignalQuitPrevHandler);
+      #endif /* HAVE_SIGQUIT */
+    #else /* not HAVE_SIGACTION */
+      signal(SIGSEGV,debugThreadSignalSegVHandler);
+      signal(SIGABRT,debugThreadSignalAbortHandler);
+      #ifdef HAVE_SIGQUIT
+        signal(SIGQUIT,debugThreadSignalQuitHandler);
+      #endif /* HAVE_SIGQUIT */
+    #endif /* HAVE_SIGACTION */
+  #endif /* not ENABLE_DEBUG_THREAD_CRASH_HANDLERS */
 }
 #endif /* NDEBUG */
 

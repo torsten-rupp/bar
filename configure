@@ -783,6 +783,7 @@ ENABLE_LZ4
 ENABLE_LZO
 ENABLE_LZMA
 ENABLE_BZ2
+ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 ENABLE_DEBUG
 SHELLEXT
 EXEEXT
@@ -854,6 +855,7 @@ with_swt_dir
 with_launch4j_dir
 with_heapview
 enable_debug
+enable_debug_thread_crash_handlers
 enable_link_static
 enable_link_dynamic
 enable_bz2
@@ -1513,7 +1515,9 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-debug          enable debug version
+  --enable-debug          enable debug functions
+  --disable-debug-thread-crash-handlers
+                          enable debug thread crash handlers
   --disable-link-static   disable static linkage (same as
                           --enable-link-dynamic)
   --enable-link-dynamic   enable dynamic linkage (same as
@@ -2693,17 +2697,17 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 HAVE_SUDO_COMMANDS=1
-              HAVE_SUDO_COMMAND_CHATTR=1
-        HAVE_SUDO_COMMAND_MOUNT_UMOUNT=1
-  HAVE_SUDO_COMMAND_LOSETUP=1
-       HAVE_SUDO_COMMAND_CHMOD=1
-         HAVE_SUDO_COMMAND_DD=1
-            HAVE_SUDO_COMMAND_MKFS=1
-          HAVE_SUDO_COMMAND_CP=1
-            HAVE_SUDO_COMMAND_DIFF=1
+               HAVE_SUDO_COMMAND_CHATTR=1
+         HAVE_SUDO_COMMAND_MOUNT_UMOUNT=1
+   HAVE_SUDO_COMMAND_LOSETUP=1
+        HAVE_SUDO_COMMAND_CHMOD=1
+          HAVE_SUDO_COMMAND_DD=1
+             HAVE_SUDO_COMMAND_MKFS=1
+           HAVE_SUDO_COMMAND_CP=1
+             HAVE_SUDO_COMMAND_DIFF=1
 
 HAVE_SUDO_COMMAND_CHATTR_I=1
-      HAVE_SUDO_COMMAND_CHATTR_A=1
+       HAVE_SUDO_COMMAND_CHATTR_A=1
 
 
 
@@ -2727,6 +2731,7 @@ LIBRARIES=""
 STATIC_LIBRARIES=""
 
 ENABLE_DEBUG="no"
+ENABLE_DEBUG_THREAD_CRASH_HANDLERS="yes"
 ENABLE_LINK_DYNAMIC="no"
 ENABLE_BZ2="yes"
 ENABLE_LZMA="yes"
@@ -2874,6 +2879,12 @@ fi
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
   enableval=$enable_debug; ENABLE_DEBUG=$enableval
+
+fi
+
+# Check whether --enable-debug-thread-crash-handlers was given.
+if test "${enable_debug_thread_crash_handlers+set}" = set; then :
+  enableval=$enable_debug_thread_crash_handlers; if test "$enableval" = "no"; then ENABLE_DEBUG_THREAD_CRASH_HANDLERS=no; fi
 
 fi
 
@@ -26570,6 +26581,21 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+if test "$ENABLE_DEBUG"                       = yes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_DEBUG "1"
+_ACEOF
+
+fi
+if test "$ENABLE_DEBUG_THREAD_CRASH_HANDLERS" = yes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_DEBUG_THREAD_CRASH_HANDLERS "1"
+_ACEOF
+
+fi
+
 # get and check version numbers (Note: keep closing ) at the end!)
 
 
@@ -28814,6 +28840,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_DEBUG=$ENABLE_DEBUG
+                   ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 
                    EPM="$EPM"
                    DOCKER="$DOCKER"
@@ -29428,41 +29455,42 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                    ;;
     "BUILD_NOTE":C) echo "";
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
-                    echo "  Host               : $host";
-                    echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  ICU support        : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
-                    echo "  zip compression    : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
-                    echo "  bzip2 compression  : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
-                    echo "  lzma compression   : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
-                    echo "  lzo compression    : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
-                    echo "  lz4 compression    : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
-                    echo "  zstd compression   : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
-                    echo "  xdelta3 compression: `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
-                    echo "  crypto support     : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
-                    echo "  FTP support        : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support       : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
-                    echo "  SCP/SFTP support   : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
-                    echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
-                    echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
-                    echo "  SQLite             : yes ($VERSION_SQLITE)";
-                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
-                    echo "  PostgreSQL support : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
-                    echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
+                    echo "  Host                 : $host";
+                    echo "  Dynamic linked       : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  ICU support          : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
+                    echo "  zip compression      : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
+                    echo "  bzip2 compression    : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
+                    echo "  lzma compression     : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
+                    echo "  lzo compression      : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
+                    echo "  lz4 compression      : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
+                    echo "  zstd compression     : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
+                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
+                    echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
+                    echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
+                    echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  SQLite               : yes ($VERSION_SQLITE)";
+                    echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
+                    echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
+                    echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
                     echo ""
-                    echo "  Debug version      : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
-                    echo "  Stacktrace support : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
+                    echo "  Debug version        : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Thread crash handlers: `if test "$ENABLE_DEBUG_THREAD_CRASH_HANDLERS" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Crash dump support   : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
+                    echo "  Stacktrace support   : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
-                    echo "  Install directory  : $INSTALL_DIR"
-                    echo "  Binary directory   : $INSTALL_BIN_DIR"
-                    echo "  Config directory   : $CONFIG_DIR"
-                    echo "  Runtime directory  : $RUNTIME_DIR"
-                    echo "  TLS directory      : $TLS_DIR"
+                    echo "  Install directory    : $INSTALL_DIR"
+                    echo "  Binary directory     : $INSTALL_BIN_DIR"
+                    echo "  Config directory     : $CONFIG_DIR"
+                    echo "  Runtime directory    : $RUNTIME_DIR"
+                    echo "  TLS directory        : $TLS_DIR"
                     echo ""
-                    echo "  Heapview directory : $HEAPVIEW_DIR"
+                    echo "  Heapview directory   : $HEAPVIEW_DIR"
                     echo ""
                     if test    ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \

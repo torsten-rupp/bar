@@ -21390,6 +21390,8 @@ Errors Server_socket(void)
 
   // run as server
   #ifndef NDEBUG
+fprintf(stderr,"%s:%d: globalOptions.debug.daemonFlag=%d\n",__FILE__,__LINE__,globalOptions.daemonFlag);
+fprintf(stderr,"%s:%d: globalOptions.debug.serverLevel=%d\n",__FILE__,__LINE__,globalOptions.debug.serverLevel);
     if (globalOptions.debug.serverLevel >= 1)
     {
       printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");

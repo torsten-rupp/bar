@@ -1652,6 +1652,7 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.quietFlag                                       = FALSE;
   globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
+  globalOptions.serverFlag                                      = FALSE;
   globalOptions.daemonFlag                                      = FALSE;
   globalOptions.noDetachFlag                                    = FALSE;
   globalOptions.batchFlag                                       = FALSE;
@@ -1821,6 +1822,7 @@ LOCAL void initGlobalOptions(void)
 
   // debug/test only
   #ifndef NDEBUG
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     globalOptions.debug.serverLevel                             = DEFAULT_SERVER_DEBUG_LEVEL;
     globalOptions.debug.indexUUID                               = NULL;
     globalOptions.debug.indexEntityId                           = DATABASE_ID_NONE;
@@ -7511,7 +7513,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 //TODO
 //  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",           0,  0,2,defaultWebDAVServer.maxStorageSize,                  0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on WebDAV server"                           ),
 
-  CMD_OPTION_BOOLEAN      ("daemon",                            0,  1,0,globalOptions.daemonFlag,                                                                                         "run in daemon mode"                                                       ),
+  CMD_OPTION_BOOLEAN      ("server",                            0,  1,0,globalOptions.serverFlag,                                                                                         "run in server mode"                                                       ),
+  CMD_OPTION_BOOLEAN      ("daemon",                            0,  1,0,globalOptions.daemonFlag,                                                                                         "run in server daemon mode"                                                ),
   CMD_OPTION_BOOLEAN      ("no-detach",                         'D',1,0,globalOptions.noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
 //  CMD_OPTION_BOOLEAN      ("pair-master",                       0  ,1,0,pairMasterFlag,                                                                                                 "pair master"                                                              ),
   CMD_OPTION_SELECT       ("server-mode",                       0,  1,1,globalOptions.serverMode,                            COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode","mode"                                                ),
@@ -7706,21 +7709,21 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   // only for debugging/testing
   #ifndef NDEBUG
-  CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,1,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "number of errors to create in archives"                                   ),
+  CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,0,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "number of errors to create in archives"                                   ),
 
-  CMD_OPTION_INCREMENT    ("debug-server",                      0,  2,1,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
-  CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,1,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
+  CMD_OPTION_INCREMENT    ("debug-server",                      0,  1,0,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
+  CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,0,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
 
-  CMD_OPTION_STRING       ("debug-index-uuid",                  0,  2,1,globalOptions.debug.indexUUID,                                                                                    "uuid","uuid"                                                              ),
-  CMD_OPTION_INTEGER64    ("debug-index-entity-id",             0,  2,1,globalOptions.debug.indexEntityId,                   0LL,MAX_INT64,NULL,                                          "entity id"                                                                ),
-  CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,1,globalOptions.debug.indexWaitOperationsFlag,                                                                      "wait for index operations"                                                ),
-  CMD_OPTION_BOOLEAN      ("debug-index-purge-deleted-storages",0,  2,1,globalOptions.debug.indexPurgeDeletedStoragesFlag,                                                                "wait for index operations"                                                ),
-  CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,1,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),
-  CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,1,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
-  CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,1,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
+  CMD_OPTION_STRING       ("debug-index-uuid",                  0,  2,0,globalOptions.debug.indexUUID,                                                                                    "uuid","uuid"                                                              ),
+  CMD_OPTION_INTEGER64    ("debug-index-entity-id",             0,  2,0,globalOptions.debug.indexEntityId,                   0LL,MAX_INT64,NULL,                                          "entity id"                                                                ),
+  CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,0,globalOptions.debug.indexWaitOperationsFlag,                                                                      "wait for index operations"                                                ),
+  CMD_OPTION_BOOLEAN      ("debug-index-purge-deleted-storages",0,  2,0,globalOptions.debug.indexPurgeDeletedStoragesFlag,                                                                "wait for index operations"                                                ),
+  CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,0,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),
+  CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,0,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
+  CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,0,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
 
 
-  CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,1,globalOptions.debug.printConfigurationSHA256,                                                                     "fixed server ids"                                                         ),
+  CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,0,globalOptions.debug.printConfigurationSHA256,                                                                     "fixed server ids"                                                         ),
   #endif
 );
 

@@ -840,6 +840,7 @@ typedef struct
 
   const char                  *pidFileName;
 
+  bool                        serverFlag;
   bool                        daemonFlag;
   bool                        noDetachFlag;
   bool                        batchFlag;

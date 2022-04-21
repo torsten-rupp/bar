@@ -4,7 +4,7 @@ DOCKER_IMAGE_NAME='dockerregistry.macio.de:5000/backup_archiver:latest'
 
 TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db TEST_LOGIN_NAME=test TEST_PASSWORD=test TEST_BASE_DIR=/home/test TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa TEST_IMAGE_OPERATIONS=no"
 
-xxxTEST_STEPS = ["basic",
+TEST_STEPS = ["basic",
               "compress",
               "delta_compress",
               "crypt",
@@ -24,10 +24,6 @@ xxxTEST_STEPS = ["basic",
               "config",
               "misc"
              ];
-TEST_STEPS = [
-              "index",
-"master_slave"
-             ];
 
 // tests
 def tests()
@@ -44,7 +40,7 @@ def tests()
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
-          sh "./configure"
+          sh "./configure --disable-debug-thread-crash-handlers"
 
           // make (Note: avoid race condition in depend by not create dependencies in parallel)
           sh "make depend"
@@ -85,8 +81,18 @@ def tests()
             default:
               docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               {
+                // start services
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
+
                 sh "rm -f bar-test.log"
                 sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
+
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
               }
               break;
             case "FULL":
@@ -176,14 +182,17 @@ def tests()
   {
     script
     {
-      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log', allowEmptyArchive: true
+//      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log', allowEmptyArchive: true
+sh "ls -la /var/log"
+      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log, /var/log/vsftpd.log', allowEmptyArchive: true
     }
+
     cleanWs notFailBuild: true
   }
 }
 
 // main
-properties([gitLabConnection('GitLab-DMZ'),
+properties([gitLabConnection('GitLab'),
             [$class: 'BuildDiscarderProperty',
              strategy: [$class: 'LogRotator',
                         artifactDaysToKeepStr: '3',

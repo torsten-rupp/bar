@@ -22,6 +22,12 @@
 /* configuration directory */
 #undef CONFIG_DIR
 
+/* enabled debug functions */
+#undef ENABLE_DEBUG
+
+/* enabled debug thread crash handlers */
+#undef ENABLE_DEBUG_THREAD_CRASH_HANDLERS
+
 /* file separator char */
 #undef FILE_SEPARATOR_CHAR
 

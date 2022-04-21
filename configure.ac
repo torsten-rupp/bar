@@ -816,182 +816,183 @@ AC_CANONICAL_HOST
 
 dnl ----------------------- substitute settings ------------------------
 
-AC_SUBST(VERSION_MAJOR)                     dnl version major number
-AC_SUBST(VERSION_MINOR)                     dnl version minor number
-AC_SUBST(VERSION_PATCH)                     dnl version patch level
-AC_SUBST(VERSION_REVISION)                  dnl version revision number (SVN number)
+AC_SUBST(VERSION_MAJOR)                      dnl version major number
+AC_SUBST(VERSION_MINOR)                      dnl version minor number
+AC_SUBST(VERSION_PATCH)                      dnl version patch level
+AC_SUBST(VERSION_REVISION)                   dnl version revision number (SVN number)
 
-AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
+AC_SUBST(COPYRIGHT_DATE)                     dnl copyright date
 
-AC_SUBST(PLATFORM)                          dnl platform name
-AC_SUBST(CPU)                               dnl cpu name
+AC_SUBST(PLATFORM)                           dnl platform name
+AC_SUBST(CPU)                                dnl cpu name
 
-AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\)
-AC_SUBST(FILE_SEPARATOR_STRING)             dnl file separator path character as string (/ or \\)
+AC_SUBST(FILE_SEPARATOR_CHAR)                dnl file separator path character (/ or \\)
+AC_SUBST(FILE_SEPARATOR_STRING)              dnl file separator path character as string (/ or \\)
 
-AC_SUBST(OBJEXT)                            dnl object extension
-AC_SUBST(EXEEXT)                            dnl executable extension
-AC_SUBST(SHELLEXT)                          dnl shell extension
+AC_SUBST(OBJEXT)                             dnl object extension
+AC_SUBST(EXEEXT)                             dnl executable extension
+AC_SUBST(SHELLEXT)                           dnl shell extension
 
-AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
-AC_SUBST(ENABLE_BZ2)                        dnl "yes" for bzip2 support, "no" otherwise
-AC_SUBST(ENABLE_LZMA)                       dnl "yes" for lzma support, "no" otherwise
-AC_SUBST(ENABLE_LZO)                        dnl "yes" for lzo support, "no" otherwise
-AC_SUBST(ENABLE_LZ4)                        dnl "yes" for lz4 support, "no" otherwise
-AC_SUBST(ENABLE_ZSTD)                       dnl "yes" for zstd support, "no" otherwise
-AC_SUBST(ENABLE_XDELTA3)                    dnl "yes" for xdelta3 support, "no" otherwise
-AC_SUBST(ENABLE_GCRYPT)                     dnl "yes" for gcrypt support, "no" otherwise
-AC_SUBST(ENABLE_CURL)                       dnl "yes" for curl support, "no" otherwise
-AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" otherwise
-AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
-AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
-AC_SUBST(ENABLE_PCRE)                       dnl "yes" for PCRE support, "no" otherwise
-AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" otherwise
-AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no" otherwise
-AC_SUBST(ENABLE_EPM)                        dnl "yes" for EPM support, "no" otherwise
+AC_SUBST(ENABLE_DEBUG)                       dnl "yes" for debug version, "no" otherwise
+AC_SUBST(ENABLE_DEBUG_THREAD_CRASH_HANDLERS) dnl "yes" for debug version, "no" otherwise
+AC_SUBST(ENABLE_BZ2)                         dnl "yes" for bzip2 support, "no" otherwise
+AC_SUBST(ENABLE_LZMA)                        dnl "yes" for lzma support, "no" otherwise
+AC_SUBST(ENABLE_LZO)                         dnl "yes" for lzo support, "no" otherwise
+AC_SUBST(ENABLE_LZ4)                         dnl "yes" for lz4 support, "no" otherwise
+AC_SUBST(ENABLE_ZSTD)                        dnl "yes" for zstd support, "no" otherwise
+AC_SUBST(ENABLE_XDELTA3)                     dnl "yes" for xdelta3 support, "no" otherwise
+AC_SUBST(ENABLE_GCRYPT)                      dnl "yes" for gcrypt support, "no" otherwise
+AC_SUBST(ENABLE_CURL)                        dnl "yes" for curl support, "no" otherwise
+AC_SUBST(ENABLE_SSH)                         dnl "yes" for ssh support, "no" otherwise
+AC_SUBST(ENABLE_TLS)                         dnl "yes" for tls support, "no" otherwise
+AC_SUBST(ENABLE_ISO9660)                     dnl "yes" for iso9660 support, "no" otherwise
+AC_SUBST(ENABLE_PCRE)                        dnl "yes" for PCRE support, "no" otherwise
+AC_SUBST(ENABLE_GUI)                         dnl "yes" for GUI support, "no" otherwise
+AC_SUBST(ENABLE_GUI_I18N)                    dnl "yes" for GUI i18n support, "no" otherwise
+AC_SUBST(ENABLE_EPM)                         dnl "yes" for EPM support, "no" otherwise
 
-AC_SUBST(HAVE_ICU)                          dnl "1" for ICU support, "" otherwise
-AC_SUBST(HAVE_Z)                            dnl "1" for zlib support, "" otherwise
-AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
-AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
-AC_SUBST(HAVE_LZO)                          dnl "1" for lzo support, "" otherwise
-AC_SUBST(HAVE_LZ4)                          dnl "1" for lz4 support, "" otherwise
-AC_SUBST(HAVE_ZSTD)                         dnl "1" for zstd support, "" otherwise
-AC_SUBST(HAVE_XDELTA3)                      dnl "1" for xdelta3 support, "" otherwise
-AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
-AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
-AC_SUBST(HAVE_CARES)                        dnl "1" for c-ares support, "" otherwise
-AC_SUBST(HAVE_CURL)                         dnl "1" for curl support, "" otherwise
-AC_SUBST(HAVE_MXML)                         dnl "1" for mxml support, "" otherwise
-AC_SUBST(HAVE_SSL)                          dnl "1" for ssl support, "" otherwise
-AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwise
-AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
-AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
-AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
-AC_SUBST(HAVE_MARIADB)                      dnl "1" for MariaDB support, "" otherwise
-AC_SUBST(HAVE_POSTGRESQL)                   dnl "1" for PostgreSQL support, "" otherwise
-AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
-AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
-AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
+AC_SUBST(HAVE_ICU)                           dnl "1" for ICU support, "" otherwise
+AC_SUBST(HAVE_Z)                             dnl "1" for zlib support, "" otherwise
+AC_SUBST(HAVE_BZ2)                           dnl "1" for bzip2 support, "" otherwise
+AC_SUBST(HAVE_LZMA)                          dnl "1" for lzma support, "" otherwise
+AC_SUBST(HAVE_LZO)                           dnl "1" for lzo support, "" otherwise
+AC_SUBST(HAVE_LZ4)                           dnl "1" for lz4 support, "" otherwise
+AC_SUBST(HAVE_ZSTD)                          dnl "1" for zstd support, "" otherwise
+AC_SUBST(HAVE_XDELTA3)                       dnl "1" for xdelta3 support, "" otherwise
+AC_SUBST(HAVE_GCRYPT)                        dnl "1" for gcrypt support, "" otherwise
+AC_SUBST(HAVE_FTP)                           dnl "1" for ftp support, "" otherwise
+AC_SUBST(HAVE_CARES)                         dnl "1" for c-ares support, "" otherwise
+AC_SUBST(HAVE_CURL)                          dnl "1" for curl support, "" otherwise
+AC_SUBST(HAVE_MXML)                          dnl "1" for mxml support, "" otherwise
+AC_SUBST(HAVE_SSL)                           dnl "1" for ssl support, "" otherwise
+AC_SUBST(HAVE_SSH2)                          dnl "1" for ssh2 support, "" otherwise
+AC_SUBST(HAVE_GNU_TLS)                       dnl "1" for GNU TLS support, "" otherwise
+AC_SUBST(HAVE_ISO9660)                       dnl "1" for ISO9660 support, "" otherwise
+AC_SUBST(HAVE_PCRE)                          dnl "1" for pcre support, "" otherwise
+AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" otherwise
+AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
+AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
+AC_SUBST(HAVE_BREAKPAD)                      dnl "1" for BreakPad support, "" otherwise
+AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
-AC_SUBST(HAVE_USLEEP)                       dnl "1" if usleep() is avaiulable, "" otherwise
+AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
 
-AC_SUBST(INSTALL_DIR)                       dnl installation directory
-AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
-AC_SUBST(CONFIG_DIR)                        dnl configuration directory
-AC_SUBST(RUNTIME_DIR)                       dnl runtime directory
-AC_SUBST(TLS_DIR)                           dnl TLS/SSL directory
-AC_SUBST(MAN_DIR)                           dnl man page directory
-AC_SUBST(LOCALE_DIR)                        dnl locale directory
+AC_SUBST(INSTALL_DIR)                        dnl installation directory
+AC_SUBST(INSTALL_BIN_DIR)                    dnl installation directory for binaries
+AC_SUBST(CONFIG_DIR)                         dnl configuration directory
+AC_SUBST(RUNTIME_DIR)                        dnl runtime directory
+AC_SUBST(TLS_DIR)                            dnl TLS/SSL directory
+AC_SUBST(MAN_DIR)                            dnl man page directory
+AC_SUBST(LOCALE_DIR)                         dnl locale directory
 
-AC_SUBST(CPP)                               dnl C preprocessor
-AC_SUBST(CC)                                dnl C compiler
-AC_SUBST(LD)                                dnl linker
-AC_SUBST(STRIP)                             dnl strip
-AC_SUBST(OBJDUMP)                           dnl objdump
-AC_SUBST(OBJCOPY)                           dnl objcopy
+AC_SUBST(CPP)                                dnl C preprocessor
+AC_SUBST(CC)                                 dnl C compiler
+AC_SUBST(LD)                                 dnl linker
+AC_SUBST(STRIP)                              dnl strip
+AC_SUBST(OBJDUMP)                            dnl objdump
+AC_SUBST(OBJCOPY)                            dnl objcopy
 
-AC_SUBST(CC_FLAGS)                          dnl C compiler flags
-AC_SUBST(CC_FLAGS_RELEASE)                  dnl additional C compiler flags for release version
-AC_SUBST(CC_FLAGS_DEBUG)                    dnl additional C compiler flags for debug version
-AC_SUBST(CC_FLAGS_GCOV)                     dnl additional C compiler flags for gcov version
-AC_SUBST(CC_FLAGS_GPROF)                    dnl additional C compiler flags for gprof version
-AC_SUBST(CC_FLAGS_VALGRIND)                 dnl additional C compiler flags for valgrind version
-AC_SUBST(CC_WARN_FLAGS)                     dnl C compiler warning flags
-AC_SUBST(CXX_FLAGS)                         dnl C++ compiler flags
-AC_SUBST(CXX_WARN_FLAGS)                    dnl C++ compiler warning flags
-AC_SUBST(CC_FLAGS_OPTIMIZE)                 dnl C compiler optimization flags
-AC_SUBST(CC_FLAGS_OPTIMIZE_RELEASE)         dnl additional C compiler optimization flags for release version
-AC_SUBST(CC_FLAGS_OPTIMIZE_DEBUG)           dnl addtiional C compiler optimization flags for debug version
-AC_SUBST(CC_FLAGS_OPTIMIZE_VALGRIND)        dnl addtiional C compiler optimization flags for valgrind version
-AC_SUBST(CC_DEFINES)                        dnl C compiler defines
-AC_SUBST(CC_DEFINES_RELEASE)                dnl additional C compiler defines for debug version
-AC_SUBST(CC_DEFINES_DEBUG)                  dnl addtioonal C compiler defines for debug version
-AC_SUBST(CC_INCLUDES)                       dnl C compiler include paths
+AC_SUBST(CC_FLAGS)                           dnl C compiler flags
+AC_SUBST(CC_FLAGS_RELEASE)                   dnl additional C compiler flags for release version
+AC_SUBST(CC_FLAGS_DEBUG)                     dnl additional C compiler flags for debug version
+AC_SUBST(CC_FLAGS_GCOV)                      dnl additional C compiler flags for gcov version
+AC_SUBST(CC_FLAGS_GPROF)                     dnl additional C compiler flags for gprof version
+AC_SUBST(CC_FLAGS_VALGRIND)                  dnl additional C compiler flags for valgrind version
+AC_SUBST(CC_WARN_FLAGS)                      dnl C compiler warning flags
+AC_SUBST(CXX_FLAGS)                          dnl C++ compiler flags
+AC_SUBST(CXX_WARN_FLAGS)                     dnl C++ compiler warning flags
+AC_SUBST(CC_FLAGS_OPTIMIZE)                  dnl C compiler optimization flags
+AC_SUBST(CC_FLAGS_OPTIMIZE_RELEASE)          dnl additional C compiler optimization flags for release version
+AC_SUBST(CC_FLAGS_OPTIMIZE_DEBUG)            dnl addtiional C compiler optimization flags for debug version
+AC_SUBST(CC_FLAGS_OPTIMIZE_VALGRIND)         dnl addtiional C compiler optimization flags for valgrind version
+AC_SUBST(CC_DEFINES)                         dnl C compiler defines
+AC_SUBST(CC_DEFINES_RELEASE)                 dnl additional C compiler defines for debug version
+AC_SUBST(CC_DEFINES_DEBUG)                   dnl addtioonal C compiler defines for debug version
+AC_SUBST(CC_INCLUDES)                        dnl C compiler include paths
 
-AC_SUBST(LD_FLAGS)                          dnl linker flags
-AC_SUBST(LD_FLAGS_RELEASE)                  dnl additional linker flags for release version
-AC_SUBST(LD_FLAGS_DEBUG)                    dnl additional linker flags for debug version
-AC_SUBST(LD_FLAGS_GCOV)                     dnl additional linker flags for gcov version
-AC_SUBST(LD_FLAGS_VALGRIND)                 dnl additional linker flags for valgrind version
+AC_SUBST(LD_FLAGS)                           dnl linker flags
+AC_SUBST(LD_FLAGS_RELEASE)                   dnl additional linker flags for release version
+AC_SUBST(LD_FLAGS_DEBUG)                     dnl additional linker flags for debug version
+AC_SUBST(LD_FLAGS_GCOV)                      dnl additional linker flags for gcov version
+AC_SUBST(LD_FLAGS_VALGRIND)                  dnl additional linker flags for valgrind version
 
-AC_SUBST(LIBRARY_PATHS)                     dnl library paths
-AC_SUBST(LIBRARIES)                         dnl libraries to link
-AC_SUBST(STATIC_LIBRARIES)                  dnl libraries to link static
+AC_SUBST(LIBRARY_PATHS)                      dnl library paths
+AC_SUBST(LIBRARIES)                          dnl libraries to link
+AC_SUBST(STATIC_LIBRARIES)                   dnl libraries to link static
 
-AC_SUBST(JAVA)                              dnl java command
-AC_SUBST(JAVAC)                             dnl java compiler
-AC_SUBST(JAR)                               dnl jar command
+AC_SUBST(JAVA)                               dnl java command
+AC_SUBST(JAVAC)                              dnl java compiler
+AC_SUBST(JAR)                                dnl jar command
 
-AC_SUBST(XGETTEXT)                          dnl xgettext command
-AC_SUBST(MSGMERGE)                          dnl msgmerge command
-AC_SUBST(MSGFMT)                            dnl msgfmt command
+AC_SUBST(XGETTEXT)                           dnl xgettext command
+AC_SUBST(MSGMERGE)                           dnl msgmerge command
+AC_SUBST(MSGFMT)                             dnl msgfmt command
 
-AC_SUBST(MYSQL)                             dnl mysql command
+AC_SUBST(MYSQL)                              dnl mysql command
 
-AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
-AC_SUBST(JAVA_FLAGS)                        dnl java flags
-AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
-AC_SUBST(JAVA_PATH_SEPARATOR_CHAR)          dnl java path separator (: or ;)
+AC_SUBST(JAVA_DATA_MODEL)                    dnl java data model (32 or 64)
+AC_SUBST(JAVA_FLAGS)                         dnl java flags
+AC_SUBST(JAVAC_FLAGS)                        dnl java compiler flags
+AC_SUBST(JAVA_PATH_SEPARATOR_CHAR)           dnl java path separator (: or ;)
 
-AC_SUBST(SWT_DIR)                           dnl SWT directory
-AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
+AC_SUBST(SWT_DIR)                            dnl SWT directory
+AC_SUBST(LAUNCH4J_DIR)                       dnl launch4j directory
 
-AC_SUBST(DUMP_SYMS)                         dnl Breakpad dump symbols tool
+AC_SUBST(DUMP_SYMS)                          dnl Breakpad dump symbols tool
 
-AC_SUBST(LCOV)                              dnl lcov command
-AC_SUBST(GENHTML)                           dnl genhtml command
+AC_SUBST(LCOV)                               dnl lcov command
+AC_SUBST(GENHTML)                            dnl genhtml command
 
-AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
-AC_SUBST(OPENSSL)                           dnl OpenSSL key tool
-AC_SUBST(KEYTOOL)                           dnl Java keytool
+AC_SUBST(CERTOOL)                            dnl GNU TLS certtool
+AC_SUBST(OPENSSL)                            dnl OpenSSL key tool
+AC_SUBST(KEYTOOL)                            dnl Java keytool
 
-AC_SUBST(UNOCONV)                           dnl OO conversion tool
-AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
+AC_SUBST(UNOCONV)                            dnl OO conversion tool
+AC_SUBST(TXT2MAN)                            dnl text-to-man page tool
 
-AC_SUBST(ATTR)                              dnl attr command
-AC_SUBST(TIME)                              dnl time command
-AC_SUBST(GETFATTR)                          dnl getfattr command
-AC_SUBST(SETFATTR)                          dnl setfattr command
+AC_SUBST(ATTR)                               dnl attr command
+AC_SUBST(TIME)                               dnl time command
+AC_SUBST(GETFATTR)                           dnl getfattr command
+AC_SUBST(SETFATTR)                           dnl setfattr command
 
-AC_SUBST(MKFS_EXT2)                         dnl mksfs.ext2 command
-AC_SUBST(MKFS_EXT3)                         dnl mksfs.ext3 command
-AC_SUBST(MKFS_EXT4)                         dnl mksfs.ext4 command
-AC_SUBST(MKFS_MSDOS)                        dnl mksfs.msdos command
-AC_SUBST(MKFS_REISERFS)                     dnl mksfs.reiserfs command
-AC_SUBST(MKFS_REISER4)                      dnl mksfs.reiser4 command
+AC_SUBST(MKFS_EXT2)                          dnl mksfs.ext2 command
+AC_SUBST(MKFS_EXT3)                          dnl mksfs.ext3 command
+AC_SUBST(MKFS_EXT4)                          dnl mksfs.ext4 command
+AC_SUBST(MKFS_MSDOS)                         dnl mksfs.msdos command
+AC_SUBST(MKFS_REISERFS)                      dnl mksfs.reiserfs command
+AC_SUBST(MKFS_REISER4)                       dnl mksfs.reiser4 command
 
-AC_SUBST(XGETTEXT)                          dnl xgettext command
-AC_SUBST(MSGMERGE)                          dnl msgmerge command
-AC_SUBST(MSGFMT)                            dnl msgfmt command
+AC_SUBST(XGETTEXT)                           dnl xgettext command
+AC_SUBST(MSGMERGE)                           dnl msgmerge command
+AC_SUBST(MSGFMT)                             dnl msgfmt command
 
-AC_SUBST(MYSQL)                             dnl mysql command
-AC_SUBST(PSQL)                              dnl psql command
-AC_SUBST(CREATEDB)                          dnl createdb command
+AC_SUBST(MYSQL)                              dnl mysql command
+AC_SUBST(PSQL)                               dnl psql command
+AC_SUBST(CREATEDB)                           dnl createdb command
 
-AC_SUBST(DOCKER)                            dnl docker
-AC_SUBST(WINE)                              dnl wine
-AC_SUBST(WINE_C_DRIVE)                      dnl wine c:-drive path
-AC_SUBST(ISCC)                              dnl Inno Setup
+AC_SUBST(DOCKER)                             dnl docker
+AC_SUBST(WINE)                               dnl wine
+AC_SUBST(WINE_C_DRIVE)                       dnl wine c:-drive path
+AC_SUBST(ISCC)                               dnl Inno Setup
 
-AC_SUBST(EPM)                               dnl EPM tool
-AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
-AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
+AC_SUBST(EPM)                                dnl EPM tool
+AC_SUBST(EPM_VERSION_3)                      dnl 1 if EPM version 3, otherwise empty
+AC_SUBST(EPM_VERSION_4)                      dnl 1 if EPM version 4, otherwise empty
 
-AC_SUBST(HAVE_SUDO_COMMANDS,1)              dnl sudo commands
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)        dnl sudo command chattr +-[ia] *
-AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)  dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)       dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
-AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)         dnl sudo command chmod o+rw /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DD,1)            dnl sudo command dd if=/dev/loop[[01]] of=-
-AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)          dnl sudo command mkfs -t * /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_CP,1)            dnl sudo command cp -r -p data/* test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)          dnl sudo command diff -r test/dev0 test/dev1
+AC_SUBST(HAVE_SUDO_COMMANDS,1)               dnl sudo commands
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)         dnl sudo command chattr +-[ia] *
+AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)   dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)        dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
+AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)          dnl sudo command chmod o+rw /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DD,1)             dnl sudo command dd if=/dev/loop[[01]] of=-
+AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)           dnl sudo command mkfs -t * /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_CP,1)             dnl sudo command cp -r -p data/* test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)           dnl sudo command diff -r test/dev0 test/dev1
 
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)      dnl sudo command chattr +-i
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)      dnl sudo command chattr +-a
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)       dnl sudo command chattr +-i
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)       dnl sudo command chattr +-a
 
-AC_SUBST(HEAPVIEW_DIR)                      dnl heapview directory
+AC_SUBST(HEAPVIEW_DIR)                       dnl heapview directory
 
 dnl ----------------------- initialize variables -----------------------
 
@@ -1015,6 +1016,7 @@ LIBRARIES=""
 STATIC_LIBRARIES=""
 
 ENABLE_DEBUG="no"
+ENABLE_DEBUG_THREAD_CRASH_HANDLERS="yes"
 ENABLE_LINK_DYNAMIC="no"
 ENABLE_BZ2="yes"
 ENABLE_LZMA="yes"
@@ -1157,8 +1159,13 @@ dnl ------------------- --enable/--disable options ---------------------
 
 AC_ARG_ENABLE(
   debug,
-  AC_HELP_STRING([--enable-debug],[enable debug version]),
+  AC_HELP_STRING([--enable-debug],[enable debug functions]),
   [ENABLE_DEBUG=$enableval]
+)
+AC_ARG_ENABLE(
+  debug-thread-crash-handlers,
+  AC_HELP_STRING([--disable-debug-thread-crash-handlers],[enable debug thread crash handlers]),
+  [if test "$enableval" = "no"; then ENABLE_DEBUG_THREAD_CRASH_HANDLERS=no; fi]
 )
 AC_ARG_ENABLE(
   link-static,
@@ -4683,6 +4690,9 @@ AC_DEFINE_UNQUOTED(CONFIG_DIR, "$CONFIG_DIR", [configuration directory])
 AC_DEFINE_UNQUOTED(RUNTIME_DIR,"$RUNTIME_DIR",[runtime directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,    "$TLS_DIR",    [TLS directory])
 
+AS_IF([test "$ENABLE_DEBUG"                       = yes],[AC_DEFINE_UNQUOTED(ENABLE_DEBUG,                      "1",[enabled debug functions])]            )
+AS_IF([test "$ENABLE_DEBUG_THREAD_CRASH_HANDLERS" = yes],[AC_DEFINE_UNQUOTED(ENABLE_DEBUG_THREAD_CRASH_HANDLERS,"1",[enabled debug thread crash handlers])])
+
 # get and check version numbers (Note: keep closing ) at the end!)
 AC_CONSTANT_VALUE([SQLite version],
                   VERSION_SQLITE,
@@ -4920,41 +4930,42 @@ AC_CONFIG_FILES(epm.list)
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
-                    echo "  Host               : $host";
-                    echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  ICU support        : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
-                    echo "  zip compression    : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
-                    echo "  bzip2 compression  : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
-                    echo "  lzma compression   : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
-                    echo "  lzo compression    : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
-                    echo "  lz4 compression    : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
-                    echo "  zstd compression   : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
-                    echo "  xdelta3 compression: `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
-                    echo "  crypto support     : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
-                    echo "  FTP support        : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support       : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
-                    echo "  SCP/SFTP support   : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
-                    echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
-                    echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
-                    echo "  SQLite             : yes ($VERSION_SQLITE)";
-                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
-                    echo "  PostgreSQL support : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
-                    echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
+                    echo "  Host                 : $host";
+                    echo "  Dynamic linked       : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  ICU support          : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
+                    echo "  zip compression      : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
+                    echo "  bzip2 compression    : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
+                    echo "  lzma compression     : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
+                    echo "  lzo compression      : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
+                    echo "  lz4 compression      : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
+                    echo "  zstd compression     : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
+                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
+                    echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
+                    echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
+                    echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  SQLite               : yes ($VERSION_SQLITE)";
+                    echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
+                    echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
+                    echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
                     echo ""
-                    echo "  Debug version      : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
-                    echo "  Stacktrace support : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
+                    echo "  Debug version        : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Thread crash handlers: `if test "$ENABLE_DEBUG_THREAD_CRASH_HANDLERS" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Crash dump support   : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
+                    echo "  Stacktrace support   : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
-                    echo "  Install directory  : $INSTALL_DIR"
-                    echo "  Binary directory   : $INSTALL_BIN_DIR"
-                    echo "  Config directory   : $CONFIG_DIR"
-                    echo "  Runtime directory  : $RUNTIME_DIR"
-                    echo "  TLS directory      : $TLS_DIR"
+                    echo "  Install directory    : $INSTALL_DIR"
+                    echo "  Binary directory     : $INSTALL_BIN_DIR"
+                    echo "  Config directory     : $CONFIG_DIR"
+                    echo "  Runtime directory    : $RUNTIME_DIR"
+                    echo "  TLS directory        : $TLS_DIR"
                     echo ""
-                    echo "  Heapview directory : $HEAPVIEW_DIR"
+                    echo "  Heapview directory   : $HEAPVIEW_DIR"
                     echo ""
                     if test    ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \
@@ -5008,6 +5019,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_DEBUG=$ENABLE_DEBUG
+                   ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 
                    EPM="$EPM"
                    DOCKER="$DOCKER"

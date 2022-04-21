@@ -266,10 +266,13 @@ LOCAL void signalHandler(int signalNumber)
   #endif /* HAVE_SIGACTION */
 
   // output error message
-  fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
-  #ifndef NDEBUG
-    debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
-  #endif /* NDEBUG */
+  if (signalNumber != SIGTERM)
+  {
+    fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
+    #ifndef NDEBUG
+      debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
+    #endif /* NDEBUG */
+  }
 
   // delete pid file
   deletePIDFile();
@@ -2964,15 +2967,15 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 }
 
 /***********************************************************************\
-* Name   : runDaemon
-* Purpose: run as daemon
+* Name   : runServer
+* Purpose: run as server
 * Input  : -
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors runDaemon(void)
+LOCAL Errors runServer(void)
 {
   Errors error;
 
@@ -3010,7 +3013,7 @@ LOCAL Errors runDaemon(void)
   }
   Job_updateAllNotifies();
 
-  // daemon mode -> run server with network
+  // server mode -> run server with network
   globalOptions.runMode = RUN_MODE_SERVER;
   error = Server_socket();
   if (error != ERROR_NONE)
@@ -4229,7 +4232,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
 
   // special case: set verbose level/quiet flag in interactive mode
-  if (!globalOptions.daemonFlag && !globalOptions.batchFlag)
+  if (!globalOptions.serverFlag && !globalOptions.daemonFlag && !globalOptions.batchFlag)
   {
     globalOptions.quietFlag    = FALSE;
     globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
@@ -4363,9 +4366,9 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // run
   error = ERROR_NONE;
-  if      (globalOptions.daemonFlag)
+  if      (globalOptions.serverFlag || globalOptions.daemonFlag)
   {
-    error = runDaemon();
+    error = runServer();
   }
   else if (globalOptions.batchFlag)
   {
