@@ -612,7 +612,9 @@ BAR_INDEX_SOURCES_OTHER     = index/index_definition.pl \
                               index/index_sqlite3.def \
                               index/index_mariadb.def \
                               index/index_postgresql.def \
-                              index/index_current.c \
+                              \
+                              index/index_version6.c \
+                              index/index_version7.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
                               $(SQLITE3_OBJECTS) \
@@ -1044,10 +1046,14 @@ bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
 	$(CHMOD) 775 $@
 
 # error definition
-errors.h: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -h $@
-errors.c: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -c $@
+errors.h: \
+  $(SOURCE_DIR)/../errors.def \
+  $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $(SOURCE_DIR)/../errors.def -h $@
+errors.c: \
+  $(SOURCE_DIR)/../errors.def \
+  $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $(SOURCE_DIR)/../errors.def -c $@
 release/errors.o: errors.c errors.h
 debug/errors.o: errors.c errors.h
 gcov/errors.o: errors.c errors.h

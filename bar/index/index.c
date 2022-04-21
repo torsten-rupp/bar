@@ -291,6 +291,9 @@ LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
 
+LOCAL char outputProgressBuffer[128];
+LOCAL uint outputProgressBufferLength;
+
 #ifdef INDEX_DEBUG_LOCK
   LOCAL ThreadLWPId indexUseCountLPWIds[32];
 #endif /* INDEX_DEBUG_LOCK */
@@ -829,6 +832,159 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 }
 #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
 
+/***********************************************************************\
+* Name   : formatSubProgressInfo
+* Purpose: format sub-progress info call back
+* Input  : progress           - progress [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void formatSubProgressInfo(uint  progress,
+                                 ulong estimatedTotalTime,
+                                 ulong estimatedRestTime,
+                                 void  *userData
+                                )
+{
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (estimatedRestTime < (999*60*60))
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%6.1f%% %2dh:%02dmin:%02ds",
+                 (float)progress/10.0,
+                 estimatedRestTime/(60*60),
+                 estimatedRestTime%(60*60)/60,
+                 estimatedRestTime%60
+                );
+  }
+  else
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%6.1f%% ---h:--min:--s",
+                 (float)progress/10.0
+                );
+  }
+}
+
+/***********************************************************************\
+* Name   : outputProgressInit
+* Purpose: output progress text
+* Input  : text     - text
+*          maxSteps - nax. number of steps (not used)
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInit(const char *text,
+                              uint64     maxSteps,
+                              void       *userData
+                             )
+{
+  UNUSED_VARIABLE(maxSteps);
+  UNUSED_VARIABLE(userData);
+
+  UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
+  fflush(stdout);
+}
+
+/***********************************************************************\
+* Name   : outputProgressInfo
+* Purpose: output progress info on console
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  const char *WHEEL = "|/-\\";
+  static uint wheelIndex = 0;
+
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+  if (estimatedRestTime < (99999*60*60))
+  {
+    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+                       " / %7.1f%% %5uh:%02umin:%02us %c",
+                       (float)progress/10.0,
+                       estimatedRestTime/(60*60),
+                       estimatedRestTime%(60*60)/60,
+                       estimatedRestTime%60,
+                       WHEEL[wheelIndex]
+                      );
+  }
+  else
+  {
+    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+                       " / %7.1f%% -----h:--min:--s %c",
+                       (float)progress/10.0,
+                       WHEEL[wheelIndex]
+                      );
+  }
+  outputProgressBufferLength = stringLength(outputProgressBuffer);
+
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  fflush(stdout);
+
+  wheelIndex = (wheelIndex+1) % 4;
+}
+
+/***********************************************************************\
+* Name   : outputProgressDone
+* Purpose: done progress output
+* Input  : totalTime - total time [s]
+*          userData  - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressDone(ulong totalTime,
+                              void  *userData
+                             )
+{
+  UNUSED_VARIABLE(userData);
+
+  stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+               "%2dh:%02dmin:%02ds",
+               totalTime/(60*60),
+               totalTime%(60*60)/60,
+               totalTime%60
+              );
+  stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
+
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  UNUSED_RESULT(fwrite("\n",1,1,stdout));
+
+  fflush(stdout);
+}
+
 // TODO:
 #if 0
 #include "index_version1.c"
@@ -972,19 +1128,13 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
     case 6:
       error = importIndexVersion6(&oldIndexHandle.databaseHandle,
                                   &indexHandle->databaseHandle,
-                                  &progressInfo,
-                                  CALLBACK_(NULL,NULL),  // progressInit
-                                  CALLBACK_(NULL,NULL),  // progressDone
-                                  CALLBACK_(NULL,NULL)  // progressInfo
+                                  &progressInfo
                                  );
       break;
     case INDEX_CONST_VERSION:
       error = importIndexVersion7(&oldIndexHandle.databaseHandle,
                                   &indexHandle->databaseHandle,
-                                  &progressInfo,
-                                  CALLBACK_(NULL,NULL),  // progressInit
-                                  CALLBACK_(NULL,NULL),  // progressDone
-                                  CALLBACK_(NULL,NULL)  // progressInfo
+                                  &progressInfo
                                  );
       break;
     default:

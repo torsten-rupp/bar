@@ -1159,10 +1159,11 @@ test1-gprof test_basic-gprof:
 test1-valgrind test_basic-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_basic
 
+# Note: limit computation effort with min. compress names for some operations
 test2 test_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
-	for compress in $(COMPRESS_NAMES); do \
+	for compress in $(MIN_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1174,6 +1175,8 @@ test2 test_compress: \
           if test $$rc -ne 0; then \
             exit $$rc; \
           fi; \
+        done
+	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1185,6 +1188,19 @@ test2 test_compress: \
           if test $$rc -ne 0; then \
             exit $$rc; \
           fi; \
+          $(MAKE) \
+            BAR_STORAGE="$(INTERMEDIATE_DIR)" \
+            BAR_FILE="test" \
+            BAR_PATTERN="test" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
+            test_file_operations_dryrun \
+            ; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
+          fi; \
+        done
+	for compress in $(MIN_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test-####" \
@@ -1202,17 +1218,6 @@ test2 test_compress: \
             BAR_PATTERN="test-*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             test_file_operations_large \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_STORAGE="$(INTERMEDIATE_DIR)" \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations_dryrun \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
