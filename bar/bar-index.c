@@ -1091,7 +1091,8 @@ LOCAL void outputProgressDone(ulong totalTime,
   fflush(stdout);
 }
 
-#include "index/index_current.c"
+#include "index/index_version6.c"
+#include "index/index_version7.c"
 
 /***********************************************************************\
 * Name   : importIntoDatabase
@@ -1107,6 +1108,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
 {
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;
+  uint              indexVersion;
   ulong             maxSteps;
   ProgressInfo      progressInfo;
   Errors            error;
@@ -1148,52 +1150,78 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
     return error;
   }
 
+  error = Database_getUInt(&oldDatabaseHandle,
+                           &indexVersion,
+                           "meta",
+                           "value",
+                           "name='version'",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL  // orderGroup
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(printableDatabaseURI);
+    Database_doneSpecifier(&databaseSpecifier);
+    return error;
+  }
+
   maxSteps = 0LL;
-// TODO:
-#if 0
   switch (indexVersion)
   {
     case 1:
-      maxSteps = getImportStepsVersion1(&oldIndexHandle,2,2,2);
-      break;
     case 2:
-      maxSteps = getImportStepsVersion2(&oldIndexHandle,2,2,2);
-      break;
     case 3:
-      maxSteps = getImportStepsVersion3(&oldIndexHandle,2,2,2);
-      break;
     case 4:
-      maxSteps = getImportStepsVersion4(&oldIndexHandle,2,2,2);
-      break;
     case 5:
-      maxSteps = getImportStepsVersion5(&oldIndexHandle,2,2,2);
       break;
     case 6:
-      maxSteps = getImportStepsVersion6(&oldIndexHandle,2,2,2);
+      maxSteps = getImportStepsVersion6(&oldDatabaseHandle);
       break;
     case INDEX_CONST_VERSION:
       maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
       break;
     default:
-      // unknown version if index
-      error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-#else
-maxSteps = getImportStepsVersion7(&oldDatabaseHandle);
-#endif
   ProgressInfo_init(&progressInfo,
                     NULL,  // parentProgressInfo
                     128,  // filterWindowSize
                     500,  // reportTime
                     maxSteps,
                     CALLBACK_(NULL,NULL),  // progresInitFunction
-                    CALLBACK_(outputProgressDone,NULL),
+                    CALLBACK_(NULL,NULL),  // progressDoneFunction
                     CALLBACK_(outputProgressInfo,NULL),
                     NULL  // text
                    );
 
-  error = importIndexVersion7XXX(&oldDatabaseHandle,databaseHandle,&progressInfo);
+  switch (indexVersion)
+  {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case 6:
+      error = importIndexVersion6(&oldDatabaseHandle,
+                                  databaseHandle,
+                                  &progressInfo
+                                 );
+      break;
+    case 7:
+      error = importIndexVersion7(&oldDatabaseHandle,
+                                  databaseHandle,
+                                  &progressInfo
+                                 );
+      break;
+    default:
+      // unknown version if index
+      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      break;
+  }
   if (error != ERROR_NONE)
   {
     printError("Import database fail: %s!\n",Error_getText(error));

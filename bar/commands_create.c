@@ -5151,10 +5151,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           n++;
         }
         while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
-        String_delete(postfixFileName);
-        String_delete(prefixFileName);
         String_delete(baseName);
         String_delete(directoryName);
+        String_delete(postfixFileName);
+        String_delete(prefixFileName);
       }
 
       // get printable storage name

@@ -291,7 +291,8 @@ LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
 
-LOCAL ProgressInfo               importProgressInfo;
+LOCAL char outputProgressBuffer[128];
+LOCAL uint outputProgressBufferLength;
 
 #ifdef INDEX_DEBUG_LOCK
   LOCAL ThreadLWPId indexUseCountLPWIds[32];
@@ -831,6 +832,159 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 }
 #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
 
+/***********************************************************************\
+* Name   : formatSubProgressInfo
+* Purpose: format sub-progress info call back
+* Input  : progress           - progress [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void formatSubProgressInfo(uint  progress,
+                                 ulong estimatedTotalTime,
+                                 ulong estimatedRestTime,
+                                 void  *userData
+                                )
+{
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (estimatedRestTime < (999*60*60))
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%6.1f%% %2dh:%02dmin:%02ds",
+                 (float)progress/10.0,
+                 estimatedRestTime/(60*60),
+                 estimatedRestTime%(60*60)/60,
+                 estimatedRestTime%60
+                );
+  }
+  else
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%6.1f%% ---h:--min:--s",
+                 (float)progress/10.0
+                );
+  }
+}
+
+/***********************************************************************\
+* Name   : outputProgressInit
+* Purpose: output progress text
+* Input  : text     - text
+*          maxSteps - nax. number of steps (not used)
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInit(const char *text,
+                              uint64     maxSteps,
+                              void       *userData
+                             )
+{
+  UNUSED_VARIABLE(maxSteps);
+  UNUSED_VARIABLE(userData);
+
+  UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
+  fflush(stdout);
+}
+
+/***********************************************************************\
+* Name   : outputProgressInfo
+* Purpose: output progress info on console
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  const char *WHEEL = "|/-\\";
+  static uint wheelIndex = 0;
+
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+  if (estimatedRestTime < (99999*60*60))
+  {
+    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+                       " / %7.1f%% %5uh:%02umin:%02us %c",
+                       (float)progress/10.0,
+                       estimatedRestTime/(60*60),
+                       estimatedRestTime%(60*60)/60,
+                       estimatedRestTime%60,
+                       WHEEL[wheelIndex]
+                      );
+  }
+  else
+  {
+    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+                       " / %7.1f%% -----h:--min:--s %c",
+                       (float)progress/10.0,
+                       WHEEL[wheelIndex]
+                      );
+  }
+  outputProgressBufferLength = stringLength(outputProgressBuffer);
+
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  fflush(stdout);
+
+  wheelIndex = (wheelIndex+1) % 4;
+}
+
+/***********************************************************************\
+* Name   : outputProgressDone
+* Purpose: done progress output
+* Input  : totalTime - total time [s]
+*          userData  - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressDone(ulong totalTime,
+                              void  *userData
+                             )
+{
+  UNUSED_VARIABLE(userData);
+
+  stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+               "%2dh:%02dmin:%02ds",
+               totalTime/(60*60),
+               totalTime%(60*60)/60,
+               totalTime%60
+              );
+  stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
+
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+  UNUSED_RESULT(fwrite("\n",1,1,stdout));
+
+  fflush(stdout);
+}
+
 // TODO:
 #if 0
 #include "index_version1.c"
@@ -838,56 +992,9 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 #include "index_version3.c"
 #include "index_version4.c"
 #include "index_version5.c"
+#endif
+#include "index_version6.c"
 #include "index_version7.c"
-#endif
-//#include "index_version6.c"
-
-#if 0
-/***********************************************************************\
-* Name   : getImportStepsCurrentVersion
-* Purpose: get number of import steps for current index version
-* Input  : oldIndexHandle     - old index handle
-*          uuidFactor         - UUID count factor (>= 1)
-*          entityCountFactor  - entity count factor (>= 1)
-*          storageCountFactor - storage count factor (>= 1)
-* Output : -
-* Return : number of import steps
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ulong getImportStepsCurrentVersion(DatabaseHandle *databaseHandle,
-                                         uint        uuidCountFactor,
-                                         uint        entityCountFactor,
-                                         uint        storageCountFactor
-                                        )
-{
-(void)databaseHandle;
-(void)uuidCountFactor;
-(void)entityCountFactor;
-(void)storageCountFactor;
-// TODO:  return getImportStepsVersion7(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
-return 7;
-}
-
-/***********************************************************************\
-* Name   : importCurrentVersion
-* Purpose: import current index version
-* Input  : oldIndexHandle,newIndexHandle - index handles
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
-                                  IndexHandle *newIndexHandle
-                                 )
-{
-// TODO:  return importIndexVersion7(oldIndexHandle,newIndexHandle);
-(void)oldIndexHandle;
-(void)newIndexHandle;
-return ERROR_STILL_NOT_IMPLEMENTED;
-}
-#endif
 
 /***********************************************************************\
 * Name   : importIndex
@@ -905,7 +1012,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   Errors            error;
   IndexHandle       oldIndexHandle;
   int64             indexVersion;
-//  ulong             maxSteps;
+  ulong             maxSteps;
+  ProgressInfo      progressInfo;
   IndexQueryHandle  indexQueryHandle;
   uint64            t0;
   uint64            t1;
@@ -948,40 +1056,44 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
               indexVersion
              );
   DIMPORT("import index %"PRIi64"",indexVersion);
-// TODO:
-#if 0
+
   maxSteps = 0LL;
   switch (indexVersion)
   {
     case 1:
-      maxSteps = getImportStepsVersion1(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 2:
-      maxSteps = getImportStepsVersion2(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 3:
-      maxSteps = getImportStepsVersion3(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 4:
-      maxSteps = getImportStepsVersion4(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 5:
-      maxSteps = getImportStepsVersion5(&oldIndexHandle,2,2,2);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 6:
-      maxSteps = getImportStepsVersion6(&oldIndexHandle,2,2,2);
+      maxSteps = getImportStepsVersion6(&oldIndexHandle.databaseHandle);
       break;
     case INDEX_CONST_VERSION:
-      maxSteps = getImportStepsCurrentVersion(&oldIndexHandle,2,2,2);
+      maxSteps = getImportStepsVersion7(&oldIndexHandle.databaseHandle);
       break;
     default:
       // unknown version if index
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-  ProgressInfo_init(&importProgressInfo,
-                    0,
+
+  ProgressInfo_init(&progressInfo,
+                    NULL,  // parentProgressInfo
+                    32,  // filterWindowSize
+                    500,  // reportTime
                     maxSteps,
+                    CALLBACK_(NULL,NULL),
+                    CALLBACK_(NULL,NULL),
                     CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
                     {
                        plogMessage(NULL,  // logHandle
@@ -999,33 +1111,38 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   switch (indexVersion)
   {
     case 1:
-      error = importIndexVersion1(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 2:
-      error = importIndexVersion2(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 3:
-      error = importIndexVersion3(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 4:
-      error = importIndexVersion4(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 5:
-      error = importIndexVersion5(&oldIndexHandle,indexHandle);
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case 6:
-      error = importIndexVersion6(&oldIndexHandle,indexHandle);
+      error = importIndexVersion6(&oldIndexHandle.databaseHandle,
+                                  &indexHandle->databaseHandle,
+                                  &progressInfo
+                                 );
       break;
     case INDEX_CONST_VERSION:
-      error = importCurrentVersion(&oldIndexHandle,indexHandle);
+      error = importIndexVersion7(&oldIndexHandle.databaseHandle,
+                                  &indexHandle->databaseHandle,
+                                  &progressInfo
+                                 );
       break;
     default:
       // unknown version if index
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-#endif
-  ProgressInfo_done(&importProgressInfo);
+  ProgressInfo_done(&progressInfo);
   DIMPORT("import index done (error: %s)",Error_getText(error));
 
   DIMPORT("create aggregates");
@@ -1050,43 +1167,45 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
-    while (   (error == ERROR_NONE)
-           && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidId
-                                   NULL,  // jobUUID
-                                   NULL,  // entityId
-                                   NULL,  // scheduleUUID
-                                   NULL,  // hostName
-                                   NULL,  // userName
-                                   NULL,  // comment
-                                   NULL,  // createdDateTime
-                                   NULL,  // archiveType
-                                   &storageId,
-                                   NULL,  // storageName,
-                                   NULL,  // dateTime
-                                   NULL,  // size,
-                                   NULL,  // indexState
-                                   NULL,  // indexMode
-                                   NULL,  // lastCheckedDateTime
-                                   NULL,  // errorMessage
-                                   NULL,  // totalEntryCount
-                                   NULL  // totalEntrySize
-                                  )
-          )
+    if (error == ERROR_NONE)
     {
-      t0 = Misc_getTimestamp();
-      error = Index_updateStorageInfos(indexHandle,storageId);
-      t1 = Misc_getTimestamp();
-      if (error == ERROR_NONE)
+      while (   (error == ERROR_NONE)
+             && Index_getNextStorage(&indexQueryHandle,
+                                     NULL,  // uuidId
+                                     NULL,  // jobUUID
+                                     NULL,  // entityId
+                                     NULL,  // scheduleUUID
+                                     NULL,  // hostName
+                                     NULL,  // userName
+                                     NULL,  // comment
+                                     NULL,  // createdDateTime
+                                     NULL,  // archiveType
+                                     &storageId,
+                                     NULL,  // storageName,
+                                     NULL,  // dateTime
+                                     NULL,  // size,
+                                     NULL,  // indexState
+                                     NULL,  // indexMode
+                                     NULL,  // lastCheckedDateTime
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
+                                    )
+            )
       {
-        logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
-                          storageId,
-                          (t1-t0)/US_PER_SECOND
-                         );
+        t0 = Misc_getTimestamp();
+        error = Index_updateStorageInfos(indexHandle,storageId);
+        t1 = Misc_getTimestamp();
+        if (error == ERROR_NONE)
+        {
+          logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
+                            storageId,
+                            (t1-t0)/US_PER_SECOND
+                           );
+        }
       }
-      ProgressInfo_step(&importProgressInfo);
+      Index_doneList(&indexQueryHandle);
     }
-    Index_doneList(&indexQueryHandle);
   }
   if (error == ERROR_NONE)
   {
@@ -1104,35 +1223,37 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
-    while (   (error == ERROR_NONE)
-           && Index_getNextEntity(&indexQueryHandle,
-                                  NULL,  // uuidId,
-                                  NULL,  // jobUUID,
-                                  NULL,  // scheduleUUID,
-                                  &entityId,
-                                  NULL,  // archiveType,
-                                  NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage
-                                  NULL,  // totalSize
-                                  NULL,  // totalEntryCount
-                                  NULL,  // totalEntrySize
-                                  NULL  // lockedCount
-                                 )
-          )
+    if (error == ERROR_NONE)
     {
-      t0 = Misc_getTimestamp();
-      error = Index_updateEntityInfos(indexHandle,entityId);
-      t1 = Misc_getTimestamp();
-      if (error == ERROR_NONE)
+      while (   (error == ERROR_NONE)
+             && Index_getNextEntity(&indexQueryHandle,
+                                    NULL,  // uuidId,
+                                    NULL,  // jobUUID,
+                                    NULL,  // scheduleUUID,
+                                    &entityId,
+                                    NULL,  // archiveType,
+                                    NULL,  // createdDateTime,
+                                    NULL,  // lastErrorMessage
+                                    NULL,  // totalSize
+                                    NULL,  // totalEntryCount
+                                    NULL,  // totalEntrySize
+                                    NULL  // lockedCount
+                                   )
+            )
       {
-        logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
-                          entityId,
-                          (t1-t0)/US_PER_SECOND
-                         );
+        t0 = Misc_getTimestamp();
+        error = Index_updateEntityInfos(indexHandle,entityId);
+        t1 = Misc_getTimestamp();
+        if (error == ERROR_NONE)
+        {
+          logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
+                            entityId,
+                            (t1-t0)/US_PER_SECOND
+                           );
+        }
       }
-      ProgressInfo_step(&importProgressInfo);
+      Index_doneList(&indexQueryHandle);
     }
-    Index_doneList(&indexQueryHandle);
   }
   if (error == ERROR_NONE)
   {
@@ -1144,35 +1265,35 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                 0LL,  // offset
                                 INDEX_UNLIMITED
                                );
-    while (   (error == ERROR_NONE)
-           && Index_getNextUUID(&indexQueryHandle,
-                                &uuidId,
-                                NULL,  // jobUUID
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // lastErrorMessage
-                                NULL,  // size
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
+    if (error == ERROR_NONE)
     {
-      t0 = Misc_getTimestamp();
-      error = Index_updateUUIDInfos(indexHandle,uuidId);
-      t1 = Misc_getTimestamp();
-      if (error == ERROR_NONE)
+      while (   (error == ERROR_NONE)
+             && Index_getNextUUID(&indexQueryHandle,
+                                  &uuidId,
+                                  NULL,  // jobUUID
+                                  NULL,  // lastCheckedDateTime
+                                  NULL,  // lastErrorMessage
+                                  NULL,  // size
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
+                                 )
+            )
       {
-        logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
-                          uuidId,
-                          (t1-t0)/US_PER_SECOND
-                         );
+        t0 = Misc_getTimestamp();
+        error = Index_updateUUIDInfos(indexHandle,uuidId);
+        t1 = Misc_getTimestamp();
+        if (error == ERROR_NONE)
+        {
+          logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
+                            uuidId,
+                            (t1-t0)/US_PER_SECOND
+                           );
+        }
       }
-      ProgressInfo_step(&importProgressInfo);
+      Index_doneList(&indexQueryHandle);
     }
-    Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
-
-  ProgressInfo_done(&importProgressInfo);
 
   if (error == ERROR_NONE)
   {
@@ -2035,7 +2156,7 @@ LOCAL void indexThreadCode(void)
           else
           {
             failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
-  // TODO:
+// TODO:
             (void)File_rename(oldDatabaseFileName,failFileName,NULL);
             String_delete(failFileName);
           }

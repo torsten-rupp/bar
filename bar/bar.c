@@ -3922,34 +3922,34 @@ LOCAL Errors runDebug(void)
     if      (error == ERROR_NONE)
     {
       // done
-      (void)Index_setStorageState(indexHandle,
-                                  storageId,
-                                  INDEX_STATE_OK,
-                                  Misc_getCurrentDateTime(),
-                                  NULL  // errorMessage
-                                 );
+      error = Index_setStorageState(indexHandle,
+                                    storageId,
+                                    INDEX_STATE_OK,
+                                    Misc_getCurrentDateTime(),
+                                    NULL  // errorMessage
+                                   );
     }
     else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
     {
       // interrupt
-      (void)Index_setStorageState(indexHandle,
-                                  storageId,
-                                  INDEX_STATE_UPDATE_REQUESTED,
-                                  0LL,  // lastCheckedTimestamp
-                                  NULL  // errorMessage
-                                 );
+      error = Index_setStorageState(indexHandle,
+                                    storageId,
+                                    INDEX_STATE_UPDATE_REQUESTED,
+                                    0LL,  // lastCheckedTimestamp
+                                    NULL  // errorMessage
+                                   );
     }
     else
     {
       // error
-      (void)Index_setStorageState(indexHandle,
-                                  storageId,
-                                  INDEX_STATE_ERROR,
-                                  0LL,  // lastCheckedDateTime
-                                  "%s (error code: %d)",
-                                  Error_getText(error),
-                                  Error_getCode(error)
-                                 );
+      error = Index_setStorageState(indexHandle,
+                                    storageId,
+                                    INDEX_STATE_ERROR,
+                                    0LL,  // lastCheckedDateTime
+                                    "%s (error code: %d)",
+                                    Error_getText(error),
+                                    Error_getCode(error)
+                                   );
     }
     if (error != ERROR_NONE)
     {

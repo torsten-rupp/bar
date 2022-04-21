@@ -1714,8 +1714,6 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
                     sqlite3_errmsg(handle),
                     sqlString
                    );
-fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,sqlite3_errcode(handle),sqlite3_errmsg(handle));
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   }
   else
   {
@@ -6208,8 +6206,6 @@ abort();
                   break;
                 case DATABASE_DATATYPE:
 // TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
@@ -6720,120 +6716,127 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         int sqliteResult;
 
         // bind values
-        sqliteResult = SQLITE_OK;
-        for (i = 0; i < valueCount; i++)
+        sqliteResult = sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
+        if (sqliteResult == SQLITE_OK)
         {
-          assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,
-                  "invalid values: index %u, count %u",
-                  databaseStatementHandle->parameterIndex,
-                  databaseStatementHandle->parameterCount
-                 );
-
-          switch (values[i].type)
+          for (i = 0; i < valueCount; i++)
           {
-            case DATABASE_DATATYPE_NONE:
-              break;
-            case DATABASE_DATATYPE:
-              break;
-            case DATABASE_DATATYPE_PRIMARY_KEY:
-            case DATABASE_DATATYPE_KEY:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+            assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,
+                    "invalid values: index %u, count %u",
+                    databaseStatementHandle->parameterIndex,
+                    databaseStatementHandle->parameterCount
+                   );
+
+            switch (values[i].type)
+            {
+              case DATABASE_DATATYPE_NONE:
+                break;
+              case DATABASE_DATATYPE:
+                break;
+              case DATABASE_DATATYPE_PRIMARY_KEY:
+              case DATABASE_DATATYPE_KEY:
+                sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                  1+databaseStatementHandle->parameterIndex,
+                                                  values[i].id
+                                                 );
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_BOOL:
+                sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->parameterIndex,
-                                                values[i].id
+                                                values[i].b ? 1 : 0
                                                );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_BOOL:
-              sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
-                                              1+databaseStatementHandle->parameterIndex,
-                                              values[i].b ? 1 : 0
-                                             );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_INT:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_INT:
+                sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->parameterIndex,
                                                 values[i].i
                                                );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_INT64:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                1+databaseStatementHandle->parameterIndex,
-                                                values[i].i64
-                                               );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_UINT:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_INT64:
+                sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                  1+databaseStatementHandle->parameterIndex,
+                                                  values[i].i64
+                                                 );
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_UINT:
+                sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->parameterIndex,
                                                 (int)values[i].u
                                                );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_UINT64:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                1+databaseStatementHandle->parameterIndex,
-                                                (int64)values[i].u64
-                                               );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_DOUBLE:
-              sqliteResult = sqlite3_bind_double(databaseStatementHandle->sqlite.statementHandle,
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_UINT64:
+                sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                  1+databaseStatementHandle->parameterIndex,
+                                                  (int64)values[i].u64
+                                                 );
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_DOUBLE:
+                sqliteResult = sqlite3_bind_double(databaseStatementHandle->sqlite.statementHandle,
+                                                   1+databaseStatementHandle->parameterIndex,
+                                                   values[i].d
+                                                  );
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_DATETIME:
+                sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                  1+databaseStatementHandle->parameterIndex,
+                                                  values[i].dateTime
+                                                 );
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_STRING:
+                sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                  1+databaseStatementHandle->parameterIndex,
-                                                 values[i].d
+                                                 String_cString(values[i].string),
+                                                 String_length(values[i].string),NULL
                                                 );
-              databaseStatementHandle->parameterIndex++;
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_CSTRING:
+                sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
+                                                 1+databaseStatementHandle->parameterIndex,
+                                                 values[i].s,
+                                                 stringLength(values[i].s),
+                                                 NULL
+                                                );
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_BLOB:
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
+              default:
+                #ifndef NDEBUG
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                #endif /* NDEBUG */
+                break;
+            }
+            if (sqliteResult != SQLITE_OK)
+            {
               break;
-            case DATABASE_DATATYPE_DATETIME:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                1+databaseStatementHandle->parameterIndex,
-                                                values[i].dateTime
-                                               );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_STRING:
-              sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
-                                               1+databaseStatementHandle->parameterIndex,
-                                               String_cString(values[i].string),
-                                               String_length(values[i].string),NULL
-                                              );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_CSTRING:
-              sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
-                                               1+databaseStatementHandle->parameterIndex,
-                                               values[i].s,
-                                               stringLength(values[i].s),
-                                               NULL
-                                              );
-              databaseStatementHandle->parameterIndex++;
-              break;
-            case DATABASE_DATATYPE_BLOB:
-              HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break;
+            }
           }
-          if      (sqliteResult == SQLITE_MISUSE)
-          {
-            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                                sqliteResult,
-                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
-                               );
-          }
-          else if (sqliteResult != SQLITE_OK)
-          {
-            error = ERRORX_(DATABASE,
-                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                            "%s",
-                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                           );
-            break;
-          }
+        }
+        if      (sqliteResult == SQLITE_MISUSE)
+        {
+          HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                              sqliteResult,
+                              sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                             );
+        }
+        else if (sqliteResult != SQLITE_OK)
+        {
+          error = ERRORX_(DATABASE,
+                          sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                          "%s",
+                          sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                         );
+          break;
         }
       }
       break;
@@ -6849,7 +6852,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                     databaseStatementHandle->parameterCount
                    );
 
-  // TODO:remove          databaseStatementHandle->values[databaseStatementHandle->parameterIndex] = &values[i];
+// TODO:remove          databaseStatementHandle->values[databaseStatementHandle->parameterIndex] = &values[i];
             switch (values[i].type)
             {
               case DATABASE_DATATYPE_NONE:
@@ -9503,9 +9506,20 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
   assert(databaseSpecifier != NULL);
 
   #ifdef NDEBUG
-    error = openDatabase(databaseHandle,databaseSpecifier,databaseName,openDatabaseMode,timeout);
+    error = openDatabase(databaseHandle,
+                         databaseSpecifier,
+                         databaseName,
+                         openDatabaseMode,
+                         timeout
+                        );
   #else /* not NDEBUG */
-    error = __openDatabase(__fileName__,__lineNb__,databaseHandle,databaseSpecifier,databaseName,openDatabaseMode,timeout);
+    error = __openDatabase(__fileName__,__lineNb__,
+                           databaseHandle,
+                           databaseSpecifier,
+                           databaseName,
+                           openDatabaseMode,
+                           timeout
+                          );
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
@@ -10463,7 +10477,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
               do
               {
                 t = Misc_getRestTimeout(&timeoutInfo,DT);
-//fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
               }
@@ -10472,7 +10485,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     );
               if (isReadWriteLock(databaseHandle))
               {
-//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)); asm("int3");
                 Misc_doneTimeout(&timeoutInfo);
                 pendingReadsDecrement(databaseHandle);
                 return FALSE;
@@ -10607,7 +10619,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     );
               if (isReadLock(databaseHandle))
               {
-//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ_WRITE 1: wait read %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)); asm("int3");
                 Misc_doneTimeout(&timeoutInfo);
                 pendingReadWritesDecrement(databaseHandle);
                 return FALSE;
@@ -10655,7 +10666,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
               do
               {
                 t = Misc_getRestTimeout(&timeoutInfo,DT);
-//fprintf(stderr,"%s, %d: c %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
               }
@@ -10664,7 +10674,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     );
               if (isReadWriteLock(databaseHandle))
               {
-//fprintf(stderr,"%s, %d: stop DATABASE_LOCK_TYPE_READ_WRITE 2: wait read/write %d %d\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)); asm("int3");
                 Misc_doneTimeout(&timeoutInfo);
                 pendingReadWritesDecrement(databaseHandle);
                 return FALSE;
@@ -11753,17 +11762,27 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
                           uint64                               limit
                          )
 {
+  #define _DEBUG_COPY_TABLE
+
   /* mappings:
+   *
+   * fromColumnMap:
+   *   map to-column indizes to from-column indizes
+   *   toColumn[i] := fromColumn[fromColumnMap[i]]
+   *
+   * parameterMap:
+   *   map parameter indizes to to-column indizes
+   *   parameter[i] := toColumn[parameterMap[i]]
    *
    * [id|a|b| | | | ] from table
    *                  ^
-   *                  | toColumnMap
+   *                  | fromColumnMap
    *                  |
    * [id|b|a| | | | ] to table
    *                  ^
    *                  | parameterMap
    *                  |
-   * [b|a| | | | ]    insert statement (with pimary key)
+   * [b|a| | | | ]    insert statement (with primary key)
    */
 
   #define START_TIMER() \
@@ -11790,11 +11809,7 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
   DatabaseColumn          fromColumns[DATABASE_MAX_TABLE_COLUMNS],toColumns[DATABASE_MAX_TABLE_COLUMNS];
   uint                    fromColumnCount,toColumnCount;
 
-  uint                    toColumnMap[DATABASE_MAX_TABLE_COLUMNS];
-// TODO:
-//  DatabaseColumnName      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS];
-char      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS][200];
-  uint                    toColumnMapCount;
+  int                     fromColumnMap[DATABASE_MAX_TABLE_COLUMNS];
   uint                    parameterMap[DATABASE_MAX_TABLE_COLUMNS];
   uint                    parameterMapCount;
   int                     toColumnPrimaryKeyIndex;
@@ -11847,7 +11862,13 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   {
     return error;
   }
-//fprintf(stderr,"%s:%d: fromTableName=%s fromColumns=",__FILE__,__LINE__,fromTableName); for (uint i = 0; i < fromColumnCount;i++) fprintf(stderr,"%s %s, ",fromColumns[i].name,DATABASE_DATATYPE_NAMES[fromColumns[i].type]); fprintf(stderr,"\n");
+  #ifdef DEBUG_COPY_TABLE
+    fprintf(stderr,"fromTable '%s': %u\n",fromTableName,fromColumnCount);
+    for (uint i = 0; i < fromColumnCount; i++)
+    {
+      fprintf(stderr,"  %2u: %s %s\n",i,fromColumns[i].name,DATABASE_DATATYPE_NAMES[fromColumns[i].type]);
+    }
+  #endif /* DEBUG_COPY_TABLE */
 
   error = getTableColumns(toColumns,
                           &toColumnCount,
@@ -11860,22 +11881,44 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
-//fprintf(stderr,"%s:%d: toTableName=%s toColumns=",__FILE__,__LINE__,toTableName); for (uint i = 0; i < toColumnCount;i++) fprintf(stderr,"%s %s, ",toColumns[i].name,DATABASE_DATATYPE_NAMES[toColumns[i].type]); fprintf(stderr,"\n");
+  #ifdef DEBUG_COPY_TABLE
+    fprintf(stderr,"toTable '%s': %u\n",toTableName,toColumnCount);
+    for (uint i = 0; i < toColumnCount; i++)
+    {
+      fprintf(stderr,"  %2u: %s %s\n",i,toColumns[i].name,DATABASE_DATATYPE_NAMES[toColumns[i].type]);
+    }
+  #endif /* DEBUG_COPY_TABLE */
   END_TIMER();
 
-  // get column mapping: toColumn[toColumnMap[i]] -> fromColumn[i]
-  toColumnMapCount = 0;
+  // get column mapping: toColumn[i] := fromColumn[fromColumnMap[i]]
   for (i = 0; i < toColumnCount; i++)
   {
-    j = ARRAY_FIND(fromColumnNames,fromColumnCount,j,stringEqualsIgnoreCase(toColumns[i].name,fromColumns[j].name));
+    j = ARRAY_FIND(fromColumns,fromColumnCount,j,stringEqualsIgnoreCase(fromColumns[j].name,toColumns[i].name));
     if (j < fromColumnCount)
     {
-      toColumnMap[toColumnMapCount] = j;
-      stringSet(toColumnMapNames[toColumnMapCount],sizeof(toColumnMapNames[toColumnMapCount]),toColumns[i].name);
-      toColumnMapCount++;
+      fromColumnMap[i] = j;
+    }
+    else
+    {
+      fromColumnMap[i] = -1;
     }
   }
-//fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (uint i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
+  #ifdef DEBUG_COPY_TABLE
+    fprintf(stderr,"mapping:\n");
+    for (uint i = 0; i < toColumnCount; i++)
+    {
+      if (fromColumnMap[i] != -1)
+      {
+        fprintf(stderr,
+                "  from %2u:%-30s -> to %2u:%-30s\n",
+                fromColumnMap[i],
+                fromColumns[fromColumnMap[i]].name,
+                i,
+                fromColumns[fromColumnMap[i]].name
+               );
+      }
+    }
+  #endif /* DEBUG_COPY_TABLE */
 
   // get parameter mapping+to-table primary key column index
   toColumnPrimaryKeyIndex = UNUSED;
@@ -11884,15 +11927,38 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   {
     if (toColumns[i].type != DATABASE_DATATYPE_PRIMARY_KEY)
     {
-      parameterMap[parameterMapCount] = i;
-      parameterMapCount++;
+      if (fromColumnMap[i] != -1)
+      {
+        parameterMap[parameterMapCount] = i;
+        parameterMapCount++;
+      }
     }
     else
     {
       toColumnPrimaryKeyIndex = i;
     }
   }
-//fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (uint i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumns[parameterMap[i]].name,toColumns[parameterMap[i]].type); } fprintf(stderr,"\n");
+  #ifdef DEBUG_COPY_TABLE
+    fprintf(stderr,"parameter mapping: %u\n",parameterMapCount);
+    for (uint i = 0; i < parameterMapCount; i++)
+    {
+      fprintf(stderr,
+              "  from %2u:%-30s -> to %2u:%-30s %s\n",
+              fromColumnMap[parameterMap[i]],
+              fromColumns[fromColumnMap[parameterMap[i]]].name,
+              parameterMap[i],
+              toColumns[parameterMap[i]].name,
+              DATABASE_DATATYPE_NAMES[fromColumns[fromColumnMap[parameterMap[i]]].type]
+             );
+    }
+    for (uint i = 0; i < parameterMapCount; i++)
+    {
+      if (fromColumnMap[parameterMap[i]] != -1)
+      {
+        assert(stringEqualsIgnoreCase(fromColumns[fromColumnMap[parameterMap[i]]].name,toColumns[parameterMap[i]].name));
+      }
+    }
+  #endif /* DEBUG_COPY_TABLE */
 
   // init to-values, parameters
   for (i = 0; i < toColumnCount; i++)
@@ -11939,24 +12005,27 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     String_formatAppend(sqlSelectString," OFFSET %"PRIu64,offset);
   }
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
-//fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
+  #ifdef DEBUG_COPY_TABLE
+    fprintf(stderr,"SQL select: %s\n",String_cString(sqlSelectString));
+  #endif /* DEBUG_COPY_TABLE */
 
   sqlInsertString = String_format(String_new(),"INSERT INTO %s (",toTableName);
   for (i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
-    String_appendCString(sqlInsertString,fromColumns[toColumnMap[parameterMap[i]]].name);
+    String_appendCString(sqlInsertString,fromColumns[fromColumnMap[parameterMap[i]]].name);
   }
   String_formatAppend(sqlInsertString,") VALUES (");
   for (i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
-//    String_appendChar(sqlInsertString,'?');
     String_appendFormat(sqlInsertString,"$%u",1+i);
   }
   String_formatAppend(sqlInsertString,")");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlInsertString);
-//fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
+  #ifdef DEBUG_COPY_TABLE
+    fprintf(stderr,"SQL insert: %s\n",String_cString(sqlInsertString));
+  #endif /* DEBUG_COPY_TABLE */
 
   // create select+insert statements
   error = prepareStatement(&fromDatabaseStatementHandle,
@@ -12002,7 +12071,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   fromColumnInfo.values = fromDatabaseStatementHandle.results;
   fromColumnInfo.count  = fromColumnCount;
 
-//fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount);
   error = prepareStatement(&toDatabaseStatementHandle,
                            toDatabaseHandle,
                            String_cString(sqlInsertString),
@@ -12069,31 +12137,34 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                                        {
                                          memCopyFast(&parameterValues[i].data,
                                                      sizeof(parameterValues[i].data),
-                                                     &values[parameterMap[toColumnMap[i]]].data,
-                                                     sizeof(values[parameterMap[toColumnMap[i]]].data)
+                                                     &values[parameterMap[fromColumnMap[i]]].data,
+                                                     sizeof(values[parameterMap[fromColumnMap[i]]].data)
                                                     );
 #if 0
 fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
-(i < parameterMapCount) ? toColumnMap[parameterMap[i]] : -1,
+(i < parameterMapCount) ? fromColumnMap[parameterMap[i]] : -1,
 (i < parameterMapCount) ? parameterMap[i] : -1,
 i,
-fromColumnNames[toColumnMap[parameterMap[i]]],
+fromColumnNames[fromColumnMap[parameterMap[i]]],
 toColumnNames[parameterMap[i]],
-DATABASE_DATATYPE_NAMES[fromColumnTypes[toColumnMap[parameterMap[i]]]],
+DATABASE_DATATYPE_NAMES[fromColumnTypes[fromColumnMap[parameterMap[i]]]],
 DATABASE_DATATYPE_NAMES[toColumnTypes[parameterMap[i]]],
-debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromValues[toColumnMap[parameterMap[i]]]),
+debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromValues[fromColumnMap[parameterMap[i]]]),
 debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 );
 #endif
                                        }
 
-                                       for (i = 0; i < toColumnMapCount; i++)
+                                       for (i = 0; i < toColumnCount; i++)
                                        {
+                                         if (fromColumnMap[i] != -1)
+                                         {
                                          memCopyFast(&toValues[i].data,
                                                      sizeof(toValues[i].data),
-                                                     &fromDatabaseStatementHandle.results[toColumnMap[i]].data,
-                                                     sizeof(fromDatabaseStatementHandle.results[toColumnMap[i]].data)
+                                                     &fromDatabaseStatementHandle.results[fromColumnMap[i]].data,
+                                                     sizeof(fromDatabaseStatementHandle.results[fromColumnMap[i]].data)
                                                     );
+                                                  }
                                        }
 
                                        // call pre-copy callback (if defined)
@@ -12122,6 +12193,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                          // copy parameter data
                                          for (i = 0; i < parameterMapCount; i++)
                                          {
+//fprintf(stderr,"%s:%d: copy %d -> %d\n",__FILE__,__LINE__,parameterMap[i],i);
                                            memCopyFast(&parameterValues[i].data,
                                                        sizeof(parameterValues[i].data),
                                                        &toColumnInfo.values[parameterMap[i]].data,
@@ -12357,14 +12429,25 @@ DatabaseId Database_getTableColumnId(DatabaseColumnInfo *columnInfo, const char 
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
            || (databaseValue->type == DATABASE_DATATYPE_KEY)
            || (databaseValue->type == DATABASE_DATATYPE_INT)
+           || (databaseValue->type == DATABASE_DATATYPE_UINT)
+           || (databaseValue->type == DATABASE_DATATYPE_INT64)
+           || (databaseValue->type == DATABASE_DATATYPE_UINT64)
           );
-    if ((databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY) || (databaseValue->type == DATABASE_DATATYPE_KEY))
+    switch (databaseValue->type)
     {
-      return databaseValue->id;
-    }
-    else
-    {
-      return databaseValue->i;
+      case DATABASE_DATATYPE_PRIMARY_KEY:
+      case DATABASE_DATATYPE_KEY:
+        return databaseValue->id;
+      case DATABASE_DATATYPE_INT:
+        return (DatabaseId)databaseValue->i;
+      case DATABASE_DATATYPE_UINT:
+        return (DatabaseId)databaseValue->u;
+      case DATABASE_DATATYPE_INT64:
+        return (DatabaseId)databaseValue->i64;
+      case DATABASE_DATATYPE_UINT64:
+        return (DatabaseId)databaseValue->u64;
+      default:
+        return defaultValue;
     }
   }
   else
@@ -12604,6 +12687,8 @@ bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *colum
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_KEY)
+           || (databaseValue->type == DATABASE_DATATYPE_INT)
+           || (databaseValue->type == DATABASE_DATATYPE_UINT)
            || (databaseValue->type == DATABASE_DATATYPE_INT64)
            || (databaseValue->type == DATABASE_DATATYPE_UINT64)
           );

@@ -145,6 +145,7 @@ dnl --- check if linker support option
 dnl usage: AC_LINKER_OPTION(<option>,<variable>...)
 AC_DEFUN([AC_LINKER_OPTION],
 [
+  AC_REQUIRE([AC_PROG_CPP])
   AC_CACHE_CHECK(
     [if $LD support option $1],
     ac_cv_linker_option_`echo $1|tr -c -d a-zA-Z0-9_`,
@@ -883,6 +884,7 @@ AC_SUBST(TLS_DIR)                           dnl TLS/SSL directory
 AC_SUBST(MAN_DIR)                           dnl man page directory
 AC_SUBST(LOCALE_DIR)                        dnl locale directory
 
+AC_SUBST(CPP)                               dnl C preprocessor
 AC_SUBST(CC)                                dnl C compiler
 AC_SUBST(LD)                                dnl linker
 AC_SUBST(STRIP)                             dnl strip
@@ -1301,6 +1303,12 @@ if test -z "$BUILD_LD"; then
   AC_PATH_PROGS(BUILD_LD,$build-ld $build-ld ld gcc)
 fi
 
+if test -z "$CPP"; then
+  AC_PATH_PROGS(CPP,$host-cpp cpp)
+fi
+if test -z "$CPP"; then
+  AC_MSG_ERROR([Cannot find C preprocessor in PATH. Please check your PATH environment variable.])
+fi
 if test -z "$CC"; then
   AC_PATH_PROGS(CC,$host-gcc $host-cc gcc cc)
 fi
@@ -4790,8 +4798,8 @@ if test $ENABLE_CURL = "yes"; then
                     ],
                     [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
                     [ "])
-  if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7660; then
-    AC_ERROR([Required libcurl 7.66 (0x076600) or newer - found '$VERSION_CURL'])
+  if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7770; then
+    AC_ERROR([Required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
   fi
 fi
 if test $ENABLE_ISO9660 = "yes"; then
