@@ -4,7 +4,7 @@ DOCKER_IMAGE_NAME='dockerregistry.macio.de:5000/backup_archiver:latest'
 
 TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db TEST_LOGIN_NAME=test TEST_PASSWORD=test TEST_BASE_DIR=/home/test TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa TEST_IMAGE_OPERATIONS=no"
 
-TEST_STEPS = ["basic",
+xxxTEST_STEPS = ["basic",
               "compress",
               "delta_compress",
               "crypt",
@@ -17,6 +17,14 @@ TEST_STEPS = ["basic",
               "storage_scp",
               "storage_sftp",
               "storage_webdav",
+              "index",
+              "server",
+              "master_slave",
+              "arguments",
+              "config",
+              "misc"
+             ];
+TEST_STEPS = ["basic",
               "index",
               "server",
               "master_slave",
