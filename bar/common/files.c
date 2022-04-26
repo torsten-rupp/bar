@@ -5170,6 +5170,7 @@ String File_castToString(String string, const FileCast *fileCast)
     assert(tm != NULL);
     strftime(s,sizeof(s),"%F %T",tm);
   #endif
+// TODO: improved text
   String_appendFormat(string,"mtime=%s",s);
 
   String_appendChar(string,' ');
@@ -5182,6 +5183,7 @@ String File_castToString(String string, const FileCast *fileCast)
     assert(tm != NULL);
     strftime(s,sizeof(s),"%F %T",tm);
   #endif
+// TODO: improved text
   String_appendFormat(string,"ctime=%s",s);
 
   return string;

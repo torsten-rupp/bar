@@ -37,6 +37,7 @@ RUN apt-get -y install \
   sudo \
   tar \
   tcl \
+  tmux \
   unzip \
   wget \
   xz-utils \
@@ -84,6 +85,7 @@ RUN usermod -aG sudo test
 # enable ftp: fix race-condition in vsftpd start script, enable write
 RUN sed '/^\s*start-stop-daemon.*/a sleep 3' -i /etc/init.d/vsftpd
 RUN sed 's/#write_enable=YES/write_enable=YES/g' -i /etc/vsftpd.conf
+RUN sed 's/#xferlog_enable=YES/xferlog_enable=YES/g' -i /etc/vsftpd.conf
 
 # enable ssh: create keys, permit key login, max. number of concurrent connection attempts
 RUN mkdir /home/test/.ssh

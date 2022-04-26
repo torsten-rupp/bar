@@ -9,6 +9,7 @@
   * added option --test-created-archives
   * added option --sparse
   * added option --no-stop-on-owner-error
+  * added option --server
   * added begin/end time for continous schedules
   * place pid file into /run by default
   * fixed reading cryption keys via config file
