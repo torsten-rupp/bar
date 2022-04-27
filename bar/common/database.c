@@ -228,6 +228,7 @@ LOCAL DatabaseList databaseList;
   #ifdef HAVE_SIGQUIT
     LOCAL void                (*debugSignalQuitPrevHandler)(int);
   #endif /* HAVE_SIGQUIT */
+  LOCAL uint64              startCycleCounter;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -1021,7 +1022,7 @@ LOCAL_INLINE void debugSetDatabaseThreadInfo(const char         *__fileName__,
   databaseThreadInfo->count        = 1;
   databaseThreadInfo->fileName     = __fileName__;
   databaseThreadInfo->lineNb       = __lineNb__;
-  databaseThreadInfo->cycleCounter = getCycleCounter();
+  databaseThreadInfo->cycleCounter = getCycleCounter()-startCycleCounter;
   BACKTRACE(databaseThreadInfo->stackTrace,databaseThreadInfo->stackTraceSize);
 }
 
@@ -1046,7 +1047,7 @@ LOCAL_INLINE void debugIncrementDatabaseThreadInfo(const char         *__fileNam
   databaseThreadInfo->count++;
   databaseThreadInfo->fileName     = __fileName__;
   databaseThreadInfo->lineNb       = __lineNb__;
-  databaseThreadInfo->cycleCounter = getCycleCounter();
+  databaseThreadInfo->cycleCounter = getCycleCounter()-startCycleCounter;
   BACKTRACE(databaseThreadInfo->stackTrace,databaseThreadInfo->stackTraceSize);
 }
 
@@ -1157,7 +1158,7 @@ LOCAL_INLINE void debugAddHistoryDatabaseThreadInfo(const char                  
   databaseHistoryThreadInfo[*index].threadId     = Thread_getCurrentId();
   databaseHistoryThreadInfo[*index].fileName     = __fileName__;
   databaseHistoryThreadInfo[*index].lineNb       = __lineNb__;
-  databaseHistoryThreadInfo[*index].cycleCounter = getCycleCounter();
+  databaseHistoryThreadInfo[*index].cycleCounter = getCycleCounter()-startCycleCounter;
   databaseHistoryThreadInfo[*index].type         = type;
   BACKTRACE(databaseHistoryThreadInfo[*index].stackTrace,databaseHistoryThreadInfo[*index].stackTraceSize);
   (*index) = ((*index)+1) % databaseHistoryThreadInfoSize;
@@ -4583,7 +4584,7 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.threadId     = Thread_getCurrentId();
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
-    databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
+    databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter()-startCycleCounter;
     databaseHandle->databaseNode->debug.lastTrigger.lockType                = lockType;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
@@ -4628,7 +4629,7 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.threadId     = Thread_getCurrentId();
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
-    databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
+    databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter()-startCycleCounter;
     databaseHandle->databaseNode->debug.lastTrigger.lockType                = lockType;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
@@ -4670,7 +4671,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.threadId     = Thread_getCurrentId();
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
-    databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
+    databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter()-startCycleCounter;
     databaseHandle->databaseNode->debug.lastTrigger.lockType                = DATABASE_LOCK_TYPE_READ_WRITE;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
@@ -8760,6 +8761,10 @@ Errors Database_initAll(void)
   List_init(&databaseList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
   Semaphore_init(&databaseList.lock,SEMAPHORE_TYPE_BINARY);
 
+  #ifndef NDEBUG
+    startCycleCounter = getCycleCounter();
+  #endif
+
   // enable sqlite3 multi-threaded support
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
@@ -10846,7 +10851,7 @@ if (   (databaseHandle->databaseNode->pendingReadCount == 0)
     && (databaseHandle->databaseNode->readWriteCount == 0)
    )
 fprintf(stderr,"%s, %d: --------------------------------------------------------------------------------------------------\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: %x trigger R %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter(),databaseLock.__data.__lock);
+fprintf(stderr,"%s, %d: %x trigger R %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter()-startCycleCounter,databaseLock.__data.__lock);
 #endif
         if (databaseHandle->databaseNode->readCount == 0)
         {
@@ -10920,7 +10925,7 @@ if (   (databaseHandle->databaseNode->pendingReadCount == 0)
     && (databaseHandle->databaseNode->readWriteCount == 0)
    )
 fprintf(stderr,"%s, %d: --------------------------------------------------------------------------------------------------\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: %x trigger RW %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter(),databaseLock.__data.__lock);
+fprintf(stderr,"%s, %d: %x trigger RW %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter()-startCycleCounter,databaseLock.__data.__lock);
 #endif
         if (databaseHandle->databaseNode->readWriteCount == 0)
         {
@@ -16030,6 +16035,13 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
 
 void Database_debugPrintInfo(void)
 {
+  const char *HISTORY_TYPE_STRINGS[] =
+  {
+    "locked read",
+    "locked read/write",
+    "unlocked"
+  };
+
   const DatabaseHandle *databaseHandle;
   const DatabaseNode   *databaseNode;
   uint                 i;
@@ -16269,15 +16281,9 @@ databaseNode->debug.lastTrigger.transactionCount
 
           if (!Thread_isNone(databaseNode->debug.history[index].threadId))
           {
-            switch (databaseNode->debug.history[index].type)
-            {
-              case DATABASE_HISTORY_TYPE_LOCK_READ:       s = "locked read"; break;
-              case DATABASE_HISTORY_TYPE_LOCK_READ_WRITE: s = "locked read/write"; break;
-              case DATABASE_HISTORY_TYPE_UNLOCK:          s = "unlocked"; break;
-            }
             fprintf(stderr,
                     "    %-18s %16"PRIu64" thread '%s' (%s) at %s, %u\n",
-                    s,
+                    HISTORY_TYPE_STRINGS[databaseNode->debug.history[index].type],
                     databaseNode->debug.history[index].cycleCounter,
                     Thread_getName(databaseNode->debug.history[index].threadId),
                     Thread_getIdString(databaseNode->debug.history[index].threadId),

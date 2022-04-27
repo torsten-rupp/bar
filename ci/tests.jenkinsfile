@@ -13,7 +13,8 @@ TEST_STEPS = ["basic",
               "split",
               "convert",
               "storage_file",
-              "storage_ftp",
+// TODO: instable
+//              "storage_ftp",
               "storage_scp",
               "storage_sftp",
               "storage_webdav",
@@ -82,6 +83,7 @@ def tests()
               docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               {
                 // start services
+                sh "sudo /etc/init.d/rsyslog start"
                 sh "sudo /etc/init.d/apache2 start"
                 sh "sudo /etc/init.d/ssh start"
                 sh "sudo /etc/init.d/vsftpd start"
@@ -93,12 +95,14 @@ def tests()
                 sh "sudo /etc/init.d/vsftpd stop || true"
                 sh "sudo /etc/init.d/ssh stop || true"
                 sh "sudo /etc/init.d/apache2 stop || true"
+                sh "sudo /etc/init.d/rsyslog stop || true"
               }
               break;
             case "FULL":
               docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               {
                 // start services
+                sh "sudo /etc/init.d/rsyslog start"
                 sh "sudo /etc/init.d/apache2 start"
                 sh "sudo /etc/init.d/ssh start"
                 sh "sudo /etc/init.d/vsftpd start"
@@ -110,6 +114,7 @@ def tests()
                 sh "sudo /etc/init.d/vsftpd stop || true"
                 sh "sudo /etc/init.d/ssh stop || true"
                 sh "sudo /etc/init.d/apache2 stop || true"
+                sh "sudo /etc/init.d/rsyslog stop || true"
               }
               break;
           }
@@ -126,6 +131,7 @@ def tests()
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
             // start services
+            sh "sudo /etc/init.d/rsyslog start"
             sh "sudo /etc/init.d/apache2 start"
             sh "sudo /etc/init.d/ssh start"
             sh "sudo /etc/init.d/vsftpd start"
@@ -138,6 +144,7 @@ def tests()
             sh "sudo /etc/init.d/vsftpd stop || true"
             sh "sudo /etc/init.d/ssh stop || true"
             sh "sudo /etc/init.d/apache2 stop || true"
+            sh "sudo /etc/init.d/rsyslog stop || true"
           }
 
           publishHTML([allowMissing:          false,
@@ -162,6 +169,7 @@ def tests()
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
             // start services
+            sh "sudo /etc/init.d/rsyslog start"
             sh "sudo /etc/init.d/apache2 start"
             sh "sudo /etc/init.d/ssh start"
             sh "sudo /etc/init.d/vsftpd start"
@@ -173,6 +181,7 @@ def tests()
             sh "sudo /etc/init.d/vsftpd stop || true"
             sh "sudo /etc/init.d/ssh stop || true"
             sh "sudo /etc/init.d/apache2 stop || true"
+            sh "sudo /etc/init.d/rsyslog stop || true"
           }
         }
       }
@@ -184,7 +193,7 @@ def tests()
     {
 //      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log', allowEmptyArchive: true
 sh "ls -la /var/log"
-      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log, /var/log/vsftpd.log', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
     }
 
     cleanWs notFailBuild: true

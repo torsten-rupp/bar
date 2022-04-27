@@ -584,6 +584,18 @@ ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType
 
 void Configuration_deleteServerNode(ServerNode *serverNode);
 
+/***********************************************************************\
+* Name   : Configuration_setServerNodeType
+* Purpose: set server node type
+* Input  : serverNode - server node
+*          serverType - server type
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_setServerNodeType(ServerNode *serverNode, ServerTypes serverType);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
