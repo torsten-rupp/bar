@@ -1444,7 +1444,7 @@ LOCAL void pairingThreadCode(void)
                   && !Connector_isAuthorized(&slaveNode->connectorInfo)
                  )
               {
-                error = Connector_authorize(&slaveNode->connectorInfo);
+                error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
                 if (error == ERROR_NONE)
                 {
                   slaveNode->authorizedFlag = TRUE;

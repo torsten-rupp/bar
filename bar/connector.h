@@ -223,12 +223,15 @@ INLINE bool Connector_isShutdown(const ConnectorInfo *connectorInfo)
 * Name   : Connector_authorize
 * Purpose: authorize
 * Input  : connectorInfo - connector info
+*          timeout       - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Connector_authorize(ConnectorInfo *connectorInfo);
+Errors Connector_authorize(ConnectorInfo *connectorInfo,
+                           long          timeout
+                          );
 
 /***********************************************************************\
 * Name   : Connector_initStorage

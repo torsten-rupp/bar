@@ -3478,7 +3478,7 @@ void Connector_disconnect(ConnectorInfo *connectorInfo)
   connectorDisconnect(connectorInfo);
 }
 
-Errors Connector_authorize(ConnectorInfo *connectorInfo)
+Errors Connector_authorize(ConnectorInfo *connectorInfo, long timeout)
 {
   Errors error;
   String hostName;
@@ -3510,7 +3510,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   Network_getHostName(hostName);
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
-                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   timeout,
                                    CALLBACK_(NULL,NULL),
                                    "AUTHORIZE encryptType=%s name=%'S encryptedUUID=%'S",
                                    ServerIO_encryptTypeToString(connectorInfo->io.encryptType,"NONE"),
