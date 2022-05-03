@@ -3260,12 +3260,17 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
           )
     {
       // find command
-      #ifdef CONNECTOR_DEBUG
+      #if   defined(CONNECTOR_DEBUG)
 //TODO: enable
         fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
         #ifndef NDEBUG
           StringMap_debugPrint(2,argumentMap);
         #endif
+      #elif !defined(NDEBUG)
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+        }
       #endif
       if (!findConnectorCommand(name,&connectorCommandFunction))
       {
@@ -3299,12 +3304,17 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
                 )
           {
             // find command
-            #ifdef CONNECTOR_DEBUG
+            #if   defined(CONNECTOR_DEBUG)
 //TODO: enable
               fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
               #ifndef NDEBUG
                 StringMap_debugPrint(2,argumentMap);
               #endif
+            #elif !defined(NDEBUG)
+              if (globalOptions.debug.serverLevel >= 1)
+              {
+                fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+              }
             #endif
             if (!findConnectorCommand(name,&connectorCommandFunction))
             {

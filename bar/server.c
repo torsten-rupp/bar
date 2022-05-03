@@ -21597,6 +21597,12 @@ Errors Server_socket(void)
                                             )
                      )
                   {
+                    #ifndef NDEBUG
+                      if (globalOptions.debug.serverLevel >= 1)
+                      {
+                        fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+                      }
+                    #endif /* not DEBUG */
                     processCommand(&clientNode->clientInfo,id,name,argumentMap);
                   }
                 }
@@ -22047,6 +22053,12 @@ Errors Server_batch(int inputDescriptor,
                            )
        )
     {
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received command #%u %s: %s\n",*id,String_cString(name),String_cString(data));
+        }
+      #endif /* not DEBUG */
       processCommand(&clientInfo,id,name,argumentMap);
     }
   }
@@ -22060,6 +22072,12 @@ Errors Server_batch(int inputDescriptor,
                                 )
             )
     {
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+        }
+      #endif /* not DEBUG */
       processCommand(&clientInfo,id,name,argumentMap);
     }
     else if (!File_eof(&clientInfo.io.file.inputHandle))

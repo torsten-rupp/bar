@@ -1550,12 +1550,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     else if (String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data))
     {
       // command: <id> <name> <data>
-      #ifndef NDEBUG
-        if (globalOptions.debug.serverLevel >= 1)
-        {
-          fprintf(stderr,"DEBUG: received command #%u %s: %s\n",*id,String_cString(name),String_cString(data));
-        }
-      #endif /* not DEBUG */
 
       // parse arguments
       if (argumentMap != NULL)
