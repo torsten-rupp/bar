@@ -25,6 +25,8 @@ TEST_STEPS = ["basic",
               "config",
               "misc"
              ];
+xxxTEST_STEPS = ["server"
+];
 
 // tests
 def tests()

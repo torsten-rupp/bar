@@ -3832,7 +3832,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     error = Connector_executeCommand(connectorInfo,
                                      CONNECTOR_DEBUG_LEVEL,
                                      CONNECTOR_COMMAND_TIMEOUT,
-                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                     CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                      {
                                        assert(resultMap != NULL);
 
@@ -3868,11 +3868,8 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
 //                                       StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
 //                                       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
 
-                                       return (errorCode != ERROR_CODE_NONE)
-                                                ? ERRORF_(errorCode,"%s",String_cString(errorData))
-                                                : ERROR_NONE;
+                                       return ERROR_NONE;
                                      },NULL),
-//                                     resultMap,
                                      "JOB_STATUS jobUUID=%S",
                                      jobUUID
                                     );

@@ -18396,7 +18396,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(pattern);
     return;
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   foundFlag           = FALSE;
   updateRequestedFlag = FALSE;
