@@ -4340,7 +4340,6 @@ AC_ARG_ENABLE(
   AC_HELP_STRING([--enable-extern-check],[enable check extern software]),
   [
    AS_IF(test $HAVE_ICU       ,,AC_MSG_ERROR([icu missing]))
-   AS_IF(test $HAVE_Z         ,,AC_MSG_ERROR([zlib missing]))
    AS_IF(test $HAVE_BZ2       ,,AC_MSG_ERROR([bzip2 missing]))
    AS_IF(test $HAVE_LZMA      ,,AC_MSG_ERROR([lzma missing]))
    AS_IF(test $HAVE_LZO       ,,AC_MSG_ERROR([lzo missing]))
@@ -5005,7 +5004,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  lzo compression      : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
                     echo "  lz4 compression      : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
                     echo "  zstd compression     : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
-                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo yes ($VERSION_XDELTA3); else echo no; fi`";
+                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo "yes ($VERSION_XDELTA3)"; else echo no; fi`";
                     echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
@@ -5033,7 +5032,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo ""
                     echo "  Heapview directory   : $HEAPVIEW_DIR"
                     echo ""
-                    if test    ! "$HAVE_BZ2" \
+                    if test    ! "$HAVE_Z" \
+                            -o ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \
                             -o ! "$HAVE_LZO" \
                             -o ! "$HAVE_LZ4" \

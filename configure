@@ -18319,11 +18319,6 @@ if test "${enable_extern_check+set}" = set; then :
 else
   as_fn_error $? "icu missing" "$LINENO" 5
 fi
-   if test $HAVE_Z         ; then :
-
-else
-  as_fn_error $? "zlib missing" "$LINENO" 5
-fi
    if test $HAVE_BZ2       ; then :
 
 else
@@ -29070,6 +29065,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_LZO="$VERSION_LZO"
                    VERSION_LZ4="$VERSION_LZ4"
                    VERSION_ZSTD="$VERSION_ZSTD"
+                   VERSION_XDELTA3="$VERSION_XDELTA3"
                    VERSION_GCRYPT="$VERSION_GCRYPT"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"
@@ -29670,7 +29666,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  lzo compression      : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
                     echo "  lz4 compression      : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
                     echo "  zstd compression     : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
-                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
+                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo "yes ($VERSION_XDELTA3)"; else echo no; fi`";
                     echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
@@ -29698,7 +29694,8 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo ""
                     echo "  Heapview directory   : $HEAPVIEW_DIR"
                     echo ""
-                    if test    ! "$HAVE_BZ2" \
+                    if test    ! "$HAVE_Z" \
+                            -o ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \
                             -o ! "$HAVE_LZO" \
                             -o ! "$HAVE_LZ4" \
