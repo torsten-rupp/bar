@@ -5,7 +5,7 @@ After=network.target remote-fs.target ypbind.service
 [Service]
 Type=simple
 PIDFile=/run/bar.pid
-ExecStart=/usr/bin/bar --daemon -D --verbose=0 --pid-file /var/run/bar.pid
+ExecStart=/usr/bin/bar --server --verbose=0 --pid-file /var/run/bar.pid
 ExecReload=/usr/bin/kill -HUP $MAINPID
 TimeoutSec=180
 Restart=always
