@@ -5916,10 +5916,11 @@ endif
             $(call functionServerCommandBatch,JOB_FLUSH); \
             $(call functionServerCommandBatch,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
-            for i in `$(SEQ) 1 3`; do \
+            for i in `$(SEQ) 1 12`; do \
             	$(call functionServerCommandBatch,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
             	$(SLEEP) 10; \
             done; \
+            $(call functionServerCommandBatch,JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
             $(SLEEP) 2; \
@@ -6008,17 +6009,17 @@ test_server_operations_socket_client: \
 	@#
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
-          : wait for server; \
-          (for i in `$(SEQ) 1 6`; do \
-             $(NETCAT) -z localhost $(TEST_SERVER_PORT); \
-             if test $$? -eq 0; then \
-               exit 0; \
-             fi; \
-             $(SLEEP) 10; \
-           done; \
-          ); \
-          : run client commands; \
           ( \
+            : wait for server; \
+            for i in `$(SEQ) 1 6`; do \
+              $(NETCAT) -z localhost $(TEST_SERVER_PORT); \
+              if test $$? -eq 0; then \
+                exit 0; \
+              fi; \
+              $(SLEEP) 10; \
+            done; \
+            \
+            : run client commands; \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ABORT id=1000); \
@@ -6178,10 +6179,11 @@ test_server_operations_socket_client: \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
-            for i in `$(SEQ) 1 6`; do \
+            for i in `$(SEQ) 1 12`; do \
               $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
               $(SLEEP) 10; \
             done; \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
             $(SLEEP) 2; \
@@ -6190,9 +6192,7 @@ test_server_operations_socket_client: \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
             \
-          ) $(LOG); \
-          : done; \
-          ( \
+            : done; \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
           ) $(LOG); \
         else \
@@ -6368,17 +6368,17 @@ test_master_slave_operations_create: \
 	@#
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
-          : wait for master; \
-          (for i in `$(SEQ) 1 6`; do \
-             $(NETCAT) -z localhost $(TEST_MASTER_PORT); \
-             if test $$? -eq 0; then \
-               exit 0; \
-             fi; \
-             $(SLEEP) 10; \
-           done; \
-          ); \
-          : create slave job; \
           ( \
+            : wait for master; \
+            for i in `$(SEQ) 1 6`; do \
+              $(NETCAT) -z localhost $(TEST_MASTER_PORT); \
+              if test $$? -eq 0; then \
+                exit 0; \
+              fi; \
+              $(SLEEP) 10; \
+            done; \
+            \
+            : create slave job; \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
@@ -6387,27 +6387,24 @@ test_master_slave_operations_create: \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
-          ) $(LOG); \
-          : wait for pairing; \
-          (for i in `$(SEQ) 1 18`; do \
-             if test -n "`$(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_LIST)|$(GREP) slaveState='PAIRED'`"; then \
-               exit 0; \
-             fi; \
-             $(SLEEP) 10; \
-           done; \
-          ); \
-          : run slave job; \
-          ( \
+            : wait for pairing; \
+            for i in `$(SEQ) 1 18`; do \
+              if test -n "`$(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_LIST)|$(GREP) slaveState='PAIRED'`"; then \
+                exit 0; \
+              fi; \
+              $(SLEEP) 10; \
+            done; \
+            \
+            : run slave job; \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
             for i in `$(SEQ) 1 12`; do \
               $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
               $(SLEEP) 10; \
             done; \
-          ) $(LOG); \
-          : done; \
-          ( \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
+            : done; \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),QUIT); \
             $(call functionSlaveCommandSocket, localhost $(TEST_SLAVE_PORT), QUIT); \
           ) $(LOG); \

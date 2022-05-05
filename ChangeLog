@@ -63,6 +63,7 @@
     requester
   * BARControl: fixed storage of table columns width
   * extended documentation by "term of use"
+  * support Yubikey
 
 2020-09-27 0.21f
   * fixed auto-index of new archives
