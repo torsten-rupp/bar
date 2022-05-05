@@ -4708,18 +4708,24 @@ AC_CONSTANT_VALUE([],
 if test $VERSION_SQLITE_NUMBER -lt 3024000; then
   AC_ERROR([Required SQLite 3.24 (3024000) or newer - found $VERSION_SQLITE])
 fi
+AC_DEFINE_UNQUOTED(VERSION_SQLITE,"$VERSION_SQLITE",[sqlite version])
+
 AC_CONSTANT_VALUE([ICU version],
                   VERSION_ICU,
                   [#include "unicode/uvernum.h"
                   ],
                   [U_ICU_VERSION],
                   [ "])
+AC_DEFINE_UNQUOTED(VERSION_ICU,"$VERSION_ICU",[icu version])
+
 AC_CONSTANT_VALUE([zlib version],
                   VERSION_Z,
                   [#include "zlib.h"
                   ],
                   [ZLIB_VERSION],
                   [ "])
+AC_DEFINE_UNQUOTED(VERSION_Z,"$VERSION_Z",[zlib version])
+
 if test $ENABLE_BZ2 = "yes"; then
   # Note: bz2 does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
@@ -4729,7 +4735,11 @@ if test $ENABLE_BZ2 = "yes"; then
               VERSION_BZ2=`./conftest$ac_exeext`,
               VERSION_BZ2=
              )
+  AC_DEFINE_UNQUOTED(VERSION_BZ2,"$VERSION_BZ2",[bzip2 version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_BZ2,"",[bzip2 version])
 fi
+
 if test $ENABLE_LZMA = "yes"; then
   AC_CONSTANT_VALUE([lzma version],
                     VERSION_LZMA,
@@ -4737,7 +4747,11 @@ if test $ENABLE_LZMA = "yes"; then
                     ],
                     [LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_LZMA,"$VERSION_LZMA",[lzma version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_LZMA,"",[lzma version])
 fi
+
 if test $ENABLE_LZO = "yes"; then
   AC_CONSTANT_VALUE([lzo version],
                     VERSION_LZO,
@@ -4745,7 +4759,11 @@ if test $ENABLE_LZO = "yes"; then
                     ],
                     [LZO_VERSION_STRING],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_LZO,"$VERSION_LZO",[lzo version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_LZO,"",[lzo version])
 fi
+
 if test $ENABLE_LZ4 = "yes"; then
   AC_CONSTANT_VALUE([lz4 version],
                     VERSION_LZ4,
@@ -4753,7 +4771,11 @@ if test $ENABLE_LZ4 = "yes"; then
                     ],
                     [LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_LZ4,"$VERSION_LZ4",[lz4 version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_LZ4,"",[lz4 version])
 fi
+
 if test $ENABLE_ZSTD = "yes"; then
   AC_CONSTANT_VALUE([zstd version],
                     VERSION_ZSTD,
@@ -4761,7 +4783,18 @@ if test $ENABLE_ZSTD = "yes"; then
                     ],
                     [ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_ZSTD,"$VERSION_ZSTD",[zstd version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_ZSTD,"",[zstd version])
 fi
+
+if test $ENABLE_XDELTA3 = "yes"; then
+  # Note: xdelta3 does not have a define for version
+  AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"3.0.11",[xdelta3 version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"",[xdelta3 version])
+fi
+
 if test $ENABLE_GCRYPT = "yes"; then
   AC_CONSTANT_VALUE([gcrypt version],
                     VERSION_GCRYPT,
@@ -4769,24 +4802,34 @@ if test $ENABLE_GCRYPT = "yes"; then
                     ],
                     [GCRYPT_VERSION],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_GCRYPT,"$VERSION_GCRYPT",[gcrypt version])
   AC_CONSTANT_VALUE([GMP version],
                     VERSION_GMP,
                     [#include "gmp.h"
                     ],
                     [__GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_GMP,"$VERSION_GMP",[gmp version])
   AC_CONSTANT_VALUE([GNU TLS version],
                     VERSION_GNUTLS,
                     [#include "gnutls/gnutls.h"
                     ],
                     [GNUTLS_VERSION],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_GNUTLS,"$VERSION_GNUTLS",[gnuTLS version])
   AC_CONSTANT_VALUE([openssl version],
                     VERSION_OPENSSL,
                     [#include "openssl/opensslv.h"],
                     [OPENSSL_VERSION_TEXT],
                     ["])
+  AC_DEFINE_UNQUOTED(VERSION_OPENSSL,"$VERSION_OPENSSL",[openssl version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_GCRYPT, "",[VERSION_GCRYPT version])
+  AC_DEFINE_UNQUOTED(VERSION_GMP,    "",[gmp version])
+  AC_DEFINE_UNQUOTED(VERSION_GNUTLS, "",[gnuTLS version])
+  AC_DEFINE_UNQUOTED(VERSION_OPENSSL,"",[openssl version])
 fi
+
 if test $ENABLE_SSH = "yes"; then
   AC_CONSTANT_VALUE([ssh2 version],
                     VERSION_LIBSSH2,
@@ -4794,7 +4837,11 @@ if test $ENABLE_SSH = "yes"; then
                     ],
                     [LIBSSH2_VERSION],
                     [ "])
+  AC_DEFINE_UNQUOTED(VERSION_LIBSSH2,"$VERSION_LIBSSH2",[libssh version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_LIBSSH2,"",[libssh version])
 fi
+
 if test $ENABLE_CURL = "yes"; then
   AC_CONSTANT_VALUE([curl version],
                     VERSION_CURL,
@@ -4811,7 +4858,11 @@ if test $ENABLE_CURL = "yes"; then
   if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7770; then
     AC_ERROR([Required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
   fi
+  AC_DEFINE_UNQUOTED(VERSION_CURL,"$VERSION_CURL",[curl version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_CURL,"",[curl version])
 fi
+
 if test $ENABLE_ISO9660 = "yes"; then
   AC_CONSTANT_VALUE([cdio version],
                     VERSION_CDIO,
@@ -4828,7 +4879,11 @@ if test $ENABLE_ISO9660 = "yes"; then
   if test $VERSION_CDIO_NUMBER -lt 10100; then
     AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
   fi
+  AC_DEFINE_UNQUOTED(VERSION_CDIO,"$VERSION_CDIO",[cdio version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_CDIO,"",[cdio version])
 fi
+
 if test $ENABLE_MARIADB = "yes"; then
   # Note: MariaDB does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
@@ -4839,7 +4894,11 @@ if test $ENABLE_MARIADB = "yes"; then
               VERSION_MARIADB=`./conftest$ac_exeext`,
               VERSION_MARIADB=unknown
              )
+  AC_DEFINE_UNQUOTED(VERSION_MARIADB,"$VERSION_MARIADB",[MariaDB version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_MARIADB,"",[MariaDB version])
 fi
+
 if test $ENABLE_POSTGRESQL = "yes"; then
   # Note: PostgreSQL does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
@@ -4850,7 +4909,11 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               VERSION_POSTGRESQL=`./conftest$ac_exeext`,
               VERSION_POSTGRESQL=unknown
              )
+  AC_DEFINE_UNQUOTED(VERSION_POSTGRESQL,"$VERSION_POSTGRESQL",[PostgreSQL version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_POSTGRESQL,"",[PostgreSQL version])
 fi
+
 if test $ENABLE_PCRE = "yes"; then
   # Note: PCRE does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
@@ -4860,6 +4923,9 @@ if test $ENABLE_PCRE = "yes"; then
               VERSION_PCRE=`./conftest$ac_exeext`,
               VERSION_PCRE=unknown
              )
+  AC_DEFINE_UNQUOTED(VERSION_PCRE,"$VERSION_PCRE",[pcre version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_PCRE,"",[pcre version])
 fi
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
@@ -4939,7 +5005,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  lzo compression      : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
                     echo "  lz4 compression      : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
                     echo "  zstd compression     : `if test "$HAVE_ZSTD"; then echo "yes ($VERSION_ZSTD)"; else echo no; fi`";
-                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo yes; else echo no; fi`";
+                    echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo yes ($VERSION_XDELTA3); else echo no; fi`";
                     echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
@@ -5043,6 +5109,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_LZO="$VERSION_LZO"
                    VERSION_LZ4="$VERSION_LZ4"
                    VERSION_ZSTD="$VERSION_ZSTD"
+                   VERSION_XDELTA3="$VERSION_XDELTA3"
                    VERSION_GCRYPT="$VERSION_GCRYPT"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"

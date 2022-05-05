@@ -763,4 +763,61 @@
 /* TLS directory */
 #undef TLS_DIR
 
+/* bzip2 version */
+#undef VERSION_BZ2
+
+/* cdio version */
+#undef VERSION_CDIO
+
+/* curl version */
+#undef VERSION_CURL
+
+/* VERSION_GCRYPT version */
+#undef VERSION_GCRYPT
+
+/* gmp version */
+#undef VERSION_GMP
+
+/* gnuTLS version */
+#undef VERSION_GNUTLS
+
+/* icu version */
+#undef VERSION_ICU
+
+/* libssh version */
+#undef VERSION_LIBSSH2
+
+/* lz4 version */
+#undef VERSION_LZ4
+
+/* lzma version */
+#undef VERSION_LZMA
+
+/* lzo version */
+#undef VERSION_LZO
+
+/* MariaDB version */
+#undef VERSION_MARIADB
+
+/* openssl version */
+#undef VERSION_OPENSSL
+
+/* pcre version */
+#undef VERSION_PCRE
+
+/* PostgreSQL version */
+#undef VERSION_POSTGRESQL
+
+/* sqlite version */
+#undef VERSION_SQLITE
+
+/* xdelta3 version */
+#undef VERSION_XDELTA3
+
+/* zlib version */
+#undef VERSION_Z
+
+/* zstd version */
+#undef VERSION_ZSTD
+
 #endif /* __CONFIG__ */
