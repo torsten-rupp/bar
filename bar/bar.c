@@ -4171,6 +4171,26 @@ LOCAL Errors bar(int argc, const char *argv[])
     #else /* NDEBUG */
       printf("BAR version %s\n",VERSION_STRING);
     #endif /* not NDEBUG */
+    printf("\n");
+    printf("Components:\n");
+    printf("  ICU        %s\n",!stringIsEmpty(VERSION_ICU       ) ? VERSION_ICU        : "(not included)");
+    printf("  bzip2      %s\n",!stringIsEmpty(VERSION_BZ2       ) ? VERSION_BZ2        : "(not included)");
+    printf("  lzma       %s\n",!stringIsEmpty(VERSION_LZMA      ) ? VERSION_LZMA       : "(not included)");
+    printf("  lzo        %s\n",!stringIsEmpty(VERSION_LZO       ) ? VERSION_LZO        : "(not included)");
+    printf("  lz4        %s\n",!stringIsEmpty(VERSION_LZ4       ) ? VERSION_LZ4        : "(not included)");
+    printf("  zstd       %s\n",!stringIsEmpty(VERSION_ZSTD      ) ? VERSION_ZSTD       : "(not included)");
+    printf("  xdelta3    %s\n",!stringIsEmpty(VERSION_XDELTA3   ) ? VERSION_XDELTA3    : "(not included)");
+    printf("  gcrypt     %s\n",!stringIsEmpty(VERSION_GCRYPT    ) ? VERSION_GCRYPT     : "(not included)");
+    printf("  gmp        %s\n",!stringIsEmpty(VERSION_GMP       ) ? VERSION_GMP        : "(not included)");
+    printf("  gnuTLS     %s\n",!stringIsEmpty(VERSION_GNUTLS    ) ? VERSION_GNUTLS     : "(not included)");
+    printf("  OpenSSL    %s\n",!stringIsEmpty(VERSION_OPENSSL   ) ? VERSION_OPENSSL    : "(not included)");
+    printf("  libssh2    %s\n",!stringIsEmpty(VERSION_LIBSSH2   ) ? VERSION_LIBSSH2    : "(not included)");
+    printf("  curl       %s\n",!stringIsEmpty(VERSION_CURL      ) ? VERSION_CURL       : "(not included)");
+    printf("  cdio       %s\n",!stringIsEmpty(VERSION_CDIO      ) ? VERSION_CDIO       : "(not included)");
+    printf("  PCRE       %s\n",!stringIsEmpty(VERSION_PCRE      ) ? VERSION_PCRE       : "(not included)");
+    printf("  SQLite     %s\n",!stringIsEmpty(VERSION_SQLITE    ) ? VERSION_SQLITE     : "(not included)");
+    printf("  MariaDB    %s\n",!stringIsEmpty(VERSION_MARIADB   ) ? VERSION_MARIADB    : "(not included)");
+    printf("  PostgreSQL %s\n",!stringIsEmpty(VERSION_POSTGRESQL) ? VERSION_POSTGRESQL : "(not included)");
 
     return ERROR_NONE;
   }
