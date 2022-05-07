@@ -62,17 +62,44 @@ typedef enum
     SemaphoreLockTypes lockType;
     const char         *fileName;            // file+line number of lock call
     ulong              lineNb;
+    uint64             cycleCounter;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      uint       stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
   } __SemaphoreThreadInfo;
-#endif /* not NDEBUG */
 
-typedef struct
-{
-  uint64 timestamp;
-  uint   readRequestCount;
-  uint   readLockCount;
-  uint   readWriteRequestCount;
-  uint   readWriteLockCount;
-} SemaphoreState;
+  typedef struct
+  {
+    uint64 timestamp;
+    uint   readRequestCount;
+    uint   readLockCount;
+    uint   readWriteRequestCount;
+    uint   readWriteLockCount;
+  } __SemaphoreState;
+
+  typedef enum
+  {
+    SEMAPHORE_HISTORY_TYPE_LOCK_READ,
+    SEMAPHORE_HISTORY_TYPE_LOCK_READ_WRITE,
+    SEMAPHORE_HISTORY_TYPE_UNLOCK,
+    SEMAPHORE_HISTORY_TYPE_WAIT,
+    SEMAPHORE_HISTORY_TYPE_WAIT_DONE,
+  } __SemaphoreHistoryTypes;
+
+  typedef struct
+  {
+    __SemaphoreHistoryTypes type;
+    ThreadId                threadId;      // id of thread who locked semaphore
+    const char              *fileName;     // file+line number of lock call
+    ulong                   lineNb;
+    uint64                  cycleCounter;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      uint       stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+  } __SemaphoreHistoryInfo;
+#endif /* not NDEBUG */
 
 typedef struct Semaphore
 {
@@ -91,6 +118,7 @@ typedef struct Semaphore
   uint                readRequestCount;      // number of pending read locks
   uint                readWriteRequestCount; // number of pending read/write locks
 
+// TODO:
 //  #if   defined(PLATFORM_LINUX)              // lock (thread who own lock is allowed to change the following semaphore variables)
 #if 1
     pthread_mutex_t     lock;
@@ -125,14 +153,18 @@ typedef struct Semaphore
       __SemaphoreThreadInfo lockedBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who locked semaphore
       uint                  lockedByCount;   // number of threads who locked semaphore
 
-      SemaphoreState        lastReadRequest;
-      SemaphoreState        lastReadWakeup;
-      SemaphoreState        lastReadLock;
-      SemaphoreState        lastReadUnlock;
-      SemaphoreState        lastReadWriteRequest;
-      SemaphoreState        lastReadWriteWakeup;
-      SemaphoreState        lastReadWriteLock;
-      SemaphoreState        lastReadWriteUnlock;
+      __SemaphoreState      lastReadRequest;
+      __SemaphoreState      lastReadWakeup;
+      __SemaphoreState      lastReadLock;
+      __SemaphoreState      lastReadUnlock;
+      __SemaphoreState      lastReadWriteRequest;
+      __SemaphoreState      lastReadWriteWakeup;
+      __SemaphoreState      lastReadWriteLock;
+      __SemaphoreState      lastReadWriteUnlock;
+
+      __SemaphoreHistoryInfo history[__SEMAPHORE_MAX_THREAD_INFO];
+      uint                   historyCount;
+      uint                   historyIndex;
     } debug;
   #endif /* not NDEBUG */
 } Semaphore;

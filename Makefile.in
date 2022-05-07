@@ -349,21 +349,24 @@ bar/%:
 	$(MAKE) -C bar $*
 
 .PHONY: bar bar-debug bar-gcov bar-gprof bar-valgrind
-
-bar: bar/bar@EXEEXT@
-bar-debug: bar/bar-debug@EXEEXT@
-bar-gcov: bar/bar-gcov@EXEEXT@
-bar-gprof: bar/bar-gprof@EXEEXT@
-bar-valgrind: bar/bar-valgrind@EXEEXT@
+bar:
+	$(MAKE) -C bar bar
+bar-debug:
+	$(MAKE) -C bar bar-debug
+bar-gcov:
+	$(MAKE) -C bar bar-gcov
+bar-gprof:
+	$(MAKE) -C bar bar-gprof
+bar-valgrind:
+	$(MAKE) -C bar bar-valgrind
 
 # create bar-keygen
 .PHONY: bar-keygen
-
-bar-keygen: bar/bar-keygen@SHELLEXT@
+bar-keygen:
+	$(MAKE) -C bar bar-keygen
 
 # create barcontrol
 .PHONY: barcontrol
-
 barcontrol barcontrol/barcontrol:
 ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol
@@ -389,7 +392,6 @@ endif
 # create SSL keys and certificates
 
 .PHONY: keys clean_keys
-
 keys: \
   $(KEY_FILES)
 
@@ -438,7 +440,6 @@ pdf doc/backup-archiver.pdf:
 # Note: prefix DESTDIR is used for temporary installations
 
 .PHONY: install install_bar install_barcontrol install_scripts install_man install_keys uninstall install_dist
-
 install: \
   install_bar \
   install_barcontrol \
@@ -558,7 +559,6 @@ memcheck_extended:
 # distribution
 
 .PHONY: dist clean_dist
-
 dist:
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
@@ -713,7 +713,6 @@ endif
 
 # --- Debian distribution
 .PHONY: debian_dist clean_debian_dist $(DISTRIBUTION_NAME).orig.tar.gz
-
 debian_dist: \
   $(DISTRIBUTION_NAME).orig.tar.gz
 

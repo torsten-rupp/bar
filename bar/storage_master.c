@@ -186,7 +186,7 @@ LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString arch
   error = ServerIO_executeCommand(storageInfo->masterIO,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
-                                  CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                  CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                   {
                                     assert(resultMap != NULL);
 

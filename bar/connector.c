@@ -3260,12 +3260,17 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
           )
     {
       // find command
-      #ifdef CONNECTOR_DEBUG
+      #if   defined(CONNECTOR_DEBUG)
 //TODO: enable
         fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
         #ifndef NDEBUG
           StringMap_debugPrint(2,argumentMap);
         #endif
+      #elif !defined(NDEBUG)
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+        }
       #endif
       if (!findConnectorCommand(name,&connectorCommandFunction))
       {
@@ -3299,12 +3304,17 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
                 )
           {
             // find command
-            #ifdef CONNECTOR_DEBUG
+            #if   defined(CONNECTOR_DEBUG)
 //TODO: enable
               fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
               #ifndef NDEBUG
                 StringMap_debugPrint(2,argumentMap);
               #endif
+            #elif !defined(NDEBUG)
+              if (globalOptions.debug.serverLevel >= 1)
+              {
+                fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+              }
             #endif
             if (!findConnectorCommand(name,&connectorCommandFunction))
             {
@@ -3478,7 +3488,7 @@ void Connector_disconnect(ConnectorInfo *connectorInfo)
   connectorDisconnect(connectorInfo);
 }
 
-Errors Connector_authorize(ConnectorInfo *connectorInfo)
+Errors Connector_authorize(ConnectorInfo *connectorInfo, long timeout)
 {
   Errors error;
   String hostName;
@@ -3510,7 +3520,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   Network_getHostName(hostName);
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
-                                   CONNECTOR_COMMAND_TIMEOUT,
+                                   timeout,
                                    CALLBACK_(NULL,NULL),
                                    "AUTHORIZE encryptType=%s name=%'S encryptedUUID=%'S",
                                    ServerIO_encryptTypeToString(connectorInfo->io.encryptType,"NONE"),
@@ -3822,7 +3832,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     error = Connector_executeCommand(connectorInfo,
                                      CONNECTOR_DEBUG_LEVEL,
                                      CONNECTOR_COMMAND_TIMEOUT,
-                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                     CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                      {
                                        assert(resultMap != NULL);
 
@@ -3858,11 +3868,8 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
 //                                       StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
 //                                       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
 
-                                       return (errorCode != ERROR_CODE_NONE)
-                                                ? ERRORF_(errorCode,"%s",String_cString(errorData))
-                                                : ERROR_NONE;
+                                       return ERROR_NONE;
                                      },NULL),
-//                                     resultMap,
                                      "JOB_STATUS jobUUID=%S",
                                      jobUUID
                                     );

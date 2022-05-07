@@ -436,7 +436,7 @@ LOCAL void busyHandler(void *userData)
         return Database_open(&indexHandle->databaseHandle,
                              databaseSpecifier,
                              NULL,  // databaseName
-                             DATABASE_OPEN_MODE_FORCE_CREATE|DATABASE_OPEN_MODE_AUX,
+                             DATABASE_OPEN_MODE_FORCE_CREATE,
                              DATABASE_TIMEOUT
                             );
       #else /* not NDEBUG */
@@ -444,7 +444,7 @@ LOCAL void busyHandler(void *userData)
                                &indexHandle->databaseHandle,
                                databaseSpecifier,
                                NULL,  // databaseName
-                               DATABASE_OPEN_MODE_FORCE_CREATE|DATABASE_OPEN_MODE_AUX,
+                               DATABASE_OPEN_MODE_FORCE_CREATE,
                                DATABASE_TIMEOUT
                               );
       #endif /* NDEBUG */
@@ -499,7 +499,7 @@ LOCAL void busyHandler(void *userData)
                              (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
                                ? DATABASE_OPEN_MODE_READWRITE
                                : DATABASE_OPEN_MODE_READ
-                             )|DATABASE_OPEN_MODE_AUX,
+                             ),
                              timeout
                             );
       #else /* not NDEBUG */
@@ -510,7 +510,7 @@ LOCAL void busyHandler(void *userData)
                                (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
                                  ? DATABASE_OPEN_MODE_READWRITE
                                  : DATABASE_OPEN_MODE_READ
-                               )|DATABASE_OPEN_MODE_AUX,
+                               ),
                                timeout
                               );
       #endif /* NDEBUG */

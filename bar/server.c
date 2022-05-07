@@ -1444,7 +1444,7 @@ LOCAL void pairingThreadCode(void)
                   && !Connector_isAuthorized(&slaveNode->connectorInfo)
                  )
               {
-                error = Connector_authorize(&slaveNode->connectorInfo);
+                error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
                 if (error == ERROR_NONE)
                 {
                   slaveNode->authorizedFlag = TRUE;
@@ -3034,7 +3034,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
             && !List_isEmpty(&jobExpirationEntityList)  // only expire if persistence list is not empty
            )
         {
-//LIST_ITERATE(&jobExpirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
           // find expired entity
           LIST_ITERATEX(&jobExpirationEntityList,jobExpirationEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
           {
@@ -3065,7 +3064,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               // check if "in-transit"
               inTransit = isInTransit(jobExpirationEntityNode);
             }
-//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
 
             // check if expired, keep one "in-transit" entity
             if (   !inTransit
@@ -6396,7 +6394,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
 
   // find config value
   i = ConfigValue_valueIndex(CONFIG_VALUES,NULL,String_cString(name));
-  if (i < 0)
+  if (i == CONFIG_VALUE_INDEX_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
     String_delete(name);
@@ -7220,51 +7218,51 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
-      switch (serverNode->type)
+      switch (serverNode->server.type)
       {
         case SERVER_TYPE_NONE:
           break;
         case SERVER_TYPE_FILE:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s maxStorageSize=%"PRIu64,
-                              serverNode->id,
-                              serverNode->name,
+                              serverNode->server.id,
+                              serverNode->server.name,
                               "FILE",
-                              serverNode->maxStorageSize
+                              serverNode->server.maxStorageSize
                              );
           break;
         case SERVER_TYPE_FTP:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
-                              serverNode->id,
-                              serverNode->name,
+                              serverNode->server.id,
+                              serverNode->server.name,
                               "FTP",
-                              serverNode->ftp.loginName,
-                              serverNode->maxConnectionCount,
-                              serverNode->maxStorageSize
+                              serverNode->server.ftp.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
                              );
           break;
         case SERVER_TYPE_SSH:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
-                              serverNode->id,
-                              serverNode->name,
+                              serverNode->server.id,
+                              serverNode->server.name,
                               "SSH",
-                              serverNode->ssh.port,
-                              serverNode->ssh.loginName,
-                              serverNode->maxConnectionCount,
-                              serverNode->maxStorageSize
+                              serverNode->server.ssh.port,
+                              serverNode->server.ssh.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
                              );
           break;
         case SERVER_TYPE_WEBDAV:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
-                              serverNode->id,
-                              serverNode->name,
+                              serverNode->server.id,
+                              serverNode->server.name,
                               "WEBDAV",
-                              serverNode->webDAV.loginName,
-                              serverNode->maxConnectionCount,
-                              serverNode->maxStorageSize
+                              serverNode->server.webDAV.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
                              );
           break;
         #ifndef NDEBUG
@@ -7290,13 +7288,15 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
 * Return : -
 * Notes  : Arguments:
 *            name=<name>
-*            serverType=filesystem|ftp|ssh|webdav
+*            serverType=file|ftp|ssh|webdav
 *            path=<path|URL>
 *            port=<n>
 *            loginName=<name>
 *            [password=<password>]
 *            [publicKey=<data>]
 *            [privateKey=<data>]
+*            [maxConnectionCount=<n>]
+*            [maxStorageSize=<size>]
 *          Result:
 *            id=<n>
 \***********************************************************************/
@@ -7349,55 +7349,13 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
   password = String_new();
-  if (!StringMap_getString(argumentMap,"password",password,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"password=<password>");
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"password",password,NULL);
   publicKey = String_new();
-  if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"publicKey=<data>");
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"publicKey",publicKey,NULL);
   privateKey = String_new();
-  if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"privateKey=<data>");
-    String_delete(privateKey);
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxConnectionCount=<n>");
-    String_delete(privateKey);
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxStorageSize=<n>");
-    String_delete(privateKey);
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"privateKey",privateKey,NULL);
+  StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,MAX_UINT);
+  StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,MAX_UINT64);
 
   // allocate storage server node
   serverNode = Configuration_newServerNode(name,serverType);
@@ -7411,34 +7369,34 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      String_set(serverNode->ftp.loginName,loginName);
+      String_set(serverNode->server.ftp.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        Password_setString(&serverNode->ftp.password,password);
+        Password_setString(&serverNode->server.ftp.password,password);
       }
       break;
     case SERVER_TYPE_SSH:
-      serverNode->ssh.port = port;
-      String_set(serverNode->ssh.loginName,loginName);
+      serverNode->server.ssh.port = port;
+      String_set(serverNode->server.ssh.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        Password_setString(&serverNode->ssh.password,password);
+        Password_setString(&serverNode->server.ssh.password,password);
       }
-      Configuration_setKeyString(&serverNode->ssh.publicKey,publicKey);
-      Configuration_setKeyString(&serverNode->ssh.privateKey,privateKey);
+      Configuration_setKeyString(&serverNode->server.ssh.publicKey,publicKey);
+      Configuration_setKeyString(&serverNode->server.ssh.privateKey,privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
-      String_set(serverNode->webDAV.loginName,loginName);
+      String_set(serverNode->server.webDAV.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        Password_setString(&serverNode->webDAV.password,password);
+        Password_setString(&serverNode->server.webDAV.password,password);
       }
-      Configuration_setKeyString(&serverNode->webDAV.publicKey,publicKey);
-      Configuration_setKeyString(&serverNode->webDAV.privateKey,privateKey);
+      Configuration_setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
+      Configuration_setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
       break;
   }
-  serverNode->maxConnectionCount = maxConnectionCount;
-  serverNode->maxStorageSize     = maxStorageSize;
+  serverNode->server.maxConnectionCount = maxConnectionCount;
+  serverNode->server.maxStorageSize     = maxStorageSize;
 
   // add to server list
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -7460,7 +7418,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",serverNode->id);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",serverNode->server.id);
 
   // free resources
   String_delete(privateKey);
@@ -7483,12 +7441,13 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
 *            id=<n>
 *            name=<name>
 *            serverType=filesystem|ftp|ssh|webdav
-*            path=<path|URL>
-*            loginName=<name>
 *            port=<n>
+*            loginName=<name>
 *            [password=<password>]
 *            [publicKey=<data>]
 *            [privateKey=<data>]
+*            [maxConnectionCount=<n>]
+*            [maxStorageSize=<size>]
 *          Result:
 \***********************************************************************/
 
@@ -7546,60 +7505,18 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
   password = String_new();
-  if (!StringMap_getString(argumentMap,"password",password,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"password=<password>");
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"password",password,NULL);
   publicKey = String_new();
-  if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"publicKey=<data>");
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"publicKey",publicKey,NULL);
   privateKey = String_new();
-  if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"privateKey=<data>");
-    String_delete(privateKey);
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxConnectionCount=<n>");
-    String_delete(privateKey);
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxStorageSize=<n>");
-    String_delete(privateKey);
-    String_delete(publicKey);
-    String_delete(password);
-    String_delete(loginName);
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"privateKey",privateKey,NULL);
+  StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,MAX_UINT);
+  StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,MAX_UINT64);
 
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
-    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -7613,7 +7530,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // update storage server settings
-    String_set(serverNode->name,name);
+    Configuration_setServerNodeType(serverNode,serverType);
+    String_set(serverNode->server.name,name);
     switch (serverType)
     {
       case SERVER_TYPE_NONE:
@@ -7621,34 +7539,34 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
       case SERVER_TYPE_FILE:
         break;
       case SERVER_TYPE_FTP:
-        String_set(serverNode->ftp.loginName,loginName);
+        String_set(serverNode->server.ftp.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          Password_setString(&serverNode->ftp.password,password);
+          Password_setString(&serverNode->server.ftp.password,password);
         }
         break;
       case SERVER_TYPE_SSH:
-        serverNode->ssh.port = port;
-        String_set(serverNode->ssh.loginName,loginName);
+        serverNode->server.ssh.port = port;
+        String_set(serverNode->server.ssh.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          Password_setString(&serverNode->ssh.password,password);
+          Password_setString(&serverNode->server.ssh.password,password);
         }
-        Configuration_setKeyString(&serverNode->ssh.publicKey,publicKey);
-        Configuration_setKeyString(&serverNode->ssh.privateKey,privateKey);
+        Configuration_setKeyString(&serverNode->server.ssh.publicKey,publicKey);
+        Configuration_setKeyString(&serverNode->server.ssh.privateKey,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
-        String_set(serverNode->webDAV.loginName,loginName);
+        String_set(serverNode->server.webDAV.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          Password_setString(&serverNode->webDAV.password,password);
+          Password_setString(&serverNode->server.webDAV.password,password);
         }
-        Configuration_setKeyString(&serverNode->webDAV.publicKey,publicKey);
-        Configuration_setKeyString(&serverNode->webDAV.privateKey,privateKey);
+        Configuration_setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
+        Configuration_setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
         break;
     }
-    serverNode->maxConnectionCount = maxConnectionCount;
-    serverNode->maxStorageSize     = maxStorageSize;
+    serverNode->server.maxConnectionCount = maxConnectionCount;
+    serverNode->server.maxStorageSize     = maxStorageSize;
 
     // update config file
     error = Configuration_update();
@@ -7710,7 +7628,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
-    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -7849,7 +7767,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
 * Return : -
 * Notes  : Arguments:
 *            time=<pause time [s]>
-*            modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE,INDEX_MAINTENANCE
+*            [modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE,INDEX_MAINTENANCE]
 *          Result:
 \***********************************************************************/
 
@@ -7875,18 +7793,13 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     return;
   }
   modeMask = String_new();
-  if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
-    String_delete(modeMask);
-    return;
-  }
+  StringMap_getString(argumentMap,"modeMask",modeMask,NULL);
 
   // set pause time
   SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // set pause flags
-    if (modeMask == NULL)
+    if (String_isEmpty(modeMask))
     {
       pauseFlags.create           = TRUE;
       pauseFlags.storage          = TRUE;
@@ -8306,6 +8219,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list");
+        Job_listUnlock();
         return;
       }
 
@@ -8320,6 +8234,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list");
           Device_closeDeviceList(&deviceListHandle);
           String_delete(deviceName);
+          Job_listUnlock();
           return;
         }
 
@@ -8330,6 +8245,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info");
           Device_closeDeviceList(&deviceListHandle);
           String_delete(deviceName);
+          Job_listUnlock();
           return;
         }
 
@@ -8808,6 +8724,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open directory '%S' fail",directory);
+        Job_listUnlock();
         String_delete(directory);
         return;
       }
@@ -18479,7 +18396,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(pattern);
     return;
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   foundFlag           = FALSE;
   updateRequestedFlag = FALSE;
@@ -21390,8 +21306,6 @@ Errors Server_socket(void)
 
   // run as server
   #ifndef NDEBUG
-fprintf(stderr,"%s:%d: globalOptions.debug.daemonFlag=%d\n",__FILE__,__LINE__,globalOptions.daemonFlag);
-fprintf(stderr,"%s:%d: globalOptions.debug.serverLevel=%d\n",__FILE__,__LINE__,globalOptions.debug.serverLevel);
     if (globalOptions.debug.serverLevel >= 1)
     {
       printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
@@ -21682,6 +21596,12 @@ fprintf(stderr,"%s:%d: globalOptions.debug.serverLevel=%d\n",__FILE__,__LINE__,g
                                             )
                      )
                   {
+                    #ifndef NDEBUG
+                      if (globalOptions.debug.serverLevel >= 1)
+                      {
+                        fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+                      }
+                    #endif /* not DEBUG */
                     processCommand(&clientNode->clientInfo,id,name,argumentMap);
                   }
                 }
@@ -21998,6 +21918,11 @@ Errors Server_batch(int inputDescriptor,
   pauseFlags.indexUpdate          = FALSE;
   pauseFlags.indexMaintenance     = FALSE;
   pauseEndDateTime                = 0LL;
+  Semaphore_init(&newMaster.lock,SEMAPHORE_TYPE_BINARY);
+  newMaster.pairingMode           = PAIRING_MODE_NONE;
+  Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
+  newMaster.name                  = String_new();
+  Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
   indexHandle                     = NULL;
   intermediateMaintenanceDateTime = 0LL;
   quitFlag                        = FALSE;
@@ -22005,6 +21930,10 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
+  AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
 
   // init index database
   if (!stringIsEmpty(globalOptions.indexDatabaseURI))
@@ -22123,6 +22052,12 @@ Errors Server_batch(int inputDescriptor,
                            )
        )
     {
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received command #%u %s: %s\n",*id,String_cString(name),String_cString(data));
+        }
+      #endif /* not DEBUG */
       processCommand(&clientInfo,id,name,argumentMap);
     }
   }
@@ -22136,6 +22071,12 @@ Errors Server_batch(int inputDescriptor,
                                 )
             )
     {
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+        }
+      #endif /* not DEBUG */
       processCommand(&clientInfo,id,name,argumentMap);
     }
     else if (!File_eof(&clientInfo.io.file.inputHandle))
@@ -22196,6 +22137,10 @@ processCommand(&clientInfo,commandString);
   // free resources
   doneClient(&clientInfo);
   if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
+  Crypt_doneHash(&newMaster.uuidHash);
+  String_delete(newMaster.name);
+  Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
+  Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
   List_done(&authorizationFailList);
   List_done(&clientList);

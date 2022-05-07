@@ -5244,7 +5244,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                     Index_modeToString(indexMode,NULL)
                                    );
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }

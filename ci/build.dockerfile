@@ -7,7 +7,7 @@ ENV CONTAINER=docker
 ENV DEBIAN_FRONTEND=noninteractive
 
 # update
-RUN apt-get -y update
+RUN apt-get -y update --fix-missing
 
 # install packages
 RUN apt-get -y install \
@@ -33,6 +33,7 @@ RUN apt-get -y install \
   postgresql \
   psmisc \
   rsync \
+  rsyslog \
   subversion \
   sudo \
   tar \
@@ -84,10 +85,10 @@ RUN usermod -aG sudo test
 
 # enable ftp: fix race-condition in vsftpd start script, enable write
 RUN sed '/^\s*start-stop-daemon.*/a sleep 3' -i /etc/init.d/vsftpd
-RUN sed 's/#write_enable=YES/write_enable=YES/g' -i /etc/vsftpd.conf
-RUN sed 's/#xferlog_enable=YES/xferlog_enable=YES/g' -i /etc/vsftpd.conf
+RUN sed 's|#write_enable=YES|write_enable=YES|g' -i /etc/vsftpd.conf
+RUN sed 's|#xferlog_file=/var/log/vsftpd.log|xferlog_file=/var/log/vsftpd.log|g' -i /etc/vsftpd.conf
 
-# enable ssh: create keys, permit key login, max. number of concurrent connection attempts
+# enable ssh: create keys, permit key login, max. number of concurrent connection attempts, enable logging
 RUN mkdir /home/test/.ssh
 RUN ssh-keygen -b 2048 -t rsa -f /home/test/.ssh/id_rsa -q -N ""
 RUN cat /home/test/.ssh/id_rsa.pub > /home/test/.ssh/authorized_keys
@@ -96,6 +97,7 @@ RUN chmod 700 /home/test/.ssh
 RUN chown -R test:test /home/test/.ssh
 RUN chmod 644 /home/test/.ssh/*
 RUN sed '/#MaxStartups/a MaxStartups 256' -i /etc/ssh/sshd_config
+COPY test-rsyslog-sshd.conf /etc/rsyslog.d/sshd.conf
 
 # enable webDAV/webDAVs
 RUN a2enmod ssl
@@ -106,6 +108,6 @@ RUN a2ensite 000-default
 RUN a2ensite default-ssl
 RUN echo ServerName test >> /etc/apache2/apache2.conf
 COPY test-apache2.conf /etc/apache2/sites-enabled/test.conf
-RUN sed 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=test/g' -i /etc/apache2/envvars
-RUN sed 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=test/g' -i /etc/apache2/envvars
+RUN sed 's|export APACHE_RUN_USER=.*|export APACHE_RUN_USER=test|g' -i /etc/apache2/envvars
+RUN sed 's|export APACHE_RUN_GROUP=.*|export APACHE_RUN_GROUP=test|g' -i /etc/apache2/envvars
 RUN (cd /var/www; rm -rf html; ln -s /home/test html)

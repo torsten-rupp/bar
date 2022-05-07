@@ -521,11 +521,9 @@ typedef enum
   SERVER_TYPE_WEBDAV
 } ServerTypes;
 
-// server node
-typedef struct ServerNode
+// server
+typedef struct
 {
-  LIST_NODE_HEADER(struct ServerNode);
-
   uint        id;                                             // unique server id
   String      name;                                           // server file name or URL
   ServerTypes type;                                           // server type
@@ -549,6 +547,14 @@ typedef struct ServerNode
     uint highPriorityRequestCount;                            // number of waiting high priority connection requests
     uint count;                                               // number of current connections
   }           connection;
+} Server;
+
+// server node
+typedef struct ServerNode
+{
+  LIST_NODE_HEADER(struct ServerNode);
+
+  Server server;
 } ServerNode;
 
 // server list
@@ -558,9 +564,6 @@ typedef struct
 
   Semaphore lock;
 } ServerList;
-
-// server (alias)
-typedef ServerNode Server;
 
 // file settings
 typedef struct

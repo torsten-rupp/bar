@@ -1427,7 +1427,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
     SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // find server
-      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
       if (serverNode == NULL)
       {
         Semaphore_unlock(&globalOptions.serverList.lock);
@@ -1435,20 +1435,20 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
       }
 
       // get max. number of allowed concurrent connections
-      if (serverNode->maxConnectionCount != 0)
+      if (serverNode->server.maxConnectionCount != 0)
       {
-        maxConnectionCount = serverNode->maxConnectionCount;
+        maxConnectionCount = serverNode->server.maxConnectionCount;
       }
       else
       {
         maxConnectionCount = 0;
-        switch (serverNode->type)
+        switch (serverNode->server.type)
         {
           case SERVER_TYPE_FILE:
             maxConnectionCount = MAX_UINT;
             break;
           case SERVER_TYPE_FTP:
-            maxConnectionCount =globalOptions.defaultFTPServer.maxConnectionCount;
+            maxConnectionCount = globalOptions.defaultFTPServer.maxConnectionCount;
             break;
           case SERVER_TYPE_SSH:
             maxConnectionCount = globalOptions.defaultSSHServer.maxConnectionCount;
@@ -1469,15 +1469,15 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
       {
         case SERVER_CONNECTION_PRIORITY_LOW:
           if (   (maxConnectionCount != 0)
-              && (serverNode->connection.count >= maxConnectionCount)
+              && (serverNode->server.connection.count >= maxConnectionCount)
              )
           {
             // request low priority connection
-            serverNode->connection.lowPriorityRequestCount++;
+            serverNode->server.connection.lowPriorityRequestCount++;
             Semaphore_signalModified(&globalOptions.serverList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
             // wait for free connection
-            while (serverNode->connection.count >= maxConnectionCount)
+            while (serverNode->server.connection.count >= maxConnectionCount)
             {
               if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
               {
@@ -1487,21 +1487,21 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
             }
 
             // low priority request done
-            assert(serverNode->connection.lowPriorityRequestCount > 0);
-            serverNode->connection.lowPriorityRequestCount--;
+            assert(serverNode->server.connection.lowPriorityRequestCount > 0);
+            serverNode->server.connection.lowPriorityRequestCount--;
           }
           break;
         case SERVER_CONNECTION_PRIORITY_HIGH:
           if (   (maxConnectionCount != 0)
-              && (serverNode->connection.count >= maxConnectionCount)
+              && (serverNode->server.connection.count >= maxConnectionCount)
              )
           {
             // request high priority connection
-            serverNode->connection.highPriorityRequestCount++;
+            serverNode->server.connection.highPriorityRequestCount++;
             Semaphore_signalModified(&globalOptions.serverList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
             // wait for free connection
-            while (serverNode->connection.count >= maxConnectionCount)
+            while (serverNode->server.connection.count >= maxConnectionCount)
             {
               if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
               {
@@ -1511,8 +1511,8 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
             }
 
             // high priority request done
-            assert(serverNode->connection.highPriorityRequestCount > 0);
-            serverNode->connection.highPriorityRequestCount--;
+            assert(serverNode->server.connection.highPriorityRequestCount > 0);
+            serverNode->server.connection.highPriorityRequestCount--;
           }
           break;
         #ifndef NDEBUG
@@ -1523,7 +1523,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
       }
 
       // allocated connection
-      serverNode->connection.count++;
+      serverNode->server.connection.count++;
     }
   }
 
@@ -1539,13 +1539,13 @@ void freeServer(uint serverId)
     SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // find server
-      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
       if (serverNode != NULL)
       {
-        assert(serverNode->connection.count > 0);
+        assert(serverNode->server.connection.count > 0);
 
         // free connection
-        serverNode->connection.count--;
+        serverNode->server.connection.count--;
       }
     }
   }
@@ -1563,10 +1563,10 @@ bool isServerAllocationPending(uint serverId)
     SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // find server
-      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
       if (serverNode != NULL)
       {
-        pendingFlag = (serverNode->connection.highPriorityRequestCount > 0);
+        pendingFlag = (serverNode->server.connection.highPriorityRequestCount > 0);
       }
     }
   }

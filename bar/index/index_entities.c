@@ -2152,7 +2152,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-// TODO: CALLBACK_LAMBDA_ -> CALLBACK_INLINE_
                                     CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);

@@ -1835,21 +1835,21 @@ uint Storage_getServerSettings(Server                 *server,
         // find file server
         existingServerNode = LIST_FIND(&globalOptions.serverList,
                                        existingServerNode,
-                                          (existingServerNode->type == SERVER_TYPE_FILE)
-                                       && String_startsWith(existingServerNode->name,storageSpecifier->archiveName)
+                                          (existingServerNode->server.type == SERVER_TYPE_FILE)
+                                       && String_startsWith(existingServerNode->server.name,storageSpecifier->archiveName)
                                       );
 
         if (existingServerNode != NULL)
         {
           // get file server settings
-          serverId = existingServerNode->id;
-          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_FILE);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
-                                                               ? existingServerNode->writePreProcessCommand
+          serverId = existingServerNode->server.id;
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_FILE);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
+                                                               ? existingServerNode->server.writePreProcessCommand
                                                                : globalOptions.file.writePreProcessCommand
                                                             );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
-                                                               ? existingServerNode->writePostProcessCommand
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->server.writePostProcessCommand)
+                                                               ? existingServerNode->server.writePostProcessCommand
                                                                : globalOptions.file.writePostProcessCommand
                                                             );
         }
@@ -1861,23 +1861,23 @@ uint Storage_getServerSettings(Server                 *server,
         // find file server
         existingServerNode = LIST_FIND(&globalOptions.serverList,
                                existingServerNode,
-                                  (existingServerNode->type == SERVER_TYPE_FTP)
-                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                                  (existingServerNode->server.type == SERVER_TYPE_FTP)
+                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
 
         if (existingServerNode != NULL)
         {
           // get FTP server settings
-          serverId  = existingServerNode->id;
-          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_FTP);
-          server->ftp.loginName = String_duplicate(existingServerNode->ftp.loginName);
-          Password_set(&server->ftp.password,&existingServerNode->ftp.password);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
-                                                               ? existingServerNode->writePreProcessCommand
+          serverId  = existingServerNode->server.id;
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_FTP);
+          server->ftp.loginName = String_duplicate(existingServerNode->server.ftp.loginName);
+          Password_set(&server->ftp.password,&existingServerNode->server.ftp.password);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
+                                                               ? existingServerNode->server.writePreProcessCommand
                                                                : globalOptions.ftp.writePreProcessCommand
                                                             );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
-                                                               ? existingServerNode->writePostProcessCommand
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->server.writePostProcessCommand)
+                                                               ? existingServerNode->server.writePostProcessCommand
                                                                : globalOptions.ftp.writePostProcessCommand
                                                             );
         }
@@ -1890,26 +1890,26 @@ uint Storage_getServerSettings(Server                 *server,
         // find SSH server
         existingServerNode = LIST_FIND(&globalOptions.serverList,
                                existingServerNode,
-                                  (existingServerNode->type == SERVER_TYPE_SSH)
-                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                                  (existingServerNode->server.type == SERVER_TYPE_SSH)
+                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
 
         if (existingServerNode != NULL)
         {
           // get file server settings
-          serverId  = existingServerNode->id;
-          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_SSH);
-          server->ssh.loginName = String_duplicate(existingServerNode->ssh.loginName);
-          server->ssh.port      = existingServerNode->ssh.port;
-          Password_set(&server->ssh.password,&existingServerNode->ssh.password);
-          Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->ssh.publicKey);
-          Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->ssh.privateKey);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
-                                                               ? existingServerNode->writePreProcessCommand
+          serverId  = existingServerNode->server.id;
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SSH);
+          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
+          server->ssh.port      = existingServerNode->server.ssh.port;
+          Password_set(&server->ssh.password,&existingServerNode->server.ssh.password);
+          Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->server.ssh.publicKey);
+          Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->server.ssh.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
+                                                               ? existingServerNode->server.writePreProcessCommand
                                                                : globalOptions.scp.writePreProcessCommand
                                                             );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
-                                                              ? existingServerNode->writePostProcessCommand
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->server.writePostProcessCommand)
+                                                              ? existingServerNode->server.writePostProcessCommand
                                                               : globalOptions.scp.writePostProcessCommand
                                                             );
         }
@@ -1921,26 +1921,26 @@ uint Storage_getServerSettings(Server                 *server,
         // find SSH server
         existingServerNode = LIST_FIND(&globalOptions.serverList,
                                existingServerNode,
-                                  (existingServerNode->type == SERVER_TYPE_SSH)
-                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                                  (existingServerNode->server.type == SERVER_TYPE_SSH)
+                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
 
         if (existingServerNode != NULL)
         {
           // get file server settings
-          serverId  = existingServerNode->id;
-          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_SSH);
-          server->ssh.loginName = String_duplicate(existingServerNode->ssh.loginName);
-          server->ssh.port      = existingServerNode->ssh.port;
-          Password_set(&server->ssh.password,&existingServerNode->ssh.password);
-          Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->ssh.publicKey);
-          Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->ssh.privateKey);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
-                                                               ? existingServerNode->writePreProcessCommand
+          serverId  = existingServerNode->server.id;
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SSH);
+          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
+          server->ssh.port      = existingServerNode->server.ssh.port;
+          Password_set(&server->ssh.password,&existingServerNode->server.ssh.password);
+          Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->server.ssh.publicKey);
+          Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->server.ssh.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
+                                                               ? existingServerNode->server.writePreProcessCommand
                                                                : globalOptions.sftp.writePreProcessCommand
                                                             );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
-                                                               ? existingServerNode->writePostProcessCommand
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->server.writePostProcessCommand)
+                                                               ? existingServerNode->server.writePostProcessCommand
                                                                : globalOptions.sftp.writePostProcessCommand
                                                             );
         }
@@ -1953,25 +1953,25 @@ uint Storage_getServerSettings(Server                 *server,
         // find file server
         existingServerNode = LIST_FIND(&globalOptions.serverList,
                                existingServerNode,
-                                  (existingServerNode->type == SERVER_TYPE_WEBDAV)
-                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                                  (existingServerNode->server.type == SERVER_TYPE_WEBDAV)
+                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
 
         if (existingServerNode != NULL)
         {
           // get webDAV server settings
-          serverId = existingServerNode->id;
-          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_WEBDAV);
-          server->webDAV.loginName = String_duplicate(existingServerNode->webDAV.loginName);
-          Password_set(&server->webDAV.password,&existingServerNode->webDAV.password);
-          Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->webDAV.publicKey);
-          Configuration_duplicateKey(&server->webDAV.privateKey,&existingServerNode->webDAV.privateKey);
-          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
-                                                               ? existingServerNode->writePreProcessCommand
+          serverId = existingServerNode->server.id;
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_WEBDAV);
+          server->webDAV.loginName = String_duplicate(existingServerNode->server.webDAV.loginName);
+          Password_set(&server->webDAV.password,&existingServerNode->server.webDAV.password);
+          Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->server.webDAV.publicKey);
+          Configuration_duplicateKey(&server->webDAV.privateKey,&existingServerNode->server.webDAV.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
+                                                               ? existingServerNode->server.writePreProcessCommand
                                                                : globalOptions.webdav.writePreProcessCommand
                                                             );
-          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
-                                                               ? existingServerNode->writePostProcessCommand
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->server.writePostProcessCommand)
+                                                               ? existingServerNode->server.writePostProcessCommand
                                                                : globalOptions.webdav.writePostProcessCommand
                                                             );
         }
