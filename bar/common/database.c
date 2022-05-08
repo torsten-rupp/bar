@@ -1618,17 +1618,30 @@ LOCAL Errors sqlite3Exec(sqlite3    *handle,
                          const char *sqlString
                         )
 {
+  const uint MAX_RETRIES = 3;
+
   int    sqliteResult;
+  uint   retries;
   Errors error;
 
   assert(handle != NULL);
   assert(sqlString != NULL);
 
-  sqliteResult = sqlite3_exec(handle,
-                              sqlString,
-                              CALLBACK_(NULL,NULL),
-                              NULL
-                             );
+  retries = 0;
+  do
+  {
+    sqliteResult = sqlite3_exec(handle,
+                                sqlString,
+                                CALLBACK_(NULL,NULL),
+                                NULL
+                               );
+    if (sqliteResult == SQLITE_LOCKED)
+    {
+      Misc_udelay(500LL*US_PER_MS);
+      retries++;
+    }
+  }
+  while ((sqliteResult == SQLITE_LOCKED) && (retries < MAX_RETRIES));
   if      (sqliteResult == SQLITE_MISUSE)
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",

@@ -540,13 +540,13 @@ LOCAL Errors getResponseError(CURL *curlHandle)
         error = ERROR_FILE_NOT_FOUND_;
         break;
       default:
-        error = ERRORX_(WEBDAV_FAIL,0,"%s",curl_easy_strerror(curlCode));
+        error = ERRORX_(WEBDAV,responseCode,"unhandled HTTP response",responseCode);
         break;
     }
   }
   else
   {
-    error = ERRORX_(WEBDAV_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
   }
 
   return error;

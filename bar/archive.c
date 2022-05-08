@@ -6769,7 +6769,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           }
           if (!decryptedFlag)
           {
-            archiveHandle->pendingError = ERROR_KEY_DECRYPT_FAIL;
+            archiveHandle->pendingError = ERROR_KEY_DECRYPT;
             Crypt_doneKey(&privateCryptKey);
             return FALSE;
           }
@@ -14150,7 +14150,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               else
               {
                 // no data decompressed -> error in inflate
-                return ERRORX_(INFLATE_FAIL,0,"not data");
+                return ERRORX_(INFLATE,0,"not data");
               }
             }
             else
@@ -14300,7 +14300,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               else
               {
                 // no data decompressed -> error in inflate
-                return ERRORX_(INFLATE_FAIL,0,"no data");
+                return ERRORX_(INFLATE,0,"no data");
               }
             }
             else
@@ -14453,7 +14453,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               else
               {
                 // no data decompressed -> error in inflate
-                return ERRORX_(INFLATE_FAIL,0,"no data");
+                return ERRORX_(INFLATE,0,"no data");
               }
             }
             else

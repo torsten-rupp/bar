@@ -84,7 +84,7 @@ LOCAL Errors CompressZIP_compressData(CompressInfo *compressInfo)
              && (zlibError != Z_BUF_ERROR)
            )
         {
-          return ERROR_(DEFLATE_FAIL,zlibError);
+          return ERROR_(DEFLATE,zlibError);
         }
         RingBuffer_decrement(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->zlib.stream.avail_in
@@ -122,7 +122,7 @@ LOCAL Errors CompressZIP_compressData(CompressInfo *compressInfo)
                  && (zlibError != Z_BUF_ERROR)
                 )
         {
-          return ERROR_(DEFLATE_FAIL,zlibError);
+          return ERROR_(DEFLATE,zlibError);
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->zlib.stream.avail_out
@@ -176,7 +176,7 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
                  && (zlibResult != Z_BUF_ERROR)
                 )
         {
-          return ERROR_(INFLATE_FAIL,zlibResult);
+          return ERROR_(INFLATE,zlibResult);
         }
         RingBuffer_decrement(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->zlib.stream.avail_in
@@ -214,7 +214,7 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
                  && (zlibResult != Z_BUF_ERROR)
                 )
         {
-          return ERROR_(INFLATE_FAIL,zlibResult);
+          return ERROR_(INFLATE,zlibResult);
         }
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->zlib.stream.avail_out
@@ -319,14 +319,14 @@ LOCAL Errors CompressZIP_reset(CompressInfo *compressInfo)
       zlibResult = deflateReset(&compressInfo->zlib.stream);
       if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
       {
-        return ERROR_(DEFLATE_FAIL,zlibResult);
+        return ERROR_(DEFLATE,zlibResult);
       }
       break;
     case COMPRESS_MODE_INFLATE:
       zlibResult = inflateReset(&compressInfo->zlib.stream);
       if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
       {
-        return ERROR_(INFLATE_FAIL,zlibResult);
+        return ERROR_(INFLATE,zlibResult);
       }
       break;
     #ifndef NDEBUG

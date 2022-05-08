@@ -178,6 +178,7 @@ def tests()
 
             sh "make -C bar gprof_clean"
             TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
+sh "ps auxw"
 
             // stop services
             sh "sudo /etc/init.d/vsftpd stop || true"
@@ -194,6 +195,7 @@ def tests()
     script
     {
 //      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log', allowEmptyArchive: true
+sh "ps auxw"
 sh "ls -la /var/log"
       archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
     }

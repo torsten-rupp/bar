@@ -51,7 +51,7 @@
 #ifdef USE_ALLOCATOR
 
 /***********************************************************************\
-* Name   : lzmaAlloc
+* Name   : CompressLZMA_alloc
 * Purpose: LZMA allocte
 * Input  : mnemb - number of elements
 *          size  - size of element
@@ -60,7 +60,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
+LOCAL void *CompressLZMA_alloc(void *userData, size_t nmemb, size_t size)
 {
   UNUSED_VARIABLE(userData);
 
@@ -69,7 +69,7 @@ LOCAL void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
 }
 
 /***********************************************************************\
-* Name   : lzmaFree
+* Name   : CompressLZMA_free
 * Purpose: LZMA free
 * Input  : p - pointer
 * Output : -
@@ -77,19 +77,19 @@ LOCAL void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void lzmaFree(void *userData, void *p)
+LOCAL void CompressLZMA_free(void *userData, void *p)
 {
   UNUSED_VARIABLE(userData);
 
   free(p);
 }
 
-LOCAL const lzma_allocator ALLOCATOR = { lzmaAlloc, lzmaFree, NULL };
+LOCAL const lzma_allocator ALLOCATOR = { CompressLZMA_alloc, CompressLZMA_free, NULL };
 
 #endif /* USE_ALLOCATOR */
 
 /***********************************************************************\
-* Name   : lzmaErrorText
+* Name   : CompressLZMA_getErrorText
 * Purpose: get error text for LZMA error code
 * Input  : lzmaResult - LZMA result
 * Output : -
@@ -97,7 +97,7 @@ LOCAL const lzma_allocator ALLOCATOR = { lzmaAlloc, lzmaFree, NULL };
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *lzmaErrorText(lzma_ret lzmaResult)
+LOCAL const char *CompressLZMA_getErrorText(lzma_ret lzmaResult)
 {
   const char *errorText;
 
@@ -156,7 +156,7 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
         lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
         if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(DEFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
+          return ERRORX_(DEFLATE,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
         }
         RingBuffer_decrement(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->lzmalib.stream.avail_in
@@ -192,7 +192,7 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
         }
         else if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(DEFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
+          return ERRORX_(DEFLATE,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->lzmalib.stream.avail_out
@@ -244,7 +244,7 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
         }
         else if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(INFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
+          return ERRORX_(INFLATE,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
         }
         RingBuffer_decrement(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->lzmalib.stream.avail_in
@@ -283,7 +283,7 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
         }
         else if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(INFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
+          return ERRORX_(INFLATE,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
         }
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->lzmalib.stream.avail_out
@@ -337,14 +337,14 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       lzmaResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
       if (lzmaResult != LZMA_OK)
       {
-        return ERRORX_(INIT_COMPRESS,lzmaResult,"%s",lzmaErrorText(lzmaResult));
+        return ERRORX_(INIT_COMPRESS,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
       }
       break;
     case COMPRESS_MODE_INFLATE:
       lzmaResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
       if (lzmaResult != LZMA_OK)
       {
-        return ERRORX_(INIT_DECOMPRESS,lzmaResult,"%s",lzmaErrorText(lzmaResult));
+        return ERRORX_(INIT_DECOMPRESS,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
       }
       break;
     #ifndef NDEBUG
@@ -385,7 +385,7 @@ LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
       lzmalibResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
       if (lzmalibResult != LZMA_OK)
       {
-        return ERROR_(DEFLATE_FAIL,lzmalibResult);;
+        return ERROR_(DEFLATE,lzmalibResult);;
       }
       break;
     case COMPRESS_MODE_INFLATE:
@@ -399,7 +399,7 @@ LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
       lzmalibResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
       if (lzmalibResult != LZMA_OK)
       {
-        return ERROR_(INFLATE_FAIL,lzmalibResult);
+        return ERROR_(INFLATE,lzmalibResult);
       }
       break;
     #ifndef NDEBUG

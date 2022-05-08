@@ -287,6 +287,7 @@ typedef struct
 /***************************** Variables *******************************/
 //TODO
 LOCAL DatabaseSpecifier          *indexDatabaseSpecifier = NULL;
+LOCAL Semaphore                  indexOpenLock;
 LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
@@ -425,100 +426,109 @@ LOCAL void busyHandler(void *userData)
       break;
   }
 
-  // open index database
-  if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
+  SEMAPHORE_LOCKED_DO(&indexOpenLock,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // create database
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      #ifdef NDEBUG
-        return Database_open(&indexHandle->databaseHandle,
-                             databaseSpecifier,
-                             NULL,  // databaseName
-                             DATABASE_OPEN_MODE_FORCE_CREATE,
-                             DATABASE_TIMEOUT
-                            );
-      #else /* not NDEBUG */
-        return __Database_open(__fileName__,__lineNb__,
-                               &indexHandle->databaseHandle,
-                               databaseSpecifier,
-                               NULL,  // databaseName
-                               DATABASE_OPEN_MODE_FORCE_CREATE,
-                               DATABASE_TIMEOUT
-                              );
-      #endif /* NDEBUG */
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    error = ERROR_NONE;
 
-    // create tables/indices/triggers
-    INDEX_DOX(error,
-              indexHandle,
+    // open index database
+    if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
     {
-      INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITIONS[Database_getType(&indexHandle->databaseHandle)],
-                                 indexDefinition,
-                                 error == ERROR_NONE
-                                )
+      // create database
+      if (error == ERROR_NONE)
       {
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 indexDefinition,
-                                 DATABASE_PARAMETERS_NONE
+        INDEX_DOX(error,
+                  indexHandle,
+        {
+          #ifdef NDEBUG
+            return Database_open(&indexHandle->databaseHandle,
+                                 databaseSpecifier,
+                                 NULL,  // databaseName
+                                 DATABASE_OPEN_MODE_FORCE_CREATE,
+                                 DATABASE_TIMEOUT
                                 );
+          #else /* not NDEBUG */
+            return __Database_open(__fileName__,__lineNb__,
+                                   &indexHandle->databaseHandle,
+                                   databaseSpecifier,
+                                   NULL,  // databaseName
+                                   DATABASE_OPEN_MODE_FORCE_CREATE,
+                                   DATABASE_TIMEOUT
+                                  );
+          #endif /* NDEBUG */
+        });
       }
 
-      return error;
-    });
-    if (error != ERROR_NONE)
-    {
-      INDEX_DO(indexHandle,
+      // create tables/indices/triggers
+      if (error == ERROR_NONE)
       {
-        #ifdef NDEBUG
-          Database_close(&indexHandle->databaseHandle);
-        #else /* not NDEBUG */
-          __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
-        #endif /* NDEBUG */
-      });
-      return error;
+        INDEX_DOX(error,
+                  indexHandle,
+        {
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITIONS[Database_getType(&indexHandle->databaseHandle)],
+                                     indexDefinition,
+                                     error == ERROR_NONE
+                                    )
+          {
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     NULL,  // changedRowCount
+                                     DATABASE_FLAG_NONE,
+                                     indexDefinition,
+                                     DATABASE_PARAMETERS_NONE
+                                    );
+          }
+
+          return error;
+        });
+        if (error != ERROR_NONE)
+        {
+          INDEX_DO(indexHandle,
+          {
+            #ifdef NDEBUG
+              Database_close(&indexHandle->databaseHandle);
+            #else /* not NDEBUG */
+              __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+            #endif /* NDEBUG */
+          });
+        }
+      }
+    }
+    else
+    {
+      // open database
+      if (error == ERROR_NONE)
+      {
+        INDEX_DOX(error,
+                  indexHandle,
+        {
+          #ifdef NDEBUG
+            return Database_open(&indexHandle->databaseHandle,
+                                 databaseSpecifier,
+                                 NULL,  // databaseName
+                                 (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
+                                   ? DATABASE_OPEN_MODE_READWRITE
+                                   : DATABASE_OPEN_MODE_READ
+                                 ),
+                                 timeout
+                                );
+          #else /* not NDEBUG */
+            return __Database_open(__fileName__,__lineNb__,
+                                   &indexHandle->databaseHandle,
+                                   databaseSpecifier,
+                                   NULL,  // databaseName
+                                   (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
+                                     ? DATABASE_OPEN_MODE_READWRITE
+                                     : DATABASE_OPEN_MODE_READ
+                                   ),
+                                   timeout
+                                  );
+          #endif /* NDEBUG */
+        });
+      }
     }
   }
-  else
+  if (error != ERROR_NONE)
   {
-    // open database
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      #ifdef NDEBUG
-        return Database_open(&indexHandle->databaseHandle,
-                             databaseSpecifier,
-                             NULL,  // databaseName
-                             (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
-                               ? DATABASE_OPEN_MODE_READWRITE
-                               : DATABASE_OPEN_MODE_READ
-                             ),
-                             timeout
-                            );
-      #else /* not NDEBUG */
-        return __Database_open(__fileName__,__lineNb__,
-                               &indexHandle->databaseHandle,
-                               databaseSpecifier,
-                               NULL,  // databaseName
-                               (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
-                                 ? DATABASE_OPEN_MODE_READWRITE
-                                 : DATABASE_OPEN_MODE_READ
-                               ),
-                               timeout
-                              );
-      #endif /* NDEBUG */
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    return error;
   }
 
   // add busy handler
@@ -2358,6 +2368,7 @@ Errors Index_initAll(void)
   // init variables
   Semaphore_init(&indexLock,SEMAPHORE_TYPE_BINARY);
   Array_init(&indexUsedBy,sizeof(ThreadInfo),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Semaphore_init(&indexOpenLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexPauseLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexClearStorageLock,SEMAPHORE_TYPE_BINARY);
@@ -2369,6 +2380,7 @@ Errors Index_initAll(void)
     Semaphore_done(&indexClearStorageLock);
     Semaphore_done(&indexThreadTrigger);
     Semaphore_done(&indexPauseLock);
+    Semaphore_done(&indexOpenLock);
     Array_done(&indexUsedBy);
     Semaphore_done(&indexLock);
     return error;
@@ -2388,6 +2400,7 @@ void Index_doneAll(void)
   Semaphore_done(&indexClearStorageLock);
   Semaphore_done(&indexThreadTrigger);
   Semaphore_done(&indexPauseLock);
+  Semaphore_done(&indexOpenLock);
   Array_done(&indexUsedBy);
   Semaphore_done(&indexLock);
 }

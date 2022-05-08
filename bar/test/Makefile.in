@@ -6227,7 +6227,7 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
 endif
 	@#
-	$(KILLALL) -w -q -9 $(shell basename $(call functionExec,$(TEST_BAR))) || true
+	$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) || true
 	./parallel@EXEEXT@ \
           "$(MAKE) test_server_operations_socket_server" \
           "$(MAKE) test_server_operations_socket_client"
@@ -6312,7 +6312,7 @@ test_master_slave_operations_slave: \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             \
             if test -n "$(TEST_SLAVE_HOST)"; then \
-              $(call functionSlaveExecute,$(KILLALL) -w -q -9 $(call functionExec,$(TEST_BAR)) 2>/dev/null) || true; \
+              $(call functionSlaveExecute,$(KILLALL) -w -9 $(call functionExec,$(TEST_BAR)) 2>/dev/null) || true; \
               $(call functionSlaveCopy,$(call functionExec,$(TEST_BAR)),$(call functionExec,$(TEST_BAR))); \
               $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_DIRECTORY)); \
               $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY)); \
@@ -6442,7 +6442,10 @@ test_master_slave_operations: \
 	@#
 	@$(call functionCleanTestFiles)
 	@#
-	@$(KILLALL) -w -q -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
+	@$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
+	ls -la /home/test/intermediate
+	ls -la /home/test/intermediate/master
+	ls -la /home/test/intermediate/slave
 	./parallel@EXEEXT@ \
           "$(MAKE) test_master_slave_operations_master" \
           "$(MAKE) test_master_slave_operations_slave" \

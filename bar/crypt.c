@@ -562,11 +562,14 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "cipher '%s' not available: %s",
                            Crypt_algorithmToString(cryptAlgorithm,NULL),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
 
@@ -578,11 +581,14 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "detect key length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
           (*keyLength) = n*8;
@@ -664,11 +670,14 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "cipher '%s' not available: %s",
                            Crypt_algorithmToString(cryptAlgorithm,NULL),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
 
@@ -680,11 +689,14 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "detect block length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
           (*blockLength) = n;
@@ -764,7 +776,6 @@ Errors __Crypt_init(const char      *__fileName__,
           gcry_error_t gcryptError;
           size_t       n;
           uint         keyLength;
-          Errors       error;
 
           assert(cryptKey != NULL);
 
@@ -803,11 +814,14 @@ Errors __Crypt_init(const char      *__fileName__,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "cipher '%s' not available: %s",
                            Crypt_algorithmToString(cryptAlgorithm,NULL),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
 
@@ -819,11 +833,14 @@ Errors __Crypt_init(const char      *__fileName__,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "detect block length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
           cryptInfo->blockLength = n;
@@ -834,11 +851,14 @@ Errors __Crypt_init(const char      *__fileName__,
                                              );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "detect key length of '%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
           keyLength = (uint)(n*8);
@@ -858,11 +878,14 @@ Errors __Crypt_init(const char      *__fileName__,
                                         );
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             return ERRORX_(INIT_CIPHER,
-                           0,
+                           gcryptError,
                            "'%s': %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
-                           gpg_strerror(gcryptError)
+                           buffer
                           );
           }
 
@@ -876,15 +899,17 @@ Errors __Crypt_init(const char      *__fileName__,
                                           );
           if (gcryptError != 0)
           {
-            error = ERRORX_(INIT_CIPHER,
-                            0,
-                            "set key for '%s' with %dbit: %s",
-                            gcry_cipher_algo_name(gcryptAlgorithm),
-                            cryptKey->dataLength*8,
-                            gpg_strerror(gcryptError)
-                           );
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-            return error;
+            return ERRORX_(INIT_CIPHER,
+                           gcryptError,
+                           "set key for '%s' with %dbit: %s",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           cryptKey->dataLength*8,
+                           buffer
+                          );
           }
 
           // set salt as IV
@@ -901,13 +926,11 @@ Errors __Crypt_init(const char      *__fileName__,
                                            );
             if (gcryptError != 0)
             {
-              error = ERRORX_(INIT_CIPHER,
-                              0,
-                              "set IV: %s",
-                              gpg_strerror(gcryptError)
-                             );
+              char buffer[128];
+
+              gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
               gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-              return error;
+              return ERRORX_(INIT_CIPHER,gcryptError,"set IV: %s",buffer);
             }
           }
         }
@@ -1078,11 +1101,10 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
                                          );
             if (gcryptError != 0)
             {
-              return ERRORX_(INIT_CIPHER,
-                             0,
-                             "set IV: %s",
-                             gpg_strerror(gcryptError)
-                            );
+              char buffer[128];
+
+              gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+              return ERRORX_(INIT_CIPHER,gcryptError,"set IV: %s",buffer);
             }
           }
         }
@@ -1141,7 +1163,10 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
                                      );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
@@ -1152,7 +1177,10 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
                                          );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(buffer);
@@ -1210,7 +1238,10 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
                                      );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
@@ -1221,7 +1252,10 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
                                          );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(buffer);
@@ -1280,7 +1314,10 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
                                      );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
@@ -1291,7 +1328,10 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
                                          );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(buffer);
@@ -1349,7 +1389,10 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
                                      );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
@@ -1360,7 +1403,10 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
                                          );
         if (gcryptError != 0)
         {
-          return ERROR_ENCRYPT_FAIL;
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+          return ERRORX_(ENCRYPT,gcryptError,"%s",buffer);
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(buffer);
@@ -1448,8 +1494,11 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
                                );
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       freeSecure(data);
-      return ERROR_INVALID_KEY;
+      return ERRORX_(INVALID_KEY,gcryptError,"%s",buffer);
     }
     assert(key != NULL);
   #endif /* HAVE_GCRYPT */
@@ -1624,12 +1673,11 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         }
         if (gcryptError != 0)
         {
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
           freeSecure(data);
-          return ERRORX_(INIT_KEY,
-                         0,
-                         "%s",
-                         gpg_strerror(gcryptError)
-                        );
+          return ERRORX_(INIT_KEY,gcryptError,"%s",buffer);
         }
 
 //TODO: create key?
@@ -1642,13 +1690,11 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
                                    );
         if (gcryptError != 0)
         {
-//fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
+          char buffer[128];
+
+          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
           freeSecure(data);
-          return ERRORX_(INIT_KEY,
-                         0,
-                         "%s",
-                         gpg_strerror(gcryptError)
-                        );
+          return ERRORX_(INIT_KEY,gcryptError,"%s",buffer);
         }
         assert(cryptKey->key != NULL);
 #else
@@ -2022,8 +2068,11 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
                                );
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       freeSecure(data);
-      return ERROR_INVALID_KEY;
+      return ERRORX_(INVALID_KEY,gcryptError,"%s",buffer);
     }
     assert(key != NULL);
 
@@ -2148,7 +2197,6 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
       gcryptError = gcry_sexp_build(&key,NULL,"(public-key (rsa (n %m) (e %m)))",nToken,eToken);
       if (gcryptError != 0)
       {
-//fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
         gcry_mpi_release(eToken);
         gcry_mpi_release(nToken);
         return FALSE;
@@ -2315,17 +2363,23 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey *publicCryptKey,
                                );
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       String_delete(description);
-      return ERRORX_(CREATE_KEY_FAIL,gcryptError,"%s",gpg_strerror(gcryptError));
+      return ERRORX_(CREATE_KEY_FAIL,gcryptError,"%s",buffer);
     }
 
     // generate key pair
     gcryptError = gcry_pk_genkey(&sexpKey,sexpKeyParameters);
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       gcry_sexp_release(sexpKeyParameters);
       String_delete(description);
-      return ERRORX_(CREATE_KEY_FAIL,gcryptError,"%s",gpg_strerror(gcryptError));
+      return ERRORX_(CREATE_KEY_FAIL,gcryptError,"%s",buffer);
     }
     gcry_sexp_release(sexpKeyParameters);
     String_delete(description);
@@ -2354,7 +2408,6 @@ Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
                                  )
 {
   #ifdef HAVE_GCRYPT
-    Errors       error;
     gcry_error_t gcryptError;
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpEncryptData;
@@ -2370,8 +2423,7 @@ Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
   assert(encryptBufferLength != NULL);
 
   #ifdef HAVE_GCRYPT
-//gcry_sexp_dump(cryptKey->key);
-//fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
+//gcry_sexp_dump(cryptKey->key); fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
     if (publicCryptKey->key == NULL)
     {
       return ERROR_NO_PUBLIC_CRYPT_KEY;
@@ -2390,46 +2442,42 @@ Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
         gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags oaep) (value %b))",(int)bufferLength,(char*)buffer);
         break;
       default:
-        return ERRORX_(KEY_ENCRYPT_FAIL,0,"unknown padding type");
+        return ERRORX_(KEY_ENCRYPT,0,"unknown padding type");
         break;
     }
     if (gcryptError != 0)
     {
-      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
-      return error;
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+      return ERRORX_(KEY_ENCRYPT,gcryptError,"%s",buffer);
     }
-//gcry_sexp_dump(sexpData);
 
     // encrypt
     gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,publicCryptKey->key);
     if (gcryptError != 0)
     {
-      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       gcry_sexp_release(sexpData);
-//      gcry_mpi_release(n);
-      return error;
+      return ERRORX_(KEY_ENCRYPT,gcryptError,"%s",buffer);
     }
-//gcry_sexp_dump(sexpEncryptData);
 
     // get encrypted data
     sexpToken = gcry_sexp_find_token(sexpEncryptData,"a",0);
     if (sexpToken == NULL)
     {
-      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
-//      gcry_mpi_release(n);
-      return error;
+      return ERROR_KEY_ENCRYPT;
     }
-//gcry_sexp_dump(sexpToken);
     encryptData = gcry_sexp_nth_data(sexpToken,1,&encryptDataLength);
     if (encryptData == NULL)
     {
-      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
-//      gcry_mpi_release(n);
-      return error;
+      return ERROR_KEY_ENCRYPT;
     }
     (*encryptBufferLength) = MIN(encryptDataLength,maxEncryptBufferLength);
     memCopyFast(encryptBuffer,*encryptBufferLength,encryptData,*encryptBufferLength);
@@ -2438,7 +2486,6 @@ Errors Crypt_encryptWithPublicKey(const CryptKey *publicCryptKey,
     // free resources
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
-//    gcry_mpi_release(n);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -2462,7 +2509,6 @@ Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
                                   )
 {
   #ifdef HAVE_GCRYPT
-    Errors       error;
     gcry_error_t gcryptError;
     gcry_sexp_t  sexpEncryptData;
     gcry_sexp_t  sexpData;
@@ -2489,22 +2535,23 @@ Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
       {
         case CRYPT_PADDING_TYPE_NONE:
           gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-//          gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags raw) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
           break;
         case CRYPT_PADDING_TYPE_PKCS1:
           gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pkcs1) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
           break;
         case CRYPT_PADDING_TYPE_OAEP:
           gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags oaep) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-//          gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pss) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
           break;
         default:
-          return ERRORX_(KEY_DECRYPT_FAIL,0,"unknown padding type");
+          return ERRORX_(KEY_DECRYPT,0,"unknown padding type");
           break;
       }
       if (gcryptError != 0)
       {
-        return ERRORX_(KEY_DECRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+        char buffer[128];
+
+        gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+        return ERRORX_(KEY_DECRYPT,gcryptError,"%s",gcry_strerror(gcryptError));
       }
 //fprintf(stderr,"%s, %d: sexpEncryptData=%s\n",__FILE__,__LINE__); gcry_sexp_dump(&sexpEncryptData);
 
@@ -2513,9 +2560,11 @@ Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
       gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,privateCryptKey->key);
       if (gcryptError != 0)
       {
-        error = ERRORX_(DECRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+        char buffer[128];
+
+        gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
         gcry_sexp_release(sexpEncryptData);
-        return error;
+        return ERRORX_(DECRYPT,gcryptError,"%s",buffer);
       }
 //fprintf(stderr,"%s, %d: plain data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpData);
 
@@ -2523,10 +2572,9 @@ Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
       data = gcry_sexp_nth_data(sexpData,1,&dataLength);
       if (data == NULL)
       {
-        error = ERRORX_(DECRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
         gcry_sexp_release(sexpData);
         gcry_sexp_release(sexpEncryptData);
-        return error;
+        return ERROR_DECRYPT;
       }
       if (bufferLength != NULL) (*bufferLength) = MIN(dataLength,maxBufferLength);
       memCopyFast(buffer,*bufferLength,data,*bufferLength);
@@ -2734,7 +2782,10 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
     gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptedKeyDataLength,encryptedKeyData);
     if (gcryptError != 0)
     {
-      return ERROR_KEY_DECRYPT_FAIL;
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+      return ERRORX_(KEY_DECRYPT,gcryptError,"%s",buffer);
     }
 //fprintf(stderr,"%s,%d: --- encrypted key data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpEncryptData);
@@ -2743,8 +2794,11 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
     gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,privateKey->key);
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       gcry_sexp_release(sexpEncryptData);
-      return ERROR_KEY_DECRYPT_FAIL;
+      return ERRORX_(KEY_DECRYPT,gcryptError,"%s",buffer);
     }
 //fprintf(stderr,"%s,%d: --- key data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpData);
@@ -2755,7 +2809,7 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
     {
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return ERROR_KEY_ENCRYPT;
     }
     keyData = (const byte*)gcry_sexp_nth_data(sexpData,0,&dataLength);
     if (keyData == NULL)
@@ -2763,7 +2817,7 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
       freeSecure(pkcs1EncodedMessage);
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
-      return ERROR_KEY_DECRYPT_FAIL;
+      return ERROR_KEY_DECRYPT;
     }
 
     // check if key length is valid
@@ -2874,7 +2928,10 @@ Errors Crypt_getSignature(CryptKey *privateKey,
 //    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (hash sha512 %b))",bufferLength,(char*)buffer);
     if (gcryptError != 0)
     {
-      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+      return ERRORX_(KEY_ENCRYPT,gcryptError,"%s",gcry_strerror(gcryptError));
     }
 //fprintf(stderr,"%s, %d: data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpData);
@@ -2883,8 +2940,11 @@ Errors Crypt_getSignature(CryptKey *privateKey,
     gcryptError = gcry_pk_sign(&sexpSignatureData,sexpData,privateKey->key);
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       gcry_sexp_release(sexpData);
-      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+      return ERRORX_(KEY_ENCRYPT,gcryptError,"%s",gcry_strerror(gcryptError));
     }
 //fprintf(stderr,"%s, %d: signature data\n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpSignatureData);
@@ -2895,7 +2955,7 @@ Errors Crypt_getSignature(CryptKey *privateKey,
     {
       gcry_sexp_release(sexpSignatureData);
       gcry_sexp_release(sexpData);
-      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+      return ERROR_KEY_ENCRYPT;
     }
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpToken);
@@ -2904,7 +2964,7 @@ Errors Crypt_getSignature(CryptKey *privateKey,
     {
       gcry_sexp_release(sexpSignatureData);
       gcry_sexp_release(sexpData);
-      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
+      return ERROR_KEY_ENCRYPT;
     }
     (*signatureLength) = MIN(signatureDataLength,maxSignatureLength);
     memCopyFast(signature,(*signatureLength),signatureData,(*signatureLength));
@@ -2965,6 +3025,9 @@ Errors Crypt_verifySignature(CryptKey             *publicKey,
     gcryptError = gcry_sexp_build(&sexpSignatureData,NULL,"(sig-val (rsa (s %b)))",signatureLength,(char*)signature);
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       return ERRORX_(INVALID_SIGNATURE,gcryptError,"%s",gcry_strerror(gcryptError));
     }
 //fprintf(stderr,"%s, %d: signature\n",__FILE__,__LINE__);
@@ -2976,6 +3039,9 @@ Errors Crypt_verifySignature(CryptKey             *publicKey,
 //    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (hash sha512 %b))",bufferLength,(char*)buffer);
     if (gcryptError != 0)
     {
+      char buffer[128];
+
+      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
       gcry_sexp_release(sexpSignatureData);
       return ERRORX_(INVALID_SIGNATURE,gcryptError,"%s",gcry_strerror(gcryptError));
     }
@@ -3062,7 +3128,10 @@ Errors __Crypt_initHash(const char          *__fileName__,
           gcryptError = gcry_md_open(&cryptHash->gcry_md_hd,hashAlgorithm,GCRY_MD_FLAG_SECURE);
           if (gcryptError != 0)
           {
-            return ERROR_INIT_HASH;
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+            return ERRORX_(INIT_HASH,gcryptError,"%s",buffer);
           }
         }
       #else /* not HAVE_GCRYPT */
@@ -3566,14 +3635,20 @@ Errors __Crypt_initMAC(const char         *__fileName__,
           gcryptError = gcry_mac_open(&cryptMAC->gcry_mac_hd,macAlgorithm,GCRY_MAC_FLAG_SECURE,NULL);
           if (gcryptError != 0)
           {
-            return ERROR_INIT_MAC;
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+            return ERRORX_(INIT_MAC,gcryptError,"%s",buffer);
           }
 
           gcryptError = gcry_mac_setkey(cryptMAC->gcry_mac_hd,keyData,keyDataLength);
           if (gcryptError != 0)
           {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
             gcry_mac_close(cryptMAC->gcry_mac_hd);
-            return ERROR_INIT_MAC;
+            return ERRORX_(INIT_MAC,gcryptError,"%s",buffer);
           }
         }
       #else /* not HAVE_GCRYPT */
