@@ -153,13 +153,10 @@ ERROR SSH_AUTHENTICATION
   }
 
 ERROR SSH
+  stringSet(errorText,sizeof(errorText),TR("ssh protocol error"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringSet(errorText,sizeof(errorText),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("ssh protocol error"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
   }
 
 // --- job --------------------------------------------------------------
@@ -255,11 +252,11 @@ ERROR WEBDAV_DOWNLOAD
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR WEBDAV_FAIL
+ERROR WEBDAV
   stringSet(errorText,sizeof(errorText),TR("WebDAV fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
   }
 
 // --- compress ---------------------------------------------------------
@@ -277,20 +274,6 @@ ERROR INIT_DECOMPRESS
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR DEFLATE_FAIL
-  stringSet(errorText,sizeof(errorText),TR("compress fail"));
-  if (!stringIsEmpty(ERROR_DATA))
-  {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
-  }
-
-ERROR INFLATE_FAIL
-  stringSet(errorText,sizeof(errorText),TR("decompress fail"));
-  if (!stringIsEmpty(ERROR_DATA))
-  {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
-  }
-
 ERROR COMPRESS_EOF                     TR("end of compressed file")
 ERROR DELTA_SOURCE_NOT_FOUND
   stringSet(errorText,sizeof(errorText),TR("delta source not found"));
@@ -302,6 +285,20 @@ ERROR DELTA_SOURCE_NOT_FOUND
 ERROR INVALID_COMPRESS_ALGORITHM       TR("invalid compress algorithm")
 ERROR UNKNOWN_COMPRESS_ALGORITHM       TR("unknown compress algorithm")
 ERROR COMPRESS_ALGORITHM_NOT_SUPPORTED TR("compress algorithm not supported")
+
+ERROR DEFLATE
+  stringSet(errorText,sizeof(errorText),TR("compress fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
+
+ERROR INFLATE
+  stringSet(errorText,sizeof(errorText),TR("decompress fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
 
 // --- crypt ------------------------------------------------------------
 ERROR UNSUPPORTED_BLOCK_LENGTH         TR("unsupported block length")
@@ -319,20 +316,6 @@ ERROR CRYPT_PASSWORDS_MISMATCH         TR("encryption passwords mismatch")
 
 ERROR INIT_CIPHER
   stringSet(errorText,sizeof(errorText),TR("initialize cipher fail"));
-  if (!stringIsEmpty(ERROR_DATA))
-  {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
-  }
-
-ERROR ENCRYPT_FAIL
-  stringSet(errorText,sizeof(errorText),TR("encrypt fail"));
-  if (!stringIsEmpty(ERROR_DATA))
-  {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
-  }
-
-ERROR DECRYPT_FAIL
-  stringSet(errorText,sizeof(errorText),TR("decrypt fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -411,14 +394,14 @@ ERROR NOT_A_PRIVATE_SIGNATURE_KEY
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR KEY_ENCRYPT_FAIL
+ERROR KEY_ENCRYPT
   stringSet(errorText,sizeof(errorText),TR("key encryption fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR KEY_DECRYPT_FAIL
+ERROR KEY_DECRYPT
   stringSet(errorText,sizeof(errorText),TR("key decryption fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
@@ -429,6 +412,21 @@ ERROR WRONG_PRIVATE_KEY                TR("wrong private decryption key")
 
 ERROR INVALID_CRYPT_ALGORITHM          TR("invalid encryption algorithm")
 ERROR UNKNOWN_CRYPT_ALGORITHM          TR("unknown encryption algorithm")
+
+ERROR ENCRYPT
+  stringSet(errorText,sizeof(errorText),TR("encrypt fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
+
+ERROR DECRYPT
+  stringSet(errorText,sizeof(errorText),TR("decrypt fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
+
 
 ERROR INIT_HASH                        TR("initialize hash fail")
 ERROR INVALID_HASH_ALGORITHM           TR("invalid hash algorithm")
@@ -467,13 +465,6 @@ ERROR OPEN_FILE
 
 ERROR CREATE_DIRECTORY
   stringSet(errorText,sizeof(errorText),TR("create directory fail"));
-  if (!stringIsEmpty(ERROR_DATA))
-  {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
-  }
-
-ERROR IO
-  stringSet(errorText,sizeof(errorText),TR("i/o error"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -554,6 +545,13 @@ ERROR INIT_FILE_NOTIFY
   }
 
 ERROR INSUFFICIENT_FILE_NOTIFY         TR("insufficient file notify entries")
+
+ERROR IO
+  stringSet(errorText,sizeof(errorText),TR("i/o error"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
 
 // --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND

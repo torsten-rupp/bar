@@ -83,7 +83,7 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
 //fprintf(stderr,"%s, %d: bzlibResult=%d input=%u,%u output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxDataBytes-compressInfo->bzlib.stream.avail_in,maxDataBytes,maxCompressBytes-compressInfo->bzlib.stream.avail_out,maxCompressBytes);
         if (bzlibResult != BZ_RUN_OK)
         {
-          return ERROR_(DEFLATE_FAIL,bzlibResult);
+          return ERROR_(DEFLATE,bzlibResult);
         }
         RingBuffer_decrement(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->bzlib.stream.avail_in
@@ -120,7 +120,7 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
         }
         else if (bzlibResult != BZ_FINISH_OK)
         {
-          return ERROR_(DEFLATE_FAIL,bzlibResult);
+          return ERROR_(DEFLATE,bzlibResult);
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->bzlib.stream.avail_out
@@ -173,7 +173,7 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
         }
         else if (bzlibResult != BZ_OK)
         {
-          return ERROR_(INFLATE_FAIL,bzlibResult);
+          return ERROR_(INFLATE,bzlibResult);
         }
         RingBuffer_decrement(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->bzlib.stream.avail_in
@@ -213,7 +213,7 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
         }
         else if (bzlibResult != BZ_RUN_OK)
         {
-          return ERROR_(INFLATE_FAIL,bzlibResult);
+          return ERROR_(INFLATE,bzlibResult);
         }
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->bzlib.stream.avail_out
@@ -317,7 +317,7 @@ LOCAL Errors CompressBZ2_reset(CompressInfo *compressInfo)
       bzlibResult = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
       if (bzlibResult != BZ_OK)
       {
-        return ERROR_(DEFLATE_FAIL,bzlibResult);
+        return ERROR_(DEFLATE,bzlibResult);
       }
       break;
     case COMPRESS_MODE_INFLATE:
@@ -325,7 +325,7 @@ LOCAL Errors CompressBZ2_reset(CompressInfo *compressInfo)
       bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
       if (bzlibResult != BZ_OK)
       {
-        return ERROR_(INFLATE_FAIL,bzlibResult);
+        return ERROR_(INFLATE,bzlibResult);
       }
       break;
     #ifndef NDEBUG

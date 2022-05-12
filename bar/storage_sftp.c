@@ -184,37 +184,39 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
                             (char*)buffer,
                             bufferSize
                            );
-      if (n >= 0)
+      if      (n == 0)
       {
-        (*bytesRead) = (ulong)n;
-        error        = ERROR_NONE;
+        // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
+        if (!waitSSHSessionSocket(socketHandle))
+        {
+          error = ERROR_NETWORK_SEND;
+        }
       }
-      else
+      else if (n == LIBSSH2_ERROR_EAGAIN)
       {
-        if      ((n == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_READ_RETRIES))
-        {
-          Misc_udelay(100LL*US_PER_MS);
-          retries++;
-        }
-        else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
-        }
-        else
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,n,"%s",sshErrorText);
-        }
+        Misc_udelay(100LL*US_PER_MS);
       }
     }
-    while (   (error == ERROR_UNKNOWN)
-           && (retries < MAX_READ_RETRIES)
-          );
+    while (n == LIBSSH2_ERROR_EAGAIN);
+    if      (n >= 0)
+    {
+      (*bytesRead) = (ulong)n;
+      error        = ERROR_NONE;
+    }
+    else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
+    {
+      char *sshErrorText;
+
+      libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
+    }
+    else
+    {
+      char *sshErrorText;
+
+      libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(IO,n,"%s",sshErrorText);
+    }
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
@@ -272,46 +274,39 @@ LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
                              buffer,
                              length
                             );
-      if (n > 0)
-      {
-        (*bytesWritten) = (ulong) n;
-        error           = ERROR_NONE;
-      }
-      else if (n == 0)
+      if      (n == 0)
       {
         // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
         if (!waitSSHSessionSocket(socketHandle))
         {
           error = ERROR_NETWORK_SEND;
-          break;
         }
       }
-      else
+      else if (n == LIBSSH2_ERROR_EAGAIN)
       {
-        if      ((n == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_WRITE_RETRIES))
-        {
-          Misc_udelay(RETRY_DELAY*US_PER_MS);
-          retries++;
-        }
-        else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
-        }
-        else
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,n,"%s",sshErrorText);
-        }
+        Misc_udelay(100LL*US_PER_MS);
       }
     }
-    while (   (error == ERROR_UNKNOWN)
-           && (retries < MAX_WRITE_RETRIES)
-          );
+    while (n == LIBSSH2_ERROR_EAGAIN);
+    if      (n > 0)
+    {
+      (*bytesWritten) = (ulong) n;
+      error           = ERROR_NONE;
+    }
+    else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
+    {
+      char *sshErrorText;
+
+      libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
+    }
+    else
+    {
+      char *sshErrorText;
+
+      libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+      error = ERRORX_(IO,n,"%s",sshErrorText);
+    }
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
@@ -345,6 +340,7 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
 {
   Errors       error;
   #ifdef HAVE_SSH2
+    int                     errorCode;
     uint                    retries;
     LIBSSH2_SFTP            *sftp;
     LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
@@ -354,20 +350,31 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
   assert(fileName != NULL);
 
   #ifdef HAVE_SSH2
-    error   = ERROR_UNKNOWN;
-    retries = 0;
+    // init SFTP session
+    errorCode = 0;
     do
     {
-      // init session
       sftp = libssh2_sftp_init(Network_getSSHSession(socketHandle));
-      if (sftp != NULL)
+      if (sftp == NULL)
       {
-        // get file info
-        if (libssh2_sftp_lstat(sftp,
-                               String_cString(fileName),
-                               &sftpAttributes
-                              ) == 0
-           )
+        errorCode = libssh2_session_last_errno(Network_getSSHSession(socketHandle));
+        if (errorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((sftp == NULL) && (errorCode == LIBSSH2_ERROR_EAGAIN));
+
+    if (sftp != NULL)
+    {
+      // get file info
+      error   = ERROR_UNKNOWN;
+      retries = 0;
+      do
+      {
+        errorCode = libssh2_sftp_lstat(sftp,
+                                       String_cString(fileName),
+                                       &sftpAttributes
+                                      );
+        if      (errorCode == 0)
         {
           if (fileInfo != NULL)
           {
@@ -389,49 +396,48 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
 
           error = ERROR_NONE;
         }
+        else if ((errorCode == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_LSTATE_RETRIES))
+        {
+          Misc_udelay(500LL*US_PER_MS);
+          retries++;
+        }
         else
         {
           char *sshErrorText;
 
           libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(SSH,
+          error = ERRORX_(IO,
                           libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
                           "%s",
                           sshErrorText
                          );
         }
+      }
+      while (error == ERROR_UNKNOWN);
 
-        libssh2_sftp_shutdown(sftp);
+      libssh2_sftp_shutdown(sftp);
+    }
+    else
+    {
+      if (errorCode == LIBSSH2_ERROR_SFTP_PROTOCOL)
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
       }
       else
       {
-        ssize_t errorCode;
+        char *sshErrorText;
 
-        errorCode = libssh2_session_last_errno(Network_getSSHSession(socketHandle));
-        if      ((errorCode == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_LSTATE_RETRIES))
-        {
-          Misc_udelay(RETRY_DELAY*US_PER_MS);
-          retries++;
-        }
-        else if (errorCode == LIBSSH2_ERROR_SFTP_PROTOCOL)
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
-        }
-        else
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,errorCode,"%s",sshErrorText);
-        }
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,
+                        libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
+                        "%s",
+                        sshErrorText
+                       );
       }
     }
-    while (   (error == ERROR_UNKNOWN)
-           && (retries < MAX_LSTATE_RETRIES)
-          );
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
@@ -460,6 +466,7 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
 {
   Errors       error;
   #ifdef HAVE_SSH2
+    int          errorCode;
     uint         retries;
     LIBSSH2_SFTP *sftp;
   #endif /* HAVE_SSH2 */
@@ -468,68 +475,78 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
   assert(directoryName != NULL);
 
   #ifdef HAVE_SSH2
-    error   = ERROR_UNKNOWN;
-    retries = 0;
+    // init SFTP session
+    errorCode = 0;
     do
     {
-      // init session
       sftp = libssh2_sftp_init(Network_getSSHSession(socketHandle));
-      if (sftp != NULL)
+      if (sftp == NULL)
       {
-        // create directory
-        if (libssh2_sftp_mkdir(sftp,
-                               String_cString(directoryName),
-                                LIBSSH2_SFTP_S_IRWXU
-                               |LIBSSH2_SFTP_S_IRGRP|LIBSSH2_SFTP_S_IXGRP
-                               |LIBSSH2_SFTP_S_IROTH|LIBSSH2_SFTP_S_IXOTH
-                              ) == 0
-           )
+        errorCode = libssh2_session_last_errno(Network_getSSHSession(socketHandle));
+        if (errorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((sftp == NULL) && (errorCode == LIBSSH2_ERROR_EAGAIN));
+
+    if (sftp != NULL)
+    {
+      // create directory
+      error   = ERROR_UNKNOWN;
+      retries = 0;
+      do
+      {
+        errorCode = libssh2_sftp_mkdir(sftp,
+                                       String_cString(directoryName),
+                                        LIBSSH2_SFTP_S_IRWXU
+                                       |LIBSSH2_SFTP_S_IRGRP|LIBSSH2_SFTP_S_IXGRP
+                                       |LIBSSH2_SFTP_S_IROTH|LIBSSH2_SFTP_S_IXOTH
+                                      );
+        if      (errorCode == 0)
         {
           error = ERROR_NONE;
         }
+        else if ((errorCode == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_MKDIR_RETRIES))
+        {
+          Misc_udelay(500LL*US_PER_MS);
+          retries++;
+        }
         else
         {
-           char *sshErrorText;
+          char *sshErrorText;
 
-           libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-           error = ERRORX_(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
-                           "%s",
-                           sshErrorText
-                          );
+          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+          error = ERRORX_(IO,
+                          libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
+                          "%s",
+                          sshErrorText
+                         );
         }
+      }
+      while (error == ERROR_UNKNOWN);
 
-        libssh2_sftp_shutdown(sftp);
+      libssh2_sftp_shutdown(sftp);
+    }
+    else
+    {
+      if (errorCode == LIBSSH2_ERROR_SFTP_PROTOCOL)
+      {
+        char *sshErrorText;
+
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
       }
       else
       {
-        ssize_t errorCode;
+        char *sshErrorText;
 
-        errorCode = libssh2_session_last_errno(Network_getSSHSession(socketHandle));
-        if      ((errorCode == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_LSTATE_RETRIES))
-        {
-          Misc_udelay(RETRY_DELAY*US_PER_MS);
-          retries++;
-        }
-        else if (errorCode == LIBSSH2_ERROR_SFTP_PROTOCOL)
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
-        }
-        else
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,errorCode,"%s",sshErrorText);
-        }
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,
+                        libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
+                        "%s",
+                        sshErrorText
+                       );
       }
     }
-    while (   (error == ERROR_UNKNOWN)
-           && (retries < MAX_LSTATE_RETRIES)
-          );
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
@@ -558,6 +575,7 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
 {
   Errors       error;
   #ifdef HAVE_SSH2
+    int          errorCode;
     uint         retries;
     LIBSSH2_SFTP *sftp;
   #endif /* HAVE_SSH2 */
@@ -566,65 +584,73 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
   assert(fileName != NULL);
 
   #ifdef HAVE_SSH2
-    error   = ERROR_UNKNOWN;
-    retries = 0;
+    // init SFTP session
+    errorCode = 0;
     do
     {
-      // init session
       sftp = libssh2_sftp_init(Network_getSSHSession(socketHandle));
-      if (sftp != NULL)
+      if (sftp == NULL)
       {
-        // delete file
-        if (libssh2_sftp_unlink(sftp,
-                                String_cString(fileName)
-                               ) == 0
-           )
+        errorCode = libssh2_session_last_errno(Network_getSSHSession(socketHandle));
+        if (errorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((sftp == NULL) && (errorCode == LIBSSH2_ERROR_EAGAIN));
+
+    if (sftp != NULL)
+    {
+      // delete file
+      error   = ERROR_UNKNOWN;
+      retries = 0;
+      do
+      {
+        errorCode = libssh2_sftp_unlink(sftp,
+                                        String_cString(fileName)
+                                       );
+        if      (errorCode == 0)
         {
           error = ERROR_NONE;
         }
+        else if ((errorCode == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_UNLINK_RETRIES))
+        {
+          Misc_udelay(500LL*US_PER_MS);
+          retries++;
+        }
         else
         {
-           char *sshErrorText;
+          char *sshErrorText;
 
-           libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-           error = ERRORX_(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
-                           "%s",
-                           sshErrorText
-                          );
+          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+          error = ERRORX_(IO,
+                          libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
+                          "%s",
+                          sshErrorText
+                         );
         }
+      }
+      while (error == ERROR_UNKNOWN);
+    }
+    else
+    {
+      if (errorCode == LIBSSH2_ERROR_SFTP_PROTOCOL)
+      {
+        char *sshErrorText;
 
-        libssh2_sftp_shutdown(sftp);
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
       }
       else
       {
-        ssize_t errorCode;
+        char *sshErrorText;
 
-        errorCode = libssh2_session_last_errno(Network_getSSHSession(socketHandle));
-        if      ((errorCode == LIBSSH2_ERROR_EAGAIN) && (retries < MAX_LSTATE_RETRIES))
-        {
-          Misc_udelay(RETRY_DELAY*US_PER_MS);
-          retries++;
-        }
-        else if (errorCode == LIBSSH2_ERROR_SFTP_PROTOCOL)
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",sshErrorText);
-        }
-        else
-        {
-          char *sshErrorText;
-
-          libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
-          error = ERRORX_(IO,errorCode,"%s",sshErrorText);
-        }
+        libssh2_session_last_error(Network_getSSHSession(socketHandle),&sshErrorText,NULL,0);
+        error = ERRORX_(IO,
+                        libssh2_session_last_errno(Network_getSSHSession(socketHandle)),
+                        "%s",
+                        sshErrorText
+                       );
       }
     }
-    while (   (error == ERROR_UNKNOWN)
-           && (retries < MAX_LSTATE_RETRIES)
-          );
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
@@ -1353,6 +1379,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
 {
   #ifdef HAVE_SSH2
     Errors                  error;
+    int                     errorCode;
     String                  directoryName;
     LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
   #endif /* HAVE_SSH2 */
@@ -1415,8 +1442,18 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
 
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
 
-    // init session
-    storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+    // init SFTP session
+    errorCode = 0;
+    do
+    {
+      storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+      if (storageHandle->sftp.sftp == NULL)
+      {
+        errorCode = libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+        if (errorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((storageHandle->sftp.sftp == NULL) && (errorCode == LIBSSH2_ERROR_EAGAIN));
     if (storageHandle->sftp.sftp == NULL)
     {
       char *sshErrorText;
@@ -1510,6 +1547,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
 {
   #ifdef HAVE_SSH2
     Errors                  error;
+    int                     errorCode;
     LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
   #endif /* HAVE_SSH2 */
 
@@ -1566,8 +1604,18 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
 
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
 
-    // init session
-    storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+    // init SFTP session
+    errorCode = 0;
+    do
+    {
+      storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+      if (storageHandle->sftp.sftp == NULL)
+      {
+        errorCode = libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+        if (errorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((storageHandle->sftp.sftp == NULL) && (errorCode == LIBSSH2_ERROR_EAGAIN));
     if (storageHandle->sftp.sftp == NULL)
     {
       error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)));
@@ -2250,6 +2298,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   #ifdef HAVE_SSH2
     AutoFreeList autoFreeList;
     Errors       error;
+    int          errorCode;
     SSHServer    sshServer;
     uint         retries;
   #endif /* HAVE_SSH2 */
@@ -2402,7 +2451,17 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.socketHandle,{ Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle); });
 
     // init SFTP session
-    storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
+    errorCode = 0;
+    do
+    {
+      storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
+      if (storageDirectoryListHandle->sftp.sftp == NULL)
+      {
+        errorCode = libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
+        if (errorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((storageDirectoryListHandle->sftp.sftp == NULL) && (errorCode == LIBSSH2_ERROR_EAGAIN));
     if (storageDirectoryListHandle->sftp.sftp == NULL)
     {
       error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));

@@ -665,7 +665,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
           #endif /* LZ4_DEBUG */
           if ((compressLength <= 0) || ((4+compressLength) >= compressInfo->lz4.inputBufferSize))
           {
-            return ERRORX_(INFLATE_FAIL,0,"invalid data size");
+            return ERRORX_(INFLATE,0,"invalid data size");
           }
 
           if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+compressLength)) // enough compress data available
@@ -680,7 +680,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                                           );
             if (lz4Result != LZ4_OK)
             {
-              return ERROR_(INFLATE_FAIL,lz4Result);
+              return ERROR_(INFLATE,lz4Result);
             }
             assert(length <= compressInfo->lz4.outputBufferSize);
 
@@ -710,7 +710,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
           length = (uint)(compressLengthFlags & LZ4_LENGTH_MASK);
           if ((length <= 0) || ((4+length) > compressInfo->lz4.inputBufferSize))
           {
-            return ERRORX_(INFLATE_FAIL,0,"invalid data size");
+            return ERRORX_(INFLATE,0,"invalid data size");
           }
 
           if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+length)) // enough data available
@@ -808,7 +808,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
               compressLength = (uint)(compressLengthFlags & LZ4_LENGTH_MASK);
               if ((compressLength <= 0) || ((4+compressLength) >= compressInfo->lz4.inputBufferSize))
               {
-                return ERRORX_(INFLATE_FAIL,0,"invalid data size");
+                return ERRORX_(INFLATE,0,"invalid data size");
               }
 
               if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+compressLength))
@@ -823,7 +823,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                                               );
                 if (lz4Result != LZ4_OK)
                 {
-                  return ERROR_DEFLATE_FAIL;
+                  return ERROR_DEFLATE;
                 }
                 assert(length <= compressInfo->lz4.outputBufferSize);
 
@@ -853,7 +853,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
               length = (uint)(compressLengthFlags & LZ4_LENGTH_MASK);
               if ((length <= 0) || ((4+length) > compressInfo->lz4.inputBufferSize))
               {
-                return ERRORX_(INFLATE_FAIL,0,"invalid data size");
+                return ERRORX_(INFLATE,0,"invalid data size");
               }
 
               if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+length))

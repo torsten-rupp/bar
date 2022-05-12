@@ -86,7 +86,7 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
 //fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if (ZSTD_isError(zstdResult))
         {
-          return ERRORX_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
+          return ERRORX_(DEFLATE,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_decrement(&compressInfo->dataRingBuffer,
                              compressInfo->zstd.inBuffer.pos
@@ -125,7 +125,7 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         }
         else if (ZSTD_isError(zstdResult))
         {
-          return ERRORX_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
+          return ERRORX_(DEFLATE,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              compressInfo->zstd.outBuffer.pos
@@ -184,7 +184,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         }
         else if (ZSTD_isError(zstdResult))
         {
-          return ERRORX_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
+          return ERRORX_(INFLATE,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_decrement(&compressInfo->compressRingBuffer,
                              compressInfo->zstd.inBuffer.pos
@@ -225,7 +225,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         }
         else if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
         {
-          return ERRORX_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
+          return ERRORX_(INFLATE,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              compressInfo->zstd.outBuffer.pos
@@ -354,18 +354,18 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
         zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
         if (ZSTD_isError(zstdResult))
         {
-          return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
+          return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
         }
         zstdResult = ZSTD_CCtx_setPledgedSrcSize(compressInfo->zstd.cStream,ZSTD_CONTENTSIZE_UNKNOWN);
         if (ZSTD_isError(zstdResult))
         {
-          return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
+          return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
         }
       #else /* not HAVE_ZSTD_CCTX_RESET */
         zstdResult = ZSTD_resetCStream(compressInfo->zstd.cStream,0);
       if (ZSTD_isError(zstdResult))
       {
-        return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
+        return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
       }
       #endif /* HAVE_ZSTD_CCTX_RESET */
       break;
@@ -377,7 +377,7 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
       #endif /* HAVE_ZSTD_CCTX_RESET */
       if (ZSTD_isError(zstdResult))
       {
-        return ERROR_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
+        return ERROR_(INFLATE,ZSTD_getErrorCode(zstdResult));
       }
       break;
     #ifndef NDEBUG

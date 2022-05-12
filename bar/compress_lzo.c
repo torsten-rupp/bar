@@ -62,7 +62,7 @@ LOCAL uint lzoblockCount = 0;
 #endif
 
 /***********************************************************************\
-* Name   : getLZOErrorText
+* Name   : CompressLZO_getErrorText
 * Purpose: get error text for LZO error code
 * Input  : errorCode - LZO error code
 * Output : -
@@ -70,7 +70,7 @@ LOCAL uint lzoblockCount = 0;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getLZOErrorText(int errorCode)
+LOCAL const char *CompressLZO_getErrorText(int errorCode)
 {
   const char *errorText;
 
@@ -186,7 +186,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                                                        );
           if (lzoError != LZO_E_OK)
           {
-            return ERRORX_(DEFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
+            return ERRORX_(DEFLATE,lzoError,"%s",CompressLZO_getErrorText(lzoError));
           }
         #else /* LZO_DEBUG_DISABLE_COMPRESS */
           compressLength = 0;
@@ -286,7 +286,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                                                        );
           if (lzoError != LZO_E_OK)
           {
-            return ERRORX_(DEFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
+            return ERRORX_(DEFLATE,lzoError,"%s",CompressLZO_getErrorText(lzoError));
           }
         #else /* LZO_DEBUG_DISABLE_COMPRESS */
           compressLength = 0;
@@ -459,7 +459,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
           compressLength = (lzo_uint)(compressLengthFlags & LZO_LENGTH_MASK);
           if ((compressLength <= 0) || ((uint)(4+compressLength) >= compressInfo->lzo.bufferSize))
           {
-            return ERRORX_(INFLATE_FAIL,0,"invalid compressed data size");
+            return ERRORX_(INFLATE,0,"invalid compressed data size");
           }
 
           if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (uint)(4+compressLength)) // enough compress data available
@@ -474,7 +474,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                                                            );
             if (lzoError != LZO_E_OK)
             {
-              return ERRORX_(INFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
+              return ERRORX_(INFLATE,lzoError,"%s",CompressLZO_getErrorText(lzoError));
             }
             assert(length <= compressInfo->lzo.bufferSize);
 
@@ -504,7 +504,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
           length = (lzo_uint)(compressLengthFlags & LZO_LENGTH_MASK);
           if ((length <= 0) || ((uint)(4+length) >= compressInfo->lzo.bufferSize))
           {
-            return ERRORX_(INFLATE_FAIL,0,"invalid decompressed data size");
+            return ERRORX_(INFLATE,0,"invalid decompressed data size");
           }
 
           if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (uint)(4+length)) // enough data available
@@ -597,7 +597,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
               compressLength = (lzo_uint)(compressLengthFlags & LZO_LENGTH_MASK);
               if ((compressLength <= 0) || ((uint)(4+compressLength) >= compressInfo->lzo.bufferSize))
               {
-                return ERRORX_(INFLATE_FAIL,0,"invalid compressed data size");
+                return ERRORX_(INFLATE,0,"invalid compressed data size");
               }
 
               if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (uint)(4+compressLength))
@@ -612,7 +612,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                                                                );
                 if (lzoError != LZO_E_OK)
                 {
-                  return ERRORX_(INFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
+                  return ERRORX_(INFLATE,lzoError,"%s",CompressLZO_getErrorText(lzoError));
                 }
                 assert(length <= compressInfo->lzo.bufferSize);
 
@@ -642,7 +642,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
               length = (lzo_uint)(compressLengthFlags & LZO_LENGTH_MASK);
               if ((length <= 0) || ((uint)(4+length) >= compressInfo->lzo.bufferSize))
               {
-                return ERRORX_(INFLATE_FAIL,0,"invalid decompressed data size");
+                return ERRORX_(INFLATE,0,"invalid decompressed data size");
               }
 
               if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (uint)(4+length))

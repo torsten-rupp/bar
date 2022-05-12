@@ -198,7 +198,7 @@ xxx                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
               break;
             default:
-              return ERRORX_(DEFLATE_FAIL,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+              return ERRORX_(DEFLATE,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
               break;
           }
         }
@@ -339,7 +339,7 @@ xxx                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
               break;
             default:
-              return ERRORX_(DEFLATE_FAIL,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+              return ERRORX_(DEFLATE,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
               break;
           }
         }
@@ -526,7 +526,7 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
               #endif /* XDELTA_DEBUG */
               break;
             default:
-              return ERRORX_(INFLATE_FAIL,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+              return ERRORX_(INFLATE,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
               break;
           }
         }
@@ -643,7 +643,7 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
               #endif /* XDELTA_DEBUG */
               break;
             default:
-              return ERRORX_(INFLATE_FAIL,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+              return ERRORX_(INFLATE,xdeltaResult,"%s",xd3_errstring(&compressInfo->xdelta.stream));
               break;
           }
         }
@@ -794,10 +794,10 @@ LOCAL Errors CompressXD3_reset(CompressInfo *compressInfo)
     switch (compressInfo->compressMode)
     {
       case COMPRESS_MODE_DEFLATE:
-        return ERRORX_(DEFLATE_FAIL,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+        return ERRORX_(DEFLATE,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
         break;
       case COMPRESS_MODE_INFLATE:
-        return ERRORX_(INFLATE_FAIL,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+        return ERRORX_(INFLATE,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
         break;
       #ifndef NDEBUG
         default:
@@ -818,10 +818,10 @@ LOCAL Errors CompressXD3_reset(CompressInfo *compressInfo)
     switch (compressInfo->compressMode)
     {
       case COMPRESS_MODE_DEFLATE:
-        return ERRORX_(DEFLATE_FAIL,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+        return ERRORX_(DEFLATE,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
         break;
       case COMPRESS_MODE_INFLATE:
-        return ERRORX_(INFLATE_FAIL,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
+        return ERRORX_(INFLATE,0,"%s",xd3_errstring(&compressInfo->xdelta.stream));
         break;
       #ifndef NDEBUG
         default:

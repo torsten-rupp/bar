@@ -506,7 +506,7 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
 *                                      maintenance time function
 * Output : -
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : Index_init must be called single-threaded _once_
 \***********************************************************************/
 
 Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
