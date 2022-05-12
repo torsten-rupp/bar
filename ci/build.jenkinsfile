@@ -96,7 +96,7 @@ def build()
       script
       {
         if (   params.TESTS
-            || (env.BRANCH_NAME == "master")
+//            || (env.BRANCH_NAME == "master")
            )
         {
           switch (params.TEST_TYPE)
@@ -129,7 +129,7 @@ def build()
       script
       {
         if (   params.CODE_COVERAGE
-            || (env.BRANCH_NAME == "master")
+//            || (env.BRANCH_NAME == "master")
            )
         {
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
@@ -167,7 +167,7 @@ def build()
       script
       {
         if (   params.PROFILING
-            || (env.BRANCH_NAME == "master")
+//            || (env.BRANCH_NAME == "master")
            )
         {
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
