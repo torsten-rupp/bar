@@ -8498,7 +8498,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          DatabaseId storageId;
 
                          assert(values != NULL);
-                         assert(valueCount == 2);
+                         assert(valueCount == 1);
 
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
