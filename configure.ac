@@ -1405,6 +1405,10 @@ if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
 
+AC_PATH_PROGS(SQLITE3,sqlite3)
+if test -z "$SQLITE3"; then
+  AC_MSG_ERROR([Cannot find a 'sqlite3' in PATH. Please check your PATH environment variable.])
+fi
 if test $ENABLE_MARIADB = "yes"; then
   AC_PATH_PROGS(MYSQL,mysql)
   if test -z "$MYSQL"; then
