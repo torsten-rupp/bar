@@ -1015,6 +1015,7 @@ TEST_FILES_INTERMEDIATE = \
   $(INTERMEDIATE_DIR)/dev0 \
   $(INTERMEDIATE_DIR)/dev1 \
   $(INTERMEDIATE_DIR)/index.db \
+  $(INTERMEDIATE_DIR)/import.db \
   $(INTERMEDIATE_DIR)/output.txt \
   $(INTERMEDIATE_DIR)/master/jobs/* \
   $(INTERMEDIATE_DIR)/slave/jobs/* \
@@ -1991,6 +1992,7 @@ test13 test_index: \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             TEST_INDEX_DATABASE=$$testIndexDatabase \
+            TEST_INDEX_DATABASE_IMPORT=archives/index.sql \
             test_index_operations \
             ; \
           rc=$$?; \
@@ -5379,12 +5381,14 @@ test_index_operations_tool: \
 	# bar-index operations
 	@$(call functionInfoHeader,test index tool operations)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
+	@$(call functionVerifyParameter,TEST_INDEX_DATABASE_IMPORT)
 	@#
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c $(INTERMEDIATE_DIR)/test0.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c $(INTERMEDIATE_DIR)/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
+	$(SQLITE3) $(INTERMEDIATE_DIR)/import.db < $(TEST_INDEX_DATABASE_IMPORT)
 	@#
 	# options
 	$(TEST_BAR_INDEX) -h 1>/dev/null $(LOG)
@@ -5398,6 +5402,7 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-indizes $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-aggregates $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --check $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(INTERMEDIATE_DIR)/import.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
@@ -5687,7 +5692,7 @@ test_index_operations_server: \
 	@#
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
-	for i in 1 2 3 4 6; do \
+	for i in 1 2 3 4 6 7; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql" $(LOG); \
           $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) - < $(UP_DIR)/archive/index$$i.sql; \
           ( \

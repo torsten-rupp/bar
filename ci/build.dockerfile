@@ -34,6 +34,7 @@ RUN apt-get -y install \
   psmisc \
   rsync \
   rsyslog \
+  sqlite3 \
   subversion \
   sudo \
   tar \
