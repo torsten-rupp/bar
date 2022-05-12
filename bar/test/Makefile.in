@@ -176,92 +176,92 @@ COMMA := ,
 QUIET ?=
 
 # supported compress algorithms
-ifeq ($(MIN_COMPRESS_NAMES),)
-  MIN_COMPRESS_NAMES = none
-  MIN_COMPRESS_NAMES += zip1
+ifeq ($(MIN_TEST_COMPRESS_NAMES),)
+  MIN_TEST_COMPRESS_NAMES = none
+  MIN_TEST_COMPRESS_NAMES += zip1
   ifeq (@HAVE_BZ2@,1)
-    MIN_COMPRESS_NAMES += bzip1
+    MIN_TEST_COMPRESS_NAMES += bzip1
   endif
   ifeq (@HAVE_LZMA@,1)
-    MIN_COMPRESS_NAMES += lzma1
+    MIN_TEST_COMPRESS_NAMES += lzma1
   endif
   ifeq (@HAVE_LZO@,1)
-    MIN_COMPRESS_NAMES += lzo1
+    MIN_TEST_COMPRESS_NAMES += lzo1
   endif
   ifeq (@HAVE_LZ4@,1)
-    MIN_COMPRESS_NAMES += lz4-1
+    MIN_TEST_COMPRESS_NAMES += lz4-1
   endif
   ifeq (@HAVE_ZSTD@,1)
-    MIN_COMPRESS_NAMES += zstd1
+    MIN_TEST_COMPRESS_NAMES += zstd1
   endif
 endif
-ifeq ($(COMPRESS_NAMES),)
-  COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
-  ifeq ($(COMPRESS_NAMES_BZIP),)
+ifeq ($(TEST_COMPRESS_NAMES),)
+  TEST_COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
+  ifeq ($(TEST_COMPRESS_NAMES_BZIP),)
     ifeq (@HAVE_BZ2@,1)
-      COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
+      TEST_COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_BZIP)
+    TEST_COMPRESS_NAMES += $(TEST_COMPRESS_NAMES_BZIP)
   endif
-  ifeq ($(COMPRESS_NAMES_LZMA),)
+  ifeq ($(TEST_COMPRESS_NAMES_LZMA),)
     ifeq (@HAVE_LZMA@,1)
-      COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
+      TEST_COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZMA)
+    TEST_COMPRESS_NAMES += $(TEST_COMPRESS_NAMES_LZMA)
   endif
-  ifeq ($(COMPRESS_NAMES_LZO),)
+  ifeq ($(TEST_COMPRESS_NAMES_LZO),)
     ifeq (@HAVE_LZO@,1)
-      COMPRESS_NAMES += lzo1 lzo2 lzo3 lzo4 lzo5
+      TEST_COMPRESS_NAMES += lzo1 lzo2 lzo3 lzo4 lzo5
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO)
+    TEST_COMPRESS_NAMES += $(TEST_COMPRESS_NAMES_LZO)
   endif
-  ifeq ($(COMPRESS_NAMES_LZ4),)
+  ifeq ($(TEST_COMPRESS_NAMES_LZ4),)
     ifeq (@HAVE_LZ4@,1)
-      COMPRESS_NAMES += lz4-0 lz4-1 lz4-9
+      TEST_COMPRESS_NAMES += lz4-0 lz4-1 lz4-9
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4)
+    TEST_COMPRESS_NAMES += $(TEST_COMPRESS_NAMES_LZ4)
   endif
-  ifeq ($(COMPRESS_NAMES_ZSTD),)
+  ifeq ($(TEST_COMPRESS_NAMES_ZSTD),)
     ifeq (@HAVE_ZSTD@,1)
-      COMPRESS_NAMES += zstd0 zstd9 zstd19
+      TEST_COMPRESS_NAMES += zstd0 zstd9 zstd19
     endif
   else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD)
+    TEST_COMPRESS_NAMES += $(TEST_COMPRESS_NAMES_ZSTD)
   endif
 endif
 
-ifeq ($(COMPRESS_NAMES_HUGE),)
-  COMPRESS_NAMES_HUGE = none zip9
+ifeq ($(TEST_COMPRESS_NAMES_HUGE),)
+  TEST_COMPRESS_NAMES_HUGE = none zip9
   ifeq (@HAVE_LZMA@,1)
-    COMPRESS_NAMES_HUGE += lzma9
+    TEST_COMPRESS_NAMES_HUGE += lzma9
   endif
   ifeq (@HAVE_LZO@,1)
-    COMPRESS_NAMES_HUGE += lzo5
+    TEST_COMPRESS_NAMES_HUGE += lzo5
   endif
   ifeq (@HAVE_LZ4@,1)
-    COMPRESS_NAMES_HUGE += lz4-16
+    TEST_COMPRESS_NAMES_HUGE += lz4-16
   endif
 endif
 
 # image compress algorithms
-IMAGE_COMPRESS_NAMES ?= none zip9
+IMAGE_TEST_COMPRESS_NAMES ?= none zip9
 
 ifeq ($(IMAGE_FILESYSTEM_NAMES),)
   IMAGE_FILESYSTEM_NAMES = raw ext fat reiser
 endif
 
 # supported crypt algorithms
-MIN_CRYPT_NAMES  = none
+MIN_TEST_CRYPT_NAMES = none
 ifeq (@HAVE_GCRYPT@,1)
-  MIN_CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
+  MIN_TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
 endif
-CRYPT_NAMES  = none
+TEST_CRYPT_NAMES = none
 ifeq (@HAVE_GCRYPT@,1)
-  CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
+  TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
 endif
 
 # additional options
@@ -398,34 +398,35 @@ TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIAD
 TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
 TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
 
+# supported databases
 TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MARIADB) $(TEST_INDEX_DATABASE_POSTGRESQL)
 MIN_TEST_INDEX_DATABASES         ?= $(TEST_INDEX_DATABASE_SQLITE)
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
-ifeq ($(COMBINED_COMPRESS_NAMES),)
-  COMBINED_COMPRESS_NAMES = none
-  COMBINED_COMPRESS_NAMES += zip9
+ifeq ($(COMBINED_TEST_COMPRESS_NAMES),)
+  COMBINED_TEST_COMPRESS_NAMES = none
+  COMBINED_TEST_COMPRESS_NAMES += zip9
   ifeq (@HAVE_BZ2@,1)
-    COMBINED_COMPRESS_NAMES += bzip9
+    COMBINED_TEST_COMPRESS_NAMES += bzip9
   endif
   ifeq (@HAVE_LZMA@,1)
-    COMBINED_COMPRESS_NAMES += lzma9
+    COMBINED_TEST_COMPRESS_NAMES += lzma9
   endif
   ifeq (@HAVE_LZO@,1)
-    COMBINED_COMPRESS_NAMES += lzo5
+    COMBINED_TEST_COMPRESS_NAMES += lzo5
   endif
   ifeq (@HAVE_LZ4@,1)
-    COMBINED_COMPRESS_NAMES += lz4-9
+    COMBINED_TEST_COMPRESS_NAMES += lz4-9
   endif
   ifeq (@HAVE_ZSTD@,1)
-    COMBINED_COMPRESS_NAMES += zstd19
+    COMBINED_TEST_COMPRESS_NAMES += zstd19
   endif
 endif
-ifeq ($(COMBINED_CRYPT_NAMES),)
-  COMBINED_CRYPT_NAMES = none
+ifeq ($(COMBINED_TEST_CRYPT_NAMES),)
+  COMBINED_TEST_CRYPT_NAMES = none
   ifeq (@HAVE_GCRYPT@,1)
-    COMBINED_CRYPT_NAMES += AES256
+    COMBINED_TEST_CRYPT_NAMES += AES256
   endif
 endif
 
@@ -564,7 +565,7 @@ help_output:
 	@$(ECHO) "  TEST_BASE_DIR=<test base directory>"
 	@$(ECHO) "  TEST_DATA_DIR=<test data directory>"
 	@$(ECHO) ""
-	@$(ECHO) "  COMPRESS_NAMES"
+	@$(ECHO) "  TEST_COMPRESS_NAMES"
         ifeq (@HAVE_BZ2@,1)
 	@$(ECHO) "    bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9"
         endif
@@ -580,9 +581,17 @@ help_output:
         ifeq (@HAVE_ZSTD@,1)
 	@$(ECHO) "    zstd0 zstd1 zstd2 zstd3 zstd4 zstd5 zstd6 zstd7 zstd8 zstd9 zstd10 zstd11 zstd12 zstd13 zstd14 zstd15 zstd16 zstd17 zstd18 zstd19"
         endif
-	@$(ECHO) "  CRYPT_NAMES"
+	@$(ECHO) "  TEST_CRYPT_NAMES"
         ifeq (@HAVE_GCRYPT@,1)
 	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
+        endif
+	@$(ECHO) "  TEST_INDEX_DATABASES"
+	@$(ECHO) "    sqlite:$(INTERMEDIATE_DIR)/index.db"
+        ifeq (@HAVE_MARIADB@,1)
+	@$(ECHO) "    mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)"
+        endif
+        ifeq (@HAVE_POSTGRESQL@,1)
+	@$(ECHO) "    postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)"
         endif
 
 # ----------------------------------------------------------------------------
@@ -685,16 +694,16 @@ functionCleanTestDatabase = \
     $(TEST_INDEX_DATABASE_SQLITE)) \
       ;; \
     $(TEST_INDEX_DATABASE_MARIADB)) \
-			MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-				$(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "DROP DATABASE bar" 2>/dev/null || true; \
-			MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-				$(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "CREATE DATABASE bar"; \
+      MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
+        $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "DROP DATABASE bar" 2>/dev/null || true; \
+      MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
+        $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "CREATE DATABASE bar"; \
       ;; \
     $(TEST_INDEX_DATABASE_POSTGRESQL)) \
-			PGPASSWORD=test \
-				$(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 1>/dev/null 2>/dev/null || true; \
-			PGPASSWORD=test \
-				$(CREATEDB) --no-password --username $(TEST_POSTGRESQL_USER) -O $(TEST_POSTGRESQL_USER) bar; \
+      PGPASSWORD=test \
+        $(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 1>/dev/null 2>/dev/null || true; \
+      PGPASSWORD=test \
+        $(CREATEDB) --no-password --username $(TEST_POSTGRESQL_USER) -O $(TEST_POSTGRESQL_USER) bar; \
       ;; \
   esac
 
@@ -850,8 +859,8 @@ functionWaitProcess = \
 #
 # Tests:
 #   create, list, test, compare, extract
-#   with compression defined in COMPRESS_NAMES
-#   with encryption defined in CRYPT_NAMES
+#   with compression defined in TEST_COMPRESS_NAMES
+#   with encryption defined in TEST_CRYPT_NAMES
 #   asymmetric crypt
 #   signature
 #   splitting
@@ -1206,7 +1215,7 @@ test1-valgrind test_basic-valgrind:
 test2 test_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
-	for compress in $(MIN_COMPRESS_NAMES); do \
+	for compress in $(MIN_TEST_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1219,7 +1228,7 @@ test2 test_compress: \
             exit $$rc; \
           fi; \
         done
-	for compress in $(COMPRESS_NAMES); do \
+	for compress in $(TEST_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1243,7 +1252,7 @@ test2 test_compress: \
             exit $$rc; \
           fi; \
         done
-	for compress in $(MIN_COMPRESS_NAMES); do \
+	for compress in $(MIN_TEST_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test-####" \
@@ -1284,7 +1293,7 @@ test2-valgrind test_compress-valgrind:
 test_delta_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: delta compress)
-	for compress in $(COMPRESS_NAMES); do \
+	for compress in $(TEST_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1326,7 +1335,7 @@ test3 test_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 3: crypt)
-	for crypt in $(CRYPT_NAMES); do \
+	for crypt in $(TEST_CRYPT_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1387,7 +1396,7 @@ test4 test_asymmetric_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 4: asymmetric crypt)
-	for crypt in $(CRYPT_NAMES); do \
+	for crypt in $(TEST_CRYPT_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
@@ -1423,7 +1432,7 @@ test4 test_asymmetric_crypt: \
           fi; \
         done
 	# wrong public key
-	for crypt in $(CRYPT_NAMES); do \
+	for crypt in $(TEST_CRYPT_NAMES); do \
           if test ! $$crypt = "none"; then \
             $(RMF) $(INTERMEDIATE_DIR)/test.bar; \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_OTHER_PUBLIC) --skip-verify-signatures -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(LOG); \
@@ -1575,7 +1584,7 @@ test7-valgrind test_convert-valgrind:
 test8 test_image: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 8: image)
-	for compress in $(IMAGE_COMPRESS_NAMES); do \
+	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_FILE="test" \
               BAR_PATTERN="test" \
@@ -1910,7 +1919,7 @@ test_storage_webdavs-valgrind:
 test10 test_huge: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 10: huge files)
-	for compress in $(COMPRESS_NAMES_HUGE); do \
+	for compress in $(TEST_COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -2124,8 +2133,8 @@ test_combined: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test combined)
-	for compress in $(COMBINED_COMPRESS_NAMES); do \
-          for crypt in $(COMBINED_CRYPT_NAMES); do \
+	for compress in $(COMBINED_TEST_COMPRESS_NAMES); do \
+          for crypt in $(COMBINED_TEST_CRYPT_NAMES); do \
             $(MAKE) \
               BAR_FILE=test-#### \
               BAR_PATTERN="test-*" \
@@ -2742,20 +2751,20 @@ test_all:
 test_smoke: \
   $(TEST_BAR)
 	@$(MAKE) --no-print-directory -s \
-	  CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
-	  COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
-	  TEST_INDEX_DATABASES="$(MIN_TEST_INDEX_DATABASES)" \
+    TEST_CRYPT_NAMES="$(MIN_TEST_CRYPT_NAMES)" \
+    TEST_COMPRESS_NAMES="$(MIN_TEST_COMPRESS_NAMES)" \
+    TEST_INDEX_DATABASES="$(MIN_TEST_INDEX_DATABASES)" \
           $(addsuffix $(TEST_BINARY_EXTENSION), \
                       test_basic \
-											test_compress \
-											test_crypt \
-											test_asymmetric_crypt \
-											test_split \
-											test_index \
-											test_arguments \
-											test_config \
-											test_misc \
-					)
+                      test_compress \
+                      test_crypt \
+                      test_asymmetric_crypt \
+                      test_split \
+                      test_index \
+                      test_arguments \
+                      test_config \
+                      test_misc \
+          )
 
 test_smoke-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BINARY_EXTENSION=-debug test_smoke

@@ -105,12 +105,6 @@ VERSION_MINOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(S
 VERSION_PATCH          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
 VERSION                := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 
-CRYPT_NAMES            = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
-COMPRESS_NAMES         = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
-
-CRYPT    = none
-COMPRESS = none
-
 PACKAGE_NAME           = backup-archiver
 PACKAGE_NAME_GUI       = backup-archiver-gui
 DISTRIBUTION_NAME      = $(PACKAGE_NAME)-$(VERSION)
