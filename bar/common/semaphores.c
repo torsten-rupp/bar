@@ -2576,7 +2576,7 @@ void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle)
         index = (semaphore->debug.historyIndex+semaphore->debug.historyCount-i-1)%semaphore->debug.historyCount;
         stringFormat(s,sizeof(s),"'%s'",Thread_getName(semaphore->debug.history[index].threadId));
         fprintf(stderr,
-                "    %-20s %16"PRIu64" thread %-20s (%s) at %s, %u\n",
+                "    %-20s %16"PRIu64" thread %-20s (%s) at %s, %lu\n",
                 HISTORY_TYPE_STRINGS[semaphore->debug.history[index].type],
                 semaphore->debug.history[index].cycleCounter,
                 s,
