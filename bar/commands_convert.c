@@ -1912,7 +1912,11 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        error = Archive_skipNextEntry(&sourceArchiveHandle);
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #else
+          error = Archive_skipNextEntry(&sourceArchiveHandle);
+        #endif /* NDEBUG */
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         #ifndef NDEBUG

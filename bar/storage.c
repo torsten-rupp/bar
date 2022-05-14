@@ -1571,58 +1571,56 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
   if (hasPatternFlag)
   {
-    // clean-up
-    if (storageSpecifier->archivePatternString != NULL)
-    {
-      Pattern_done(&storageSpecifier->archivePattern);
-      String_delete(storageSpecifier->archivePatternString);
-      storageSpecifier->archivePatternString = NULL;
-    }
+    String  archivePatternString;
+    Pattern archivePattern;
 
     // get file pattern string
-    storageSpecifier->archivePatternString = String_new();
+    archivePatternString = String_new();
     File_initSplitFileName(&archiveNameTokenizer,archiveName);
     {
       if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
       {
         if (!String_isEmpty(token))
         {
-          File_setFileName(storageSpecifier->archivePatternString,token);
+          File_setFileName(archivePatternString,token);
         }
         else
         {
-          File_setFileNameChar(storageSpecifier->archivePatternString,FILE_PATH_SEPARATOR_CHAR);
+          File_setFileNameChar(archivePatternString,FILE_PATH_SEPARATOR_CHAR);
         }
         while (File_getNextSplitFileName(&archiveNameTokenizer,&token))
         {
-          File_appendFileName(storageSpecifier->archivePatternString,token);
+          File_appendFileName(archivePatternString,token);
         }
       }
     }
     File_doneSplitFileName(&archiveNameTokenizer);
 
     // parse file pattern
-    error = Pattern_init(&storageSpecifier->archivePattern,
-                         storageSpecifier->archivePatternString,
-//TODO: glob? parameter?
-                         PATTERN_TYPE_GLOB,
+    error = Pattern_init(&archivePattern,
+                         archivePatternString,
+                         globalOptions.patternType,
                          PATTERN_FLAG_NONE
                         );
     if (error != ERROR_NONE)
     {
+      String_delete(archivePatternString);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-  }
-  else
-  {
-    // free pattern
+
+    // save
     if (storageSpecifier->archivePatternString != NULL)
     {
       Pattern_done(&storageSpecifier->archivePattern);
       String_delete(storageSpecifier->archivePatternString);
-      storageSpecifier->archivePatternString = NULL;
     }
+    storageSpecifier->archivePatternString = archivePatternString;
+    Pattern_move(&storageSpecifier->archivePattern,&archivePattern);
+  }
+  else
+  {
+    storageSpecifier->archivePatternString = NULL;
   }
 
   // free resources

@@ -1,4 +1,4 @@
-2022-04-01 0.22
+2022-05-18 0.22
   * added option --save-configuration: format and
     save configuration file
   * added support for external index database engines
@@ -52,6 +52,7 @@
   * fixed band width calculation: use last specified
     matching date/time
   * fixed concurrent network connections handling
+  * fixed pattern type for archive names
   * improved tests
   * BARControl: added create directory/delete file in
     file requester

@@ -484,6 +484,27 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
   return ERROR_NONE;
 }
 
+Errors Pattern_move(Pattern *pattern, const Pattern *fromPattern)
+{
+  assert(pattern != NULL);
+  assert(fromPattern != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromPattern);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(fromPattern,Pattern);
+
+  pattern->type        = fromPattern->type;
+  pattern->regexString = String_duplicate(fromPattern->regexString);
+  pattern->regexFlags  = fromPattern->regexFlags;
+  pattern->regexBegin  = fromPattern->regexBegin;
+  pattern->regexEnd    = fromPattern->regexEnd;
+  pattern->regexExact  = fromPattern->regexExact;
+  pattern->regexAny    = fromPattern->regexAny;
+
+  DEBUG_ADD_RESOURCE_TRACE(pattern,Pattern);
+
+  return ERROR_NONE;
+}
+
 bool Pattern_match(const Pattern     *pattern,
                    ConstString       string,
                    ulong             index,
