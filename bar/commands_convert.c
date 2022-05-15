@@ -1968,6 +1968,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   uint                   i;
   Errors                 failError;
   ArchiveHandle          sourceArchiveHandle;
+  CryptSignatureStates   sourceAllCryptSignatureState;
+  uint64                 sourceLastSignatureOffset;
   ArchiveEntryTypes      archiveEntryType;
   const ArchiveCryptInfo *archiveCryptInfo;
   uint64                 offset;
@@ -2186,16 +2188,39 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 //TODO: remove
 //fprintf(stderr,"%s, %d: archiveEntryType=%s\n",__FILE__,__LINE__,Archive_archiveEntryTypeToString(archiveEntryType,NULL));
 
-    // send entry to convert threads
-//TODO: increment on multiple archives and when threads are not restarted each time
-    entryMsg.archiveIndex     = 1;
-    entryMsg.archiveHandle    = &sourceArchiveHandle;
-    entryMsg.archiveEntryType = archiveEntryType;
-    entryMsg.archiveCryptInfo = archiveCryptInfo;
-    entryMsg.offset           = offset;
-    if (!MsgQueue_put(&convertInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    // convert entries
+    if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
-      HALT_INTERNAL_ERROR("Send message to convert threads fail!");
+      // send entry to convert threads
+//TODO: increment on multiple archives and when threads are not restarted each time
+      entryMsg.archiveIndex     = 1;
+      entryMsg.archiveHandle    = &sourceArchiveHandle;
+      entryMsg.archiveEntryType = archiveEntryType;
+      entryMsg.archiveCryptInfo = archiveCryptInfo;
+      entryMsg.offset           = offset;
+      if (!MsgQueue_put(&convertInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+      {
+        HALT_INTERNAL_ERROR("Send message to convert threads fail!");
+      }
+    }
+    else
+    {
+      if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
+      {
+        // check signature
+        error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&allCryptSignatureState);
+      }
+      else
+      {
+        // skip signature
+        error = Archive_skipNextEntry(&sourceArchiveHandle);
+      }
+      if (error != ERROR_NONE)
+      {
+        if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+        break;
+      }
+      sourceLastSignatureOffset = Archive_tell(&sourceArchiveHandle);
     }
 
     // next entry
