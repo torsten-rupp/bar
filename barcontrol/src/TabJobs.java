@@ -2245,19 +2245,17 @@ public class TabJobs
 
   class EntityIndexData implements Comparable<EntityIndexData>
   {
-    public long         id;
-    public String       scheduleUUID;
-    public ArchiveTypes archiveType;
-    public long         createdDateTime;
-    public long         size;
-    public long         totalEntryCount;
-    public long         totalEntrySize;
-    public boolean      inTransit;
+    public long    id;
+    public String  scheduleUUID;
+    public long    createdDateTime;
+    public long    size;
+    public long    totalEntryCount;
+    public long    totalEntrySize;
+    public boolean inTransit;
 
     /** create entity index data index
      * @param indexId index id
      * @param scheduleUUID schedule UUID
-     * @param archiveType archive type
      * @param createdDateTime create date/time (timestamp)
      * @param size size of enity [byte]
      * @param totalEntryCount total number of entries
@@ -2266,7 +2264,6 @@ public class TabJobs
      */
     EntityIndexData(long         indexId,
                     String       scheduleUUID,
-                    ArchiveTypes archiveType,
                     long         createdDateTime,
                     long         size,
                     long         totalEntryCount,
@@ -2278,7 +2275,6 @@ public class TabJobs
 
       this.id              = indexId;
       this.scheduleUUID    = scheduleUUID;
-      this.archiveType     = archiveType;
       this.createdDateTime = createdDateTime;
       this.size            = size;
       this.totalEntryCount = totalEntryCount;
@@ -2301,8 +2297,8 @@ public class TabJobs
       }
       else
       {
-        if      (createdDateTime < entityIndexData.createdDateTime) result = -1;
-        else if (createdDateTime > entityIndexData.createdDateTime) result =  1;
+        if      (createdDateTime > entityIndexData.createdDateTime) result = -1;
+        else if (createdDateTime < entityIndexData.createdDateTime) result =  1;
         else                                                        result =  0;
       }
 
@@ -2368,7 +2364,7 @@ public class TabJobs
     @Override
     public String toString()
     {
-      return "EntityIndexData {"+id+", "+createdDateTime+"}";
+      return "EntityIndexData {id="+id+", createdDateTime="+createdDateTime+"}";
     }
   }
 
@@ -16868,9 +16864,10 @@ throw new Error("NYI");
                                      TreeItem persistenceTreeItem = persistenceTreeItemMap.get(persistenceId);
                                      if (persistenceTreeItem != null)
                                      {
+//                                       PersistenceData persistenceData = (PersistenceData)persistenceTreeItem.getData();
+
                                        EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                              "", // scheuduleUUID
-                                                                                             archiveType,
                                                                                              createdDateTime,
                                                                                              totalSize,
                                                                                              totalEntryCount,
@@ -17333,7 +17330,6 @@ throw new Error("NYI");
             persistenceData.moveTo.loginPassword = widgetMoveToWebDAV.loginPassword.getText();
             break;
         }
-Dprintf.dprintf("persistenceData.moveTo=%s",persistenceData.moveTo);
 
         Dialogs.close(dialog,true);
       }

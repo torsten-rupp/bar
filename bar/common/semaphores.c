@@ -1407,6 +1407,7 @@ LOCAL bool lock(const char         *__fileName__,
            )
         {
           __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
+          lockedFlag = FALSE;
 
           #ifndef NDEBUG
             decrementReadRequest(semaphore,__fileName__,__lineNb__);
@@ -1467,6 +1468,7 @@ LOCAL bool lock(const char         *__fileName__,
         if (semaphore->readWriteLockCount > 0)
         {
           __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
+          lockedFlag = FALSE;
 
           #ifndef NDEBUG
             decrementReadRequest(semaphore,__fileName__,__lineNb__);
@@ -1552,6 +1554,7 @@ LOCAL bool lock(const char         *__fileName__,
         if (semaphore->readLockCount > 0)
         {
           __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ_WRITE,"RW");
+          lockedFlag = FALSE;
 
           #ifndef NDEBUG
             decrementReadWriteRequest(semaphore,__fileName__,__lineNb__);

@@ -2798,11 +2798,11 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
 /***********************************************************************\
 * Name   : getJobExpirationEntityList
 * Purpose: get entity expiration list for job
-* Input  : jobExpirationEntityList - job expiration list
+* Input  : jobExpirationEntityList - job expiration list variable
 *          expirationEntityList    - expiration list
 *          jobUUID                 - job UUID
 *          persistenceList         - job persistence list
-* Output : -
+* Output : jobExpirationEntityList - job expiration list
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -2826,7 +2826,6 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
   assert(Job_isListLocked());
 
   // init variables
-// TODO: free correct?
   List_init(jobExpirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
 
   now = Misc_getCurrentDateTime();
@@ -2846,8 +2845,7 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
       // find persistence node for entity
       age                 = (now-expirationEntityNode->createdDateTime)/S_PER_DAY;
       lastPersistenceNode = NULL;
-
-      persistenceNode = LIST_HEAD(persistenceList);
+      persistenceNode     = LIST_HEAD(persistenceList);
       do
       {
         // find persistence node for archive type
@@ -2874,7 +2872,10 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
         if (persistenceNode != NULL)
         {
           if (   ((lastPersistenceNode == NULL) || (age >= lastPersistenceNode->maxAge))
-              && ((persistenceNode->maxAge == AGE_FOREVER) || (age < persistenceNode->maxAge))
+              && (   (persistenceNode->maxAge == AGE_FOREVER)
+                  || (age < persistenceNode->maxAge)
+                  || ((nextPersistenceNode == NULL) || (age < nextPersistenceNode->maxAge))
+                 )
              )
           {
             jobExpirationEntityNode->persistenceNode = persistenceNode;
@@ -3063,45 +3064,45 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 
               // check if "in-transit"
               inTransit = isInTransit(jobExpirationEntityNode);
-            }
 
-            // check if expired, keep one "in-transit" entity
-            if (   !inTransit
-                && hasPersistence(jobNode,jobExpirationEntityNode->archiveType)
-                && (   (jobExpirationEntityNode->persistenceNode == NULL)
-                    || ((   (jobExpirationEntityNode->persistenceNode->maxKeep > 0)
-                         && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
-                         && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
-                        )
-                       )
-                   )
-               )
-            {
-              // find oldest entry
-              while (   (jobExpirationEntityNode->next != NULL)
-                     && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
-                    )
+              // check if expired, keep one "in-transit" entity
+              if (   !inTransit
+                  && hasPersistence(jobNode,jobExpirationEntityNode->archiveType)
+                  && (   (jobExpirationEntityNode->persistenceNode == NULL)
+                      || ((   (jobExpirationEntityNode->persistenceNode->maxKeep > 0)
+                           && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
+                           && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
+                          )
+                         )
+                     )
+                 )
               {
-                jobExpirationEntityNode = jobExpirationEntityNode->next;
-              }
+                // find oldest entry
+                while (   (jobExpirationEntityNode->next != NULL)
+                       && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
+                      )
+                {
+                  jobExpirationEntityNode = jobExpirationEntityNode->next;
+                }
 
-              if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId,CALLBACK_(NULL,NULL)))
-              {
-                // get expired entity
-                expiredEntityId        = jobExpirationEntityNode->entityId;
-                String_set(expiredJobName,jobNode->name);
-                expiredArchiveType     = jobExpirationEntityNode->archiveType;
-                expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
-                expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
-                expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
+                if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId,CALLBACK_(NULL,NULL)))
+                {
+                  // get expired entity
+                  expiredEntityId        = jobExpirationEntityNode->entityId;
+                  String_set(expiredJobName,jobNode->name);
+                  expiredArchiveType     = jobExpirationEntityNode->archiveType;
+                  expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
+                  expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
+                  expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
 
-                // get mount list
-                List_copy(&mountList,
-                          NULL,
-                          &jobNode->job.options.mountList,
-                          NULL,
-                          NULL
-                         );
+                  // get mount list
+                  List_copy(&mountList,
+                            NULL,
+                            &jobNode->job.options.mountList,
+                            NULL,
+                            NULL
+                           );
+                }
               }
             }
           }

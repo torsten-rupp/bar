@@ -265,7 +265,7 @@ typedef struct
   LIST_HEADER(JobNode);
 
   Semaphore lock;
-  uint      activeCount;
+  uint      activeCount;                                // number of currently active jobs
 
   #ifndef NDEBUG
     uint64 lockTimestamp;
