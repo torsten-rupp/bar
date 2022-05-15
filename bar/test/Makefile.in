@@ -80,8 +80,6 @@ TEST_BAR_INDEX_GPROF    ?= $(BAR_DIR)/bar-index-gprof@EXEEXT@
 TEST_BAR_INDEX_VALGRIND ?= $(BAR_DIR)/bar-index-valgrind@EXEEXT@
 TEST_DESTROYER          ?= $(BAR_DIR)/destroyer@EXEEXT@
 
-TEST_BAR_HAS_DEBUG_FUNCTIONS := `test $(TEST_BAR) --debug-server`
-
 #---------------------------------- commands----------------------------------
 
 ATTR           = @ATTR@
@@ -665,6 +663,9 @@ COLUMNS := $(shell tput cols 2>/dev/null || $(ECHO) 80)
 
 # log redirection
 LOG = $(if $(QUIET),</dev/null 1>/dev/null)
+
+# helper function to check if debug functions are available
+functionHasDebugFunctions = `$1 --debug-server 2>/dev/null && $(ECHO) 1`
 
 # helper function to output info lines
 functionInfoBegin = $(ECHO_NO_LF) >&2 "$1..."; $(ECHO) "$1" $(if $(QUIET),1>/dev/null)
@@ -1602,6 +1603,7 @@ test8 test_image: \
 	@$(call functionInfoBegin,Test 8: image)
 	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
             $(MAKE) \
+              BAR_STORAGE="$(INTERMEDIATE_DIR)" \
               BAR_FILE="test" \
               BAR_PATTERN="test*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
@@ -1612,6 +1614,7 @@ test8 test_image: \
               exit $$rc; \
             fi; \
             $(MAKE) \
+              BAR_STORAGE="$(INTERMEDIATE_DIR)" \
               BAR_FILE="test" \
               BAR_PATTERN="test*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
@@ -2013,11 +2016,12 @@ test13 test_index: \
 	@$(call functionInfoBegin,Test 13: index)
 	for testIndexDatabase in $(TEST_INDEX_DATABASES); do \
           $(MAKE) \
+            BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
             TEST_INDEX_DATABASE=$$testIndexDatabase \
-            TEST_INDEX_DATABASE_IMPORT=archives/index.sql \
+            TEST_INDEX_DATABASE_IMPORT=archive/index.sql \
             test_index_operations \
             ; \
           rc=$$?; \
@@ -2043,6 +2047,7 @@ test14 test_server: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 14: server)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_JOBS_DIRECTORY=$(TEST_MASTER_JOBS_DIRECTORY) \
@@ -2050,6 +2055,7 @@ test14 test_server: \
           test_server_operations \
           ;
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_JOBS_DIRECTORY=$(TEST_SLAVE_JOBS_DIRECTORY) \
@@ -2101,6 +2107,7 @@ test15_master test_master: \
   $(TEST_MASTER_JOBS_DIRECTORY)
 	@$(call functionInfoBegin,Test 14: master)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
@@ -2126,6 +2133,7 @@ test15_slave test_slave: \
   $(TEST_SLAVE_JOBS_DIRECTORY)
 	@$(call functionInfoBegin,Test 14: slave)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
@@ -2152,6 +2160,7 @@ test_combined: \
 	for compress in $(COMBINED_TEST_COMPRESS_NAMES); do \
           for crypt in $(COMBINED_TEST_CRYPT_NAMES); do \
             $(MAKE) \
+              BAR_STORAGE="$(INTERMEDIATE_DIR)" \
               BAR_FILE=test-#### \
               BAR_PATTERN="test-*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K $(OPTIONS)" \
@@ -2163,6 +2172,7 @@ test_combined: \
             fi; \
             if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
               $(MAKE) \
+                BAR_STORAGE="$(INTERMEDIATE_DIR)" \
                 BAR_FILE=test-#### \
                 BAR_PATTERN="test-*" \
                 BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
@@ -5561,6 +5571,7 @@ test_index_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	# maintain index
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --debug-index-wait-operations $(LOG))
 	@#
@@ -5765,6 +5776,9 @@ test_index_operations_base: \
                                         WHERE storages.deletedFlag!=1 \
                                        ") # no special entries
 	@$(RMF) $(BAR_STORAGE)/test0.bar $(BAR_STORAGE)/test1.bar
+else
+	@$(ECHO) "server index test: debug functions not available in $(TEST_BAR) - skipped"
+endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
@@ -5778,11 +5792,12 @@ test_index_operations_server: \
 	@$(call functionInfoHeader,test index opertations server)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	for i in 1 2 3 4 6 7; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql" $(LOG); \
-          $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) - < $(UP_DIR)/archive/index$$i.sql; \
+          $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) - < archive/index$$i.sql; \
           ( \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -5795,6 +5810,9 @@ test_index_operations_server: \
           ) $(LOG); \
         done
 	@$(call functionDoneTestFiles)
+else
+	@$(ECHO) "server index test: debug functions not available in $(TEST_BAR) - skipped"
+endif
 	@$(call functionInfoFooter)
 
 .PHONY: test_index_operations-debug
