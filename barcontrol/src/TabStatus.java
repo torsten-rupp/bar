@@ -2480,6 +2480,10 @@ public class TabStatus
 
       updateStatusFailCount = 0;
     }
+    catch (ConnectionError error)
+    {
+      // ignored
+    }
     catch (Exception exception)
     {
       updateStatusFailCount++;
