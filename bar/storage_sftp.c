@@ -165,7 +165,6 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
 {
   Errors  error;
   #ifdef HAVE_SSH2
-    uint    retries;
     ssize_t n;
   #endif /* HAVE_SSH2 */
 
@@ -176,8 +175,7 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
   assert(bytesRead != NULL);
 
   #ifdef HAVE_SSH2
-    error   = ERROR_UNKNOWN;
-    retries = 0;
+    error = ERROR_UNKNOWN;
     do
     {
       n = libssh2_sftp_read(sftpHandle,
@@ -255,7 +253,6 @@ LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
 {
   Errors  error;
   #ifdef HAVE_SSH2
-    uint    retries;
     ssize_t n;
   #endif /* HAVE_SSH2 */
 
@@ -266,8 +263,7 @@ LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
   assert(bytesWritten != NULL);
 
   #ifdef HAVE_SSH2
-    error   = ERROR_UNKNOWN;
-    retries = 0;
+    error = ERROR_UNKNOWN;
     do
     {
       n = libssh2_sftp_write(sftpHandle,
