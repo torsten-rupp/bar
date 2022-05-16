@@ -1247,7 +1247,11 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        error = Archive_skipNextEntry(&archiveHandle);
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #else
+          error = Archive_skipNextEntry(&archiveHandle);
+        #endif /* NDEBUG */
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         #ifndef NDEBUG

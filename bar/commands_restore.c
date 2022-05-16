@@ -906,7 +906,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRun)
     {
-      // temporary change owern+permission for writing (ignore errors)
+      // temporary change owner+permissions for writing (ignore errors)
       (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
       (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
@@ -2454,7 +2454,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       // restore hardlink
       printInfo(1,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
-// TODO: check exists
+      // check if hardlink already exists
       SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         if (!Dictionary_contains(&restoreInfo->namesDictionary,
@@ -2536,6 +2536,91 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
       }
 
+      // check if hardlink fragment already eixsts
+      if (   !restoreInfo->jobOptions->noFragmentsCheckFlag
+          && !restoredDataFlag
+         )
+      {
+        // check if fragment already exist -> get/create file fragment node
+        SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          FragmentNode *fragmentNode;
+
+          fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+          if (fragmentNode != NULL)
+          {
+            if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
+            {
+              switch (restoreInfo->jobOptions->restoreEntryMode)
+              {
+                case RESTORE_ENTRY_MODE_STOP:
+                  // stop
+                  printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
+                            fragmentOffset,
+                            (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
+                           );
+                  Semaphore_unlock(&restoreInfo->fragmentListLock);
+                  AutoFree_cleanup(&autoFreeList);
+                  return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                case RESTORE_ENTRY_MODE_RENAME:
+                  // rename new entry
+                  prefixFileName  = String_new();
+                  postfixFileName = String_new();
+                  index = String_findLastChar(destinationFileName,STRING_END,'.');
+                  if (index >= 0)
+                  {
+                    String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                    String_sub(postfixFileName,destinationFileName,index,STRING_END);
+                  }
+                  else
+                  {
+                    String_set(prefixFileName,destinationFileName);
+                  }
+                  String_set(destinationFileName,prefixFileName);
+                  String_append(destinationFileName,postfixFileName);
+                  if (File_exists(destinationFileName))
+                  {
+                    n = 0;
+                    do
+                    {
+                      String_set(destinationFileName,prefixFileName);
+                      String_appendFormat(destinationFileName,"-%u",n);
+                      String_append(destinationFileName,postfixFileName);
+                      n++;
+                    }
+                    while (File_exists(destinationFileName));
+                  }
+                  String_delete(postfixFileName);
+                  String_delete(prefixFileName);
+                  break;
+                case RESTORE_ENTRY_MODE_OVERWRITE:
+                  // nothing to do
+                  break;
+                case RESTORE_ENTRY_MODE_SKIP_EXISTING:
+                  // skip
+                  printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
+                            fragmentOffset,
+                            (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
+                           );
+                  Semaphore_unlock(&restoreInfo->fragmentListLock);
+                  AutoFree_cleanup(&autoFreeList);
+                  return ERROR_NONE;
+              }
+            }
+          }
+          else
+          {
+            fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                            fileName,
+                                            fileInfo.size,
+                                            &fileInfo,sizeof(FileInfo),
+                                            0
+                                           );
+          }
+          assert(fragmentNode != NULL);
+        }
+      }
+
       // create parent directories if not existing
       if (!restoreInfo->jobOptions->dryRun)
       {
@@ -2562,152 +2647,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
       }
 
-      // check if hardlink already exists
-      if (   !Dictionary_contains(&restoreInfo->namesDictionary,
-                                  String_cString(destinationFileName),
-                                  String_length(destinationFileName)
-                                 )
-          && File_exists(destinationFileName)
-         )
-      {
-        switch (restoreInfo->jobOptions->restoreEntryMode)
-        {
-          case RESTORE_ENTRY_MODE_STOP:
-            // stop
-            printInfo(1,"stopped (file exists)\n");
-            AutoFree_cleanup(&autoFreeList);
-            return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-            break;
-          case RESTORE_ENTRY_MODE_RENAME:
-            // rename new entry
-            prefixFileName  = String_new();
-            postfixFileName = String_new();
-            index = String_findLastChar(destinationFileName,STRING_END,'.');
-            if (index >= 0)
-            {
-              String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-              String_sub(postfixFileName,destinationFileName,index,STRING_END);
-            }
-            else
-            {
-              String_set(prefixFileName,destinationFileName);
-            }
-            String_set(destinationFileName,prefixFileName);
-            String_append(destinationFileName,postfixFileName);
-            if (File_exists(destinationFileName))
-            {
-              n = 0;
-              do
-              {
-                String_set(destinationFileName,prefixFileName);
-                String_appendFormat(destinationFileName,"-%u",n);
-                String_append(destinationFileName,postfixFileName);
-                n++;
-              }
-              while (File_exists(destinationFileName));
-            }
-            String_delete(postfixFileName);
-            String_delete(prefixFileName);
-            break;
-          case RESTORE_ENTRY_MODE_OVERWRITE:
-            // nothing to do
-            break;
-          case RESTORE_ENTRY_MODE_SKIP_EXISTING:
-            // skip
-            printInfo(1,"skipped (hardlink exists)\n");
-            AutoFree_cleanup(&autoFreeList);
-            return ERROR_NONE;
-        }
-      }
-
+      // create hardlink
       if (!restoredDataFlag)
       {
-        // check if hardlink fragment already eixsts
-        if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
-        {
-          // check if fragment already exist -> get/create file fragment node
-          SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            FragmentNode *fragmentNode;
-
-            fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
-            if (fragmentNode != NULL)
-            {
-              if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
-              {
-                switch (restoreInfo->jobOptions->restoreEntryMode)
-                {
-                  case RESTORE_ENTRY_MODE_STOP:
-                    // stop
-                    printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
-                              fragmentOffset,
-                              (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
-                             );
-                    Semaphore_unlock(&restoreInfo->fragmentListLock);
-                    AutoFree_cleanup(&autoFreeList);
-                    return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-                  case RESTORE_ENTRY_MODE_RENAME:
-                    // rename new entry
-                    prefixFileName  = String_new();
-                    postfixFileName = String_new();
-                    index = String_findLastChar(destinationFileName,STRING_END,'.');
-                    if (index >= 0)
-                    {
-                      String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                      String_sub(postfixFileName,destinationFileName,index,STRING_END);
-                    }
-                    else
-                    {
-                      String_set(prefixFileName,destinationFileName);
-                    }
-                    String_set(destinationFileName,prefixFileName);
-                    String_append(destinationFileName,postfixFileName);
-                    if (File_exists(destinationFileName))
-                    {
-                      n = 0;
-                      do
-                      {
-                        String_set(destinationFileName,prefixFileName);
-                        String_appendFormat(destinationFileName,"-%u",n);
-                        String_append(destinationFileName,postfixFileName);
-                        n++;
-                      }
-                      while (File_exists(destinationFileName));
-                    }
-                    String_delete(postfixFileName);
-                    String_delete(prefixFileName);
-                    break;
-                  case RESTORE_ENTRY_MODE_OVERWRITE:
-                    // nothing to do
-                    break;
-                  case RESTORE_ENTRY_MODE_SKIP_EXISTING:
-                    // skip
-                    printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
-                              fragmentOffset,
-                              (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
-                             );
-                    Semaphore_unlock(&restoreInfo->fragmentListLock);
-                    AutoFree_cleanup(&autoFreeList);
-                    return ERROR_NONE;
-                }
-              }
-            }
-            else
-            {
-              fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
-                                              fileName,
-                                              fileInfo.size,
-                                              &fileInfo,sizeof(FileInfo),
-                                              0
-                                             );
-            }
-            assert(fragmentNode != NULL);
-          }
-        }
-
+        // create file
         if (!restoreInfo->jobOptions->dryRun)
         {
-          // temporary change owern+permission for writing (ignore errors)
+          // temporary change owner+permissions for writing (ignore errors)
           (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
           (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
@@ -2718,7 +2664,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create/write to file '%s' (error: %s)",
+            printError("Cannot create/write to hard link '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2734,7 +2680,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot create/write to file '%s' (error: %s)",
+              printError("Cannot create/write to hard link '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -2840,7 +2786,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           (void)File_close(&fileHandle);
         }
 
-        // add fragment to file fragment list
+        // add fragment to hardlink fragment list
         isComplete = FALSE;
         SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -2868,7 +2814,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         {
           if (isComplete)
           {
-            // set file time, file permissions
+            // set hardlink time, file permissions
             if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
             {
               fileInfo.permissions = globalOptions.permissions;
@@ -2881,7 +2827,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file info of '%s' (error: %s)",
+                printError("Cannot set hard link info of '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -2890,7 +2836,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               }
               else
               {
-                printWarning("Cannot set file info of '%s' (error: %s)",
+                printWarning("Cannot set hard link info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2909,7 +2855,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set owner/group of hardlink '%s' (error: %s)",
+                printError("Cannot set owner/group of hard link '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -2918,7 +2864,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               }
               else
               {
-                printWarning("Cannot set owner/group of hardlink '%s' (error: %s)",
+                printWarning("Cannot set owner/group of hard link '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2934,7 +2880,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file attributes of '%s' (error: %s)",
+                printError("Cannot set hard link attributes of '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -2943,7 +2889,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               }
               else
               {
-                printWarning("Cannot set file attributes of '%s' (error: %s)",
+                printWarning("Cannot set hard link attributes of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2985,64 +2931,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       }
       else
       {
-// TODO:
-        // check if hardlink exists
-        if (   !Dictionary_contains(&restoreInfo->namesDictionary,
-                                    String_cString(destinationFileName),
-                                    String_length(destinationFileName)
-                                   )
-            && File_exists(destinationFileName)
-           )
-        {
-          switch (restoreInfo->jobOptions->restoreEntryMode)
-          {
-            case RESTORE_ENTRY_MODE_STOP:
-              // stop
-              printInfo(1,"stopped (hardlink exists)\n");
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-            case RESTORE_ENTRY_MODE_RENAME:
-              // rename new entry
-              prefixFileName  = String_new();
-              postfixFileName = String_new();
-              index = String_findLastChar(destinationFileName,STRING_END,'.');
-              if (index >= 0)
-              {
-                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                String_sub(postfixFileName,destinationFileName,index,STRING_END);
-              }
-              else
-              {
-                String_set(prefixFileName,destinationFileName);
-              }
-              String_set(destinationFileName,prefixFileName);
-              String_append(destinationFileName,postfixFileName);
-              if (File_exists(destinationFileName))
-              {
-                n = 0;
-                do
-                {
-                  String_set(destinationFileName,prefixFileName);
-                  String_appendFormat(destinationFileName,"-%u",n);
-                  String_append(destinationFileName,postfixFileName);
-                  n++;
-                }
-                while (File_exists(destinationFileName));
-              }
-              String_delete(postfixFileName);
-              String_delete(prefixFileName);
-              break;
-            case RESTORE_ENTRY_MODE_OVERWRITE:
-              // nothing to do
-              break;
-            case RESTORE_ENTRY_MODE_SKIP_EXISTING:
-              // skip
-              printInfo(1,"skipped (hardlink exists)\n");
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              return ERROR_NONE;
-          }
-        }
-
         // create hard link
         if (!restoreInfo->jobOptions->dryRun)
         {
@@ -3050,7 +2938,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create/write to file '%s' (error: %s)",
+            printError("Cannot create hard link '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -3539,7 +3427,11 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        error = Archive_skipNextEntry(&archiveHandle);
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #else
+          error = Archive_skipNextEntry(&archiveHandle);
+        #endif /* NDEBUG */
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         #ifndef NDEBUG

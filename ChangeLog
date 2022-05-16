@@ -1,4 +1,4 @@
-2022-04-01 0.22
+2022-05-18 0.22
   * added option --save-configuration: format and
     save configuration file
   * added support for external index database engines
@@ -44,7 +44,8 @@
   * upgrade pcre 8.44
   * upgrade SQLite 3.34
   * upgrade binutils 2.35
-  * fix abort restore job if client connection is lost
+  * fixed possible dead-lock on timeout
+  * fixed abort restore job if client connection is lost
   * renamed bar-sqlite3 to bar-index and support MariaDB
     and PostgreSQL
   * fixed parsing permissions, fixed set permissions on
@@ -52,6 +53,8 @@
   * fixed band width calculation: use last specified
     matching date/time
   * fixed concurrent network connections handling
+  * fixed pattern type for archive names
+  * fixed purge entities
   * improved tests
   * BARControl: added create directory/delete file in
     file requester

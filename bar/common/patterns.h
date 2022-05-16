@@ -245,6 +245,18 @@ Pattern *Pattern_duplicate(const Pattern *fromPattern);
 Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern);
 
 /***********************************************************************\
+* Name   : Pattern_move
+* Purpose: move pattern
+* Input  : pattern     - pattern variable
+*          fromPattern - from pattern
+* Output : pattern - pattern
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Pattern_move(Pattern *pattern, const Pattern *fromPattern);
+
+/***********************************************************************\
 * Name   : Pattern_match
 * Purpose: patch string with single pattern
 * Input  : pattern          - pattern
