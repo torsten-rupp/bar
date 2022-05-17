@@ -1752,28 +1752,28 @@ test_storage_scp: \
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
           BAR_FILE="test" \
-          BAR_PATTERN="test*" \
+          BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
           BAR_FILE="test" \
-          BAR_PATTERN="test*" \
+          BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
           BAR_FILE="test" \
-          BAR_PATTERN="test*" \
+          BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
           BAR_FILE="test" \
-          BAR_PATTERN="test*" \
+          BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
