@@ -33,6 +33,7 @@ RUN apt-get -y install \
   patch \
   pkg-config \
   postgresql \
+  psmisc \
   rsync \
   sqlite3 \
   subversion \
