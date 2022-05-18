@@ -29,6 +29,7 @@ RUN yum -y install \
   psmisc \
   rpm-build \
   rsync \
+  sqlite3 \
   subversion \
   sudo \
   tar \

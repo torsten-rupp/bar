@@ -38,8 +38,9 @@ RUN yum -y install \
   psmisc \
   rpm-build \
   rsync \
-  sudo \
+  sqlite3 \
   subversion \
+  sudo \
   sudo \
   tar \
   tcl \
