@@ -3182,6 +3182,7 @@ if test $ENABLE_CURL = "yes"; then
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
+          --disable-tests \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then

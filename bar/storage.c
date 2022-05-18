@@ -1363,6 +1363,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"webdav://"))
   {
+    // Note: keep starting / of archive name
     if (   String_matchCString(storageName,9,"^[^:]+:([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
         || String_matchCString(storageName,9,"^([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
         || String_matchCString(storageName,9,"^[^/]+",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
@@ -1392,6 +1393,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"webdavs://"))
   {
+    // Note: keep starting / of archive name
     if (   String_matchCString(storageName,10,"^[^:]+:([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
         || String_matchCString(storageName,10,"^([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
         || String_matchCString(storageName,10,"^[^/]+",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
