@@ -1792,7 +1792,7 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
-  return ERROR_FUNCTION_NOT_SUPPORTED;
+  return ERROR_NONE;
 }
 
 LOCAL void StorageSCP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -1825,7 +1825,19 @@ LOCAL Errors StorageSCP_readDirectoryList(StorageDirectoryListHandle *storageDir
   UNUSED_VARIABLE(fileName);
   UNUSED_VARIABLE(fileInfo);
 
-  return ERROR_FUNCTION_NOT_SUPPORTED;
+  String_clear(fileName);
+  fileInfo->type            = FILE_TYPE_NONE;
+  fileInfo->size            = 0LL;
+  fileInfo->timeLastAccess  = 0LL;
+  fileInfo->timeModified    = 0LL;
+  fileInfo->timeLastChanged = 0LL;
+  fileInfo->userId          = 0;
+  fileInfo->groupId         = 0;
+  fileInfo->permissions     = 0L;
+  fileInfo->major           = 0;
+  fileInfo->minor           = 0;
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus
