@@ -1106,6 +1106,9 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                     CALLBACK_(NULL,NULL),
                     CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
                     {
+                       UNUSED_VARIABLE(estimatedTotalTime);
+                       UNUSED_VARIABLE(userData);
+                    
                        plogMessage(NULL,  // logHandle
                                    LOG_TYPE_INDEX,
                                    "INDEX",

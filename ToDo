@@ -181,6 +181,7 @@ rest time
 - check if time()/gettimeofday() is 64 bit safe
 - gnutls 3.7.x: add support for brotli compression in gnutls
 - support brotli compression, https://brotli.org/
+- add libpsl for curl
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok

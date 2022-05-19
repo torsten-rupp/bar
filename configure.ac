@@ -3250,6 +3250,7 @@ if test $ENABLE_CURL = "yes"; then
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
+# TODO: temporary disabled brotli compression, psl
           (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
             --host=$host \
             --build=$build \
@@ -3265,6 +3266,8 @@ if test $ENABLE_CURL = "yes"; then
             --with-ssl=$cwd/extern \
             --with-gnutls=$cwd/extern \
             --with-libssh2=$cwd/extern \
+--without-brotli \
+--without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then
