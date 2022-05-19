@@ -1108,7 +1108,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                     {
                        UNUSED_VARIABLE(estimatedTotalTime);
                        UNUSED_VARIABLE(userData);
-                    
+
                        plogMessage(NULL,  // logHandle
                                    LOG_TYPE_INDEX,
                                    "INDEX",
