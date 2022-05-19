@@ -1749,6 +1749,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(CoTaskMemFree,ole32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"],,combaseapi.h)
     AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
     AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
+    AC_SEARCH_STATIC_LIBRARIES(GetUnicastIpAddressTable,iphlpapi ssp,[STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"],,winsock2.h netioapi.h)
     ;;
 esac
 

@@ -179,6 +179,8 @@ rest time
 - check: schedule change work with new time?
 - continuous jobs: option to discard backup changed files in case of an error
 - check if time()/gettimeofday() is 64 bit safe
+- gnutls 3.7.x: add support for brotli compression in gnutls
+- support brotli compression, https://brotli.org/
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok

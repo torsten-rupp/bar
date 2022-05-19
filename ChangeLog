@@ -34,7 +34,7 @@
   * upgrade nettle 3.7.3
   * upgrade gmp 6.2.1
   * upgrade libidn2 2.3.0
-  * upgrade GnuTLS 3.7.4
+  * upgrade GnuTLS 3.6.16
   * upgrade libssh2 1.10.0
   * upgrade libidn2 2.3.2
   * upgrade libicon 1.16
