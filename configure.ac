@@ -1749,6 +1749,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(CoTaskMemFree,ole32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"],,combaseapi.h)
     AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
     AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
+    AC_SEARCH_STATIC_LIBRARIES(GetUnicastIpAddressTable,iphlpapi ssp,[STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"],,winsock2.h netioapi.h)
     ;;
 esac
 
@@ -3250,6 +3251,7 @@ if test $ENABLE_CURL = "yes"; then
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
+# TODO: temporary disabled brotli compression, psl
           (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
             --host=$host \
             --build=$build \
@@ -3265,6 +3267,8 @@ if test $ENABLE_CURL = "yes"; then
             --with-ssl=$cwd/extern \
             --with-gnutls=$cwd/extern \
             --with-libssh2=$cwd/extern \
+--without-brotli \
+--without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then

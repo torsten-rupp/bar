@@ -10125,6 +10125,66 @@ $as_echo "$ac_cv_search_static_PathRemoveFileSpec" >&6; }
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"
 fi
 
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing GetUnicastIpAddressTable" >&5
+$as_echo_n "checking for static library containing GetUnicastIpAddressTable... " >&6; }
+if ${ac_cv_search_static_GetUnicastIpAddressTable+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in iphlpapi ssp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo winsock2.h netioapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "winsock2.h netioapi.h"; then echo "extern void GetUnicastIpAddressTable();"; fi`
+                                         return (int)GetUnicastIpAddressTable;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_GetUnicastIpAddressTable=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_GetUnicastIpAddressTable+:} false; then :
+
+else
+  ac_cv_search_static_GetUnicastIpAddressTable=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_GetUnicastIpAddressTable" >&5
+$as_echo "$ac_cv_search_static_GetUnicastIpAddressTable" >&6; }
+  ac_result=$ac_cv_search_static_GetUnicastIpAddressTable
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"
+fi
+
     ;;
 esac
 
@@ -14782,6 +14842,7 @@ $as_echo "done" >&6; }
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
+# TODO: temporary disabled brotli compression
           (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
             --host=$host \
             --build=$build \
@@ -14797,6 +14858,8 @@ $as_echo "done" >&6; }
             --with-ssl=$cwd/extern \
             --with-gnutls=$cwd/extern \
             --with-libssh2=$cwd/extern \
+--without-brotli \
+--without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then

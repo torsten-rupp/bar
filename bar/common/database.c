@@ -128,20 +128,22 @@ LOCAL const char *DATABASE_DATATYPE_NAMES[] =
   "UNKNOWN"
 };
 
-// min. MariaDB server version (>= 5.7.7 with key length 3072)
-#define MARIADB_MIN_SERVER_VERSION 100200
+#ifdef HAVE_MARIADB
+  // min. MariaDB server version (>= 5.7.7 with key length 3072)
+  #define MARIADB_MIN_SERVER_VERSION 100200
 
-#define MARIADB_TIMEOUT (5*60)  // [s]
+  #define MARIADB_TIMEOUT (5*60)  // [s]
 
-/* MariaDB database character sets to use (descenting order)
-   Note: try to create with character set uft8mb4 (4-byte UTF8),
-         then utf8 as a fallback for older MariaDB versions.
-*/
-LOCAL const char *MARIADB_CHARACTER_SETS[] =
-{
-  "utf8mb4",
-  "utf8"
-};
+  /* MariaDB database character sets to use (descenting order)
+     Note: try to create with character set uft8mb4 (4-byte UTF8),
+           then utf8 as a fallback for older MariaDB versions.
+  */
+  LOCAL const char *MARIADB_CHARACTER_SETS[] =
+  {
+    "utf8mb4",
+    "utf8"
+  };
+#endif /* HAVE_MARIADB */
 
 // PostgreSQL specific constants
 #ifdef HAVE_POSTGRESQL
