@@ -31,6 +31,7 @@ RUN apt-get -y install \
   pkg-config \
   postgresql \
   rsync \
+  sqlite3 \
   subversion \
   sudo \
   tar \
