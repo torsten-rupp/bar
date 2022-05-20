@@ -15,7 +15,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get -y update
 
 # install packages
-RUN apt-get -y install \
+RUN apt-get -y install --fix-missing \
   bc \
   bzip2 \
   coreutils \
@@ -45,7 +45,7 @@ RUN apt-get -y install \
   xvfb \
   xz-utils \
   ;
-RUN apt-get -y install \
+RUN apt-get -y install --fix-missing \
   gcc \
   g++ \
   libc6 \
