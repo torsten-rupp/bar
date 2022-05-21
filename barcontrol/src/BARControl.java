@@ -1325,14 +1325,23 @@ class Age
    */
   public static String format(int age)
   {
-    if      (age == FOREVER  ) return BARControl.tr("forever"                                         );
-    else if (age == 365      ) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   1      );
-    else if ((age % 365) == 0) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   age/365);
-    else if (age == 30       ) return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",1      );
-    else if ((age % 30) == 0 ) return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",age/30 );
-    else if (age == 7        ) return BARControl.tr("{0} {0,choice,0#weeks|1#week|1<weeks}",   1      );
-    else if ((age % 7) == 0  ) return BARControl.tr("{0} {0,choice,0#weeks|1#week|1<weeks}",   age/7  );
-    else                       return BARControl.tr("{0} {0,choice,0#days|1#day|1<days}",      age    );
+    if      (age == FOREVER  ) return BARControl.tr("forever");
+
+    // years
+    if (age == 365      ) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   1);
+    if ((age % 365) == 0) return BARControl.tr("{0} {0,choice,0#years|1#year|1<years}",   age/365);
+
+    // months
+    if (age >= 365)       return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",(int)((double)age/365.0*12.0));
+    if (age == 30       ) return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",1);
+    if ((age % 30) == 0 ) return BARControl.tr("{0} {0,choice,0#months|1#month|1<months}",age/30 );
+
+    // weeks
+    if (age == 7        ) return BARControl.tr("{0} {0,choice,0#weeks|1#week|1<weeks}",   1);
+    if ((age % 7) == 0  ) return BARControl.tr("{0} {0,choice,0#weeks|1#week|1<weeks}",   age/7);
+
+    // days
+    return BARControl.tr("{0} {0,choice,0#days|1#day|1<days}",age);
   }
 }
 
