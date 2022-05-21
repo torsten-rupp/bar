@@ -8150,11 +8150,9 @@ Errors Command_create(ServerIO                     *masterIO,
   IndexId          uuidId;
   String           hostName,userName;
   IndexId          entityId;
-  Thread           collectorSumThread;                 // files collector sum thread
-  Thread           collectorThread;                    // files collector thread
-  Thread           storageThread;                      // storage thread
-  Thread           *createThreads;
+  ThreadPoolNode   *collectorSumThreadNode,*collectorThreadNode,*collectorStorageThreadNode;
   uint             createThreadCount;
+  ThreadPoolSet    createThreadSet;
   uint             i;
   String           fileName;
 
@@ -8453,64 +8451,28 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,&createInfo.archiveHandle,{ Archive_close(&createInfo.archiveHandle); });
 
   // start collectors and storage thread
-  if (!Thread_init(&collectorSumThread,"BAR collector sum",globalOptions.niceLevel,collectorSumThreadCode,&createInfo))
-  {
-    HALT_FATAL_ERROR("Cannot initialize collector sum thread!");
-  }
-  if (!Thread_init(&collectorThread,"BAR collector",globalOptions.niceLevel,collectorThreadCode,&createInfo))
-  {
-    HALT_FATAL_ERROR("Cannot initialize collector thread!");
-  }
-  if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,&createInfo))
-  {
-    HALT_FATAL_ERROR("Cannot initialize storage thread!");
-  }
-  AUTOFREE_ADD(&autoFreeList,&collectorSumThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorSumThread); Thread_done(&collectorSumThread); });
-  AUTOFREE_ADD(&autoFreeList,&collectorThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorThread); Thread_done(&collectorThread); });
-  AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
+  collectorSumThreadNode     = ThreadPool_run(&workerThreadPool,collectorSumThreadCode,&createInfo);
+  collectorThreadNode        = ThreadPool_run(&workerThreadPool,collectorThreadCode,&createInfo);
+  collectorStorageThreadNode = ThreadPool_run(&workerThreadPool,storageThreadCode,&createInfo);
 
   // start create threads
   createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  createThreads     = (Thread*)malloc(createThreadCount*sizeof(Thread));
-  if (createThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
+  ThreadPool_initSet(&createThreadSet,&workerThreadPool);
   for (i = 0; i < createThreadCount; i++)
   {
-    if (!Thread_init(&createThreads[i],"BAR create",globalOptions.niceLevel,createThreadCode,&createInfo))
-    {
-      HALT_FATAL_ERROR("Cannot initialize create thread #%d!",i);
-    }
+    ThreadPool_setAdd(&createThreadSet,
+                      ThreadPool_run(&workerThreadPool,createThreadCode,&createInfo)
+                     );
   }
 
   // wait for collector threads
-  AUTOFREE_REMOVE(&autoFreeList,&collectorSumThread);
-  if (!Thread_join(&collectorSumThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
-  }
-  Thread_done(&collectorSumThread);
-  AUTOFREE_REMOVE(&autoFreeList,&collectorThread);
-  if (!Thread_join(&collectorThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop collector thread!");
-  }
-  Thread_done(&collectorThread);
+  ThreadPool_join(&workerThreadPool,collectorSumThreadNode);
+  ThreadPool_join(&workerThreadPool,collectorThreadNode);
 
   // wait for and done create threads
-  AUTOFREE_REMOVE(&autoFreeList,createThreads);
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
-  for (i = 0; i < createThreadCount; i++)
-  {
-    if (!Thread_join(&createThreads[i]))
-    {
-      HALT_FATAL_ERROR("Cannot stop create thread #%d!",i);
-    }
-    Thread_done(&createThreads[i]);
-  }
-  free(createThreads);
+  ThreadPool_joinSet(&createThreadSet);
+  ThreadPool_doneSet(&createThreadSet);
 
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
@@ -8527,13 +8489,8 @@ Errors Command_create(ServerIO                     *masterIO,
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // wait for storage thread
-  AUTOFREE_REMOVE(&autoFreeList,&storageThread);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
-  if (!Thread_join(&storageThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop storage thread!");
-  }
-  Thread_done(&storageThread);
+  ThreadPool_join(&workerThreadPool,collectorStorageThreadNode);
 
   // final update of status info
   SEMAPHORE_LOCKED_DO(&createInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)

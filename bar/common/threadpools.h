@@ -19,7 +19,6 @@
 #include <pthread.h>
 #include <assert.h>
 
-#include <common/threads.h>
 
 #if   defined(PLATFORM_LINUX)
   #include <unistd.h>
@@ -28,8 +27,10 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
+#include <common/arrays.h>
 #include "common/lists.h"
 #include "common/msgqueues.h"
+#include <common/threads.h>
 
 /****************** Conditional compilation switches *******************/
 
@@ -78,6 +79,8 @@ typedef struct
 
 typedef struct
 {
+  ThreadPool *threadPool;
+  Array      threadPoolNodes;
 } ThreadPoolSet;
 
 /***************************** Variables *******************************/
@@ -151,12 +154,15 @@ void ThreadPool_done(ThreadPool *threadPool);
 * Name   : ThreadPool_initSet
 * Purpose: init thread pool set
 * Input  : threadPoolSet - thread pool set variable
+*          threadPool    - thread pool
 * Output : threadPoolSet - thread pool set
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void ThreadPool_initSet(ThreadPoolSet *threadPoolSet);
+void ThreadPool_initSet(ThreadPoolSet *threadPoolSet,
+                        ThreadPool    *threadPool
+                       );
 
 /***********************************************************************\
 * Name   : ThreadPool_doneSet
@@ -168,6 +174,18 @@ void ThreadPool_initSet(ThreadPoolSet *threadPoolSet);
 \***********************************************************************/
 
 void ThreadPool_doneSet(ThreadPoolSet *threadPoolSet);
+
+/***********************************************************************\
+* Name   : ThreadPool_setAdd
+* Purpose: add thread pool node to set
+* Input  : threadPoolSet  - thread pool set
+*          threadPoolNode - thread pool node to add
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ThreadPool_setAdd(ThreadPoolSet *threadPoolSet, ThreadPoolNode *threadPoolNode);
 
 /***********************************************************************\
 * Name   : ThreadPool_run
@@ -196,6 +214,17 @@ ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
 \***********************************************************************/
 
 bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode);
+
+/***********************************************************************\
+* Name   : ThreadPool_joinSet
+* Purpose: wait for termination of all threads in pool set
+* Input  : threadPoolSet - thread pool set
+* Output : -
+* Return : TRUE if no error, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool ThreadPool_joinSet(ThreadPoolSet *threadPoolSet);
 
 /***********************************************************************\
 * Name   : ThreadPool_joinAll

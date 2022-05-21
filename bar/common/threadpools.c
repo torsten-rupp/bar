@@ -448,6 +448,41 @@ void ThreadPool_done(ThreadPool *threadPool)
   pthread_mutex_destroy(&threadPool->lock);
 }
 
+void ThreadPool_initSet(ThreadPoolSet *threadPoolSet,
+                        ThreadPool    *threadPool
+                       )
+{
+  assert(threadPoolSet != NULL);
+
+  threadPoolSet->threadPool = threadPool;
+
+  Array_init(&threadPoolSet->threadPoolNodes,
+             sizeof(ThreadPoolNode*),
+             64,
+             CALLBACK_(NULL,NULL),
+             CALLBACK_(NULL,NULL)
+            );
+
+  DEBUG_ADD_RESOURCE_TRACE(threadPoolSet,ThreadPoolSet);
+}
+
+void ThreadPool_doneSet(ThreadPoolSet *threadPoolSet)
+{
+  assert(threadPoolSet != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(threadPoolSet,ThreadPoolSet);
+
+  Array_done(&threadPoolSet->threadPoolNodes);
+}
+
+void ThreadPool_setAdd(ThreadPoolSet *threadPoolSet, ThreadPoolNode *threadPoolNode)
+{
+  assert(threadPoolSet != NULL);
+  assert(threadPoolNode != NULL);
+
+  Array_append(&threadPoolSet->threadPoolNodes,&threadPoolNode);
+}
+
 ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
                                const void *entryFunction,
                                void       *argument
@@ -511,6 +546,22 @@ bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode)
       }
     }
     pthread_mutex_unlock(&threadPool->lock);
+  }
+
+  return TRUE;
+}
+
+bool ThreadPool_joinSet(ThreadPoolSet *threadPoolSet)
+{
+  ArrayIterator  arrayIterator;
+  ThreadPoolNode *threadPoolNode;
+
+  assert(threadPoolSet != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(threadPoolSet);
+
+  ARRAY_ITERATE(&threadPoolSet->threadPoolNodes,arrayIterator,threadPoolNode)
+  {
+    ThreadPool_join(threadPoolSet->threadPool,threadPoolNode);
   }
 
   return TRUE;
