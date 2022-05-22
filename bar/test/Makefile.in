@@ -2761,7 +2761,7 @@ test_misc:
 	@$(call functionCleanTestFiles)
 	@#
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
-	  $(call functionTestCheckExitcode,127,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG))); \
+	  $(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG))); \
   fi
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@#
