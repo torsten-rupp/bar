@@ -5694,7 +5694,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       // update storage info
       storageInfoDecrement(createInfo,storageMsg.intermediateFileSize);
-
     }
 
     // free resources
@@ -8451,9 +8450,15 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,&createInfo.archiveHandle,{ Archive_close(&createInfo.archiveHandle); });
 
   // start collectors and storage thread
-  collectorSumThreadNode     = ThreadPool_run(&workerThreadPool,collectorSumThreadCode,&createInfo);
-  collectorThreadNode        = ThreadPool_run(&workerThreadPool,collectorThreadCode,&createInfo);
+  collectorSumThreadNode = ThreadPool_run(&workerThreadPool,collectorSumThreadCode,&createInfo);
+  assert(collectorSumThreadNode != NULL);
+  collectorThreadNode = ThreadPool_run(&workerThreadPool,collectorThreadCode,&createInfo);
+  assert(collectorThreadNode != NULL);
   collectorStorageThreadNode = ThreadPool_run(&workerThreadPool,storageThreadCode,&createInfo);
+  assert(collectorStorageThreadNode != NULL);
+  AUTOFREE_ADD(&autoFreeList,collectorSumThreadNode,{ ThreadPool_join(&workerThreadPool,collectorSumThreadNode); });
+  AUTOFREE_ADD(&autoFreeList,collectorThreadNode,{ ThreadPool_join(&workerThreadPool,collectorThreadNode); });
+  AUTOFREE_ADD(&autoFreeList,collectorStorageThreadNode,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); ThreadPool_join(&workerThreadPool,collectorStorageThreadNode); });
 
   // start create threads
   createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
@@ -8464,15 +8469,19 @@ Errors Command_create(ServerIO                     *masterIO,
                       ThreadPool_run(&workerThreadPool,createThreadCode,&createInfo)
                      );
   }
+  AUTOFREE_ADD(&autoFreeList,&createThreadSet,{ ThreadPool_joinSet(&createThreadSet); ThreadPool_doneSet(&createThreadSet); });
 
   // wait for collector threads
   ThreadPool_join(&workerThreadPool,collectorSumThreadNode);
   ThreadPool_join(&workerThreadPool,collectorThreadNode);
+  AUTOFREE_REMOVE(&autoFreeList,collectorSumThreadNode);
+  AUTOFREE_REMOVE(&autoFreeList,collectorThreadNode);
 
   // wait for and done create threads
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   ThreadPool_joinSet(&createThreadSet);
   ThreadPool_doneSet(&createThreadSet);
+  AUTOFREE_REMOVE(&autoFreeList,&createThreadSet);
 
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
