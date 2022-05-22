@@ -1183,6 +1183,7 @@ void debugCheckResourceTrace(const char *__fileName__,
                 debugResourceNode->freeLineNb
                );
         #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
           fprintf(stderr,"  allocated at");
           debugDumpStackTrace(stderr,4,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
           fprintf(stderr,"  deleted at");

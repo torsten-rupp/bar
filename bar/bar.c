@@ -4371,18 +4371,31 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
 
   // create client+worker thread pools
-  ThreadPool_init(&clientThreadPool,
-                  "BAR client",
-                  globalOptions.niceLevel,
-                  4,
-                  32
-                 );
-  ThreadPool_init(&workerThreadPool,
-                  "BAR worker",
-                  globalOptions.niceLevel,
-                  (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores(),
-                  (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
-                 );
+  if (!ThreadPool_init(&clientThreadPool,
+                       "BAR client",
+                       globalOptions.niceLevel,
+                       4,
+                       32
+                      )
+     )
+  {
+    (void)File_delete(tmpDirectory,TRUE);
+    printError(_("Cannot initialize client thread pool!"));
+    return ERROR_INIT;
+  }
+  if (!ThreadPool_init(&workerThreadPool,
+                       "BAR worker",
+                       globalOptions.niceLevel,
+                       (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()+3,
+                       MAX_UINT
+                      )
+     )
+  {
+    ThreadPool_done(&clientThreadPool);
+    (void)File_delete(tmpDirectory,TRUE);
+    printError(_("Cannot initialize worker thread pool!"));
+    return ERROR_INIT;
+  }
 
   // run
   error = ERROR_NONE;
