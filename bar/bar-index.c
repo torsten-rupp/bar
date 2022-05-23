@@ -5468,13 +5468,12 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
-  String        storageName;
-  Errors        error;
-  ulong         total;
-  ulong         n;
-  Array         ids;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
+  String storageName;
+  Errors error;
+  ulong  total;
+  ulong  i;
+  ulong  n;
+  Array  ids;
 
   // initialize variables
   storageName = String_new();
@@ -5500,20 +5499,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           (
                           )
                          );
-    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
-    {
-      (void)Database_delete(databaseHandle,
-                            &n,
-                            "entryFragments",
-                            DATABASE_FLAG_NONE,
-                            "id=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(databaseId)
-                            ),
-                            DATABASE_UNLIMITED
-                           );
-    }
+    (void)Database_deleteArray(databaseHandle,
+                               &n,
+                               "entryFragments",
+                               DATABASE_FLAG_NONE,
+                               "id=?",
+                               DATABASE_DATATYPE_KEY,
+                               Array_cArray(&ids),
+                               Array_length(&ids),
+                               DATABASE_UNLIMITED
+                              );
   }
   (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5530,20 +5525,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           (
                           )
                          );
-    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
-    {
-      (void)Database_delete(databaseHandle,
-                            &n,
-                            "directoryEntries",
-                            DATABASE_FLAG_NONE,
-                            "id=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(databaseId)
-                            ),
-                            DATABASE_UNLIMITED
-                           );
-    }
+    (void)Database_deleteArray(databaseHandle,
+                               &n,
+                               "directoryEntries",
+                               DATABASE_FLAG_NONE,
+                               "id=?",
+                               DATABASE_DATATYPE_KEY,
+                               Array_cArray(&ids),
+                               Array_length(&ids),
+                               DATABASE_UNLIMITED
+                              );
   }
   (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5560,20 +5551,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           (
                           )
                          );
-    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
-    {
-      (void)Database_delete(databaseHandle,
-                            &n,
-                            "linkEntries",
-                            DATABASE_FLAG_NONE,
-                            "id=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(databaseId)
-                            ),
-                            DATABASE_UNLIMITED
-                           );
-    }
+    (void)Database_deleteArray(databaseHandle,
+                               &n,
+                               "linkEntries",
+                               DATABASE_FLAG_NONE,
+                               "id=?",
+                               DATABASE_DATATYPE_KEY,
+                               Array_cArray(&ids),
+                               Array_length(&ids),
+                               DATABASE_UNLIMITED
+                              );
   }
   (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5590,20 +5577,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           (
                           )
                          );
-    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
-    {
-      (void)Database_delete(databaseHandle,
-                            &n,
-                            "specialEntries",
-                            DATABASE_FLAG_NONE,
-                            "id=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(databaseId)
-                            ),
-                            DATABASE_UNLIMITED
-                           );
-    }
+    (void)Database_deleteArray(databaseHandle,
+                               &n,
+                               "specialEntries",
+                               DATABASE_FLAG_NONE,
+                               "id=?",
+                               DATABASE_DATATYPE_KEY,
+                               Array_cArray(&ids),
+                               Array_length(&ids),
+                               DATABASE_UNLIMITED
+                              );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -5686,25 +5669,24 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&ids));
-      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+      for (i = 0; i < Array_length(&ids); i += 1000)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entries",
-                              DATABASE_FLAG_NONE,
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteArray(databaseHandle,
+                                   &n,
+                                   "entries",
+                                   DATABASE_FLAG_NONE,
+                                   "id=?",
+                                   DATABASE_DATATYPE_KEY,
+                                   &((DatabaseId*)Array_cArray(&ids))[i],
+                                   MIN(Array_length(&ids)-i,1000),
+                                   DATABASE_UNLIMITED
+                                  );
         printPercentage(n,Array_length(&ids));
       }
+      clearPercentage();
     }
     (void)Database_flush(databaseHandle);
   }
-  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
@@ -5728,19 +5710,18 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&ids));
-      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+      for (i = 0; i < Array_length(&ids); i += 1000)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entries",
-                              DATABASE_FLAG_NONE,
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteArray(databaseHandle,
+                                   &n,
+                                   "entries",
+                                   DATABASE_FLAG_NONE,
+                                   "id=?",
+                                   DATABASE_DATATYPE_KEY,
+                                   &((DatabaseId*)Array_cArray(&ids))[i],
+                                   MIN(Array_length(&ids)-i,1000),
+                                   DATABASE_UNLIMITED
+                                  );
         printPercentage(n,Array_length(&ids));
       }
       clearPercentage();
@@ -5765,32 +5746,31 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_DIRECTORY)
                           )
                          );
+fprintf(stderr,"%s:%d: array size=%d\n",__FILE__,__LINE__,Array_length(&ids));
   if (error == ERROR_NONE)
   {
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&ids));
       printPercentage(0,Array_length(&ids));
-      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+      for (i = 0; i < Array_length(&ids); i += 1000)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entries",
-                              DATABASE_FLAG_NONE,
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteArray(databaseHandle,
+                                   &n,
+                                   "entries",
+                                   DATABASE_FLAG_NONE,
+                                   "id=?",
+                                   DATABASE_DATATYPE_KEY,
+                                   &((DatabaseId*)Array_cArray(&ids))[i],
+                                   MIN(Array_length(&ids)-i,1000),
+                                   DATABASE_UNLIMITED
+                                  );
         printPercentage(n,Array_length(&ids));
       }
+      clearPercentage();
     }
     (void)Database_flush(databaseHandle);
   }
-  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
@@ -5814,25 +5794,24 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&ids));
-      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+      for (i = 0; i < Array_length(&ids); i += 1000)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entries",
-                              DATABASE_FLAG_NONE,
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteArray(databaseHandle,
+                                   &n,
+                                   "entries",
+                                   DATABASE_FLAG_NONE,
+                                   "id=?",
+                                   DATABASE_DATATYPE_KEY,
+                                   &((DatabaseId*)Array_cArray(&ids))[i],
+                                   MIN(Array_length(&ids)-i,1000),
+                                   DATABASE_UNLIMITED
+                                  );
         printPercentage(n,Array_length(&ids));
       }
+      clearPercentage();
     }
     (void)Database_flush(databaseHandle);
   }
-  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
@@ -5856,25 +5835,24 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&ids));
-      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+      for (i = 0; i < Array_length(&ids); i += 1000)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entries",
-                              DATABASE_FLAG_NONE,
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteArray(databaseHandle,
+                                   &n,
+                                   "entries",
+                                   DATABASE_FLAG_NONE,
+                                   "id=?",
+                                   DATABASE_DATATYPE_KEY,
+                                   &((DatabaseId*)Array_cArray(&ids))[i],
+                                   MIN(Array_length(&ids)-i,1000),
+                                   DATABASE_UNLIMITED
+                                  );
         printPercentage(n,Array_length(&ids));
       }
+      clearPercentage();
     }
     (void)Database_flush(databaseHandle);
   }
-  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
@@ -5898,25 +5876,24 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&ids));
-      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+      for (i = 0; i < Array_length(&ids); i += 1000)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entries",
-                              DATABASE_FLAG_NONE,
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteArray(databaseHandle,
+                                   &n,
+                                   "entries",
+                                   DATABASE_FLAG_NONE,
+                                   "id=?",
+                                   DATABASE_DATATYPE_KEY,
+                                   &((DatabaseId*)Array_cArray(&ids))[i],
+                                   MIN(Array_length(&ids)-i,1000),
+                                   DATABASE_UNLIMITED
+                                  );
         printPercentage(n,Array_length(&ids));
       }
+      clearPercentage();
     }
     (void)Database_flush(databaseHandle);
   }
-  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 

@@ -148,6 +148,8 @@ typedef enum
   DATABASE_DATATYPE_CSTRING,
   DATABASE_DATATYPE_BLOB,
 
+  DATABASE_DATATYPE_ARRAY,
+
   DATABASE_DATATYPE_UNKNOWN
 } DatabaseDataTypes;
 
@@ -545,26 +547,37 @@ typedef struct
 // database filter
 typedef struct
 {
+  const void *data;
+  ulong      length;
+} DatabaseFilterBlob;
+
+typedef struct
+{
+  const void *data;
+  ulong      length;
+  uint       elementSize;
+  const char *(*toString)(const void *data); 
+} DatabaseFilterArray;
+
+typedef struct
+{
   DatabaseDataTypes type;
   union
   {
-    intptr_t   p;
-
-    DatabaseId id;
-    bool       b;
-    int        i;
-    int64      i64;
-    uint32     u;
-    uint64     u64;
-    double     d;
-    uint64     dateTime;
-    String     string;
-    char       *s;
-    struct
-    {
-      void  *data;
-      ulong length;
-    } blob;
+    intptr_t            p;
+                        
+    DatabaseId          id;
+    bool                b;
+    int                 i;
+    int64               i64;
+    uint32              u;
+    uint64              u64;
+    double              d;
+    uint64              dateTime;
+    ConstString         string;
+    const char          *s;
+    DatabaseFilterBlob  blob;
+    DatabaseFilterArray array;
   };
 } DatabaseFilter;
 
@@ -999,18 +1012,53 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   (DatabaseFilter[]){__VA_ARGS__}, \
   ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2)
 
-#define DATABASE_FILTER_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
-#define DATABASE_FILTER_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value) == true) } }
-#define DATABASE_FILTER_INT(value)      { DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
-#define DATABASE_FILTER_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(uint)(value) } }
-#define DATABASE_FILTER_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
-#define DATABASE_FILTER_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
-#define DATABASE_FILTER_DOUBLE(value)   { DATABASE_DATATYPE_DOUBLE,   { (intptr_t)(value) } }
-#define DATABASE_FILTER_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
-#define DATABASE_FILTER_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
-#define DATABASE_FILTER_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+/***********************************************************************\
+* Name   : __DatabaseFilterBlob
+* Purpose: helper function to declare blob filter
+* Input  : data   - blob data
+*          length - blob data length
+* Output : -
+* Return : blob filter
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE DatabaseFilterBlob __DatabaseFilterBlob(void *data, ulong length) 
+{
+  return (DatabaseFilterBlob){ data, length };
+}
+
+/***********************************************************************\
+* Name   : __DatabaseFilterArray
+* Purpose: helper function to declare array filter
+* Input  : data        - array data
+*          length      - array data length
+*          elementSize - element size
+*          toString    - to-string callback
+* Output : -
+* Return : array filter
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE DatabaseFilterArray __DatabaseFilterArray(void *data, ulong length, uint elementSize, const char*(*toString)(const void *data)) 
+{
+  return (DatabaseFilterArray){ data, length, elementSize, toString };
+}
+
+#define DATABASE_FILTER_KEY(value)           { .type = DATABASE_DATATYPE_KEY,      { .id = value } }
+#define DATABASE_FILTER_BOOL(value)          { .type = DATABASE_DATATYPE_BOOL,     { .b  = ((value) == true) } }
+#define DATABASE_FILTER_INT(value)           { .type = DATABASE_DATATYPE_INT,      { .i  = value } }
+#define DATABASE_FILTER_UINT(value)          { .type = DATABASE_DATATYPE_UINT,     { .u  = value } }
+#define DATABASE_FILTER_INT64(value)         { .type = DATABASE_DATATYPE_INT64,    { .i64 = value } }
+#define DATABASE_FILTER_UINT64(value)        { .type = DATABASE_DATATYPE_UINT64,   { .u64 = value } }
+#define DATABASE_FILTER_DOUBLE(value)        { .type = DATABASE_DATATYPE_DOUBLE,   { .d   = value } }
+#define DATABASE_FILTER_DATETIME(value)      { .type = DATABASE_DATATYPE_DATETIME, { .dateTime = value } }
+#define DATABASE_FILTER_STRING(value)        { .type = DATABASE_DATATYPE_STRING,   { .string   = value } }
+#define DATABASE_FILTER_CSTRING(value)       { .type = DATABASE_DATATYPE_CSTRING,  { .s        = value } }
+#define DATABASE_FILTER_BLOB(value,_length)  { .type = DATABASE_DATATYPE_BLOB,     { .blob  = __DatabaseFilterArray value } }
+#define DATABASE_FILTER_ARRAY(value)         { .type = DATABASE_DATATYPE_ARRAY,    { .array = __DatabaseFilterArray value } }
 
 #define DATABASE_FILTERS_NONE (const char*)NULL,(DatabaseFilter*)NULL,0
+
 
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
@@ -2335,6 +2383,34 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
                        uint                 filterCount,
                        uint64               limit
                       );
+
+/***********************************************************************\
+* Name   : Database_deleteArray
+* Purpose: delete rows from database table by array
+* Input  : databaseHandle    - database handle
+*          changedRowCount   - row count variable (can be NULL)
+*          tableName         - table name,
+*          flags             - insert flags; see DATABASE_FLAG__...
+*          filter            - SQL filter expression
+*          filterDataType    - filter value type
+*          filterArrayData   - filter array data
+*          filterArrayLength - filter array length
+*          limit             - delete limit (if supported) or 0
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
+                            ulong                *changedRowCount,
+                            const char           *tableName,
+                            uint                 flags,
+                            const char           *filter,
+                            DatabaseDataTypes    filterDataType,
+                            const void           *filterArrayData,
+                            ulong                filterArrayLength,
+                            uint64               limit
+                           );
 
 /***********************************************************************\
 * Name   : Database_select
