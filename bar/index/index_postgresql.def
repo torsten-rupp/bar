@@ -141,6 +141,7 @@ CREATE TABLE FTS_storages(
   storageId BIGINT REFERENCES storages(id) ON DELETE CASCADE,
   name      TSVECTOR
 );
+CREATE INDEX ON FTS_storages(storageId);
 CREATE INDEX ON FTS_storages USING GIST(name);
 
 // --- entries ---------------------------------------------------------
@@ -210,6 +211,7 @@ CREATE TABLE FTS_entries(
   entryId BIGINT REFERENCES entries(id) ON DELETE CASCADE,
   name    TSVECTOR
 );
+CREATE INDEX ON FTS_entries(entryId);
 CREATE INDEX ON FTS_entries USING GIST(name);
 
 //TODO

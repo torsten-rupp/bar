@@ -733,6 +733,8 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
       return (dataType1 == DATABASE_DATATYPE_CSTRING);
     case DATABASE_DATATYPE_BLOB:
       return (dataType1 == DATABASE_DATATYPE_BLOB);
+    case DATABASE_DATATYPE_ARRAY:
+      return (dataType1 == DATABASE_DATATYPE_ARRAY);
 
     case DATABASE_DATATYPE_UNKNOWN:
       return FALSE;
@@ -2872,8 +2874,8 @@ LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
          || (postgreSQLExecStatus == PGRES_TUPLES_OK)
        )
     {
-      statement->result   = postgresqlResult;
-      statement->rowCount = PQntuples(postgresqlResult);
+      statement->result = postgresqlResult;
+      stringToUInt64(PQcmdTuples(postgresqlResult),&statement->rowCount,NULL);
       error = ERROR_NONE;
     }
     else
@@ -5340,7 +5342,7 @@ LOCAL void formatParameters(String               sqlString,
         databaseStatementHandle->resultCount    = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
 
         // allocate bind data
-        databaseStatementHandle->sqlite.bind = (DatabaseValue**)calloc(databaseStatementHandle->resultCount+databaseStatementHandle->parameterCount,
+        databaseStatementHandle->sqlite.bind = (DatabaseValue**)calloc(databaseStatementHandle->parameterCount+databaseStatementHandle->resultCount,
                                                                        sizeof(DatabaseValue*)
                                                                       );
         if (databaseStatementHandle->sqlite.bind == NULL)
@@ -5388,37 +5390,37 @@ LOCAL void formatParameters(String               sqlString,
 
           // allocate bind data
           databaseStatementHandle->mariadb.values.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->parameterCount,
-                                                                           sizeof(MYSQL_BIND)
-                                                                          );
+                                                                             sizeof(MYSQL_BIND)
+                                                                            );
           if (databaseStatementHandle->mariadb.values.bind == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
           databaseStatementHandle->mariadb.values.time = (MYSQL_TIME*)calloc(databaseStatementHandle->parameterCount,
-                                                                           sizeof(MYSQL_TIME)
-                                                                          );
+                                                                             sizeof(MYSQL_TIME)
+                                                                            );
           if (databaseStatementHandle->mariadb.values.time == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
 
           databaseStatementHandle->mariadb.results.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->resultCount,
-                                                                            sizeof(MYSQL_BIND)
-                                                                           );
+                                                                              sizeof(MYSQL_BIND)
+                                                                             );
           if (databaseStatementHandle->mariadb.results.bind == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
           databaseStatementHandle->mariadb.results.time = (MYSQL_TIME*)calloc(databaseStatementHandle->resultCount,
-                                                                            sizeof(MYSQL_TIME)
-                                                                           );
+                                                                              sizeof(MYSQL_TIME)
+                                                                             );
           if (databaseStatementHandle->mariadb.results.time == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
           databaseStatementHandle->mariadb.results.lengths = (unsigned long*)calloc(databaseStatementHandle->resultCount,
-                                                                                  sizeof(unsigned long)
-                                                                                 );
+                                                                                    sizeof(unsigned long)
+                                                                                   );
           if (databaseStatementHandle->mariadb.results.lengths == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
@@ -5588,6 +5590,9 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
+            case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+              break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -5688,6 +5693,9 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
               default:
                 #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -5741,6 +5749,9 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -5825,6 +5836,9 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
         break;
       case DATABASE_DATATYPE_BLOB:
         HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        break;
+      case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
       default:
         #ifndef NDEBUG
@@ -6083,6 +6097,9 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
               default:
                 #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -6166,6 +6183,9 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                     break;
                   case DATABASE_DATATYPE_BLOB:
                     HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                    break;
+                  case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                     break;
                   default:
                     #ifndef NDEBUG
@@ -6259,6 +6279,9 @@ abort();
                   break;
                 case DATABASE_DATATYPE_BLOB:
                   HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                  break;
+                case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
                 default:
                   #ifndef NDEBUG
@@ -6604,6 +6627,9 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                 case DATABASE_DATATYPE_BLOB:
                   HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
+                case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                  break;
                 default:
                   #ifndef NDEBUG
                     HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -6826,6 +6852,9 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
               default:
                 #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -6978,6 +7007,9 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -7139,6 +7171,9 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
               default:
                 #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -7273,9 +7308,31 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
+            case DATABASE_DATATYPE_ARRAY:
+              {
+                String string;
+                uint   j;
+                
+                string = String_new();
+                for (j = 0; j < filters[i].array.length; j++)
+                {
+                  if (!String_isEmpty(string)) String_appendChar(string,',');
+                  String_formatAppend(string,"%lld",((DatabaseId*)filters[i].array.data)[j]);
+                }
+
+                sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
+                                                 1+databaseStatementHandle->parameterIndex,
+                                                 String_cString(string),
+                                                 String_length(string),
+                                                 NULL
+                                                );
+
+                String_delete(string);
+              }
+              break;
             default:
               #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("type %u",filters[i].type);
               #endif /* NDEBUG */
               break;
           }
@@ -7403,13 +7460,16 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_CSTRING:
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = filters[i].s;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)filters[i].s;
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_length = stringLength(filters[i].s);
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
                 break;
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -7560,6 +7620,9 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
+              case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
               default:
                 #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -7577,6 +7640,40 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
   }
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : resetFilters
+* Purpose: reset fiters in prepared statement
+* Input  : databaseStatementHandle  - database statement handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void resetFilters(DatabaseStatementHandle *databaseStatementHandle)
+{
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+
+  switch (Database_getType(databaseStatementHandle->databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+      #else /* HAVE_MARIADB */
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+
+  databaseStatementHandle->parameterIndex = 0;
 }
 
 /***********************************************************************\
@@ -7925,7 +8022,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // get number of changes
             if (changedRowCount != NULL)
             {
-// TODO:              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->postgresql.handle);
+              (*changedRowCount) = databaseStatementHandle->postgresql.rowCount;
             }
           }
         #else /* HAVE_POSTGRESQL */
@@ -13631,6 +13728,9 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
     case DATABASE_DATATYPE_BLOB:
       String_format(string,"");
       break;
+    case DATABASE_DATATYPE_ARRAY:
+      String_format(string,"");
+      break;
     default:
       break;
   }
@@ -13679,6 +13779,9 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%s",databaseValue->s);
       break;
     case DATABASE_DATATYPE_BLOB:
+      stringFormat(buffer,bufferSize,"");
+      break;
+    case DATABASE_DATATYPE_ARRAY:
       stringFormat(buffer,bufferSize,"");
       break;
     default:
@@ -13951,6 +14054,9 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           break;
         case DATABASE_DATATYPE_BLOB:
           HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          break;
+        case DATABASE_DATATYPE_ARRAY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           break;
         default:
           #ifndef NDEBUG
@@ -14639,6 +14745,144 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
                                 changedRowCount,
                                 WAIT_FOREVER
                                );
+  });
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  // finalize statementHandle
+  finalizeStatement(&databaseStatementHandle);
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
+                            ulong                *changedRowCount,
+                            const char           *tableName,
+                            uint                 flags,
+                            const char           *filter,
+                            DatabaseDataTypes    filterDataType,
+                            const void           *filterArrayData,
+                            ulong                filterArrayLength,
+                            uint64               limit
+                           )
+{
+  String                  sqlString;
+  uint                    parameterCount;
+  DatabaseStatementHandle databaseStatementHandle;
+  ulong                   i;
+  DatabaseFilter          filters[1];
+  Errors                  error;
+  ulong                   n;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+// TODO:
+(void)flags;
+  // create SQL string
+  sqlString      = String_newCString("DELETE FROM ");
+  parameterCount = 0;
+  String_appendCString(sqlString,tableName);
+  if (filter != NULL)
+  {
+    String_formatAppend(sqlString," WHERE ");
+    formatParameters(sqlString,databaseHandle,filter,&parameterCount);
+  }
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      if (limit < DATABASE_UNLIMITED)
+      {
+        String_formatAppend(sqlString," LIMIT %"PRIu64,limit);
+      }
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+      #else /* HAVE_MARIADB */
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+  #ifndef NDEBUG
+    if (IS_SET(flags,DATABASE_FLAG_DEBUG))
+    {
+      printf("DEBUG: %s\n",String_cString(sqlString));
+    }
+  #endif
+
+  // prepare statement
+  error = prepareStatement(&databaseStatementHandle,
+                           databaseHandle,
+                           String_cString(sqlString),
+                           parameterCount
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  filters[0].type = filterDataType;
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    for (i = 0; i < filterArrayLength; i++)
+    {
+      if (filter != NULL)
+      {
+        resetFilters(&databaseStatementHandle);
+
+        switch (filterDataType)
+        {
+          case DATABASE_DATATYPE_KEY:
+            filters[0].id = ((DatabaseId*)filterArrayData)[i];
+            break;
+          default:
+            HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+            break;
+        }
+        error = bindFilters(&databaseStatementHandle,
+                            filters,
+                            1
+                           );
+        if (error != ERROR_NONE)
+        {
+          finalizeStatement(&databaseStatementHandle);
+          String_delete(sqlString);
+          return error;
+        }
+      }
+
+      // execute statement
+      error = executePreparedQuery(&databaseStatementHandle,
+                                   &n,
+                                   WAIT_FOREVER
+                                  );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      if (changedRowCount != NULL)
+      {
+        (*changedRowCount) += n;
+      }
+    }
+    
+    return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
