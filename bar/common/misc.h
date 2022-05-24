@@ -638,9 +638,9 @@ INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo)
 * Notes  : -
 \***********************************************************************/
 
-INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout);
+INLINE ulong Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
-INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout)
+INLINE ulong Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout)
 {
   uint64 timestamp;
 
@@ -650,7 +650,7 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout)
   {
     timestamp = Misc_getTimestamp();
     return (timestamp <= timeoutInfo->endTimestamp)
-             ? MIN((long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),maxTimeout)
+             ? MIN((ulong)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),maxTimeout)
              : 0L;
   }
   else

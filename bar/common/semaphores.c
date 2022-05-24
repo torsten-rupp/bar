@@ -203,7 +203,6 @@
         struct timespec __timespec; \
         \
         assert(semaphore != NULL); \
-        assert(timeout != WAIT_FOREVER); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (timeout != WAIT_FOREVER) \

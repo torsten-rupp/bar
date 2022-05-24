@@ -14127,6 +14127,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   String                  sqlString;
   uint                    parameterCount;
   DatabaseStatementHandle databaseStatementHandle;
+  TimeoutInfo             timeoutInfo;
   Errors                  error;
 
   assert(databaseHandle != NULL);
@@ -14340,17 +14341,19 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
+               Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
   {
     return executePreparedQuery(&databaseStatementHandle,
                                 NULL,  // changedRowCount,
-                                WAIT_FOREVER
+                                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
+  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14394,6 +14397,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   String                  sqlString;
   uint                    parameterCount;
   DatabaseStatementHandle databaseStatementHandle;
+  TimeoutInfo             timeoutInfo;
   Errors                  error;
 
   assert(databaseHandle != NULL);
@@ -14535,11 +14539,11 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
+               Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
   {
     return executePreparedQuery(&databaseStatementHandle,
                                 changedRowCount,
-                                WAIT_FOREVER
+                                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
   if (error != ERROR_NONE)
@@ -14572,6 +14576,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   String                  sqlString;
   uint                    parameterCount;
   DatabaseStatementHandle databaseStatementHandle;
+  TimeoutInfo             timeoutInfo;
   Errors                  error;
 
   assert(databaseHandle != NULL);
@@ -14669,17 +14674,19 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
+               Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
   {
     return executePreparedQuery(&databaseStatementHandle,
                                 changedRowCount,
-                                WAIT_FOREVER
+                                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
+  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14709,6 +14716,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   String                  sqlString;
   uint                    parameterCount;
   DatabaseStatementHandle databaseStatementHandle;
+  TimeoutInfo             timeoutInfo;
   Errors                  error;
 
   assert(databaseHandle != NULL);
@@ -14778,17 +14786,19 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   }
 
   // execute statement
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
+               Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
   {
     return executePreparedQuery(&databaseStatementHandle,
                                 changedRowCount,
-                                WAIT_FOREVER
+                                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
+  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -14821,6 +14831,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   DatabaseStatementHandle databaseStatementHandle;
   ulong                   i;
   DatabaseFilter          filters[1];
+  TimeoutInfo             timeoutInfo;
   Errors                  error;
   ulong                   n;
 
@@ -14877,6 +14888,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   }
 
   filters[0].type = filterDataType;
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
@@ -14913,7 +14925,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
       // execute statement
       error = executePreparedQuery(&databaseStatementHandle,
                                    &n,
-                                   WAIT_FOREVER
+                                   Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                   );
       if (error != ERROR_NONE)
       {
@@ -14927,6 +14939,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 
     return ERROR_NONE;
   });
+  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);

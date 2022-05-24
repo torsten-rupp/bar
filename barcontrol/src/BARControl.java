@@ -1410,7 +1410,7 @@ enum PasswordTypes
       case FTP:    return "FTP";
       case SSH:    return "SSH";
       case WEBDAV: return "WebDAV";
-      case CRYPT:  return "encryption";
+      case CRYPT:  return BARControl.tr("encryption");
     }
 
     return "";
