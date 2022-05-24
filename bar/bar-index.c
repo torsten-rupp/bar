@@ -5746,7 +5746,6 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_DIRECTORY)
                           )
                          );
-fprintf(stderr,"%s:%d: array size=%d\n",__FILE__,__LINE__,Array_length(&ids));
   if (error == ERROR_NONE)
   {
     n = 0L;
