@@ -150,7 +150,6 @@ LOCAL const char *DATABASE_DATATYPE_NAMES[] =
   #define MIN_POSTGRESQL_PROTOCOL_VERSION 3
 
   #define POSTGRESQL_CHARACTER_SET "utf8"
-// TODO: which collate?
   #define POSTGRESQL_COLLATE       "en_US.UTF-8"
 
   #ifdef POSTGRESQL_BINARY_INTERFACE
@@ -2386,8 +2385,6 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
     POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
     POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
-// TODO:
-//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
     POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
 
     handle = PQconnectdbParams(keywords,values,0);
@@ -2495,8 +2492,6 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     POSTGRESQL_CONNECT_PARAMETER(3,"dbname",         "template1");
     POSTGRESQL_CONNECT_PARAMETER(4,"connect_timeout","60");
     POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
-// TODO:
-//            POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","SQL_ASCII");  // Note: dp not use UTF-8; disable PostgreSQL check for valid encoding
     POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
 
     handle = PQconnectdbParams(keywords,values,0);
@@ -2656,18 +2651,20 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
 * Name   : postgresqlExecute
 * Purpose: execute PostgreSQL SQL string
 * Input  : handle           - database handle
+*          changedRowCount  - changed row count variable
 *          sqlString        - SQL string
 *          parameterTypes   - parameter types
 *          parameterValues  - parameter values
 *          parameterLengths - parameter lengths
 *          parameterFormats - parameter formats
 *          parameterCount   - number of parameters
-* Output : -
+* Output : changedRowCount - number of changed rows
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors postgresqlExecute(PGconn     *handle,
+                               ulong      *changedRowCount,
                                const char *sqlString,
                                const Oid  parameterTypes[],
                                const char *parameterValues[],
@@ -2708,6 +2705,11 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
                       "%s",
                       PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
                      );
+    }
+
+    if (changedRowCount != NULL)
+    {
+      stringToUInt64(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
     }
 
     PQclear(postgresqlResult);
@@ -2792,7 +2794,6 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                                  parameterCount,
                                  NULL  // paramTypes
                                 );
-  // TODO: clean up
     if (postgresqlResult == NULL)
     {
       return ERRORX_(DATABASE,
@@ -3636,7 +3637,8 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          int mysqlResult;
+          int  mysqlResult;
+          bool flag;
 
           // set SQL mode: allow null dates, disable strict to allow automatic cut of too long values
           mysqlResult = mysql_query(databaseHandle->mariadb.handle,
@@ -3648,10 +3650,11 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           UNUSED_VARIABLE(mysqlResult);
 
 // TODO:
-bool b = FALSE;
-mysql_options(databaseHandle->mariadb.handle,
-              MYSQL_REPORT_DATA_TRUNCATION,
-              &b);
+          flag = FALSE;
+          mysql_options(databaseHandle->mariadb.handle,
+                        MYSQL_REPORT_DATA_TRUNCATION,
+                        &flag
+                       );
         }
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
@@ -5950,7 +5953,6 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
       break;
   }
   if (databaseStatementHandle->results != NULL) free(databaseStatementHandle->results);
-// TODO:remove  if (databaseStatementHandle->values != NULL) free(databaseStatementHandle->values);
 
   // unlock
   Database_unlock(databaseStatementHandle->databaseHandle,DATABASE_LOCK_TYPE_READ);
@@ -6009,7 +6011,6 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
             sqlite3WaitUnlockNotify(databaseStatementHandle->databaseHandle->sqlite.handle);
             sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
           }
-  //TODO: correct? abort here?
           else if (sqliteResult == SQLITE_BUSY)
           {
             Misc_udelay(SLEEP_TIME*US_PER_MS);
@@ -6281,7 +6282,7 @@ abort();
                   HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
                 case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
                 default:
                   #ifndef NDEBUG
@@ -6453,10 +6454,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             PostgresSQLStatement statement;
             Oid                  *parameterTypes;
             uint                 i;
-// TODO:
-//            const char     **parameterValues;
-//            int            *parameterLengths;
-//            int            *parameterFormats;
+            ulong                n;
 
             // allocate parameter data
             statement.bind = (PostgreSQLBind*)malloc(parameterCount*sizeof(PostgreSQLBind));
@@ -6628,7 +6626,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                   HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
                 case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
                 default:
                   #ifndef NDEBUG
@@ -6640,6 +6638,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
             // execute SQL statement
             error = postgresqlExecute(databaseHandle->postgresql.handle,
+                                      &n,
                                       sqlString,
                                       parameterTypes,
                                       statement.parameterValues,
@@ -6660,7 +6659,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             // get number of changes
             if (changedRowCount != NULL)
             {
-// TODO:              (*changedRowCount) += (ulong)databaseHandle->postgresql.rowCount;
+              (*changedRowCount) += n;
             }
 
             // free resources
@@ -6853,7 +6852,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -7009,7 +7008,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -7172,7 +7171,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -7189,6 +7188,40 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : resetValues
+* Purpose: reset values in prepared statement
+* Input  : databaseStatementHandle  - database statement handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void resetValues(DatabaseStatementHandle *databaseStatementHandle)
+{
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+
+  switch (Database_getType(databaseStatementHandle->databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+      #else /* HAVE_MARIADB */
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+
+  databaseStatementHandle->parameterIndex = 0;
 }
 
 /***********************************************************************\
@@ -7312,7 +7345,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
               {
                 String string;
                 uint   j;
-                
+
                 string = String_new();
                 for (j = 0; j < filters[i].array.length; j++)
                 {
@@ -7773,7 +7806,10 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
           {
+            ulong n;
+
             error = postgresqlExecute(databaseHandle->postgresql.handle,
+                                      &n,
                                       sqlString,
                                       NULL,  // parameterTypes,
                                       NULL,  // parameterValues,
@@ -7789,7 +7825,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             // get number of changes
             if (changedRowCount != NULL)
             {
-//// TODO:              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mariadb.handle);
+              (*changedRowCount) += n;
             }
           }
         #else /* HAVE_POSTGRESQL */
@@ -8272,8 +8308,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
               // get number of changes
               if (changedRowCount != NULL)
               {
-// TODO:
-//                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
+                (*changedRowCount) += databaseStatementHandle->postgresql.rowCount;
               }
             }
           }
@@ -8965,7 +9000,7 @@ bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
           databaseSpecifier->mariadb.databaseName = String_setBuffer(String_new(),s4,n4);
         #else /* HAVE_MARIADB */
-    // TODO:
+// TODO:
         #endif /* HAVE_MARIADB */
         validURIFlag = TRUE;
       }
@@ -9420,6 +9455,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                        newDatabaseName
                       );
           error = postgresqlExecute(databaseHandle.postgresql.handle,
+                                    NULL,  // changedRowCount
                                     sqlString,
                                     NULL,  // parameterTypes,
                                     NULL,  // parameterValues,
@@ -10899,7 +10935,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
     UNUSED_VARIABLE(__lineNb__);
   #endif /* not NDEBUG */
 
-//TODO
   switch (lockType)
   {
     case DATABASE_LOCK_TYPE_NONE:
@@ -10907,8 +10942,9 @@ Errors Database_getTriggerList(StringList     *triggerList,
     case DATABASE_LOCK_TYPE_READ:
       DATABASE_HANDLE_LOCKED_DO(databaseHandle,
       {
-//        #ifndef xxxNDEBUG
+//TODO
 #if 0
+        #ifndef NDEBUG
           databaseHandle->debug.locked.threadId = THREAD_ID_NONE;
           databaseHandle->debug.locked.fileName = NULL;
           databaseHandle->debug.locked.lineNb   = 0;
@@ -10921,6 +10957,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                                             DATABASE_HISTORY_TYPE_UNLOCK
                                            );
         #endif /* not NDEBUG */
+#endif
 
         #ifdef DATABASE_DEBUG_LOCK_PRINT
           fprintf(stderr,
@@ -11278,8 +11315,11 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+      #if defined(HAVE_MARIADB)
+        error = ERROR_NONE;  // not supported; ignored
+      #else /* HAVE_MARIADB */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MARIADB */
       break;
   }
 
@@ -12338,9 +12378,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                            && (toColumnInfo.values[toColumnPrimaryKeyIndex].id == DATABASE_ID_ANY)
                                           )
                                        {
-                                 //fprintf(stderr,"%s:%d: bind insert parameter values %d\n",__FILE__,__LINE__,parameterValueCount);
-// TODO: implement resetBindValues()
-toDatabaseStatementHandle.parameterIndex=0;
+                                         resetValues(&toDatabaseStatementHandle);
                                          error = bindValues(&toDatabaseStatementHandle,parameterValues,parameterValueCount);
                                          if (error != ERROR_NONE)
                                          {
@@ -13890,6 +13928,13 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(sqlString != NULL);
 
+// TODO: debug version
+#ifndef NDEBUG
+  UNUSED_VARIABLE(__fileName__);
+  UNUSED_VARIABLE(__lineNb__);
+#endif /* not NDEBUG */
+
+
   // prepare statement
   error = prepareStatement(databaseStatementHandle,
                            databaseHandle,
@@ -13926,13 +13971,6 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   }
 
   // free resources
-
-// TODO: debug version
-#ifdef NDEBUG
-#else /* not NDEBUG */
-(void)__fileName__;
-(void)__lineNb__;
-#endif /* NDEBUG */
 
   return ERROR_NONE;
 }
@@ -14048,7 +14086,6 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           value.s = va_arg(arguments,const char**);
           if (value.s != NULL)
           {
-// TODO:warning
             (*value.s) = databaseStatementHandle->results[i].s;
           }
           break;
@@ -14056,7 +14093,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           break;
         case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           break;
         default:
           #ifndef NDEBUG
@@ -14402,8 +14439,11 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+      #if defined(HAVE_POSTGRESQL)
+// TODO: flags
+        String_setCString(sqlString,"INSERT");
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
       break;
   }
   String_appendCString(sqlString," INTO ");
@@ -14556,8 +14596,10 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+        #if defined(HAVE_POSTGRESQL)
+// TODO: flags
+        #else /* HAVE_POSTGRESQL */
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
   }
@@ -14881,7 +14923,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
         (*changedRowCount) += n;
       }
     }
-    
+
     return ERROR_NONE;
   });
   if (error != ERROR_NONE)
@@ -14979,8 +15021,10 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+        #if defined(HAVE_POSTGRESQL)
+// TODO: flags
+        #else /* HAVE_POSTGRESQL */
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
   }
@@ -16179,8 +16223,10 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+      #if defined(HAVE_POSTGRESQL)
+      #else /* HAVE_POSTGRESQL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
       break;
   }
   assert(error != ERROR_UNKNOWN);
@@ -16210,8 +16256,11 @@ void Database_debugPrintSimpleLockInfo(void)
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+        #if defined(HAVE_POSTGRESQL)
+          printf("Database: 'postgresql:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.postgresql.serverName),String_cString(databaseNode->databaseSpecifier.postgresql.userName));
+        #else /* HAVE_POSTGRESQL */
+          return;
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
 
@@ -16284,9 +16333,11 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
           #else /* HAVE_MARIADB */
           #endif /* HAVE_MARIADB */
           break;
-      case DATABASE_TYPE_POSTGRESQL:
-// TODO:
-        break;
+        case DATABASE_TYPE_POSTGRESQL:
+          #if defined(HAVE_POSTGRESQL)
+          #else /* HAVE_POSTGRESQL */
+          #endif /* HAVE_POSTGRESQL */
+          break;
       }
     }
   }
@@ -16607,7 +16658,14 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
           #endif /* HAVE_MARIADB */
           break;
         case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+          #if defined(HAVE_POSTGRESQL)
+            fprintf(stderr,
+                    "Database lock info 'postgresql:%s:%s':\n",
+                    String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.serverName),
+                    String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.userName)
+                   );
+          #else /* HAVE_POSTGRESQL */
+          #endif /* HAVE_POSTGRESQL */
           break;
       }
       fprintf(stderr,
@@ -16705,7 +16763,16 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
-// TODO:
+      #if defined(HAVE_POSTGRESQL)
+        fprintf(stderr,
+                "DEBUG database %s, %lu: 'postgresql:%s:%s': %s\n",
+                __fileName__,__lineNb__,
+                String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.postgresql.serverName),
+                String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.postgresql.userName),
+                String_cString(databaseStatementHandle->debug.sqlString)
+               );
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
       break;
   }
   #ifdef HAVE_BACKTRACE
