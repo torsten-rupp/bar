@@ -125,13 +125,35 @@ def build()
       }
     }
 
+    stage("Valgrind checks")
+    {
+      script
+      {
+        if (params.VALGRIND)
+        {
+          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          {
+            // start services
+            sh "sudo /etc/init.d/apache2 start"
+            sh "sudo /etc/init.d/ssh start"
+            sh "sudo /etc/init.d/vsftpd start"
+
+            TEST_STEPS.each { step -> sh "make -C bar valgrind_${step}"+" "+TEST_SETTINGS }
+
+            // stop services
+            sh "sudo /etc/init.d/vsftpd stop || true"
+            sh "sudo /etc/init.d/ssh stop || true"
+            sh "sudo /etc/init.d/apache2 stop || true"
+          }
+        }
+      }
+    }
+
     stage("Code coverage")
     {
       script
       {
-        if (   params.CODE_COVERAGE
-//            || (env.BRANCH_NAME == "master")
-           )
+        if (params.CODE_COVERAGE)
         {
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
@@ -167,9 +189,7 @@ def build()
     {
       script
       {
-        if (   params.PROFILING
-//            || (env.BRANCH_NAME == "master")
-           )
+        if (params.PROFILING)
         {
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
