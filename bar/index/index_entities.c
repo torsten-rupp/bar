@@ -2138,7 +2138,6 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                              );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
 

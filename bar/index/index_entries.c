@@ -531,14 +531,14 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                     "entriesNewest",
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_VALUE_KEY   ("entryId",         entryId),
-                                      DATABASE_VALUE_KEY   ("uuidId",          uuidId),
-                                      DATABASE_VALUE_KEY   ("entityId",        entityId),
-                                      DATABASE_VALUE_UINT  ("type",            indexType),
-                                      DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                      DATABASE_VALUE_UINT  ("userId",          userId),
-                                      DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                      DATABASE_VALUE_UINT  ("permission",      permission),
+                                      DATABASE_VALUE_KEY     ("entryId",         entryId),
+                                      DATABASE_VALUE_KEY     ("uuidId",          uuidId),
+                                      DATABASE_VALUE_KEY     ("entityId",        entityId),
+                                      DATABASE_VALUE_UINT    ("type",            indexType),
+                                      DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                      DATABASE_VALUE_UINT    ("userId",          userId),
+                                      DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                      DATABASE_VALUE_UINT    ("permission",      permission),
                                     ),
                                     "id=?",
                                     DATABASE_FILTERS
@@ -550,22 +550,21 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           else
           {
             // insert
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      KEY   ("entryId",         entryId),
-                                      KEY   ("uuidId",          uuidId),
-                                      KEY   ("entityId",        entityId),
-                                      UINT  ("type",            indexType),
-                                      STRING("name",            name),
-                                      UINT64("timeLastChanged", timeLastChanged),
-                                      UINT  ("userId",          userId),
-                                      UINT  ("groupId",         groupId),
-                                      UINT  ("permission",      permission)
+                                      DATABASE_VALUE_KEY     ("entryId",         entryId),
+                                      DATABASE_VALUE_KEY     ("uuidId",          uuidId),
+                                      DATABASE_VALUE_KEY     ("entityId",        entityId),
+                                      DATABASE_VALUE_UINT    ("type",            indexType),
+                                      DATABASE_VALUE_STROMG  ("name",            name),
+                                      DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                      DATABASE_VALUE_UINT    ("userId",          userId),
+                                      DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                      DATABASE_VALUE_UINT    ("permission",      permission)
                                     )
                                    );
           }
@@ -631,18 +630,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
                             (
-                              KEY   ("entryId",         entryId),
-                              KEY   ("uuidId",          uuidId),
-                              KEY   ("entityId",        entityId),
-                              UINT  ("type",            indexType),
-                              STRING("name",            name),
-                              UINT64("timeLastChanged", timeLastChanged),
-                              UINT  ("userId",          userId),
-                              UINT  ("groupId",         groupId),
-                              UINT  ("permission",      permission)
+                              DATABASE_VALUE_KEY     ("entryId",         entryId),
+                              DATABASE_VALUE_KEY     ("uuidId",          uuidId),
+                              DATABASE_VALUE_KEY     ("entityId",        entityId),
+                              DATABASE_VALUE_UINT    ("type",            indexType),
+                              DATABASE_VALUE_STRING  ("name",            name),
+                              DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                              DATABASE_VALUE_UINT    ("userId",          userId),
+                              DATABASE_VALUE_UINT    ("groupId",         groupId),
+                              DATABASE_VALUE_UINT    ("permission",      permission)
                             )
                            );
-fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
 #if 0
     error = Database_insertSelect(&indexHandle->databaseHandle,
                                   NULL,  // changedRowCount
@@ -650,15 +648,15 @@ fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entryId")
-                                    DATABASE_VALUE_KEY   ("uuidId")
-                                    DATABASE_VALUE_KEY   ("entityId")
-                                    DATABASE_VALUE_UINT  ("type")
-                                    DATABASE_VALUE_STRING("name")
-                                    DATABASE_VALUE_UINT64("timeLastChanged")
-                                    DATABASE_VALUE_UINT  ("userId")
-                                    DATABASE_VALUE_UINT  ("groupId")
-                                    DATABASE_VALUE_UINT  ("permission")
+                                    DATABASE_VALUE_KEY     ("entryId")
+                                    DATABASE_VALUE_KEY     ("uuidId")
+                                    DATABASE_VALUE_KEY     ("entityId")
+                                    DATABASE_VALUE_UINT    ("type")
+                                    DATABASE_VALUE_STRING  ("name")
+                                    DATABASE_VALUE_DATETIME("timeLastChanged")
+                                    DATABASE_VALUE_UINT    ("userId")
+                                    DATABASE_VALUE_UINT    ("groupId")
+                                    DATABASE_VALUE_UINT    ("permission")
                                   ),
                                   DATABASE_TABLES
                                   (
@@ -666,15 +664,15 @@ fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
                                   ),
                                   DATABASE_COLUMNS
                                   (
-                                    DATABASE_COLUMN_KEY   ("id"),
-                                    DATABASE_COLUMN_KEY   ("uuidId"),
-                                    DATABASE_COLUMN_KEY   ("entityId"),
-                                    DATABASE_COLUMN_UINT  ("type"),
-                                    DATABASE_COLUMN_STRING("name"),
-                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
-                                    DATABASE_COLUMN_UINT  ("userId"),
-                                    DATABASE_COLUMN_UINT  ("groupId"),
-                                    DATABASE_COLUMN_UINT  ("permission")
+                                    DATABASE_COLUMN_KEY     ("id"),
+                                    DATABASE_COLUMN_KEY     ("uuidId"),
+                                    DATABASE_COLUMN_KEY     ("entityId"),
+                                    DATABASE_COLUMN_UINT    ("type"),
+                                    DATABASE_COLUMN_STRING  ("name"),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT    ("userId"),
+                                    DATABASE_COLUMN_UINT    ("groupId"),
+                                    DATABASE_COLUMN_UINT    ("permission")
                                   ),
                                   "name=?",
                                   DATABASE_FILTERS
@@ -693,15 +691,15 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entryId")
-                                    DATABASE_VALUE_KEY   ("uuidId")
-                                    DATABASE_VALUE_KEY   ("entityId")
-                                    DATABASE_VALUE_UINT  ("type")
-                                    DATABASE_VALUE_STRING("name")
-                                    DATABASE_VALUE_UINT64("timeLastChanged")
-                                    DATABASE_VALUE_UINT  ("userId")
-                                    DATABASE_VALUE_UINT  ("groupId")
-                                    DATABASE_VALUE_UINT  ("permission")
+                                    DATABASE_VALUE_KEY     ("entryId")
+                                    DATABASE_VALUE_KEY     ("uuidId")
+                                    DATABASE_VALUE_KEY     ("entityId")
+                                    DATABASE_VALUE_UINT    ("type")
+                                    DATABASE_VALUE_STRING  ("name")
+                                    DATABASE_VALUE_DATETIME("timeLastChanged")
+                                    DATABASE_VALUE_UINT    ("userId")
+                                    DATABASE_VALUE_UINT    ("groupId")
+                                    DATABASE_VALUE_UINT    ("permission")
                                   ),
                                   DATABASE_TABLES
                                   (
@@ -709,15 +707,15 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                   ),
                                   DATABASE_COLUMNS
                                   (
-                                    DATABASE_COLUMN_KEY   ("id"),
-                                    DATABASE_COLUMN_KEY   ("uuidId"),
-                                    DATABASE_COLUMN_KEY   ("entityId"),
-                                    DATABASE_COLUMN_UINT  ("type"),
-                                    DATABASE_COLUMN_STRING("name"),
-                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
-                                    DATABASE_COLUMN_UINT  ("userId"),
-                                    DATABASE_COLUMN_UINT  ("groupId"),
-                                    DATABASE_COLUMN_UINT  ("permission")
+                                    DATABASE_COLUMN_KEY     ("id"),
+                                    DATABASE_COLUMN_KEY     ("uuidId"),
+                                    DATABASE_COLUMN_KEY     ("entityId"),
+                                    DATABASE_COLUMN_UINT    ("type"),
+                                    DATABASE_COLUMN_STRING  ("name"),
+                                    DATABASE_COLUMN_DATETIME("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT    ("userId"),
+                                    DATABASE_COLUMN_UINT    ("groupId"),
+                                    DATABASE_COLUMN_UINT    ("permission")
                                   ),
                                   "name=?",
                                   DATABASE_FILTERS
@@ -2481,50 +2479,50 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
-                                 DATABASE_COLUMN_KEY   ("uuids.id"),
-                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                                 DATABASE_COLUMN_KEY   ("entities.id"),
-                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                                 DATABASE_COLUMN_STRING("entities.hostName"),
-                                 DATABASE_COLUMN_STRING("entities.userName"),
-                                 DATABASE_COLUMN_UINT  ("entities.type"),
-                                 DATABASE_COLUMN_KEY   ("entriesNewest.entryId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.type"),
-                                 DATABASE_COLUMN_STRING("entriesNewest.name"),
-                                 DATABASE_COLUMN_UINT64("entriesNewest.timeLastChanged"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.userId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.groupId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
-                                 DATABASE_COLUMN_UINT64("entriesNewest.size"),
-                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
-                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN directoryEntries.storageId \
-                                                           WHEN ? THEN linkEntries.storageId \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN specialEntries.storageId \
-                                                         END \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN directoryEntries.storageId \
-                                                                                               WHEN ? THEN linkEntries.storageId \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN specialEntries.storageId \
-                                                                                             END \
-                                                         ) \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
-                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
-                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
-                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                                 DATABASE_COLUMN_KEY     ("uuids.id"),
+                                 DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY     ("entities.id"),
+                                 DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING  ("entities.hostName"),
+                                 DATABASE_COLUMN_STRING  ("entities.userName"),
+                                 DATABASE_COLUMN_UINT    ("entities.type"),
+                                 DATABASE_COLUMN_KEY     ("entriesNewest.entryId"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.type"),
+                                 DATABASE_COLUMN_STRING  ("entriesNewest.name"),
+                                 DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.userId"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.groupId"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.permission"),
+                                 DATABASE_COLUMN_UINT64  ("entriesNewest.size"),
+                                 DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
+                                 DATABASE_COLUMN_KEY     ("CASE entries.type \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN directoryEntries.storageId \
+                                                             WHEN ? THEN linkEntries.storageId \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN specialEntries.storageId \
+                                                           END \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN directoryEntries.storageId \
+                                                                                                 WHEN ? THEN linkEntries.storageId \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN specialEntries.storageId \
+                                                                                               END \
+                                                           ) \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_UINT64  ("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64  ("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
                                stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
@@ -2574,49 +2572,49 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
-                                 DATABASE_COLUMN_KEY   ("uuids.id"),
-                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                                 DATABASE_COLUMN_KEY   ("entities.id"),
-                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                                 DATABASE_COLUMN_STRING("entities.hostName"),
-                                 DATABASE_COLUMN_STRING("entities.userName"),
-                                 DATABASE_COLUMN_UINT  ("entities.type"),
-                                 DATABASE_COLUMN_KEY   ("entries.id"),
-                                 DATABASE_COLUMN_UINT  ("entries.type"),
-                                 DATABASE_COLUMN_STRING("entries.name"),
-                                 DATABASE_COLUMN_UINT64("entries.timeLastChanged"),
-                                 DATABASE_COLUMN_UINT  ("entries.userId"),
-                                 DATABASE_COLUMN_UINT  ("entries.groupId"),
-                                 DATABASE_COLUMN_UINT  ("entries.permission"),
-                                 DATABASE_COLUMN_UINT64("entries.size"),
-                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
-                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN directoryEntries.storageId \
-                                                           WHEN ? THEN linkEntries.storageId \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN specialEntries.storageId \
-                                                         END"
-                                                       ),
-                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN directoryEntries.storageId \
-                                                                                               WHEN ? THEN linkEntries.storageId \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN specialEntries.storageId \
-                                                                                             END \
-                                                         ) \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
-                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySize"),
-                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
-                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                                 DATABASE_COLUMN_KEY     ("uuids.id"),
+                                 DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY     ("entities.id"),
+                                 DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING  ("entities.hostName"),
+                                 DATABASE_COLUMN_STRING  ("entities.userName"),
+                                 DATABASE_COLUMN_UINT    ("entities.type"),
+                                 DATABASE_COLUMN_KEY     ("entries.id"),
+                                 DATABASE_COLUMN_UINT    ("entries.type"),
+                                 DATABASE_COLUMN_STRING  ("entries.name"),
+                                 DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT    ("entries.userId"),
+                                 DATABASE_COLUMN_UINT    ("entries.groupId"),
+                                 DATABASE_COLUMN_UINT    ("entries.permission"),
+                                 DATABASE_COLUMN_UINT64  ("entries.size"),
+                                 DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
+                                 DATABASE_COLUMN_KEY     ("CASE entries.type \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN directoryEntries.storageId \
+                                                             WHEN ? THEN linkEntries.storageId \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN specialEntries.storageId \
+                                                           END"
+                                                         ),
+                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN directoryEntries.storageId \
+                                                                                                 WHEN ? THEN linkEntries.storageId \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN specialEntries.storageId \
+                                                                                               END \
+                                                           ) \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_UINT64  ("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64  ("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySize"),
+                                 DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
                                stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
@@ -2688,50 +2686,50 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
-                                 DATABASE_COLUMN_KEY   ("uuids.id"),
-                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                                 DATABASE_COLUMN_KEY   ("entities.id"),
-                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                                 DATABASE_COLUMN_STRING("entities.hostName"),
-                                 DATABASE_COLUMN_STRING("entities.userName"),
-                                 DATABASE_COLUMN_UINT  ("entities.type"),
-                                 DATABASE_COLUMN_KEY   ("entriesNewest.entryId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.type"),
-                                 DATABASE_COLUMN_STRING("entriesNewest.name"),
-                                 DATABASE_COLUMN_UINT64("entriesNewest.timeLastChanged"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.userId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.groupId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
-                                 DATABASE_COLUMN_UINT64("entriesNewest.size"),
-                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
-                                 DATABASE_COLUMN_KEY   ("CASE entriesNewest.type \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN directoryEntries.storageId \
-                                                           WHEN ? THEN linkEntries.storageId \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN specialEntries.storageId \
-                                                         END \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entriesNewest.type \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN directoryEntries.storageId \
-                                                                                               WHEN ? THEN linkEntries.storageId \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN specialEntries.storageId \
-                                                                                             END \
-                                                         ) \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
-                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
-                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
-                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                                 DATABASE_COLUMN_KEY     ("uuids.id"),
+                                 DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY     ("entities.id"),
+                                 DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING  ("entities.hostName"),
+                                 DATABASE_COLUMN_STRING  ("entities.userName"),
+                                 DATABASE_COLUMN_UINT    ("entities.type"),
+                                 DATABASE_COLUMN_KEY     ("entriesNewest.entryId"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.type"),
+                                 DATABASE_COLUMN_STRING  ("entriesNewest.name"),
+                                 DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.userId"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.groupId"),
+                                 DATABASE_COLUMN_UINT    ("entriesNewest.permission"),
+                                 DATABASE_COLUMN_UINT64  ("entriesNewest.size"),
+                                 DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
+                                 DATABASE_COLUMN_KEY     ("CASE entriesNewest.type \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN directoryEntries.storageId \
+                                                             WHEN ? THEN linkEntries.storageId \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN specialEntries.storageId \
+                                                           END \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entriesNewest.type \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN directoryEntries.storageId \
+                                                                                                 WHEN ? THEN linkEntries.storageId \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN specialEntries.storageId \
+                                                                                               END \
+                                                           ) \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_UINT64  ("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64  ("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
                                stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
@@ -2962,6 +2960,7 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
+
   assert(fileSystemType_ >= 0);
 //TODO: may happen
   if (uuidId         != NULL) (*uuidId        ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidDatabaseId   );
@@ -3034,7 +3033,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId))
                            ),
                            NULL,  // groupBy
-                           "'entryFragments.offset' ASC",
+                           "entryFragments.offset ASC",
                            offset,
                            limit
                           );

@@ -5591,7 +5591,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
             case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+              HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
             default:
               #ifndef NDEBUG
@@ -5694,7 +5694,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -5751,7 +5751,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -5838,7 +5838,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
       case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
       default:
         #ifndef NDEBUG
@@ -6098,7 +6098,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -6185,7 +6185,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                     HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                     break;
                   case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                    HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                     break;
                   default:
                     #ifndef NDEBUG
@@ -7469,7 +7469,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -7621,7 +7621,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               case DATABASE_DATATYPE_ARRAY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
               default:
                 #ifndef NDEBUG
@@ -13954,8 +13954,9 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
     float      *f;
     double     *d;
     char       *ch;
+    uint64     *dateTime;
     const char **s;
-    String string;
+    String     string;
   }       value;
 
   assert(databaseStatementHandle != NULL);
@@ -14029,10 +14030,10 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           }
           break;
         case DATABASE_DATATYPE_DATETIME:
-          value.u64 = va_arg(arguments,uint64*);
-          if (value.u64 != NULL)
+          value.dateTime = va_arg(arguments,uint64*);
+          if (value.dateTime != NULL)
           {
-            (*value.u64) = databaseStatementHandle->results[i].dateTime;
+            (*value.dateTime) = databaseStatementHandle->results[i].dateTime;
           }
           break;
         case DATABASE_DATATYPE_STRING:
