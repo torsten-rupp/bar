@@ -2801,7 +2801,7 @@ test_misc-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_misc
 
 test_all:
-	@$(MAKE) --no-print-directory -s \
+	@$(MAKE) --no-print-directory \
 	  QUIET=1 \
           test_basic \
           test_compress \
@@ -2823,7 +2823,7 @@ test_all:
 
 test_smoke: \
   $(TEST_BAR)
-	@$(MAKE) --no-print-directory -s \
+	@$(MAKE) --no-print-directory \
     TEST_CRYPT_NAMES="$(MIN_TEST_CRYPT_NAMES)" \
     TEST_COMPRESS_NAMES="$(MIN_TEST_COMPRESS_NAMES)" \
     TEST_INDEX_DATABASES="$(MIN_TEST_INDEX_DATABASES)" \

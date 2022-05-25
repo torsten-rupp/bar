@@ -4737,7 +4737,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
           }
           break;
       }
-      if (error == ERROR_NONE)
+      if (error != ERROR_NONE)
       {
         return error;
       }
@@ -4912,7 +4912,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
           }
           break;
       }
-      if (error == ERROR_NONE)
+      if (error != ERROR_NONE)
       {
         return error;
       }

@@ -9692,8 +9692,8 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
         #if defined(HAVE_MARIADB)
           fprintf(stderr,
                   "Database debug: opened 'mariadb:%s:%s:*:%s'\n",
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.serverName)
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.userName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.serverName),
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.userName),
                   String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.databaseName)
                  );
         #else /* HAVE_MARIADB */
@@ -9703,8 +9703,8 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
         #if defined(HAVE_POSTGRESQL)
           fprintf(stderr,
                   "Database debug: opened 'postgresql:%s:%s:*:%s'\n",
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.serverName)
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.userName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.serverName),
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.userName),
                   String_cString(databaseHandle->databaseNode->databaseSpecifier.postgresql.databaseName)
                  );
         #else /* HAVE_POSTGRESQL */
