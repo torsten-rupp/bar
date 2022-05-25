@@ -3685,7 +3685,7 @@ class Dialogs
               widgetPassword1Hidden.setVisible(false);
               widgetPassword1Visible.setVisible(true);
 
-              if (text2 != null)
+              if (widgetPassword2Hidden != null)
               {
                 widgetPassword2Hidden.setEnabled(false);
                 widgetPassword2Hidden.setText("");
@@ -3698,7 +3698,7 @@ class Dialogs
               widgetPassword1Hidden.setVisible(true);
               widgetPassword1Visible.setVisible(false);
 
-              if (text2 != null)
+              if (widgetPassword2Hidden != null)
               {
                 widgetPassword2Hidden.setText(widgetPassword1Visible.getText());
                 widgetPassword2Hidden.setEnabled(true);
@@ -3727,7 +3727,7 @@ class Dialogs
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String password1 = widgetShowPassword.getSelection() ? widgetPassword1Visible.getText() : widgetPassword1Hidden.getText();
-            if (text2 != null)
+            if (widgetPassword2Hidden != null)
             {
               String password2 = widgetPassword2Hidden.getText();
               if (password1.equals(password2))
@@ -3765,7 +3765,7 @@ class Dialogs
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-          if (text2 != null)
+          if (widgetPassword2Hidden != null)
           {
             if (widgetShowPassword.getSelection())
             {
@@ -3788,7 +3788,7 @@ class Dialogs
       };
       widgetPassword1Hidden.addSelectionListener(selectionListener1);
       widgetPassword1Visible.addSelectionListener(selectionListener1);
-      if (text2 != null)
+      if (widgetPassword2Hidden != null)
       {
         SelectionListener selectionListener2 = new SelectionListener()
         {
@@ -3812,7 +3812,7 @@ class Dialogs
         {
           String password1,password2;
 
-          if (widgetShowPassword.getSelection())
+          if (widgetShowPassword.getSelection() || (widgetPassword2Hidden == null))
           {
             widgetOkButton.setEnabled(true);
           }
@@ -3824,7 +3824,10 @@ class Dialogs
       };
       widgetPassword1Hidden.addModifyListener(modifyListener);
       widgetPassword1Visible.addModifyListener(modifyListener);
-      widgetPassword2Hidden.addModifyListener(modifyListener);
+      if (widgetPassword2Hidden != null)
+      {
+        widgetPassword2Hidden.addModifyListener(modifyListener);
+      }
 
       if (widgetShowPassword.getSelection())
       {

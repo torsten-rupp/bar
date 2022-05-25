@@ -3324,29 +3324,49 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
 
   // restore entries
   failError = ERROR_NONE;
-  while (   ((restoreInfo->failError == ERROR_NONE) || !restoreInfo->jobOptions->noStopOnErrorFlag)
-//TODO
-//         && !isAborted(restoreInfo)
-         && MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
-        )
+  while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
-    // open archive (only if new archive)
-    if (archiveIndex != entryMsg.archiveIndex)
+    if (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
+// TODO:
+//        && !isAborted(restoreInfo)
+       )
     {
-      // close previous archive
-      if (archiveIndex != 0)
+      // open archive (only if new archive)
+      if (archiveIndex != entryMsg.archiveIndex)
       {
-        Archive_close(&archiveHandle);
-        archiveIndex = 0;
+        // close previous archive
+        if (archiveIndex != 0)
+        {
+          Archive_close(&archiveHandle);
+          archiveIndex = 0;
+        }
+
+        // open new archive
+        error = Archive_openHandle(&archiveHandle,
+                                   entryMsg.archiveHandle
+                                  );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot open archive '%s' (error: %s)!",
+                     String_cString(entryMsg.archiveHandle->printableStorageName),
+                     Error_getText(error)
+                    );
+          if (failError == ERROR_NONE) failError = error;
+          break;
+        }
+
+        // store current archive index
+        archiveIndex = entryMsg.archiveIndex;
       }
 
-      // open new archive
-      error = Archive_openHandle(&archiveHandle,
-                                 entryMsg.archiveHandle
-                                );
+      // set archive crypt info
+      Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
+
+      // seek to start of entry
+      error = Archive_seek(&archiveHandle,entryMsg.offset);
       if (error != ERROR_NONE)
       {
-        printError("Cannot open archive '%s' (error: %s)!",
+        printError("Cannot read storage '%s' (error: %s)!",
                    String_cString(entryMsg.archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
@@ -3354,100 +3374,82 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
         break;
       }
 
-      // store current archive index
-      archiveIndex = entryMsg.archiveIndex;
-    }
+      switch (entryMsg.archiveEntryType)
+      {
+        case ARCHIVE_ENTRY_TYPE_NONE:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+        case ARCHIVE_ENTRY_TYPE_FILE:
+          error = restoreFileEntry(restoreInfo,
+                                   &archiveHandle,
+                                   entryMsg.archiveHandle->printableStorageName,
+                                   buffer,
+                                   BUFFER_SIZE
+                                  );
+          break;
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          error = restoreImageEntry(restoreInfo,
+                                    &archiveHandle,
+                                    entryMsg.archiveHandle->printableStorageName,
+                                    buffer,
+                                    BUFFER_SIZE
+                                   );
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+          error = restoreDirectoryEntry(restoreInfo,
+                                        &archiveHandle,
+                                        entryMsg.archiveHandle->printableStorageName
+                                       );
 
-    // set archive crypt info
-    Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
-
-    // seek to start of entry
-    error = Archive_seek(&archiveHandle,entryMsg.offset);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot read storage '%s' (error: %s)!",
-                 String_cString(entryMsg.archiveHandle->printableStorageName),
-                 Error_getText(error)
-                );
-      if (failError == ERROR_NONE) failError = error;
-      break;
-    }
-
-    switch (entryMsg.archiveEntryType)
-    {
-      case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-      case ARCHIVE_ENTRY_TYPE_FILE:
-        error = restoreFileEntry(restoreInfo,
-                                 &archiveHandle,
-                                 entryMsg.archiveHandle->printableStorageName,
-                                 buffer,
-                                 BUFFER_SIZE
-                                );
-        break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
-        error = restoreImageEntry(restoreInfo,
-                                  &archiveHandle,
-                                  entryMsg.archiveHandle->printableStorageName,
-                                  buffer,
-                                  BUFFER_SIZE
-                                 );
-        break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        error = restoreDirectoryEntry(restoreInfo,
+          break;
+        case ARCHIVE_ENTRY_TYPE_LINK:
+          error = restoreLinkEntry(restoreInfo,
+                                   &archiveHandle,
+                                   entryMsg.archiveHandle->printableStorageName
+                                  );
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          error = restoreHardLinkEntry(restoreInfo,
+                                       &archiveHandle,
+                                       entryMsg.archiveHandle->printableStorageName,
+                                       buffer,
+                                       BUFFER_SIZE
+                                      );
+          break;
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          error = restoreSpecialEntry(restoreInfo,
                                       &archiveHandle,
                                       entryMsg.archiveHandle->printableStorageName
                                      );
-
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
-        error = restoreLinkEntry(restoreInfo,
-                                 &archiveHandle,
-                                 entryMsg.archiveHandle->printableStorageName
-                                );
-        break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        error = restoreHardLinkEntry(restoreInfo,
-                                     &archiveHandle,
-                                     entryMsg.archiveHandle->printableStorageName,
-                                     buffer,
-                                     BUFFER_SIZE
-                                    );
-        break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        error = restoreSpecialEntry(restoreInfo,
-                                    &archiveHandle,
-                                    entryMsg.archiveHandle->printableStorageName
-                                   );
-        break;
-      case ARCHIVE_ENTRY_TYPE_META:
-        error = Archive_skipNextEntry(&archiveHandle);
-        break;
-      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #else
+          break;
+        case ARCHIVE_ENTRY_TYPE_META:
           error = Archive_skipNextEntry(&archiveHandle);
-        #endif /* NDEBUG */
-        break;
-      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-    }
-    if (error != ERROR_NONE)
-    {
-      if (failError == ERROR_NONE) failError = error;
-    }
+          break;
+        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #else
+            error = Archive_skipNextEntry(&archiveHandle);
+          #endif /* NDEBUG */
+          break;
+        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+      }
+      if (error != ERROR_NONE)
+      {
+        if (failError == ERROR_NONE) failError = error;
+      }
 
-    // store fail error
-    if (failError != ERROR_NONE)
-    {
-      if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = failError;
+      // store fail error
+      if (failError != ERROR_NONE)
+      {
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = failError;
+      }
     }
 
     // free resources

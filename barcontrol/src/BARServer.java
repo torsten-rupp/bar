@@ -266,51 +266,6 @@ class Command
     CONFIRM;
   };
 
-  /** password types
-   */
-  enum PasswordTypes
-  {
-    NONE,
-    FTP,
-    SSH,
-    WEBDAV,
-    CRYPT;
-
-    /** check if login password
-     * @return true iff login password
-     */
-    public boolean isLogin()
-    {
-      return (this == FTP) || (this == SSH) || (this == WEBDAV);
-    }
-
-    /** check if crypt password
-     * @return true iff crypt password
-     */
-    public boolean isCrypt()
-    {
-      return (this == CRYPT);
-    }
-
-    /** convert to string
-     * @return string
-     */
-    @Override
-    public String toString()
-    {
-      switch (this)
-      {
-        case NONE:   return "none";
-        case FTP:    return "FTP";
-        case SSH:    return "SSH";
-        case WEBDAV: return "WebDAV";
-        case CRYPT:  return "encryption";
-      }
-
-      return "";
-    }
-  };
-
   // --------------------------- variables --------------------------------
 
   private static long         commandId = 0;     // global command id counter
@@ -1292,8 +1247,8 @@ class CommandThread extends Thread
                   if (passwordType.isLogin())
                   {
                     String[] data = Dialogs.login(new Shell(),
-                                                  BARControl.tr("{0} login password",passwordType),
-                                                  BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                                  BARControl.tr("Enter password"),
+                                                  BARControl.tr("Please enter {0} password for: {1}",passwordType.toString(),passwordText),
                                                   name,
                                                   BARControl.tr("Password")+":"
                                                  );
@@ -1315,8 +1270,8 @@ class CommandThread extends Thread
                   else
                   {
                     String password = Dialogs.password(new Shell(),
-                                                       BARControl.tr("{0} login password",passwordType),
-                                                       BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                       BARControl.tr("Enter password"),
+                                                       BARControl.tr("Please enter {0} password for: {1}",passwordType.toString(),passwordText),
                                                        BARControl.tr("Password")+":"
                                                       );
                     if (password != null)

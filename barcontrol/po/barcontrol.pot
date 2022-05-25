@@ -173,7 +173,7 @@ msgstr ""
 msgid "{0} {0,choice,0#days|1#day|1<days}"
 msgstr ""
 
-#: src/BARControl.java:1395
+#: src/BARControl.java:1395 src/BARControl.java:1413
 msgid "encryption"
 msgstr ""
 
@@ -368,7 +368,7 @@ msgid "TLS"
 msgstr ""
 
 #: src/BARControl.java:3914 src/BARControl.java:5704 src/BARControl.java:5728
-#: src/BARServer.java:1298 src/BARServer.java:1320 src/BARWidgets.java:2080
+#: src/BARServer.java:1253 src/BARServer.java:1275 src/BARWidgets.java:2080
 #: src/BARWidgets.java:2573 src/BARWidgets.java:3312
 #: src/ServerSettings.java:1326 src/ServerSettings.java:1668
 #: src/ServerSettings.java:3897
@@ -388,7 +388,7 @@ msgstr ""
 msgid "Try without TLS (SSL)"
 msgstr ""
 
-#: src/BARControl.java:4292 src/BARControl.java:4349 src/BARServer.java:1438
+#: src/BARControl.java:4292 src/BARControl.java:4349 src/BARServer.java:1393
 msgid "Master"
 msgstr ""
 
@@ -448,12 +448,12 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/BARControl.java:5039 src/BARServer.java:1465 src/TabStatus.java:2186
+#: src/BARControl.java:5039 src/BARServer.java:1420 src/TabStatus.java:2186
 #: src/TabStatus.java:2208
 msgid "suspended"
 msgstr ""
 
-#: src/BARControl.java:5702 src/BARServer.java:1296
+#: src/BARControl.java:5702
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr ""
@@ -467,7 +467,7 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/BARControl.java:5727 src/BARServer.java:1319
+#: src/BARControl.java:5727 src/BARServer.java:1251 src/BARServer.java:1274
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr ""
@@ -561,7 +561,7 @@ msgstr ""
 msgid "connect fail"
 msgstr ""
 
-#: src/BARException.java:367 src/BARServer.java:1089 src/TabStatus.java:103
+#: src/BARException.java:367 src/BARServer.java:1044 src/TabStatus.java:103
 msgid "disconnected"
 msgstr ""
 
@@ -1399,17 +1399,17 @@ msgstr ""
 msgid "instance is not a slave"
 msgstr ""
 
-#: src/BARServer.java:924
+#: src/BARServer.java:879
 #, java-format
 msgid "malformed command or result ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:935
+#: src/BARServer.java:890
 #, java-format
 msgid "Timeout reading data from server ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:981
+#: src/BARServer.java:936
 #, java-format
 msgid "Lost connection to server ''{0}''."
 msgstr ""
@@ -1418,7 +1418,7 @@ msgstr ""
 msgid "Confirmation"
 msgstr ""
 
-#: src/BARServer.java:1234
+#: src/BARServer.java:1189
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -1428,135 +1428,134 @@ msgid ""
 "Reason: {1}"
 msgstr ""
 
-#: src/BARServer.java:1238
+#: src/BARServer.java:1193
 msgid "Skip"
 msgstr ""
 
-#: src/BARServer.java:1238
+#: src/BARServer.java:1193
 msgid "Skip all"
 msgstr ""
 
-#: src/BARServer.java:1295 src/BARServer.java:1318
-#, java-format
-msgid "{0} login password"
+#: src/BARServer.java:1250 src/BARServer.java:1273
+msgid "Enter password"
 msgstr ""
 
-#: src/BARServer.java:1439 src/TabJobs.java:2768 src/TabJobs.java:10199
+#: src/BARServer.java:1394 src/TabJobs.java:2768 src/TabJobs.java:10199
 #: src/TabStatus.java:692 src/TabStatus.java:771
 msgid "Slave"
 msgstr ""
 
-#: src/BARServer.java:1463 src/TabStatus.java:92
+#: src/BARServer.java:1418 src/TabStatus.java:92
 msgid "running"
 msgstr ""
 
-#: src/BARServer.java:1464
+#: src/BARServer.java:1419
 msgid "paused"
 msgstr ""
 
-#: src/BARServer.java:1492
+#: src/BARServer.java:1447
 msgid "none"
 msgstr ""
 
-#: src/BARServer.java:1493
+#: src/BARServer.java:1448
 msgid "create"
 msgstr ""
 
-#: src/BARServer.java:1494
+#: src/BARServer.java:1449
 msgid "restore"
 msgstr ""
 
-#: src/BARServer.java:1495
+#: src/BARServer.java:1450
 msgid "update index"
 msgstr ""
 
-#: src/BARServer.java:1496
+#: src/BARServer.java:1451
 msgid "network"
 msgstr ""
 
-#: src/BARServer.java:1737 src/BARServer.java:1741 src/BARServer.java:1967
-#: src/BARServer.java:1971
+#: src/BARServer.java:1692 src/BARServer.java:1696 src/BARServer.java:1922
+#: src/BARServer.java:1926
 #, java-format
 msgid "connection to host {0}:{1} failed (error: {2})"
 msgstr ""
 
-#: src/BARServer.java:1745 src/BARServer.java:1850 src/BARServer.java:1858
-#: src/BARServer.java:1975 src/BARServer.java:2075
+#: src/BARServer.java:1700 src/BARServer.java:1805 src/BARServer.java:1813
+#: src/BARServer.java:1930 src/BARServer.java:2030
 #, java-format
 msgid "host {0}:{1} unreachable (error: {2})"
 msgstr ""
 
-#: src/BARServer.java:1749 src/BARServer.java:1854 src/BARServer.java:1979
-#: src/BARServer.java:2079 src/BARServer.java:2133
+#: src/BARServer.java:1704 src/BARServer.java:1809 src/BARServer.java:1934
+#: src/BARServer.java:2034 src/BARServer.java:2088
 #, java-format
 msgid "connection to host {0}:{1} refused"
 msgstr ""
 
-#: src/BARServer.java:1753 src/BARServer.java:1983 src/BARServer.java:2083
-#: src/BARServer.java:2137
+#: src/BARServer.java:1708 src/BARServer.java:1938 src/BARServer.java:2038
+#: src/BARServer.java:2092
 #, java-format
 msgid "host {0}:{1} unreachable (error: no route to host)"
 msgstr ""
 
-#: src/BARServer.java:1757 src/BARServer.java:1862 src/BARServer.java:1987
-#: src/BARServer.java:2087 src/BARServer.java:2141
+#: src/BARServer.java:1712 src/BARServer.java:1817 src/BARServer.java:1942
+#: src/BARServer.java:2042 src/BARServer.java:2096
 #, java-format
 msgid "unknown host {0}:{1}"
 msgstr ""
 
-#: src/BARServer.java:2159
+#: src/BARServer.java:2114
 msgid "no server ports specified"
 msgstr ""
 
-#: src/BARServer.java:2187
+#: src/BARServer.java:2142
 #, java-format
 msgid "Incompatible protocol version for {0}:{1}: : expected {2}, got {3}"
 msgstr ""
 
-#: src/BARServer.java:2206 src/BARServer.java:2210
+#: src/BARServer.java:2161 src/BARServer.java:2165
 #, java-format
 msgid "{0}:{1}: {2}"
 msgstr ""
 
-#: src/BARServer.java:2470 src/BARServer.java:3076
+#: src/BARServer.java:2425 src/BARServer.java:3031
 #, java-format
 msgid "input/output error: {0}"
 msgstr ""
 
-#: src/BARServer.java:3783 src/BARServer.java:3816
+#: src/BARServer.java:3738 src/BARServer.java:3771
 msgid "Password encryption fail"
 msgstr ""
 
-#: src/BARServer.java:4830 src/BARServer.java:4952
+#: src/BARServer.java:4785 src/BARServer.java:4907
 msgid "No result from server"
 msgstr ""
 
-#: src/BARServer.java:4836
+#: src/BARServer.java:4791
 msgid "Invalid response from server: expected SESSION"
 msgstr ""
 
-#: src/BARServer.java:4840
+#: src/BARServer.java:4795
 msgid "Invalid response from server: expected parameters"
 msgstr ""
 
-#: src/BARServer.java:4845
+#: src/BARServer.java:4800
 msgid "No session id"
 msgstr ""
 
-#: src/BARServer.java:4914
+#: src/BARServer.java:4869
 msgid "Init password cipher fail"
 msgstr ""
 
-#: src/BARServer.java:4960
+#: src/BARServer.java:4915
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:4968
+#: src/BARServer.java:4923
 msgid "Invalid response from server: no command id"
 msgstr ""
 
-#: src/BARServer.java:4980
+#: src/BARServer.java:4935
 msgid "Invalid response from server: parameters"
 msgstr ""
 

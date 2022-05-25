@@ -17892,7 +17892,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // request password
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
-                                  60*1000,
+                                  60*MS_PER_S,
                                   resultMap,
                                   "REQUEST_PASSWORD",
                                   "name=%'S passwordType=%'s passwordText=%'s",
