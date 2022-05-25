@@ -14624,7 +14624,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
 /***********************************************************************\
 * Name   : serverCommand_passwordsClear
-* Purpose: clear ssh/ftp/crypt passwords stored in memory
+* Purpose: clear ssh/ftp/crypt/decrypt passwords stored in memory
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -14643,12 +14643,16 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
+  // clear ftp/ssh/crypt passwords
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     Password_clear(&clientInfo->jobOptions.ftpServer.password);
     Password_clear(&clientInfo->jobOptions.sshServer.password);
     Password_clear(&clientInfo->jobOptions.cryptPassword);
   }
+
+  // clear decrypt passwords
+  Archive_clearDecryptPasswords();
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -19929,7 +19933,6 @@ SERVER_COMMANDS[] =
   { "PERSISTENCE_LIST_UPDATE",     serverCommand_persistenceListUpdate,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "PERSISTENCE_LIST_REMOVE",     serverCommand_persistenceListRemove,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "DECRYPT_PASSWORD_ADD",        serverCommand_decryptPasswordAdd,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "FTP_PASSWORD",                serverCommand_ftpPassword,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SSH_PASSWORD",                serverCommand_sshPassword,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },

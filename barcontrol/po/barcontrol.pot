@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-05-24 11:33+0200\n"
+"POT-Creation-Date: 2022-05-25 10:55+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -232,7 +232,7 @@ msgstr ""
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:3016 src/BARServer.java:1238 src/TabRestore.java:9075
+#: src/BARControl.java:3016 src/BARServer.java:1193 src/TabRestore.java:9075
 #: src/TabStatus.java:1117 src/TabStatus.java:1854 src/TabStatus.java:2878
 #: src/TabStatus.java:3010
 msgid "Abort"
@@ -1414,7 +1414,7 @@ msgstr ""
 msgid "Lost connection to server ''{0}''."
 msgstr ""
 
-#: src/BARServer.java:1233 src/TabRestore.java:9073 src/TabStatus.java:2833
+#: src/BARServer.java:1188 src/TabRestore.java:9073 src/TabStatus.java:2833
 msgid "Confirmation"
 msgstr ""
 

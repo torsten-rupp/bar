@@ -158,12 +158,12 @@ typedef struct DecryptKeyNode
 {
   LIST_NODE_HEADER(struct DecryptKeyNode);
 
-  CryptSalt        cryptSalt;
-  CryptKey         cryptKey;
-//  ArchiveCryptInfo archiveCryptInfo;
-  Password         *password;
-  uint             keyLength;
-//  CryptAlgorithms cryptAlgorithm;
+  String    storageName;
+  bool      askedFlag;                                   // TRUE if asked for password
+  CryptSalt cryptSalt;
+  CryptKey  cryptKey;
+  Password  *password;
+  uint      keyLength;
 } DecryptKeyNode;
 
 typedef struct
@@ -330,6 +330,7 @@ LOCAL void freeDecryptKeyNode(DecryptKeyNode *decryptKeyNode, void *userData)
 
   Crypt_doneKey(&decryptKeyNode->cryptKey);
   Password_delete(decryptKeyNode->password);
+  String_delete(decryptKeyNode->storageName);
 }
 
 /***********************************************************************\
@@ -627,13 +628,9 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordH
                                               void                    *getNamePasswordUserData
                                              )
 {
-  const Password *password;
-
   assert(passwordHandle != NULL);
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
-
-  password = NULL;
 
   SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -643,11 +640,9 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordH
     passwordHandle->passwordNode            = decryptPasswordList.head;
     passwordHandle->getNamePasswordFunction = getNamePasswordFunction;
     passwordHandle->getNamePasswordUserData = getNamePasswordUserData;
-
-    password = getNextDecryptPassword(passwordHandle);
   }
 
-  return password;
+  return getNextDecryptPassword(passwordHandle);
 }
 
 /***********************************************************************\
@@ -689,15 +684,70 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   // store new salt and key length
   Crypt_copySalt(&decryptKeyNode->cryptSalt,cryptSalt);
   decryptKeyNode->keyLength  = keyLength;
-//fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__); debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
 
   return ERROR_NONE;
 }
 
 /***********************************************************************\
-* Name   : addDecryptKey
-* Purpose: add decrypt key for password with salt and key length
-* Input  : password           - password
+* Name   : findDecryptKey
+* Purpose: find decrypt key
+* Input  : storageName - storage name
+* Output : -
+* Return : crypt key or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL CryptKey *findDecryptKey(ConstString         storageName,
+                               bool                askedFlag,
+                               CryptKeyDeriveTypes cryptKeyDeriveType,
+                               const CryptSalt     *cryptSalt,
+                               uint                keyLength
+                              )
+{
+  DecryptKeyNode *decryptKeyNode;
+  Errors         error;
+
+  assert(storageName != NULL);
+  assert(Semaphore_isLocked(&decryptKeyList.lock));
+
+  // find decrypt key
+  decryptKeyNode = LIST_FIND(&decryptKeyList,
+                             decryptKeyNode,
+                                (decryptKeyNode->askedFlag == askedFlag)
+                             && String_equals(decryptKeyNode->storageName,storageName)
+                            );
+
+  if (decryptKeyNode != NULL)
+  {
+    // check if salt/key length changed => calculate new key derivation
+    if (   (decryptKeyNode->keyLength != keyLength)
+        || !Crypt_equalsSalt(&decryptKeyNode->cryptSalt,cryptSalt)
+       )
+    {
+      error = deriveDecryptKey(decryptKeyNode,
+                               cryptKeyDeriveType,
+                               cryptSalt,
+                               keyLength
+                              );
+      if (error != ERROR_NONE)
+      {
+        return NULL;
+      }
+    }
+
+    return &decryptKeyNode->cryptKey;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : updateDecryptKey
+* Purpose: update/add decrypt key for password with salt and key length
+* Input  : storageName        - storage name
+*          password           - password
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 *          cryptSalt          - crypt salt
 *          keyLength          - key length [bits]
@@ -707,23 +757,25 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 *          iterators will get aware of new added decrypt keys.
 \***********************************************************************/
 
-LOCAL CryptKey *addDecryptKey(const Password      *password,
-                              CryptKeyDeriveTypes cryptKeyDeriveType,
-                              const CryptSalt     *cryptSalt,
-                              uint                keyLength
-                             )
+LOCAL CryptKey *updateDecryptKey(ConstString         storageName,
+                                 bool                askedFlag,
+                                 const Password      *password,
+                                 CryptKeyDeriveTypes cryptKeyDeriveType,
+                                 const CryptSalt     *cryptSalt,
+                                 uint                keyLength
+                                )
 {
   DecryptKeyNode *decryptKeyNode;
   Errors         error;
 
-  assert(password != NULL);
-  assert(keyLength > 0);
+  assert(storageName != NULL);
   assert(Semaphore_isLocked(&decryptKeyList.lock));
 
   // find decrypt key
   decryptKeyNode = LIST_FIND(&decryptKeyList,
                              decryptKeyNode,
-                             Password_equals(decryptKeyNode->password,password)
+                                String_equals(decryptKeyNode->storageName,storageName)
+                             && Password_equals(decryptKeyNode->password,password)
                             );
 
   // create new decrypt key node if required
@@ -735,15 +787,17 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
+    decryptKeyNode->storageName = String_duplicate(storageName);
     Crypt_initSalt(&decryptKeyNode->cryptSalt);
     Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
-    decryptKeyNode->password  = Password_duplicate(password);
-    decryptKeyNode->keyLength = 0;
+    decryptKeyNode->password    = Password_duplicate(password);
+    decryptKeyNode->keyLength   = 0;
 
     // add to decrypt key list
     List_append(&decryptKeyList,decryptKeyNode);
   }
   assert(decryptKeyNode != NULL);
+  if (askedFlag) decryptKeyNode->askedFlag = TRUE;
 
   // check if salt/key length changed => calculate new key derivation
   if (   (decryptKeyNode->keyLength != keyLength)
@@ -789,7 +843,6 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 {
   DecryptKeyNode *decryptKeyNode;
   const CryptKey *decryptKey;
-  String         printableStorageName;
   Password       newPassword;
   Errors         error;
 
@@ -807,6 +860,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
       {
         // get next crypt info from list
         decryptKeyNode = decryptKeyIterator->nextDecryptKeyNode;
+        assert(decryptKeyNode != NULL);
         decryptKeyIterator->nextDecryptKeyNode = decryptKeyNode->next;
 
         // check if key length/salt change
@@ -840,11 +894,13 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              // get decrypt key from job config
              if (decryptKeyIterator->jobCryptPassword != NULL)
              {
-               decryptKey = addDecryptKey(decryptKeyIterator->jobCryptPassword,
-                                          cryptKeyDeriveType,
-                                          cryptSalt,
-                                          keyLength
-                                         );
+               decryptKey = updateDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
+                                             FALSE,
+                                             decryptKeyIterator->jobCryptPassword,
+                                             cryptKeyDeriveType,
+                                             cryptSalt,
+                                             keyLength
+                                            );
              }
 
              // next password mode is: default
@@ -854,44 +910,56 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              // get decrypt key from global config
              if (!Password_isEmpty(&globalOptions.cryptPassword))
              {
-               decryptKey = addDecryptKey(&globalOptions.cryptPassword,
-                                          cryptKeyDeriveType,
-                                          cryptSalt,
-                                          keyLength
-                                         );
+               decryptKey = updateDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
+                                             FALSE,
+                                             &globalOptions.cryptPassword,
+                                             cryptKeyDeriveType,
+                                             cryptSalt,
+                                             keyLength
+                                            );
              }
 
              // next password mode is: ask
              decryptKeyIterator->passwordMode = PASSWORD_MODE_ASK;
              break;
            case PASSWORD_MODE_ASK:
-             // input password and derive decrypt key
-             if (decryptKeyIterator->getNamePasswordFunction != NULL)
+             // check if already asked for password for the storage
+             decryptKey = findDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
+                                         TRUE,
+                                         cryptKeyDeriveType,
+                                         cryptSalt,
+                                         keyLength
+                                        );
+             if (decryptKey == NULL)
              {
-               // input password
-               printableStorageName = Storage_getPrintableName(String_new(),&decryptKeyIterator->archiveHandle->storageInfo->storageSpecifier,NULL);
-               Password_init(&newPassword);
-               error = decryptKeyIterator->getNamePasswordFunction(NULL,  // loginName
-                                                                   &newPassword,
-                                                                   PASSWORD_TYPE_CRYPT,
-                                                                   (decryptKeyIterator->archiveHandle->mode == ARCHIVE_MODE_READ)
-                                                                     ? String_cString(printableStorageName)
-                                                                     : NULL,
-                                                                   FALSE,  // validateFlag
-                                                                   FALSE,  // weakCheckFlag
-                                                                   decryptKeyIterator->getNamePasswordUserData
-                                                                  );
-               if ((error == ERROR_NONE) && !Password_isEmpty(&newPassword))
+               // input password and derive decrypt key
+               if (decryptKeyIterator->getNamePasswordFunction != NULL)
                {
-                 // add to decrypt key list
-                 decryptKey = addDecryptKey(&newPassword,
-                                            cryptKeyDeriveType,
-                                            cryptSalt,
-                                            keyLength
-                                           );
+                 // input password
+                 Password_init(&newPassword);
+                 error = decryptKeyIterator->getNamePasswordFunction(NULL,  // loginName
+                                                                     &newPassword,
+                                                                     PASSWORD_TYPE_CRYPT,
+                                                                     (decryptKeyIterator->archiveHandle->mode == ARCHIVE_MODE_READ)
+                                                                       ? String_cString(decryptKeyIterator->archiveHandle->printableStorageName)
+                                                                       : NULL,
+                                                                     FALSE,  // validateFlag
+                                                                     FALSE,  // weakCheckFlag
+                                                                     decryptKeyIterator->getNamePasswordUserData
+                                                                    );
+// TODO: remove                 if ((error == ERROR_NONE) && !Password_isEmpty(&newPassword))
+                 {
+                   // add to decrypt key list
+                   decryptKey = updateDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
+                                                 TRUE,
+                                                 &newPassword,
+                                                 cryptKeyDeriveType,
+                                                 cryptSalt,
+                                                 keyLength
+                                                );
+                 }
+                 Password_done(&newPassword);
                }
-               Password_done(&newPassword);
-               String_delete(printableStorageName);
              }
 
              // next password mode is: none
@@ -1318,11 +1386,9 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
     {
       archiveFileSize = 0LL;
     }
-//fprintf(stderr,"%s, %d: archiveFileSize=%llu %lu %llu\n",__FILE__,__LINE__,archiveFileSize,minBytes,archiveHandle->archiveFileSize);
 
     if ((archiveHandle->archiveFileSize+archiveFileSize+minBytes) >= archiveHandle->storageInfo->jobOptions->archivePartSize)
     {
-//fprintf(stderr,"%s, %d: archiveFileSize=%lld minBytes=%lld\n",__FILE__,__LINE__,archiveFileSize,minBytes);
       // less than min. number of bytes left in part -> create new part
       newPartFlag = TRUE;
     }
@@ -1433,8 +1499,6 @@ LOCAL Errors calculateHash(const ChunkIO *chunkIO,
   }
 
   // calculate hash
-//fprintf(stderr,"%s, %d: offset=%llu\n",__FILE__,__LINE__,startOffset);
-//fprintf(stderr,"%s, %d: chunkSignature.info.offset=%llu\n",__FILE__,__LINE__,endOffset);
   offset = start;
   while (   (offset < end)
          && (error == ERROR_NONE)
@@ -1445,7 +1509,6 @@ LOCAL Errors calculateHash(const ChunkIO *chunkIO,
     error = chunkIO->read(chunkIOUserData,buffer,n,NULL);
     if (error == ERROR_NONE)
     {
-//fprintf(stderr,"%s, %d: n=%lu\n",__FILE__,__LINE__,n); debugDumpMemory(buffer,n,0);
       Crypt_updateHash(cryptHash,buffer,n);
 
       offset += (uint64)n;
@@ -1594,7 +1657,6 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
         const uint MAX_RETRIES = 3;
 
         uint retryCount;
-//uint64 t0 = Misc_getTimestamp(); fprintf(stderr,"%s:%d: flush %d\n",__FILE__,__LINE__,List_count(&archiveIndexList));
 
         retryCount = 0;
         do
@@ -1727,7 +1789,6 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
           }
         }
         while ((error != ERROR_NONE) && (retryCount < MAX_RETRIES));
-//fprintf(stderr,"%s:%d: flush done %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/1000);
       }
     }
 
@@ -2386,7 +2447,6 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
     free(encryptedKeyData);
     return error;
   }
-//fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
 
 //TODO: not required to store encrypted key when reading archives
   // set crypt data
@@ -5660,9 +5720,16 @@ bool Archive_isArchiveFile(ConstString fileName)
 
 void Archive_clearDecryptPasswords(void)
 {
+  // clear decrypt passwords
   SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     List_clear(&decryptPasswordList);
+  }
+
+  // clear decrypt keys
+  SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_clear(&decryptKeyList);
   }
 }
 
@@ -6078,7 +6145,6 @@ UNUSED_VARIABLE(storageInfo);
           }
         }
         while (!okFlag);
-//fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
         AUTOFREE_ADD(&autoFreeList,&archiveHandle->encryptedKeyData,{ free(archiveHandle->encryptedKeyData); });
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
@@ -14251,8 +14317,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                 do
                 {
                   error = readImageDataBlock(archiveEntryInfo);
-//fprintf(stderr,"%s, %d: flush=%d size=%d index=%d\n",__FILE__,__LINE__,Compress_isFlush(&archiveEntryInfo->image.byteCompressInfo),
-//archiveEntryInfo->image.chunkImageData.info.size,archiveEntryInfo->image.chunkImageData.info.index);
                   if (error != ERROR_NONE)
                   {
                     return error;
@@ -14265,7 +14329,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                     return error;
                   }
                   byteDecompressEmptyFlag = (availableBytes <= 0L);
-//fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
                 while (   byteDecompressEmptyFlag
                        && !Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo)
@@ -14273,7 +14336,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
             }
 
-//fprintf(stderr,"%s, %d: availableBytes=%d flushed=%d end=%d\n",__FILE__,__LINE__,availableBytes,Compress_isFlush(&archiveEntryInfo->image.byteCompressInfo),Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo));
             if (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta buffer
@@ -14404,8 +14466,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                 do
                 {
                   error = readHardLinkDataBlock(archiveEntryInfo);
-//fprintf(stderr,"%s, %d: flush=%d size=%d index=%d\n",__FILE__,__LINE__,Compress_isFlush(&archiveEntryInfo->hardLink.byteCompressInfo),
-//archiveEntryInfo->hardLink.chunkHardLinkData.info.size,archiveEntryInfo->hardLink.chunkHardLinkData.info.index);
                   if (error != ERROR_NONE)
                   {
                     return error;
@@ -14418,7 +14478,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                     return error;
                   }
                   byteDecompressEmptyFlag = (availableBytes <= 0L);
-//fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
                 while (   byteDecompressEmptyFlag
                        && !Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo)
@@ -14426,7 +14485,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
             }
 
-//fprintf(stderr,"%s, %d: availableBytes=%d flushed=%d end=%d\n",__FILE__,__LINE__,availableBytes,Compress_isFlush(&archiveEntryInfo->hardLink.byteCompressInfo),Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo));
             if (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta buffer
@@ -14747,7 +14805,6 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
     {
       break;
     }
-//fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,chunkHeader.idChars);
 
     // check if signature
     if (chunkHeader.id == CHUNK_ID_SIGNATURE)
@@ -14796,7 +14853,6 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
       }
 
       // get signature hash
-//fprintf(stderr,"%s, %d: %llx .. %llx\n",__FILE__,__LINE__,lastSignatureOffset,chunkSignature.info.offset);
       error = calculateHash(archiveHandle->chunkIO,
                             archiveHandle->chunkIOUserData,
                             &signatureHash,
@@ -15254,7 +15310,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     }
 
     // read entry
-//fprintf(stderr,"%s, %d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:

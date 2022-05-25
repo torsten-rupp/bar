@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-05-24 11:33+0200\n"
+"POT-Creation-Date: 2022-05-25 10:55+0200\n"
 "PO-Revision-Date: 2021-10-11 11:18+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -237,7 +237,7 @@ msgstr "Verbindung fehlgeschlagen"
 msgid "Start"
 msgstr "Start"
 
-#: src/BARControl.java:3016 src/BARServer.java:1238 src/TabRestore.java:9075
+#: src/BARControl.java:3016 src/BARServer.java:1193 src/TabRestore.java:9075
 #: src/TabStatus.java:1117 src/TabStatus.java:1854 src/TabStatus.java:2878
 #: src/TabStatus.java:3010
 msgid "Abort"
@@ -1445,7 +1445,7 @@ msgstr "Zeitüberschreitung beim Lesen von Rechner ''{0}''"
 msgid "Lost connection to server ''{0}''."
 msgstr "Verbindung zu Rechner ''{0}'' verloren."
 
-#: src/BARServer.java:1233 src/TabRestore.java:9073 src/TabStatus.java:2833
+#: src/BARServer.java:1188 src/TabRestore.java:9073 src/TabStatus.java:2833
 msgid "Confirmation"
 msgstr "Bestätigung"
 
