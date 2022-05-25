@@ -294,6 +294,7 @@ typedef struct
 
   uint                     blockLength;                                // block length for crypt algorithm
 
+// TODO: also in storageInfo->storageSpecifier->archiveName?
   ConstString              archiveName;                                // archive file name
   ConstString              printableStorageName;                       // printable storage name
 
