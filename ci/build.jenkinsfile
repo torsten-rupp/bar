@@ -64,6 +64,9 @@ def build()
 
     switch (params.BINARY_TYPE)
     {
+      case "":
+        binaryExtension="";
+        break;
       case "DEBUG":
         binaryExtension="-debug";
         break;
@@ -77,7 +80,7 @@ def build()
         binaryExtension="-gprof";
         break;
       default:
-        binaryExtension="";
+        binaryExtension="-debug";
         break;
     }
     stage("Smoke tests")
