@@ -1415,6 +1415,11 @@ LOCAL void pairingThreadCode(void)
               if (!Connector_isConnected(&slaveNode->connectorInfo))
               {
                 // try connect to slave
+                logMessage(NULL,  // logHandle,
+                           LOG_TYPE_INFO,
+                           "Try to connect to slave %s:%d",
+                           String_cString(slaveNode->name),slaveNode->port
+                          );
                 error = Connector_connect(&slaveNode->connectorInfo,
                                           slaveNode->name,
                                           slaveNode->port
@@ -1429,7 +1434,6 @@ LOCAL void pairingThreadCode(void)
                                "Slave %s:%d online",
                                String_cString(slaveNode->name),slaveNode->port
                               );
-
                   }
                   slaveNode->lastOnlineDateTime = Misc_getCurrentDateTime();
                 }
@@ -1444,6 +1448,11 @@ LOCAL void pairingThreadCode(void)
                   && !Connector_isAuthorized(&slaveNode->connectorInfo)
                  )
               {
+                logMessage(NULL,  // logHandle,
+                           LOG_TYPE_INFO,
+                           "Try to authorize slave %s:%d",
+                           String_cString(slaveNode->name),slaveNode->port
+                          );
                 error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
                 if (error == ERROR_NONE)
                 {
