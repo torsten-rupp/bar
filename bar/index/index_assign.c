@@ -942,6 +942,15 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
+      error = Database_beginTransaction(&indexHandle->databaseHandle,
+                                        DATABASE_TRANSACTION_TYPE_EXCLUSIVE,
+                                        indexHandle->databaseHandle.timeout
+                                       );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
       if      (toJobUUID != NULL)
       {
         if (!INDEX_ID_IS_NONE(entityId) && !INDEX_ID_IS_DEFAULT_ENTITY(entityId))
@@ -956,6 +965,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                    );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
         }
@@ -970,6 +980,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                 );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
         }
@@ -989,6 +1000,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                        );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
         }
@@ -1005,6 +1017,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                       );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
         }
@@ -1021,6 +1034,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                    );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
 #else
@@ -1043,6 +1057,7 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToEntity");
                                                );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
         }
@@ -1060,6 +1075,7 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToEntity");
                                        );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
 #else
@@ -1078,6 +1094,7 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignEntityToStorage");
                                     );
           if (error != ERROR_NONE)
           {
+            Database_rollbackTransaction(&indexHandle->databaseHandle);
             return error;
           }
 #else
@@ -1095,6 +1112,12 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToStorage");
         IndexCommon_verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
         IndexCommon_verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
       #endif /* not NDEBUG */
+
+      error = Database_endTransaction(&indexHandle->databaseHandle);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
 
       return ERROR_NONE;
     });

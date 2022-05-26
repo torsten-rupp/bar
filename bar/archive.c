@@ -15155,14 +15155,15 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
     assert(offset > 0LL);
 
-    if (updateSize > 0)
+    if (updateSize > 0LL)
     {
       progress          = (offset*1000)/updateSize;
       now               = Misc_getTimestamp();
       elapsedTime       = (ulong)((now-updateStartTimestamp)/US_PER_SECOND);
       importTotalTime   = (ulong)(((uint64)elapsedTime*updateSize)/offset);
       estimatedRestTime = importTotalTime-elapsedTime;
-      if (   (progress >= (importLastProgress+1))
+      if (   (progress >= 20)  // to avoid wrong estimation wait until 2% are done
+          && (progress >= (importLastProgress+1))
           && (now > (updateLastProgressTimestamp+30*US_PER_SECOND))
           && (estimatedRestTime > 0)
          )
