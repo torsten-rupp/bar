@@ -386,7 +386,7 @@ LOCAL void busyHandler(void *userData)
   IndexDefinition indexDefinition;
 
   assert(indexHandle != NULL);
-  assert(databaseSpecifier != NULL);
+//  assert(databaseSpecifier != NULL);
 
   // init variables
   indexHandle->masterIO            = masterIO;
@@ -399,6 +399,9 @@ LOCAL void busyHandler(void *userData)
     indexHandle->threadId = pthread_self();
   #endif /* NDEBUG */
 
+if (masterIO == NULL)
+{
+  assert(databaseSpecifier != NULL);
   // check and complete database specifier
   switch (databaseSpecifier->type)
   {
@@ -552,6 +555,7 @@ LOCAL void busyHandler(void *userData)
   });
 
   // free resources
+}
 
   return ERROR_NONE;
 }
@@ -576,6 +580,8 @@ LOCAL void busyHandler(void *userData)
 {
   assert(indexHandle != NULL);
 
+if (indexHandle->masterIO == NULL)
+{
   // remove busy handler
   Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
 
@@ -587,6 +593,7 @@ LOCAL void busyHandler(void *userData)
       __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
     #endif /* NDEBUG */
   });
+}
 
   return ERROR_NONE;
 }
@@ -2292,11 +2299,11 @@ LOCAL void indexThreadCode(void)
             // remove storage from database
             do
             {
-              // purge storage
-              error = IndexStorage_purge(&indexHandle,
-                                         storageId,
-                                         NULL  // progressInfo
-                                        );
+              // delete storage
+              error = IndexStorage_delete(&indexHandle,
+                                          storageId,
+                                          NULL  // progressInfo
+                                         );
               if (error == ERROR_INTERRUPTED)
               {
                 // wait until index is unused
@@ -2316,10 +2323,10 @@ LOCAL void indexThreadCode(void)
               do
               {
                 error = IndexEntity_prune(&indexHandle,
-                                    NULL,  // doneFlag
-                                    NULL,  // deletedCounter
-                                    entityId
-                                   );
+                                          NULL,  // doneFlag
+                                          NULL,  // deletedCounter
+                                          entityId
+                                         );
                 if (error == ERROR_INTERRUPTED)
                 {
                   // wait until index is unused
@@ -2937,9 +2944,9 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     (void)IndexStorage_cleanUp(&indexHandle);
     (void)IndexUUID_cleanUp(&indexHandle);
 
-    (void)IndexStorage_pruneEmpty(&indexHandle,NULL);
-    (void)IndexEntity_pruneEmpty(&indexHandle,NULL,NULL);
-    (void)IndexUUID_pruneEmpty(&indexHandle,NULL,NULL);
+    (void)IndexStorage_pruneAll(&indexHandle,NULL);
+    (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
+    (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
 
@@ -3035,9 +3042,9 @@ IndexHandle *__Index_open(const char *__fileName__,
 
   indexHandle = NULL;
 
-  if (Index_isAvailable())
+//  if (Index_isAvailable())
   {
-    assert(indexDatabaseSpecifier != NULL);
+//    assert(indexDatabaseSpecifier != NULL);
 
     indexHandle = (IndexHandle*)malloc(sizeof(IndexHandle));
     if (indexHandle == NULL)
@@ -3128,35 +3135,75 @@ Errors __Index_beginTransaction(const char  *__fileName__,
 
   assert(indexHandle != NULL);
 
-  // begin transaction
-  #ifdef NDEBUG
-    error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-  #else /* not NDEBUG */
-    error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-  #endif /* NDEBUG */
+  if (indexHandle->masterIO == NULL)
+  {
+    // begin transaction
+    #ifdef NDEBUG
+      error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+    #else /* not NDEBUG */
+      error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+    #endif /* NDEBUG */
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
 
   return error;
 }
 
 Errors Index_endTransaction(IndexHandle *indexHandle)
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
-  return Database_endTransaction(&indexHandle->databaseHandle);
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Database_endTransaction(&indexHandle->databaseHandle);
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
 }
 
 Errors Index_rollbackTransaction(IndexHandle *indexHandle)
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
-  return Database_rollbackTransaction(&indexHandle->databaseHandle);
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Database_rollbackTransaction(&indexHandle->databaseHandle);
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
 }
 
 Errors Index_flush(IndexHandle *indexHandle)
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
-  return Database_flush(&indexHandle->databaseHandle);
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Database_flush(&indexHandle->databaseHandle);
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
 }
 
 bool Index_containsType(const IndexId indexIds[],

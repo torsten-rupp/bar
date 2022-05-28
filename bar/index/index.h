@@ -2805,44 +2805,91 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
 
 /***********************************************************************\
 * Name   : Index_pruneUUID
-* Purpose: delete uuid from index if not used anymore (empty)
+* Purpose: delete uuid from index if empty
 * Input  : indexHandle - index handle
-*          uuidId      - index id of UUID
+*          indexId     - index id of UUID
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_pruneUUID(IndexHandle *indexHandle,
-                       IndexId     uuidId
+                       IndexId     indexId
                       );
 
 /***********************************************************************\
-* Name   : Index_pruneEntity
-* Purpose: delete entity from index if not used anymore (empty)
+* Name   : Index_purgeEntity
+* Purpose: purge entity from index if empty
 * Input  : indexHandle - index handle
-*          entityId    - index id of entity
+*          indexId     - index id of entity
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_purgeEntity(IndexHandle *indexHandle,
+                         IndexId     indexId
+                        );
+
+/***********************************************************************\
+* Name   : Index_pruneEntity
+* Purpose: delete entity from index if empty
+* Input  : indexHandle - index handle
+*          indexId     - index id of entity
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_pruneEntity(IndexHandle *indexHandle,
-                         IndexId     entityId
+                         IndexId     indexId
                         );
 
 /***********************************************************************\
 * Name   : Index_pruneStorage
-* Purpose: delete storage from index if not used anymore (empty)
+* Purpose: purge storage from index (mark as "deleted")
 * Input  : indexHandle - index handle
-*          storageId   - index id of storage
+*          indexId     - index id of storage
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_purgeStorage(IndexHandle *indexHandle,
+                          IndexId     indexId
+                         );
+
+/***********************************************************************\
+* Name   : Index_pruneStorage
+* Purpose: purge all storage from index (mark as "deleted")
+* Input  : indexHandle      - index handle
+*          storageSpecifier - storage specifier or NULL
+*          archiveName      - archive name or NULL for name from
+*                             storage specifier
+*          keepIndexId      - index id of storage to keep
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_purgeAllStorages(IndexHandle            *indexHandle,
+                              const StorageSpecifier *storageSpecifier,
+                              ConstString            archiveName,
+                              IndexId                keepIndexId
+                             );
+
+/***********************************************************************\
+* Name   : Index_pruneStorage
+* Purpose: purge storage from index if empty
+* Input  : indexHandle - index handle
+*          indexId     - index id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_pruneStorage(IndexHandle *indexHandle,
-                          IndexId     storageId
+                          IndexId     indexId
                          );
 
 /***********************************************************************\

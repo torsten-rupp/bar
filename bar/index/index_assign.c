@@ -530,10 +530,10 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     error = IndexEntity_prune(indexHandle,
-                                    NULL,  // doneFlag
-                                    NULL,  // deletedCounter
-                                    entityId
-                                   );
+                              NULL,  // doneFlag
+                              NULL,  // deletedCounter
+                              entityId
+                             );
   }
 
   // free resources
@@ -628,10 +628,10 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
     if (error == ERROR_NONE)
     {
       error = IndexEntity_prune(indexHandle,
-                          NULL,  // doneFlag
-                          NULL,  // deletedCounter
-                          entityId
-                         );
+                                NULL,  // doneFlag
+                                NULL,  // deletedCounter
+                                entityId
+                               );
     }
   }
 
@@ -769,7 +769,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // prune UUID
     if (error == ERROR_NONE)
     {
-      error = IndexUUID_pruneEmpty(indexHandle,
+      error = IndexUUID_pruneAll(indexHandle,
                                    NULL,  // doneFlag
                                    NULL  // deletedCounter
                                   );

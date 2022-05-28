@@ -69,7 +69,7 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : purgeStorage
-* Purpose: purge storage (mark as "deleted")
+* Purpose: delete storage
 * Input  : indexHandle  - index handle
 *          storageId    - storage database id
 *          progressInfo - progress info (or NULL)
@@ -78,10 +78,72 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_purge(IndexHandle  *indexHandle,
-                          DatabaseId   storageId,
-                          ProgressInfo *progressInfo
+Errors IndexStorage_delete(IndexHandle  *indexHandle,
+                           DatabaseId   storageId,
+                           ProgressInfo *progressInfo
+                          );
+
+/***********************************************************************\
+* Name   : IndexStorage_purge
+* Purpose: purge storage (mark as "deleted")
+* Input  : indexHandle - index handle
+*          storageId   - storage database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_purge(IndexHandle *indexHandle,
+                          DatabaseId  storageId
                          );
+
+/***********************************************************************\
+* Name   : IndexStorage_purgeAll
+* Purpose: purge all storages (mark as "deleted")
+* Input  : indexHandle      - index handle
+*          storageSpecifier - storage specifier or NULL
+*          archiveName      - archive name or NULL
+*          keepStorageId    - storage database id to keep
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
+                             const StorageSpecifier *storageSpecifier,
+                             ConstString            archiveName,
+                             DatabaseId             keepStorageId
+                            );
+
+/***********************************************************************\
+* Name   : IndexStorage_prune
+* Purpose: purge storage (mark as "deleted") if empty
+* Input  : indexHandle - index handle
+*          storageId   - storage database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_prune(IndexHandle  *indexHandle,
+                          DatabaseId   storageId
+                         );
+
+/***********************************************************************\
+* Name   : IndexStorage_pruneAll
+* Purpose: purge all storages (mark as "deleted") if
+*            - empty
+*            - with state OK or ERROR
+* Input  : indexHandle  - index handle
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_pruneAll(IndexHandle  *indexHandle,
+                             ProgressInfo *progressInfo
+                            );
 
 /***********************************************************************\
 * Name   : IndexStroage_addToNewest
@@ -128,20 +190,6 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
 Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                                      DatabaseId  storageId
                                     );
-
-/***********************************************************************\
-* Name   : IndexStorage_pruneEmpty
-* Purpose: prune all empty storages which have state OK or ERROR
-* Input  : indexHandle  - index handle
-*          progressInfo - progress info (or NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors IndexStorage_pruneEmpty(IndexHandle  *indexHandle,
-                               ProgressInfo *progressInfo
-                              );
 
 #ifdef __cplusplus
   }

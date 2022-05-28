@@ -44,7 +44,7 @@
 typedef enum
 {
   ARCHIVE_MODE_CREATE,
-  ARCHIVE_MODE_READ,
+  ARCHIVE_MODE_READ
 } ArchiveModes;
 
 // archive entry types

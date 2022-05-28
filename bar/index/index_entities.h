@@ -40,9 +40,30 @@
 #endif
 
 /***********************************************************************\
+* Name   : IndexEntity_purge
+* Purpose: delete entity
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+*          entityId       - entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexEntity_purge(IndexHandle *indexHandle,
+                         bool        *doneFlag,
+                         ulong       *deletedCounter,
+                         DatabaseId  entityId
+                        );
+
+/***********************************************************************\
 * Name   : IndexEntity_prune
-* Purpose: purge entity if empty, is not default entity and is not
-*          locked, purge UUID if empty
+* Purpose: delete entity if
+*            - empty,
+*            - is not default entity and
+*            - is not locked
+*          purge UUID of entity if empty
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
 *          deletedCounter - deleted entries count (can be NULL)
@@ -59,8 +80,12 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                         );
 
 /***********************************************************************\
-* Name   : IndexEntity_pruneEmpty
-* Purpose: prune all empty entities
+* Name   : IndexEntity_pruneAll
+* Purpose: delete all entities if
+*            - empty,
+*            - is not default entity and
+*            - is not locked
+*          purge UUID of entity if empty
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
 *          deletedCounter - deleted entries count (can be NULL)
@@ -69,7 +94,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexEntity_pruneEmpty(IndexHandle *indexHandle,
+Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
                               bool        *doneFlag,
                               ulong       *deletedCounter
                              );

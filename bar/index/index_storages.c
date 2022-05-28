@@ -2113,7 +2113,7 @@ LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
     }
 
     // purge storage
-    error = IndexStorage_purge(indexHandle,storageId,progressInfo);
+    error = IndexStorage_purge(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
       String_delete(string);
@@ -2125,10 +2125,10 @@ LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
     if (entityId != DATABASE_ID_NONE)
     {
       error = IndexEntity_prune(indexHandle,
-                          NULL,  // doneFlag
-                          NULL,  // deletedCounter
-                          entityId
-                         );
+                                NULL,  // doneFlag
+                                NULL,  // deletedCounter
+                                entityId
+                               );
       if (error != ERROR_NONE)
       {
         String_delete(string);
@@ -2306,10 +2306,10 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                                  );
 }
 
-Errors IndexStorage_purge(IndexHandle  *indexHandle,
-                          DatabaseId   storageId,
-                          ProgressInfo *progressInfo
-                         )
+Errors IndexStorage_delete(IndexHandle  *indexHandle,
+                           DatabaseId   storageId,
+                           ProgressInfo *progressInfo
+                          )
 {
   String name;
   String string;
@@ -2322,6 +2322,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
   #endif
 
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
@@ -2484,7 +2485,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Removed deleted storage #%"PRIu64" from index: %s, created at %s",
+              "Removed storage #%"PRIu64" from index: %s, created at %s",
               storageId,
               String_cString(name),
               (createdDateTime != 0LL)
@@ -2495,6 +2496,314 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
   // free resources
   String_delete(string);
   String_delete(name);
+
+  return ERROR_NONE;
+}
+
+Errors IndexStorage_purge(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    // purge storage
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "storages",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES
+                            (
+                              DATABASE_VALUE_BOOL("deletedFlag",TRUE),
+                            ),
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(storageId)
+                            )
+                           );
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); }
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_STORAGE_PURGE storageId=%"PRIi64,
+                                    INDEX_ID_STORAGE(storageId)
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
+                             const StorageSpecifier *storageSpecifier,
+                             ConstString            archiveName,
+                             DatabaseId             keepStorageId
+                            )
+{
+  IndexId          oldUUIDId,oldEntityId,oldStorageId;
+  String           oldStorageName;
+  StorageSpecifier oldStorageSpecifier;
+  Array            uuidIds,entityIds,storageIds;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  ArrayIterator    arrayIterator;
+  IndexId          indexId;
+  String           storageName;
+
+  assert(indexHandle != NULL);
+  assert(storageSpecifier != NULL);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    // init variables
+    oldStorageName = String_new();
+    Storage_initSpecifier(&oldStorageSpecifier);
+    Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+    Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+    Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+    // get storage ids to purge, enities/UUIDs to prune
+    if (storageSpecifier != NULL)
+    {
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     INDEX_ID_ANY, // uuidId
+                                     INDEX_ID_ANY, // entityId
+                                     NULL,  // jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // indexIds
+                                     0,  // indexIdCount
+                                     INDEX_TYPE_SET_ALL,
+                                     INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
+                                     NULL,  // hostName
+                                     NULL,  // userName
+                                     archiveName,
+                                     INDEX_STORAGE_SORT_MODE_NONE,
+                                     DATABASE_ORDERING_NONE,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error != ERROR_NONE)
+      {
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuidIds);
+        Storage_doneSpecifier(&oldStorageSpecifier);
+        String_delete(oldStorageName);
+        return error;
+      }
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &oldUUIDId,
+                                  NULL,  // job UUID
+                                  &oldEntityId,
+                                  NULL,  // schedule UUID
+                                  NULL,  // hostName
+                                  NULL,  // userName
+                                  NULL,  // comment
+                                  NULL,  // createdDateTime
+                                  NULL,  // archiveType
+                                  &oldStorageId,
+                                  oldStorageName,
+                                  NULL,  // createdDateTime
+                                  NULL,  // size
+                                  NULL,  // indexState
+                                  NULL,  // indexMode
+                                  NULL,  // lastCheckedDateTime
+                                  NULL,  // errorMessage
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
+                                 )
+            )
+      {
+        if (   !INDEX_ID_EQUALS(oldStorageId,keepStorageId)
+            && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
+            && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
+           )
+        {
+          if (!INDEX_ID_IS_NONE(oldUUIDId)) Array_append(&uuidIds,&oldUUIDId);
+          if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
+          if (!INDEX_ID_IS_NONE(oldStorageId)) Array_append(&storageIds,&oldStorageId);
+        }
+      }
+      Index_doneList(&indexQueryHandle);
+      if (error != ERROR_NONE)
+      {
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuidIds);
+        Storage_doneSpecifier(&oldStorageSpecifier);
+        String_delete(oldStorageName);
+        return error;
+      }
+    }
+
+    // delete old indizes for same storage file
+    ARRAY_ITERATEX(&storageIds,arrayIterator,indexId,error == ERROR_NONE)
+    {
+      // purge storage
+      error = IndexStorage_purge(indexHandle,INDEX_DATABASE_ID_(indexId));
+      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); }
+    }
+
+    // prune entity index
+    ARRAY_ITERATEX(&entityIds,arrayIterator,indexId,error == ERROR_NONE)
+    {
+      error = IndexEntity_prune(indexHandle,NULL,NULL,INDEX_DATABASE_ID_(indexId));
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+    }
+
+    // prune uuid index
+    ARRAY_ITERATEX(&uuidIds,arrayIterator,indexId,error == ERROR_NONE)
+    {
+      error = IndexUUID_prune(indexHandle,INDEX_DATABASE_ID_(indexId));
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+    }
+
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuidIds);
+      Storage_doneSpecifier(&oldStorageSpecifier);
+      String_delete(oldStorageName);
+      return error;
+    }
+
+    // free resoruces
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuidIds);
+    Storage_doneSpecifier(&oldStorageSpecifier);
+    String_delete(oldStorageName);
+  }
+  else
+  {
+    storageName = Storage_getPrintableName(String_new(),storageSpecifier,archiveName);
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_STORAGE_PURGE_ALL storageName=%'S keepStorageId=%"PRIi64,
+                                    storageName,
+                                    INDEX_ID_STORAGE(keepStorageId)
+                                   );
+    String_delete(storageName);
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors IndexStorage_prune(IndexHandle  *indexHandle,
+                          DatabaseId   storageId
+                         )
+{
+  Errors      error;
+  IndexStates indexState;
+
+  assert(indexHandle != NULL);
+
+  // get storage state
+  error = getStorageState(indexHandle,
+                          storageId,
+                          &indexState,
+                          NULL,  // lastCheckedDateTime
+                          NULL  // errorMessage
+                         );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  if ((indexState == INDEX_STATE_OK) && IndexStorage_isEmpty(indexHandle,storageId))
+  {
+    error = IndexStorage_purge(indexHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Purged storage #%"PRIu64": empty",
+                storageId
+               );
+  }
+
+  return ERROR_NONE;
+}
+
+Errors IndexStorage_pruneAll(IndexHandle  *indexHandle,
+                             ProgressInfo *progressInfo
+                            )
+{
+  Array         storageIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    storageId;
+
+  assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
+
+  // init variables
+  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all storage ids
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "state IN (?,?)",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_STATE_OK),
+                            DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
+                          )
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // prune storages
+  ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+  {
+    error = IndexStorage_prune(indexHandle,storageId);
+// TODO: progressInfo
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&storageIds);
 
   return ERROR_NONE;
 }
@@ -3879,55 +4188,6 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-Errors IndexStorage_pruneEmpty(IndexHandle  *indexHandle,
-                               ProgressInfo *progressInfo
-                              )
-{
-  Array         storageIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    storageId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  // get all storage ids
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &storageIds,
-                          "storages",
-                          "id",
-                          "state IN (?,?)",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_UINT(INDEX_STATE_OK),
-                            DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
-                          )
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    return error;
-  }
-
-  // prune storages
-  ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
-  {
-    error = pruneStorage(indexHandle,storageId,progressInfo);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    return error;
-  }
-
-  // free resources
-  Array_done(&storageIds);
-
-  return ERROR_NONE;
-}
-
 // ----------------------------------------------------------------------
 
 bool Index_findStorageById(IndexHandle *indexHandle,
@@ -4852,6 +5112,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
   assert(INDEX_ID_IS_ANY(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
   assert((indexIdCount == 0L) || (indexIds != NULL));
@@ -6096,7 +6357,7 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %"PRIu64"  totalFile=%lu %"PRIu64"  total
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_STORAGE_DELETE storageId=%"PRIi64,
+                                    "INDEX_STORAGE_PURGE storageId=%"PRIi64,
                                     storageId
                                    );
   }
@@ -6248,9 +6509,9 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                            UNUSED_VARIABLE(userData);
                            UNUSED_VARIABLE(valueCount);
 
-                           if (uuidId              != NULL) (*uuidId)              = INDEX_ID_(INDEX_TYPE_UUID, values[0].id);
+                           if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID(values[0].id);
                            if (jobUUID             != NULL) String_set(jobUUID, values[1].string);
-                           if (entityId            != NULL) (*entityId)            = INDEX_ID_(INDEX_TYPE_ENTITY,values[2].id);
+                           if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[2].id);
                            if (scheduleUUID        != NULL) String_set(scheduleUUID, values[3].string);
                            if (archiveType         != NULL) (*archiveType)         = values[ 4].u;
                            if (storageName         != NULL) String_set(storageName, values[5].string);
@@ -6312,6 +6573,53 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   return error;
 }
 
+Errors Index_purgeStorage(IndexHandle *indexHandle,
+                          IndexId     indexId
+                         )
+{
+  Errors  error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(indexId) == INDEX_TYPE_STORAGE);
+
+  // check if entries exists for storage
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return IndexStorage_purge(indexHandle,
+                              Index_getDatabaseId(indexId)
+                             );
+  });
+
+  return error;
+}
+
+Errors Index_purgeAllStorages(IndexHandle            *indexHandle,
+                              const StorageSpecifier *storageSpecifier,
+                              ConstString            archiveName,
+                              IndexId                keepIndexId
+                             )
+{
+  Errors  error;
+
+  assert(indexHandle != NULL);
+  assert(storageSpecifier != NULL);
+  assert(Index_getType(keepIndexId) == INDEX_TYPE_STORAGE);
+
+  // check if entries exists for storage
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return IndexStorage_purgeAll(indexHandle,
+                                 storageSpecifier,
+                                 archiveName,
+                                 Index_getDatabaseId(keepIndexId)
+                                );
+  });
+
+  return error;
+}
+
 Errors Index_pruneStorage(IndexHandle *indexHandle,
                           IndexId     indexId
                          )
@@ -6325,10 +6633,9 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return pruneStorage(indexHandle,
-                        Index_getDatabaseId(indexId),
-                        NULL  // progressInfo
-                       );
+    return IndexStorage_prune(indexHandle,
+                              Index_getDatabaseId(indexId)
+                             );
   });
 
   return error;
