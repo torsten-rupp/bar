@@ -5786,13 +5786,13 @@ public class TabJobs
           Widgets.addModifyListener(new WidgetModifyListener(text,cryptAlgorithm,cryptType)
           {
             @Override
-            public void modified(Control control, WidgetVariable cryptAlgorithm)
+            public void modified(Text text, WidgetVariable cryptAlgorithm)
             {
             }
             @Override
-            public void modified(Control control, WidgetVariable variables[])
+            public void modified(Text text, WidgetVariable variables[])
             {
-              Widgets.setEnabled(control,
+              Widgets.setEnabled(text,
                                     !variables[0].equals("none")
                                  && variables[1].equals("asymmetric")
                                 );
