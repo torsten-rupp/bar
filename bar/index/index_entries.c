@@ -2495,7 +2495,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT    ("entriesNewest.permission"),
                                  DATABASE_COLUMN_UINT64  ("entriesNewest.size"),
                                  DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
-                                 DATABASE_COLUMN_KEY     ("CASE entries.type \
+                                 DATABASE_COLUMN_KEY     ("CASE entriesNewest.type \
                                                              WHEN ? THEN 0 \
                                                              WHEN ? THEN 0 \
                                                              WHEN ? THEN directoryEntries.storageId \
@@ -2505,7 +2505,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                                            END \
                                                           "
                                                          ),
-                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entriesNewest.type \
                                                                                                  WHEN ? THEN 0 \
                                                                                                  WHEN ? THEN 0 \
                                                                                                  WHEN ? THEN directoryEntries.storageId \
