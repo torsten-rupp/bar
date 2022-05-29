@@ -2355,6 +2355,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((indexIdCount == 0L) || (indexIds != NULL));
   assert((entryIdCount == 0L) || (entryIds != NULL));
 
@@ -2963,10 +2964,10 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
 
   assert(fileSystemType_ >= 0);
 //TODO: may happen
-  if (uuidId         != NULL) (*uuidId        ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidDatabaseId   );
-  if (entityId       != NULL) (*entityId      ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityDatabaseId );
-  if (entryId        != NULL) (*entryId       ) = INDEX_ID_(indexType,         entryDatabaseId  );
-  if (storageId      != NULL) (*storageId     ) = INDEX_ID_(INDEX_TYPE_STORAGE,storageDatabaseId);
+  if (uuidId         != NULL) (*uuidId        ) = INDEX_ID_UUID(uuidDatabaseId   );
+  if (entityId       != NULL) (*entityId      ) = INDEX_ID_ENTITY(entityDatabaseId );
+  if (entryId        != NULL) (*entryId       ) = INDEX_ID_(indexType,entryDatabaseId  );
+  if (storageId      != NULL) (*storageId     ) = INDEX_ID_STORAGE(storageDatabaseId);
   if (fileSystemType != NULL) (*fileSystemType) = (FileSystemTypes)fileSystemType_;
 
   return TRUE;
@@ -2983,6 +2984,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert(   (Index_getType(entryId) == INDEX_TYPE_FILE)
          || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
          || (Index_getType(entryId) == INDEX_TYPE_DIRECTORY)
@@ -3087,8 +3089,8 @@ bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (entryFragmentId != NULL) (*entryFragmentId) = INDEX_ID_(INDEX_TYPE_STORAGE,entryFragmentDatabaseId);
-  if (storageId       != NULL) (*storageId      ) = INDEX_ID_(INDEX_TYPE_STORAGE,storageDatabaseId);
+  if (entryFragmentId != NULL) (*entryFragmentId) = INDEX_ID_STORAGE(entryFragmentDatabaseId);
+  if (storageId       != NULL) (*storageId      ) = INDEX_ID_STORAGE(storageDatabaseId);
 
   return TRUE;
 }
@@ -3287,6 +3289,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((entityIdCount == 0) || (entityIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -3446,6 +3449,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((entityIdCount == 0) || (entityIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -3606,6 +3610,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((entityIdCount == 0) || (entityIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -3763,6 +3768,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((entityIdCount == 0) || (entityIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -3924,6 +3930,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((entityIdCount == 0) || (entityIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -4083,6 +4090,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert((entityIdCount == 0) || (entityIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -5389,6 +5397,10 @@ Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
   UNUSED_VARIABLE(ordering);
   UNUSED_VARIABLE(offset);
   UNUSED_VARIABLE(limit);
+
+  assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
 
   return ERROR_STILL_NOT_IMPLEMENTED;
 }

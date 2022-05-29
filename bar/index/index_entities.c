@@ -786,14 +786,13 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
 
 /*---------------------------------------------------------------------*/
 
-Errors IndexEntity_prune(IndexHandle *indexHandle,
-                               bool        *doneFlag,
-                               ulong       *deletedCounter,
-                               DatabaseId  entityId
-                              )
+Errors IndexEntity_purge(IndexHandle *indexHandle,
+                         bool        *doneFlag,
+                         ulong       *deletedCounter,
+                         DatabaseId  entityId
+                        )
 {
   String       string;
-  uint         lockedCount;
   Errors       error;
   DatabaseId   uuidId;
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -805,28 +804,9 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
   // init variables
   string = String_new();
 
-  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  if (indexHandle->masterIO == NULL)
   {
-    // get locked count
-    error = Database_getUInt(&indexHandle->databaseHandle,
-                             &lockedCount,
-                             "entities",
-                             "lockedCount",
-                             "id=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(entityId)
-                             ),
-                             NULL  // group
-                            );
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      return error;
-    }
-
-    // prune if not locked and entity is empty
-    if ((lockedCount == 0L) && isEmptyEntity(indexHandle,entityId))
+    if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
     {
       // get uuid id, job UUID, created date/time, archive type
       error = Database_get(&indexHandle->databaseHandle,
@@ -939,6 +919,85 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       }
     }
   }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_UUID_PURGE entityId=%"PRIi64,
+                                    INDEX_ID_ENTITY(entityId)
+                                   );
+  }
+
+  // free resources
+  String_delete(string);
+
+
+  return ERROR_NONE;
+}
+
+Errors IndexEntity_prune(IndexHandle *indexHandle,
+                         bool        *doneFlag,
+                         ulong       *deletedCounter,
+                         DatabaseId  entityId
+                        )
+{
+  String       string;
+  uint         lockedCount;
+  Errors       error;
+  DatabaseId   uuidId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64       createdDateTime;
+  ArchiveTypes archiveType;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  string = String_new();
+
+  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  {
+    // get locked count
+    error = Database_getUInt(&indexHandle->databaseHandle,
+                             &lockedCount,
+                             "entities",
+                             "lockedCount",
+                             "id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entityId)
+                             ),
+                             NULL  // group
+                            );
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      return error;
+    }
+
+    // delete if not locked and entity is empty
+    if ((lockedCount == 0L) && isEmptyEntity(indexHandle,entityId))
+    {
+      error = IndexEntity_purge(indexHandle,
+                                doneFlag,
+                                deletedCounter,
+                                entityId
+                               );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Purged entity #%"PRIu64": empty",
+                  uuidId
+                 );
+    }
+  }
 
   // free resources
   String_delete(string);
@@ -946,10 +1005,10 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-Errors IndexEntity_pruneEmpty(IndexHandle *indexHandle,
-                              bool        *doneFlag,
-                              ulong       *deletedCounter
-                             )
+Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
+                            bool        *doneFlag,
+                            ulong       *deletedCounter
+                           )
 {
   Array         entityIds;
   Errors        error;
@@ -1846,6 +1905,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
 
   // check init error
@@ -2318,30 +2378,37 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_update(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount
-                            "entities",
-                            DATABASE_FLAG_NONE,
-                            DATABASE_VALUES
-                            (
-                              DATABASE_VALUE("lockedCount", "lockedCount-1"),
-                            ),
-                            "id=? AND lockedCount>0",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
-                            )
-                           );
-    if (error != ERROR_NONE)
+    INDEX_DOX(error,
+              indexHandle,
     {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+      return Database_update(&indexHandle->databaseHandle,
+                             NULL,  // changedRowCount
+                             "entities",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_VALUES
+                             (
+                               DATABASE_VALUE("lockedCount", "lockedCount-1"),
+                             ),
+                             "id=? AND lockedCount>0",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                             )
+                            );
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_ENTITY_UNLOCK entityId=%lld",
+                                    entityId
+                                   );
+  }
 
   return error;
 }
@@ -2551,6 +2618,43 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
   return emptyFlag;
 }
 
+Errors Index_purgeEntity(IndexHandle *indexHandle,
+                         IndexId     indexId
+                        )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
+  assert(Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
+
+  // prune storages of entity if not default entity
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return IndexEntity_purge(indexHandle,
+                               NULL,  // doneFlag
+                               NULL,  // deletedCounter
+                               Index_getDatabaseId(indexId)
+                              );
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_ENTITY_PURGE entityId=%lld",
+                                    indexId
+                                   );
+  }
+
+  return error;
+}
+
 Errors Index_pruneEntity(IndexHandle *indexHandle,
                          IndexId     indexId
                         )
@@ -2568,10 +2672,10 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
               indexHandle,
     {
       return IndexEntity_prune(indexHandle,
-                                     NULL,  // doneFlag
-                                     NULL,  // deletedCounter
-                                     Index_getDatabaseId(indexId)
-                                    );
+                               NULL,  // doneFlag
+                               NULL,  // deletedCounter
+                               Index_getDatabaseId(indexId)
+                              );
     });
   }
   else
@@ -2580,7 +2684,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_PRUNE_ENTITY entityId=%lld",
+                                    "INDEX_ENTITY_PRUNE entityId=%lld",
                                     indexId
                                    );
   }

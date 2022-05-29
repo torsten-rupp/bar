@@ -386,7 +386,7 @@ LOCAL void busyHandler(void *userData)
   IndexDefinition indexDefinition;
 
   assert(indexHandle != NULL);
-  assert(databaseSpecifier != NULL);
+  assert((databaseSpecifier != NULL) || (masterIO != NULL));
 
   // init variables
   indexHandle->masterIO            = masterIO;
@@ -399,120 +399,113 @@ LOCAL void busyHandler(void *userData)
     indexHandle->threadId = pthread_self();
   #endif /* NDEBUG */
 
-  // check and complete database specifier
-  switch (databaseSpecifier->type)
+  if (masterIO == NULL)
   {
-    case DATABASE_TYPE_SQLITE3:
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
-        if (String_isEmpty(databaseSpecifier->mariadb.databaseName))
-        {
-          String_setCString(databaseSpecifier->mariadb.databaseName,DEFAULT_DATABASE_NAME);
-        }
-      #else /* HAVE_MARIADB */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-        if (String_isEmpty(databaseSpecifier->postgresql.databaseName))
-        {
-          String_setCString(databaseSpecifier->postgresql.databaseName,DEFAULT_DATABASE_NAME);
-        }
-      #else /* HAVE_POSTGRESQL */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_POSTGRESQL */
-      break;
-  }
+    assert(databaseSpecifier != NULL);
 
-  SEMAPHORE_LOCKED_DO(&indexOpenLock,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    error = ERROR_NONE;
-
-    // open index database
-    if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
+    // check and complete database specifier
+    switch (databaseSpecifier->type)
     {
-      // create database
-      if (error == ERROR_NONE)
+      case DATABASE_TYPE_SQLITE3:
+        break;
+      case DATABASE_TYPE_MARIADB:
+        #if defined(HAVE_MARIADB)
+          if (String_isEmpty(databaseSpecifier->mariadb.databaseName))
+          {
+            String_setCString(databaseSpecifier->mariadb.databaseName,DEFAULT_DATABASE_NAME);
+          }
+        #else /* HAVE_MARIADB */
+          return ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MARIADB */
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        #if defined(HAVE_POSTGRESQL)
+          if (String_isEmpty(databaseSpecifier->postgresql.databaseName))
+          {
+            String_setCString(databaseSpecifier->postgresql.databaseName,DEFAULT_DATABASE_NAME);
+          }
+        #else /* HAVE_POSTGRESQL */
+          return ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_POSTGRESQL */
+        break;
+    }
+
+    SEMAPHORE_LOCKED_DO(&indexOpenLock,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      error = ERROR_NONE;
+
+      // open index database
+      if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
       {
-        INDEX_DOX(error,
-                  indexHandle,
+        // create database
+        if (error == ERROR_NONE)
         {
-          #ifdef NDEBUG
-            return Database_open(&indexHandle->databaseHandle,
-                                 databaseSpecifier,
-                                 NULL,  // databaseName
-                                 DATABASE_OPEN_MODE_FORCE_CREATE,
-                                 DATABASE_TIMEOUT
-                                );
-          #else /* not NDEBUG */
-            return __Database_open(__fileName__,__lineNb__,
-                                   &indexHandle->databaseHandle,
+          INDEX_DOX(error,
+                    indexHandle,
+          {
+            #ifdef NDEBUG
+              return Database_open(&indexHandle->databaseHandle,
                                    databaseSpecifier,
                                    NULL,  // databaseName
                                    DATABASE_OPEN_MODE_FORCE_CREATE,
                                    DATABASE_TIMEOUT
                                   );
-          #endif /* NDEBUG */
-        });
-      }
-
-      // create tables/indices/triggers
-      if (error == ERROR_NONE)
-      {
-        INDEX_DOX(error,
-                  indexHandle,
-        {
-          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITIONS[Database_getType(&indexHandle->databaseHandle)],
-                                     indexDefinition,
-                                     error == ERROR_NONE
-                                    )
-          {
-            error = Database_execute(&indexHandle->databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     indexDefinition,
-                                     DATABASE_PARAMETERS_NONE
-                                    );
-          }
-
-          return error;
-        });
-        if (error != ERROR_NONE)
-        {
-          INDEX_DO(indexHandle,
-          {
-            #ifdef NDEBUG
-              Database_close(&indexHandle->databaseHandle);
             #else /* not NDEBUG */
-              __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+              return __Database_open(__fileName__,__lineNb__,
+                                     &indexHandle->databaseHandle,
+                                     databaseSpecifier,
+                                     NULL,  // databaseName
+                                     DATABASE_OPEN_MODE_FORCE_CREATE,
+                                     DATABASE_TIMEOUT
+                                    );
             #endif /* NDEBUG */
           });
         }
-      }
-    }
-    else
-    {
-      // open database
-      if (error == ERROR_NONE)
-      {
-        INDEX_DOX(error,
-                  indexHandle,
+
+        // create tables/indices/triggers
+        if (error == ERROR_NONE)
         {
-          #ifdef NDEBUG
-            return Database_open(&indexHandle->databaseHandle,
-                                 databaseSpecifier,
-                                 NULL,  // databaseName
-                                 (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
-                                   ? DATABASE_OPEN_MODE_READWRITE
-                                   : DATABASE_OPEN_MODE_READ
-                                 ),
-                                 timeout
-                                );
-          #else /* not NDEBUG */
-            return __Database_open(__fileName__,__lineNb__,
-                                   &indexHandle->databaseHandle,
+          INDEX_DOX(error,
+                    indexHandle,
+          {
+            INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITIONS[Database_getType(&indexHandle->databaseHandle)],
+                                       indexDefinition,
+                                       error == ERROR_NONE
+                                      )
+            {
+              error = Database_execute(&indexHandle->databaseHandle,
+                                       NULL,  // changedRowCount
+                                       DATABASE_FLAG_NONE,
+                                       indexDefinition,
+                                       DATABASE_PARAMETERS_NONE
+                                      );
+            }
+
+            return error;
+          });
+          if (error != ERROR_NONE)
+          {
+            INDEX_DO(indexHandle,
+            {
+              #ifdef NDEBUG
+                Database_close(&indexHandle->databaseHandle);
+              #else /* not NDEBUG */
+                __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+              #endif /* NDEBUG */
+            });
+          }
+        }
+      }
+      else
+      {
+        // open database
+        if (error == ERROR_NONE)
+        {
+          INDEX_DOX(error,
+                    indexHandle,
+          {
+            #ifdef NDEBUG
+              return Database_open(&indexHandle->databaseHandle,
                                    databaseSpecifier,
                                    NULL,  // databaseName
                                    (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
@@ -521,37 +514,49 @@ LOCAL void busyHandler(void *userData)
                                    ),
                                    timeout
                                   );
-          #endif /* NDEBUG */
-        });
+            #else /* not NDEBUG */
+              return __Database_open(__fileName__,__lineNb__,
+                                     &indexHandle->databaseHandle,
+                                     databaseSpecifier,
+                                     NULL,  // databaseName
+                                     (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
+                                       ? DATABASE_OPEN_MODE_READWRITE
+                                       : DATABASE_OPEN_MODE_READ
+                                     ),
+                                     timeout
+                                    );
+            #endif /* NDEBUG */
+          });
+        }
       }
     }
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // add busy handler
-  Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
-
-  INDEX_DO(indexHandle,
-  {
-    // disable sync, enable foreign keys
-    if (   ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
-        || ((indexOpenMode & INDEX_OPEN_MODE_NO_JOURNAL) != 0)
-       )
+    if (error != ERROR_NONE)
     {
-      // disable synchronous mode and journal to increase transaction speed
-      (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
+      return error;
     }
-    if ((indexOpenMode & INDEX_OPEN_MODE_KEYS) != 0)
-    {
-      // enable foreign key constrains
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-    }
-  });
 
-  // free resources
+    // add busy handler
+    Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
+
+    INDEX_DO(indexHandle,
+    {
+      // disable sync, enable foreign keys
+      if (   ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
+          || ((indexOpenMode & INDEX_OPEN_MODE_NO_JOURNAL) != 0)
+         )
+      {
+        // disable synchronous mode and journal to increase transaction speed
+        (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
+      }
+      if ((indexOpenMode & INDEX_OPEN_MODE_KEYS) != 0)
+      {
+        // enable foreign key constrains
+        (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      }
+    });
+
+    // free resources
+  }
 
   return ERROR_NONE;
 }
@@ -576,6 +581,8 @@ LOCAL void busyHandler(void *userData)
 {
   assert(indexHandle != NULL);
 
+if (indexHandle->masterIO == NULL)
+{
   // remove busy handler
   Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
 
@@ -587,6 +594,7 @@ LOCAL void busyHandler(void *userData)
       __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
     #endif /* NDEBUG */
   });
+}
 
   return ERROR_NONE;
 }
@@ -2292,11 +2300,11 @@ LOCAL void indexThreadCode(void)
             // remove storage from database
             do
             {
-              // purge storage
-              error = IndexStorage_purge(&indexHandle,
-                                         storageId,
-                                         NULL  // progressInfo
-                                        );
+              // delete storage
+              error = IndexStorage_delete(&indexHandle,
+                                          storageId,
+                                          NULL  // progressInfo
+                                         );
               if (error == ERROR_INTERRUPTED)
               {
                 // wait until index is unused
@@ -2316,10 +2324,10 @@ LOCAL void indexThreadCode(void)
               do
               {
                 error = IndexEntity_prune(&indexHandle,
-                                    NULL,  // doneFlag
-                                    NULL,  // deletedCounter
-                                    entityId
-                                   );
+                                          NULL,  // doneFlag
+                                          NULL,  // deletedCounter
+                                          entityId
+                                         );
                 if (error == ERROR_INTERRUPTED)
                 {
                   // wait until index is unused
@@ -2937,9 +2945,9 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     (void)IndexStorage_cleanUp(&indexHandle);
     (void)IndexUUID_cleanUp(&indexHandle);
 
-    (void)IndexStorage_pruneEmpty(&indexHandle,NULL);
-    (void)IndexEntity_pruneEmpty(&indexHandle,NULL,NULL);
-    (void)IndexUUID_pruneEmpty(&indexHandle,NULL,NULL);
+    (void)IndexStorage_pruneAll(&indexHandle,NULL);
+    (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
+    (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
 
@@ -3035,10 +3043,8 @@ IndexHandle *__Index_open(const char *__fileName__,
 
   indexHandle = NULL;
 
-  if (Index_isAvailable())
+  if ((indexDatabaseSpecifier != NULL) || (masterIO != NULL))
   {
-    assert(indexDatabaseSpecifier != NULL);
-
     indexHandle = (IndexHandle*)malloc(sizeof(IndexHandle));
     if (indexHandle == NULL)
     {
@@ -3128,35 +3134,75 @@ Errors __Index_beginTransaction(const char  *__fileName__,
 
   assert(indexHandle != NULL);
 
-  // begin transaction
-  #ifdef NDEBUG
-    error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-  #else /* not NDEBUG */
-    error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-  #endif /* NDEBUG */
+  if (indexHandle->masterIO == NULL)
+  {
+    // begin transaction
+    #ifdef NDEBUG
+      error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+    #else /* not NDEBUG */
+      error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
+    #endif /* NDEBUG */
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
 
   return error;
 }
 
 Errors Index_endTransaction(IndexHandle *indexHandle)
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
-  return Database_endTransaction(&indexHandle->databaseHandle);
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Database_endTransaction(&indexHandle->databaseHandle);
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
 }
 
 Errors Index_rollbackTransaction(IndexHandle *indexHandle)
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
-  return Database_rollbackTransaction(&indexHandle->databaseHandle);
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Database_rollbackTransaction(&indexHandle->databaseHandle);
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
 }
 
 Errors Index_flush(IndexHandle *indexHandle)
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
-  return Database_flush(&indexHandle->databaseHandle);
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Database_flush(&indexHandle->databaseHandle);
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
 }
 
 bool Index_containsType(const IndexId indexIds[],

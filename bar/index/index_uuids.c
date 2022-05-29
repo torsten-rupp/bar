@@ -200,7 +200,7 @@ Errors IndexUUID_cleanUp(IndexHandle *indexHandle)
   return error;
 }
 
-Errors IndexUUID_prune(IndexHandle *indexHandle,
+Errors IndexUUID_purge(IndexHandle *indexHandle,
                        bool        *doneFlag,
                        ulong       *deletedCounter,
                        DatabaseId  uuidId
@@ -214,8 +214,7 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
   UNUSED_VARIABLE(doneFlag);
   UNUSED_VARIABLE(deletedCounter);
 
-  // delete uuid if empty
-  if (isEmptyUUID(indexHandle,uuidId))
+  if (indexHandle->masterIO == NULL)
   {
     // delete UUID index
     error = Database_delete(&indexHandle->databaseHandle,
@@ -233,12 +232,49 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
     {
       return error;
     }
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_UUID_PURGE uuidId=%"PRIi64,
+                                    INDEX_ID_(INDEX_TYPE_UUID,uuidId)
+                                   );
+  }
+
+  return ERROR_NONE;
+}
+
+Errors IndexUUID_prune(IndexHandle *indexHandle,
+                       bool        *doneFlag,
+                       ulong       *deletedCounter,
+                       DatabaseId  uuidId
+                      )
+{
+  Errors        error;
+
+  assert(indexHandle != NULL);
+  assert(uuidId != DATABASE_ID_NONE);
+
+  UNUSED_VARIABLE(doneFlag);
+  UNUSED_VARIABLE(deletedCounter);
+
+  // delete uuid if empty
+  if (isEmptyUUID(indexHandle,uuidId))
+  {
+    error = IndexUUID_purge(indexHandle,doneFlag,deletedCounter,uuidId);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Purged UUID #%"PRIu64": no entities",
-                Index_getDatabaseId(uuidId)
+                uuidId
                );
   }
 
@@ -1282,6 +1318,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -1581,6 +1618,41 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
   return emptyFlag;
 }
 
+Errors Index_purgeUUID(IndexHandle *indexHandle,
+                       IndexId     indexId
+                      )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(indexId) == INDEX_TYPE_UUID);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return IndexUUID_purge(indexHandle,
+                             NULL,  // doneFlag
+                             NULL,  // deletedCounter
+                             Index_getDatabaseId(indexId)
+                            );
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_UUID_PURGE uuidId=%lld",
+                                    indexId
+                                   );
+  }
+
+  return error;
+}
+
 Errors Index_pruneUUID(IndexHandle *indexHandle,
                        IndexId     indexId
                       )
@@ -1608,7 +1680,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_PRUNE_UUID uuidId=%lld",
+                                    "INDEX_UUID_PRUNE uuidId=%lld",
                                     indexId
                                    );
   }
@@ -1616,10 +1688,10 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   return error;
 }
 
-Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
-                            bool        *doneFlag,
-                            ulong       *deletedCounter
-                           )
+Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter
+                         )
 {
   Array         uuidIds;
   Errors        error;
@@ -1628,7 +1700,10 @@ Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
 
+  // init variables
   Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all UUIDs
   error = Database_getIds(&indexHandle->databaseHandle,
                           &uuidIds,
                           "uuids",
@@ -1640,6 +1715,8 @@ Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
     Array_done(&uuidIds);
     return error;
   }
+
+  // prune UUIDs
   ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
   {
     error = IndexUUID_prune(indexHandle,
@@ -1653,6 +1730,8 @@ Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
     Array_done(&uuidIds);
     return error;
   }
+
+  // free resources
   Array_done(&uuidIds);
 
   return ERROR_NONE;

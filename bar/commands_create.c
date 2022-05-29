@@ -4152,401 +4152,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 }
 
 /***********************************************************************\
-* Name   : deleteStorage
-* Purpose: delete storage
-* Input  : indexHandle - index handle
-*          storageId   - storage to delete
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors deleteStorage(IndexHandle *indexHandle,
-                           IndexId     storageId
-                          )
-{
-  Errors           error;
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  StorageInfo      storageInfo;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  storageName = String_new();
-
-  // find storage
-  if (!Index_findStorageById(indexHandle,
-                             storageId,
-                             NULL,  // jobUUID,
-                             NULL,  // scheduleUUID
-                             NULL,  // uuidId
-                             NULL,  // entityId
-                             storageName,
-                             NULL,  // createdDateTime,
-                             NULL,  // size
-                             NULL,  // indexState
-                             NULL,  // indexMode
-                             NULL,  // lastCheckedDateTime
-                             NULL,  // errorMessage
-                             NULL,  // totalEntryCount
-                             NULL  // totalEntrySize
-                            )
-     )
-  {
-    String_delete(storageName);
-    return ERROR_DATABASE_INDEX_NOT_FOUND;
-  }
-
-  error = ERROR_NONE;
-
-  if (!String_isEmpty(storageName))
-  {
-    // delete storage file
-    Storage_initSpecifier(&storageSpecifier);
-    error = Storage_parseName(&storageSpecifier,storageName);
-    if (error == ERROR_NONE)
-    {
-//TODO
-#ifndef WERROR
-#warning NYI: move this special handling of limited scp into Storage_delete()?
-#endif
-      // init storage
-      if (storageSpecifier.type == STORAGE_TYPE_SCP)
-      {
-        // try to init scp-storage first with sftp
-        storageSpecifier.type = STORAGE_TYPE_SFTP;
-        error = Storage_init(&storageInfo,
-                             NULL,  // masterIO
-                             &storageSpecifier,
-                             NULL,  // jobOptions
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK_(NULL,NULL),  // updateStatusInfo
-                             CALLBACK_(NULL,NULL),  // getNamePassword
-                             CALLBACK_(NULL,NULL),  // requestVolume
-                             CALLBACK_(NULL,NULL),  // isPause
-                             CALLBACK_(NULL,NULL),  // isAborted
-                             NULL  // logHandle
-                            );
-        if (error != ERROR_NONE)
-        {
-          // init scp-storage
-          storageSpecifier.type = STORAGE_TYPE_SCP;
-          error = Storage_init(&storageInfo,
-                               NULL,  // masterIO
-                               &storageSpecifier,
-                               NULL,  // jobOptions
-                               &globalOptions.indexDatabaseMaxBandWidthList,
-                               SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // updateStatusInfo
-                               CALLBACK_(NULL,NULL),  // getNamePassword
-                               CALLBACK_(NULL,NULL),  // requestVolume
-                               CALLBACK_(NULL,NULL),  // isPause
-                               CALLBACK_(NULL,NULL),  // isAborted
-                               NULL  // logHandle
-                              );
-        }
-      }
-      else
-      {
-        // init other storage types
-        error = Storage_init(&storageInfo,
-                             NULL,  // masterIO
-                             &storageSpecifier,
-                             NULL,  // jobOptions
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK_(NULL,NULL),  // updateStatusInfo
-                             CALLBACK_(NULL,NULL),  // getNamePassword
-                             CALLBACK_(NULL,NULL),  // requestVolume
-                             CALLBACK_(NULL,NULL),  // isPause
-                             CALLBACK_(NULL,NULL),  // isAborted
-                             NULL  // logHandle
-                            );
-      }
-      if (error == ERROR_NONE)
-      {
-        if (Storage_exists(&storageInfo,
-                           NULL  // archiveName
-                          )
-           )
-        {
-          // delete storage
-          error = Storage_delete(&storageInfo,
-                                 NULL  // archiveName
-                                );
-        }
-
-        // prune empty directories
-        Storage_pruneDirectories(&storageInfo,
-                                 NULL  // archiveName
-                                );
-
-        // close storage
-        Storage_done(&storageInfo);
-      }
-    }
-    Storage_doneSpecifier(&storageSpecifier);
-  }
-
-  // delete index
-  if (error == ERROR_NONE)
-  {
-    error = Index_deleteStorage(indexHandle,storageId);
-  }
-
-  // free resources
-  String_delete(storageName);
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : deleteEntity
-* Purpose: delete entity index and all attached storage files
-* Input  : indexHandle - index handle
-*          entityId    - index id of entity
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors deleteEntity(IndexHandle *indexHandle,
-                          IndexId     entityId
-                         )
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-
-  // delete all storages of entity
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 entityId,
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID,
-                                 NULL,  // indexIds
-                                 0,  // indexIdCount
-                                 INDEX_TYPE_SET_ALL,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // name
-                                 INDEX_STORAGE_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_NONE,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  while (   (error == ERROR_NONE)
-         && Index_getNextStorage(&indexQueryHandle,
-                                 NULL,  // uuidId
-                                 NULL,  // jobUUID
-                                 NULL,  // entityId
-                                 NULL,  // scheduleUUID
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // comment
-                                 NULL,  // createdDateTime
-                                 NULL,  // archiveType
-                                 &storageId,
-                                 NULL,  // storageName
-                                 NULL,  // createdDateTime
-                                 NULL,  // size
-                                 NULL,  // indexState
-                                 NULL,  // indexMode
-                                 NULL,  // lastCheckedDateTime
-                                 NULL,  // errorMessage
-                                 NULL,  // totalEntryCount
-                                 NULL  // totalEntrySize
-                                )
-        )
-  {
-    error = deleteStorage(indexHandle,storageId);
-  }
-  Index_doneList(&indexQueryHandle);
-
-  // delete entity index
-  if (error == ERROR_NONE)
-  {
-    error = Index_deleteEntity(indexHandle,entityId);
-  }
-
-  // free resources
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : purgeStorageIndex
-* Purpose: purge storage index and delete entity, uuid if empty and not
-*          locked
-* Input  : indexHandle      - index handle or NULL if no index
-*          storageId        - index storage id to purge
-*          storageSpecifier - storage specifier
-*          archiveName      - storage archive name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
-                               IndexId          storageId,
-                               StorageSpecifier *storageSpecifier,
-                               ConstString      archiveName
-                              )
-{
-  IndexId          oldUUIDId,oldEntityId,oldStorageId;
-  String           oldStorageName;
-  StorageSpecifier oldStorageSpecifier;
-  Array            uuidIds,entityIds,storageIds;
-  Errors           error;
-  ulong            iterator;
-  IndexId          indexId;
-  IndexQueryHandle indexQueryHandle;
-
-  // init variables
-  oldStorageName = String_new();
-  Storage_initSpecifier(&oldStorageSpecifier);
-  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  if (indexHandle != NULL)
-  {
-    // get storage ids to purge
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY, // uuidId
-                                   INDEX_ID_ANY, // entityId
-                                   NULL,  // jobUUID,
-                                   NULL,  // scheduleUUID,
-                                   NULL,  // indexIds
-                                   0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // hostName
-                                   NULL,  // userName
-                                   archiveName,
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      Storage_doneSpecifier(&oldStorageSpecifier);
-      String_delete(oldStorageName);
-      return error;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &oldUUIDId,
-                                NULL,  // job UUID
-                                &oldEntityId,
-                                NULL,  // schedule UUID
-                                NULL,  // hostName
-                                NULL,  // userName
-                                NULL,  // comment
-                                NULL,  // createdDateTime
-                                NULL,  // archiveType
-                                &oldStorageId,
-                                oldStorageName,
-                                NULL,  // createdDateTime
-                                NULL,  // size
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
-    {
-      if (   !INDEX_ID_EQUALS(oldStorageId,storageId)
-          && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
-          && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
-         )
-      {
-        if (!INDEX_ID_IS_NONE(oldUUIDId)) Array_append(&uuidIds,&oldUUIDId);
-        if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
-        if (!INDEX_ID_IS_NONE(oldStorageId)) Array_append(&storageIds,&oldStorageId);
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-    if (error != ERROR_NONE)
-    {
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuidIds);
-      Storage_doneSpecifier(&oldStorageSpecifier);
-      String_delete(oldStorageName);
-      return error;
-    }
-  }
-
-  // delete old indizes for same storage file
-  ARRAY_ITERATEX(&storageIds,iterator,indexId,error == ERROR_NONE)
-  {
-    // delete old index of storage
-    error = Index_deleteStorage(indexHandle,indexId);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-  }
-  // delete entity index if empty and not locked
-  ARRAY_ITERATEX(&entityIds,iterator,indexId,error == ERROR_NONE)
-  {
-    error = Index_pruneEntity(indexHandle,indexId);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-  }
-  // delete uuid index if empty
-  ARRAY_ITERATEX(&uuidIds,iterator,indexId,error == ERROR_NONE)
-  {
-    error = Index_pruneUUID(indexHandle,indexId);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuidIds);
-    Storage_doneSpecifier(&oldStorageSpecifier);
-    String_delete(oldStorageName);
-    return error;
-  }
-
-  // free resoruces
-  Array_done(&storageIds);
-  Array_done(&entityIds);
-  Array_done(&uuidIds);
-  Storage_doneSpecifier(&oldStorageSpecifier);
-  String_delete(oldStorageName);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : purgeStorageByJobUUID
 * Purpose: purge old storages by job UUID
 * Input  : indexHandle    - index handle or NULL if no index
@@ -5278,7 +4883,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                      {
                        if (!appendFlag && !INDEX_ID_IS_NONE(storageMsg.storageId))
                        {
-                         Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+                         Index_purgeStorage(createInfo->indexHandle,storageMsg.storageId);
                        }
                      }
                     );
@@ -5487,11 +5092,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           });
 
           // delete old indizes for same storage file
-          error = purgeStorageIndex(createInfo->indexHandle,
-                                    storageMsg.storageId,
-                                    &createInfo->storageInfo.storageSpecifier,
-                                    storageMsg.archiveName
-                                   );
+          error = Index_purgeAllStorages(createInfo->indexHandle,
+                                         &createInfo->storageInfo.storageSpecifier,
+                                         storageMsg.archiveName,
+                                         storageMsg.storageId
+                                        );
           if (error != ERROR_NONE)
           {
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
@@ -5509,7 +5114,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           // append storage to existing entity which has the same storage directory
           if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
           {
-//fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
             Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
             // find matching entity and assign storage to entity
@@ -8405,8 +8009,8 @@ Errors Command_create(ServerIO                     *masterIO,
       return error;
     }
     assert(!INDEX_ID_IS_NONE(entityId));
-    DEBUG_TESTCODE() { (void)deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)deleteEntity(indexHandle,entityId); });
+    DEBUG_TESTCODE() { (void)Index_purgeEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)Index_purgeEntity(indexHandle,entityId); });
 
 //TODO
     // purge expired entities
@@ -8560,8 +8164,8 @@ Errors Command_create(ServerIO                     *masterIO,
     }
     else
     {
-      // delete entity on error/abort
-      (void)deleteEntity(indexHandle,entityId);
+      // purge entity on error/abort
+      (void)Index_purgeEntity(indexHandle,entityId);
     }
 
     AUTOFREE_REMOVE(&autoFreeList,&entityId);

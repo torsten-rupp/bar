@@ -52,7 +52,25 @@ Errors IndexUUID_cleanUp(IndexHandle *indexHandle);
 
 /***********************************************************************\
 * Name   : IndexUUID_prune
-* Purpose: prune empty UUID
+* Purpose: delete UUID
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+*          uuidId         - UUID database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexUUID_purge(IndexHandle *indexHandle,
+                       bool        *doneFlag,
+                       ulong       *deletedCounter,
+                       DatabaseId  uuidId
+                      );
+
+/***********************************************************************\
+* Name   : IndexUUID_prune
+* Purpose: purge UUID if empty
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
 *          deletedCounter - deleted entries count (can be NULL)
@@ -70,7 +88,7 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : IndexUUID_pruneAll
-* Purpose: prune all enpty UUIDs
+* Purpose: purge all UUIDs (mark as "deleted") if empty
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
 *          deletedCounter - deleted entries count (can be NULL)
@@ -79,10 +97,10 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
-                            bool        *doneFlag,
-                            ulong       *deletedCounter
-                           );
+Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter
+                         );
 
 #ifdef __cplusplus
   }

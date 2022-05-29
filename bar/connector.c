@@ -2376,7 +2376,59 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
 }
 
 /***********************************************************************\
-* Name   : connectorCommand_indexPruneUUID
+* Name   : connectorCommand_indexUUIDPrune
+* Purpose: purge index UUID
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            uuidId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexUUIDPurge(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId uuidId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get uuidId
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,0LL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // prune UUID
+    error = Index_purgeUUID(indexHandle,uuidId);
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexUUIDPrune
 * Purpose: prune index UUID
 * Input  : connectorInfo - connector info
 *          indexHandle   - index handle
@@ -2389,7 +2441,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
 *          Result:
 \***********************************************************************/
 
-LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexUUIDPrune(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId uuidId;
   Errors  error;
@@ -2428,7 +2480,59 @@ LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHa
 }
 
 /***********************************************************************\
-* Name   : connectorCommand_indexPruneEntity
+* Name   : connectorCommand_indexEntityPurge
+* Purpose: purge index entity
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexEntityPurge(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId entityId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get entityId
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // prune entity
+    error = Index_purgeEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexEntityPrune
 * Purpose: prune index entity
 * Input  : connectorInfo - connector info
 *          indexHandle   - index handle
@@ -2441,7 +2545,7 @@ LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHa
 *          Result:
 \***********************************************************************/
 
-LOCAL void connectorCommand_indexPruneEntity(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexEntityPrune(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId entityId;
   Errors  error;
@@ -2655,7 +2759,7 @@ LOCAL void connectorCommand_indexEntityUpdateInfos(ConnectorInfo *connectorInfo,
   }
   if (Index_getType(entityId) != INDEX_TYPE_ENTITY)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"h not an entity index id %llx",entityId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not an entity index id %llx",entityId);
     return;
   }
 
@@ -2665,6 +2769,66 @@ LOCAL void connectorCommand_indexEntityUpdateInfos(ConnectorInfo *connectorInfo,
     error = Index_updateEntityInfos(indexHandle,
                                     entityId
                                    );
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+
+/***********************************************************************\
+* Name   : connectorCommand_indexEntityUnlock
+* Purpose: unlock entity
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexEntityUnlock(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId entityId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get entityId
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
+  if (Index_getType(entityId) != INDEX_TYPE_ENTITY)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not an entity index id %llx",entityId);
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // updunlockate entity
+    error = Index_unlockEntity(indexHandle,
+                               entityId
+                              );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2822,7 +2986,9 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      String_delete(comment);
       String_delete(storageName);
+      String_delete(userName);
       return;
     }
 
@@ -2901,8 +3067,8 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
 }
 
 /***********************************************************************\
-* Name   : connectorCommand_indexStorageDelete
-* Purpose: delete storage
+* Name   : connectorCommand_indexStoragePurge
+* Purpose: purge storage (mark as "deleted")
 * Input  : connectorInfo - connector info
 *          indexHandle   - index handle
 *          id            - command id
@@ -2911,13 +3077,16 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
+*            storageName=<name>
 *          Result:
 \***********************************************************************/
 
-LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId storageId;
-  Errors  error;
+  IndexId          storageId;
+  String           storageName;
+  StorageSpecifier storageSpecifier;
+  Errors           error;
 
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -2934,16 +3103,35 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
     sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
+  storageName = String_new();
+  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
+    String_delete(storageName);
+    return;
+  }
+
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,storageName);
+  if (error != ERROR_NONE)
+  {
+    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageName);
+    return;
+  }
 
   if (indexHandle != NULL)
   {
-    // delete storage
-    error = Index_deleteStorage(indexHandle,
-                                storageId
-                               );
+    // purge storage
+    error = Index_purgeStorage(indexHandle,
+                               storageId
+                              );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      Storage_doneSpecifier(&storageSpecifier);
+      String_delete(storageName);
       return;
     }
 
@@ -2957,6 +3145,90 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
   }
 
   // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageName);
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexStoragePurgeAll
+* Purpose: purge storage (mark as "deleted")
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageName=<name>
+*            keepStorageId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  String           storageName;
+  IndexId          keepStorageId;
+  StorageSpecifier storageSpecifier;
+  Errors           error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get storage name, keep storage id
+  storageName = String_new();
+  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
+    String_delete(storageName);
+    return;
+  }
+  StringMap_getInt64(argumentMap,"keepStorageId",&keepStorageId,INDEX_ID_NONE);
+  if ((keepStorageId != INDEX_ID_NONE) && (Index_getType(keepStorageId) != INDEX_TYPE_STORAGE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",keepStorageId);
+    String_delete(storageName);
+    return;
+  }
+
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,storageName);
+  if (error != ERROR_NONE)
+  {
+    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageName);
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // purge storage
+    error = Index_purgeAllStorages(indexHandle,
+                                   &storageSpecifier,
+                                   NULL,
+                                   keepStorageId
+                                  );
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      Storage_doneSpecifier(&storageSpecifier);
+      String_delete(storageName);
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageName);
 }
 
 /***********************************************************************\
@@ -3161,15 +3433,22 @@ CONNECTOR_COMMANDS[] =
   { "INDEX_ADD_LINK",            connectorCommand_indexAddLink            },
   { "INDEX_ADD_HARDLINK",        connectorCommand_indexAddHardlink        },
   { "INDEX_ADD_SPECIAL",         connectorCommand_indexAddSpecial         },
-  { "INDEX_PRUNE_UUID",          connectorCommand_indexPruneUUID          },
-  { "INDEX_PRUNE_ENTITY",        connectorCommand_indexPruneEntity        },
+
+  { "INDEX_UUID_PURGE",          connectorCommand_indexUUIDPurge          },
+  { "INDEX_UUID_PRUNE",          connectorCommand_indexUUIDPrune          },
+
+  { "INDEX_ENTITY_PURGE",        connectorCommand_indexEntityPurge        },
+  { "INDEX_ENTITY_PRUNE",        connectorCommand_indexEntityPrune        },
 
   { "INDEX_SET_STATE",           connectorCommand_indexSetState           },
   { "INDEX_ENTITY_UPDATE_INFOS", connectorCommand_indexEntityUpdateInfos  },
+  { "INDEX_ENTITY_UNLOCK",       connectorCommand_indexEntityUnlock       },
   { "INDEX_ENTITY_DELETE",       connectorCommand_indexEntityDelete       },
+
   { "INDEX_STORAGE_UPDATE",      connectorCommand_indexStorageUpdate      },
   { "INDEX_STORAGE_UPDATE_INFOS",connectorCommand_indexStorageUpdateInfos },
-  { "INDEX_STORAGE_DELETE",      connectorCommand_indexStorageDelete      },
+  { "INDEX_STORAGE_PURGE",       connectorCommand_indexStoragePurge       },
+  { "INDEX_STORAGE_PURGE_ALL",   connectorCommand_indexStoragePurgeAll    },
 
   { "INDEX_NEW_HISTORY",         connectorCommand_indexNewHistory         },
 };
