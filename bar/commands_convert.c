@@ -1962,7 +1962,6 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   String                 printableStorageName;
   uint                   convertThreadCount;
   Errors                 error;
-  CryptSignatureStates   allCryptSignatureState;
   String                 baseName;
   Thread                 storageThread;
   uint                   i;
@@ -2055,13 +2054,13 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&sourceArchiveHandle,
-                                     &allCryptSignatureState
+                                     &sourceAllCryptSignatureState
                                     );
     if (error != ERROR_NONE)
     {
       if (!convertInfo->newJobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
-        allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
+        sourceAllCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
       }
       else
       {
@@ -2070,7 +2069,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
         return error;
       }
     }
-    if (!Crypt_isValidSignatureState(allCryptSignatureState))
+    if (!Crypt_isValidSignatureState(sourceAllCryptSignatureState))
     {
       if (convertInfo->newJobOptions->forceVerifySignaturesFlag)
       {
@@ -2208,7 +2207,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
       if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
       {
         // check signature
-        error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&allCryptSignatureState);
+        error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&sourceAllCryptSignatureState);
       }
       else
       {
