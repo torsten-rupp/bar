@@ -635,12 +635,13 @@ INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo)
 *          maxTimeout  - max. timeout [ms]
 * Output : -
 * Return : rest timeout [ms]
-* Notes  : -
+* Notes  : return 'long' because usually timeout parameter could be
+*          WAIT_FOREVER
 \***********************************************************************/
 
-INLINE ulong Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout);
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
-INLINE ulong Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout)
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout)
 {
   uint64 timestamp;
 
@@ -650,7 +651,7 @@ INLINE ulong Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeou
   {
     timestamp = Misc_getTimestamp();
     return (timestamp <= timeoutInfo->endTimestamp)
-             ? MIN((ulong)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),maxTimeout)
+             ? MIN((long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),maxTimeout)
              : 0L;
   }
   else
