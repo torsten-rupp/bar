@@ -1747,7 +1747,7 @@ Errors ServerIO_executeCommand(ServerIO                      *serverIO,
                                long                          timeout,
                                ServerIOCommandResultFunction commandResultFunction,
                                void                          *commandResultUserData,
-                               const char *format,
+                               const char                    *format,
                                ...
                               )
 {

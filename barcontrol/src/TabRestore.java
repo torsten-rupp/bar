@@ -3792,6 +3792,10 @@ Dprintf.dprintf("");
           // ignored
           totalEntryCount = 0;
           totalEntrySize  = 0;
+          if (Settings.debugLevel > 0)
+          {
+            BARControl.printError(exception);
+          }
         }
 
         // show warning if too many entries

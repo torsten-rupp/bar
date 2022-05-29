@@ -289,6 +289,7 @@ public class BusyDialog
           widgetTexts[3] = new Label(subComposite,SWT.LEFT);
           widgetTexts[3].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
           widgetList = new List(subComposite,SWT.BORDER|SWT.V_SCROLL);
+          widgetList.setBackground(display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND));
           widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE)); row++;
         }
         else
