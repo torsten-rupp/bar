@@ -656,7 +656,7 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout
   }
   else
   {
-    return maxTimeout;
+    return WAIT_FOREVER;
   }
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
