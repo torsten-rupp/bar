@@ -475,19 +475,15 @@ void Array_removeAll(Array                *array,
 /***********************************************************************\
 * Name   : Array_contains
 * Purpose: check if array contain data element
-* Input  : array                - array
-*          data                 - data element
-*          arrayCompareFunction - compare function or NULL for memcmp
-*          arrayCompareUserData - user data for compare function
+* Input  : array - array
+*          data  - data element
 * Output : -
 * Return : TRUE if array contain data element, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Array_contains(const Array          *array,
-                    const void           *data,
-                    ArrayCompareFunction arrayCompareFunction,
-                    void                 *arrayCompareUserData
+bool Array_contains(const Array *array,
+                    const void  *data
                    );
 
 /***********************************************************************\

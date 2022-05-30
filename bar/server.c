@@ -90,7 +90,8 @@
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
-#define SLEEP_TIME_PERSISTENCE_THREAD            (10*S_PER_MINUTE)
+//// TODO:#define SLEEP_TIME_PERSISTENCE_THREAD            (10*S_PER_MINUTE)
+#define SLEEP_TIME_PERSISTENCE_THREAD            (30)
 
 // id none
 #define ID_NONE                                  0
@@ -2840,10 +2841,9 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
   now = Misc_getCurrentDateTime();
   LIST_ITERATE(expirationEntityList,expirationEntityNode)
   {
-//fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
     if (   String_equals(expirationEntityNode->jobUUID,jobUUID)
         #ifdef SIMULATE_PURGE
-        && !Array_contains(&simulatedPurgeEntityIdArray,&expirationEntityNode->entityId,CALLBACK_(NULL,NULL))
+        && !Array_contains(&simulatedPurgeEntityIdArray,&expirationEntityNode->entityId)
         #endif /* SIMULATE_PURGE */
        )
     {
@@ -3094,7 +3094,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                   jobExpirationEntityNode = jobExpirationEntityNode->next;
                 }
 
-                if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId,CALLBACK_(NULL,NULL)))
+                if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId))
                 {
                   // get expired entity
                   expiredEntityId        = jobExpirationEntityNode->entityId;
@@ -3397,219 +3397,267 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 
 LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 {
-  Array                      entityIdArray;
-  StorageSpecifier           moveToStorageSpecifier;
-  String                     moveToJobName;
-  String                     storageName;
-  StorageSpecifier           storageSpecifier;
-  String                     pathName,baseName;
-  String                     moveToPathName;
-  JobOptions                 jobOptions;
-  IndexId                    moveToEntityId;
-  MountList                  mountList;
-  uint64                     now;
-  Errors                     error;
-  const JobNode              *jobNode;
-  const PersistenceNode      *persistenceNode;
-  IndexQueryHandle           indexQueryHandle1,indexQueryHandle2;
-  IndexId                    entityId;
-  ArchiveTypes               archiveType;
-  uint64                     createdDateTime;
-  uint                       lockedCount;
-  uint                       age;
-  IndexId                    storageId;
-  char                       string[64];
+  typedef struct
+  {
+    String       jobUUID;
+    String       jobName;
+    ArchiveTypes archiveType;
+    int          maxAge;
+    String       moveTo;
+  } MoveToInfo;
+
+  Array                 entityIdArray;
+  Array                 moveToArray;
+  const JobNode         *jobNode;
+  const PersistenceNode *persistenceNode;
+  MoveToInfo            moveToInfo;
+  StorageSpecifier      moveToStorageSpecifier;
+  uint64                now;
+  ArrayIterator         moveToArrayIterator;
+  JobOptions            jobOptions;
+  StorageSpecifier      storageSpecifier;
+  String                pathName,baseName;
+  String                moveToPathName;
+  IndexId               moveToEntityId;
+  Errors                error;
+  IndexQueryHandle      indexQueryHandle1,indexQueryHandle2;
+  IndexId               entityId;
+  ArchiveTypes          archiveType;
+  uint64                createdDateTime;
+  uint                  lockedCount;
+  uint                  age;
+  IndexId               storageId;
+  String                storageName;
+  String                moveToJobUUID,moveToJobName;
+  char                  string[64];
 
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Storage_initSpecifier(&moveToStorageSpecifier);
-  moveToJobName     = String_new();
-  storageName       = String_new();
+  Job_initOptions(&jobOptions);
   Storage_initSpecifier(&storageSpecifier);
   pathName          = String_new();
   baseName          = String_new();
   moveToPathName    = String_new();
-  Job_initOptions(&jobOptions);
+  storageName       = String_new();
+  moveToJobUUID     = String_new();
 
   error = ERROR_NONE;
   do
   {
     // init variables
     moveToEntityId = INDEX_ID_NONE;
-    List_init(&mountList,
-              CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
-              CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
-             );
 
-    now = Misc_getCurrentDateTime();
+    // get all persistence entries with a move-to destination
+    Array_init(&moveToArray,
+               sizeof(MoveToInfo),
+               64,
+               CALLBACK_INLINE(void,(void *data, void *userData),
+               {
+                 MoveToInfo *moveToInfo = (MoveToInfo*)data;
+
+                 assert(moveToInfo != NULL);
+                 
+                 UNUSED_VARIABLE(userData);
+
+                 String_delete(moveToInfo->moveTo);
+                 String_delete(moveToInfo->jobName);
+                 String_delete(moveToInfo->jobUUID);
+               },NULL),
+               CALLBACK_(NULL,NULL)
+              );
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      // find entity to move
-      JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(moveToEntityId))
+      JOB_LIST_ITERATE(jobNode)
       {
-        LIST_ITERATEX(&jobNode->job.options.persistenceList,persistenceNode,INDEX_ID_IS_NONE(moveToEntityId))
+        LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
         {
-          // check if entity should be moved
           if (!String_isEmpty(persistenceNode->moveTo))
           {
-            // parse move-to name
-            error = Storage_parseName(&moveToStorageSpecifier,persistenceNode->moveTo);
-            if (error != ERROR_NONE)
-            {
-              continue;
-            }
-
-            // get entity to move
-            error = Index_initListEntities(&indexQueryHandle1,
-                                           indexHandle,
-                                           INDEX_ID_ANY,  // uuidId
-                                           jobNode->job.uuid,
-                                           NULL,  // scheduldUUID
-                                           ARCHIVE_TYPE_ANY,
-                                           INDEX_STATE_SET_ALL,
-                                           INDEX_MODE_SET_ALL,
-                                           NULL,  // name
-                                           INDEX_ENTITY_SORT_MODE_CREATED,
-                                           DATABASE_ORDERING_DESCENDING,
-                                           0LL,  // offset
-                                           INDEX_UNLIMITED
-                                          );
-            if (error == ERROR_NONE)
-            {
-              while (   INDEX_ID_IS_NONE(moveToEntityId)
-                     && Index_getNextEntity(&indexQueryHandle1,
-                                            NULL,  // uuidId,
-                                            NULL,  // jobUUID,
-                                            NULL,  // scheduleUUID,
-                                            &entityId,
-                                            &archiveType,
-                                            &createdDateTime,
-                                            NULL,  // lastErrorMessage
-                                            NULL,  // totalSize,
-                                            NULL,  // totalEntryCount,
-                                            NULL,  // totalEntrySize,
-                                            &lockedCount
-                                           )
-                    )
-              {
-                if (!Array_contains(&entityIdArray,&entityId,CALLBACK_(NULL,NULL)))
-                {
-                  age = (now-createdDateTime)/S_PER_DAY;
-
-                  if (   (lockedCount == 0)
-                      && (archiveType == persistenceNode->archiveType)
-                      && ((persistenceNode->maxAge == AGE_FOREVER) || (age < (uint)persistenceNode->maxAge))
-                     )
-                  {
-                    // check storages
-                    error = Index_initListStorages(&indexQueryHandle2,
-                                                   indexHandle,
-                                                   INDEX_ID_ANY,  // uuidId
-                                                   entityId,
-                                                   NULL,  // jobUUID
-                                                   NULL,  // scheduleUUID,
-                                                   NULL,  // indexIds
-                                                   0,  // indexIdCount
-                                                   INDEX_TYPE_SET_ALL,
-                                                   INDEX_STATE_SET_ALL,
-                                                   INDEX_MODE_SET_ALL,
-                                                   NULL,  // hostName
-                                                   NULL,  // userName
-                                                   NULL,  // name
-                                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                                   DATABASE_ORDERING_NONE,
-                                                   0LL,  // offset
-                                                   INDEX_UNLIMITED
-                                                  );
-                    if (error == ERROR_NONE)
-                    {
-                      while (   INDEX_ID_IS_NONE(moveToEntityId)
-                             && Index_getNextStorage(&indexQueryHandle2,
-                                                     NULL,  // uuidId
-                                                     NULL,  // jobUUID
-                                                     NULL,  // entityId
-                                                     NULL,  // scheduleUUID
-                                                     NULL,  // hostName
-                                                     NULL,  // userName
-                                                     NULL,  // comment
-                                                     NULL,  // createdDateTime
-                                                     NULL,  // archiveType
-                                                     &storageId,
-                                                     storageName,
-                                                     NULL,  // createdDateTime,
-                                                     NULL,  // size
-                                                     NULL,  // indexState,
-                                                     NULL,  // indexMode,
-                                                     NULL,  // lastCheckedDateTime,
-                                                     NULL,  // errorMessage
-                                                     NULL,  // totalEntryCount
-                                                     NULL  // totalEntrySize
-                                                    )
-                            )
-                      {
-                        // parse storage name, get path
-                        error = Storage_parseName(&storageSpecifier,storageName);
-                        if (error != ERROR_NONE)
-                        {
-                          continue;
-                        }
-                        File_getDirectoryName(pathName,storageSpecifier.archiveName);
-
-                        // get move-to path name (expand macros)
-                        error = Archive_formatName(moveToPathName,
-                                                   moveToStorageSpecifier.archiveName,
-                                                   EXPAND_MACRO_MODE_STRING,
-                                                   archiveType,
-                                                   NULL,  // scheduleTitle,
-                                                   NULL,  // customText,
-                                                   createdDateTime,
-                                                   NAME_PART_NUMBER_NONE
-                                                  );
-                        if (error != ERROR_NONE)
-                        {
-                          continue;
-                        }
-
-                        if (!Storage_equalSpecifiers(&moveToStorageSpecifier,
-                                                     moveToPathName,
-                                                     &storageSpecifier,
-                                                     pathName
-                                                    )
-                           )
-                        {
-                          moveToEntityId = entityId;
-                          String_set(moveToJobName,jobNode->name);
-
-                          List_copy(&mountList,
-                                    NULL,
-                                    &jobNode->job.options.mountList,
-                                    NULL,
-                                    NULL
-                                   );
-                        }
-                      }
-                      Index_doneList(&indexQueryHandle2);
-                    }
-                  }
-                }
-              }
-              Index_doneList(&indexQueryHandle1);
-            }
+            MoveToInfo moveToInfo;
+            
+            moveToInfo.jobUUID     = String_duplicate(jobNode->job.uuid);
+            moveToInfo.jobName     = String_duplicate(jobNode->name);
+            moveToInfo.archiveType = persistenceNode->archiveType;
+            moveToInfo.maxAge      = persistenceNode->maxAge;
+            moveToInfo.moveTo      = String_duplicate(persistenceNode->moveTo);
+            
+            Array_append(&moveToArray,&moveToInfo);
           }
         }
       }
-    } // jobList
+    }
+   
+    // find next storage to move
+    now = Misc_getCurrentDateTime();
+    ARRAY_ITERATEX(&moveToArray,moveToArrayIterator,moveToInfo,TRUE)
+    {
+      // parse move-to name
+      error = Storage_parseName(&moveToStorageSpecifier,moveToInfo.moveTo);
+      if (error != ERROR_NONE)
+      {
+        continue;
+      }
+
+      // get entity to move
+      error = Index_initListEntities(&indexQueryHandle1,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     moveToInfo.jobUUID,
+                                     NULL,  // scheduldUUID
+                                     ARCHIVE_TYPE_ANY,
+                                     INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
+                                     NULL,  // name
+                                     INDEX_ENTITY_SORT_MODE_CREATED,
+                                     DATABASE_ORDERING_DESCENDING,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error == ERROR_NONE)
+      {
+        while (   INDEX_ID_IS_NONE(moveToEntityId)
+               && Index_getNextEntity(&indexQueryHandle1,
+                                      NULL,  // uuidId,
+                                      NULL,  // jobUUID,
+                                      NULL,  // scheduleUUID,
+                                      &entityId,
+                                      &archiveType,
+                                      &createdDateTime,
+                                      NULL,  // lastErrorMessage
+                                      NULL,  // totalSize,
+                                      NULL,  // totalEntryCount,
+                                      NULL,  // totalEntrySize,
+                                      &lockedCount
+                                     )
+              )
+        {
+          if (!Array_contains(&entityIdArray,&entityId))
+          {
+            age = (now-createdDateTime)/S_PER_DAY;
+
+            if (   (lockedCount == 0)
+                && (archiveType == moveToInfo.archiveType)
+                && ((moveToInfo.maxAge == AGE_FOREVER) || (age < (uint)moveToInfo.maxAge))
+               )
+            {
+              // check storages
+              error = Index_initListStorages(&indexQueryHandle2,
+                                             indexHandle,
+                                             INDEX_ID_ANY,  // uuidId
+                                             entityId,
+                                             NULL,  // jobUUID
+                                             NULL,  // scheduleUUID,
+                                             NULL,  // indexIds
+                                             0,  // indexIdCount
+                                             INDEX_TYPE_SET_ALL,
+                                             INDEX_STATE_SET_ALL,
+                                             INDEX_MODE_SET_ALL,
+                                             NULL,  // hostName
+                                             NULL,  // userName
+                                             NULL,  // name
+                                             INDEX_STORAGE_SORT_MODE_NONE,
+                                             DATABASE_ORDERING_NONE,
+                                             0LL,  // offset
+                                             INDEX_UNLIMITED
+                                            );
+              if (error == ERROR_NONE)
+              {
+                while (   INDEX_ID_IS_NONE(moveToEntityId)
+                       && Index_getNextStorage(&indexQueryHandle2,
+                                               NULL,  // uuidId
+                                               NULL,  // jobUUID
+                                               NULL,  // entityId
+                                               NULL,  // scheduleUUID
+                                               NULL,  // hostName
+                                               NULL,  // userName
+                                               NULL,  // comment
+                                               NULL,  // createdDateTime
+                                               NULL,  // archiveType
+                                               &storageId,
+                                               storageName,
+                                               NULL,  // createdDateTime,
+                                               NULL,  // size
+                                               NULL,  // indexState,
+                                               NULL,  // indexMode,
+                                               NULL,  // lastCheckedDateTime,
+                                               NULL,  // errorMessage
+                                               NULL,  // totalEntryCount
+                                               NULL  // totalEntrySize
+                                              )
+                      )
+                {
+                  // parse storage name, get path
+                  error = Storage_parseName(&storageSpecifier,storageName);
+                  if (error != ERROR_NONE)
+                  {
+                    continue;
+                  }
+                  File_getDirectoryName(pathName,storageSpecifier.archiveName);
+
+                  // get move-to path name (expand macros)
+                  error = Archive_formatName(moveToPathName,
+                                             moveToStorageSpecifier.archiveName,
+                                             EXPAND_MACRO_MODE_STRING,
+                                             archiveType,
+                                             NULL,  // scheduleTitle,
+                                             NULL,  // customText,
+                                             createdDateTime,
+                                             NAME_PART_NUMBER_NONE
+                                            );
+                  if (error != ERROR_NONE)
+                  {
+                    continue;
+                  }
+
+                  if (!Storage_equalSpecifiers(&moveToStorageSpecifier,
+                                               moveToPathName,
+                                               &storageSpecifier,
+                                               pathName
+                                              )
+                     )
+                  {
+                    moveToEntityId = entityId;
+                    String_set(moveToJobUUID,moveToInfo.jobUUID);
+                    String_set(moveToJobName,moveToInfo.jobName);
+                  }
+                }
+                Index_doneList(&indexQueryHandle2);
+              }
+            }
+          }
+        }
+        Index_doneList(&indexQueryHandle1);
+      }
+    }
+
+    // free resources
+    Array_done(&moveToArray);
 
     // move entity
     if (!INDEX_ID_IS_NONE(moveToEntityId))
     {
       Array_append(&entityIdArray,&moveToEntityId);
+      
+      error = ERROR_NONE;
 
       // mount devices
-      error = mountAll(&mountList);
       if (error == ERROR_NONE)
       {
-        // move entity
+        JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        {
+          // find job if possible
+          jobNode = Job_findByUUID(moveToJobUUID);
+          if (jobNode != NULL)
+          {
+            error = mountAll(&jobNode->job.options.mountList);
+          }
+        }
+      }
+
+      // move entity
+      if (error == ERROR_NONE)
+      {
         error = moveEntity(indexHandle,
                            &jobOptions,
                            moveToEntityId,
@@ -3617,9 +3665,22 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                            moveToPathName
                           );
 
-        // unmount devices
-        (void)unmountAll(&mountList);
       }
+
+      // unmount devices
+      if (error == ERROR_NONE)
+      {
+        JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        {
+          // find job if possible
+          jobNode = Job_findByUUID(moveToJobUUID);
+          if (jobNode != NULL)
+          {
+            (void)unmountAll(&jobNode->job.options.mountList);
+          }
+        }
+      }
+
       if (error == ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle,
@@ -3648,9 +3709,6 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    );
       }
     }
-
-    // free resources
-    List_done(&mountList);
   }
   while (   !INDEX_ID_IS_NONE(moveToEntityId)
          && !isQuit()
@@ -4308,6 +4366,8 @@ LOCAL void autoIndexThreadCode(void)
                            String_cString(printableStorageName)
                           );
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
+// TODO: cannot do forall+read/write database, because forall do a read-lock
+#if 0
                 (void)Storage_forAll(&storageSpecifier,
                                      baseName,
                                      String_cString(pattern),
@@ -4403,7 +4463,7 @@ LOCAL void autoIndexThreadCode(void)
                                                                           0LL,  // size
                                                                           INDEX_STATE_UPDATE_REQUESTED,
                                                                           INDEX_MODE_AUTO,
-                                                                          &storageId
+                                                                          NULL  // storageId
                                                                          );
                                                  if (error == ERROR_NONE)
                                                  {
@@ -4430,6 +4490,7 @@ LOCAL void autoIndexThreadCode(void)
                                      },NULL),
                                      CALLBACK_(NULL,NULL)
                                     );
+#endif
               }
             }
           }
@@ -13673,8 +13734,14 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     persistenceNode->minKeep     = minKeep;
     persistenceNode->maxKeep     = maxKeep;
     persistenceNode->maxAge      = maxAge;
-// TODO:
-    String_set(persistenceNode->moveTo,moveTo);
+    if (persistenceNode->moveTo != NULL)
+    {
+      String_set(persistenceNode->moveTo,moveTo);
+    }
+    else
+    {
+      persistenceNode->moveTo = String_duplicate(moveTo);
+    }
 
     if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        existingPersistenceNode,
@@ -13682,6 +13749,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
                        && (existingPersistenceNode->minKeep     == persistenceNode->minKeep    )
                        && (existingPersistenceNode->maxKeep     == persistenceNode->maxKeep    )
                        && (existingPersistenceNode->maxAge      == persistenceNode->maxAge     )
+                       && String_equals(existingPersistenceNode->moveTo,persistenceNode->moveTo)
                       )
        )
     {
