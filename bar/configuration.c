@@ -3905,7 +3905,6 @@ LOCAL void *configValuePersistenceSectionDataIterator(ConfigValueSectionDataIter
         PersistenceNode *persistenceNode = (PersistenceNode*)(*sectionDataIterator);
         String          name             = (String)data;
 
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
         if (persistenceNode != NULL)
         {
           (*sectionDataIterator) = persistenceNode->next;

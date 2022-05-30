@@ -2361,145 +2361,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
 
 Errors Job_write(JobNode *jobNode)
 {
-// TODO:
-#if 0
-  StringList            jobLinesList;
-  String                line;
-  Errors                error;
-  uint                  i;
-  StringNode            *nextStringNode;
-  const ScheduleNode    *scheduleNode;
-  const PersistenceNode *persistenceNode;
-  ConfigValueFormat     configValueFormat;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (String_isSet(jobNode->fileName))
-  {
-    // init variables
-    StringList_init(&jobLinesList);
-    line = String_new();
-
-    // read config file lines
-    error = ConfigValue_readConfigFileLines(jobNode->fileName,&jobLinesList);
-    if (error != ERROR_NONE)
-    {
-      StringList_done(&jobLinesList);
-      String_delete(line);
-      return error;
-    }
-
-    // correct config values
-    switch (jobNode->job.options.cryptPasswordMode)
-    {
-      case PASSWORD_MODE_DEFAULT:
-      case PASSWORD_MODE_ASK:
-        Password_clear(&jobNode->job.options.cryptPassword);
-        break;
-      case PASSWORD_MODE_NONE:
-      case PASSWORD_MODE_CONFIG:
-        // nothing to do
-        break;
-    }
-
-    // update line list
-    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
-    {
-      // delete old entries, get position for insert new entries
-      nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
-
-      // insert new entries
-      ConfigValue_formatInit(&configValueFormat,
-                             &JOB_CONFIG_VALUES[i],
-                             CONFIG_VALUE_FORMAT_MODE_LINE,
-                             jobNode
-                            );
-      while (ConfigValue_format(&configValueFormat,line))
-      {
-        StringList_insert(&jobLinesList,line,nextStringNode);
-      }
-      ConfigValue_formatDone(&configValueFormat);
-    }
-
-    // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
-    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
-    if (!List_isEmpty(&jobNode->job.options.scheduleList))
-    {
-      StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-      {
-        // insert new schedule sections
-        String_format(line,"[schedule]");
-        StringList_insert(&jobLinesList,line,nextStringNode);
-
-        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"schedule",i)
-        {
-          ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[i],
-                                 CONFIG_VALUE_FORMAT_MODE_LINE,
-                                 scheduleNode
-                                );
-          while (ConfigValue_format(&configValueFormat,line))
-          {
-            StringList_insert(&jobLinesList,line,nextStringNode);
-          }
-          ConfigValue_formatDone(&configValueFormat);
-        }
-
-        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
-        StringList_insertCString(&jobLinesList,"",nextStringNode);
-      }
-    }
-
-    // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
-    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
-    if (!List_isEmpty(&jobNode->job.options.persistenceList))
-    {
-      StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
-      {
-        // insert new persistence sections
-        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType));
-        StringList_insert(&jobLinesList,line,nextStringNode);
-
-        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"persistence",i)
-        {
-          ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[i],
-                                 CONFIG_VALUE_FORMAT_MODE_LINE,
-                                 persistenceNode
-                                );
-          while (ConfigValue_format(&configValueFormat,line))
-          {
-            StringList_insert(&jobLinesList,line,nextStringNode);
-          }
-          ConfigValue_formatDone(&configValueFormat);
-        }
-
-        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
-        StringList_insertCString(&jobLinesList,"",nextStringNode);
-      }
-    }
-
-    // write config file lines
-    error = ConfigValue_writeConfigFileLines(jobNode->fileName,&jobLinesList);
-    if (error != ERROR_NONE)
-    {
-      String_delete(line);
-      StringList_done(&jobLinesList);
-      return error;
-    }
-
-    // save time modified
-    jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
-
-    // free resources
-    String_delete(line);
-    StringList_done(&jobLinesList);
-  }
-#else
-  Errors                error;
+  Errors error;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -2519,7 +2381,7 @@ Errors Job_write(JobNode *jobNode)
         break;
     }
 
-    // write config
+    // write job config
     error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
     if (error != ERROR_NONE)
     {
@@ -2547,7 +2409,6 @@ Errors Job_write(JobNode *jobNode)
 
     // free resources
   }
-#endif
 
   // reset modified flag
   jobNode->modifiedFlag = FALSE;
