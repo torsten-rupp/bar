@@ -1168,7 +1168,7 @@ INLINE ulong CmdOption_isSet(const void *variable)
 {
   extern Array cmdSetOptions;
 
-  return Array_contains(&cmdSetOptions,variable,CALLBACK_(NULL,NULL));
+  return Array_contains(&cmdSetOptions,variable);
 }
 #endif /* NDEBUG || __CMDOPTION_IMPLEMENTATION__ */
 

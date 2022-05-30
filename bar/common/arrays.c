@@ -522,50 +522,53 @@ void Array_removeAll(Array                *array,
 {
   ulong index;
 
-  index = 0;
-  if (arrayCompareFunction != NULL)
+  if (array != NULL)
   {
-    while (index < array->length)
+    index = 0;
+    if (arrayCompareFunction != NULL)
     {
-      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
+      while (index < array->length)
       {
-        Array_remove(array,index);
-      }
-      else
-      {
-        index++;
+        if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
+        {
+          Array_remove(array,index);
+        }
+        else
+        {
+          index++;
+        }
       }
     }
-  }
-  else
-  {
-    while (index < array->length)
+    else
     {
-      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
+      while (index < array->length)
       {
-        Array_remove(array,index);
-      }
-      else
-      {
-        index++;
+        if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
+        {
+          Array_remove(array,index);
+        }
+        else
+        {
+          index++;
+        }
       }
     }
   }
 }
 
-bool Array_contains(const Array          *array,
-                    const void           *data,
-                    ArrayCompareFunction arrayCompareFunction,
-                    void                 *arrayCompareUserData
+bool Array_contains(const Array *array,
+                    const void  *data
                    )
 {
   ulong index;
+  
+  assert(array != NULL);
 
-  if (arrayCompareFunction != NULL)
+  if (array->arrayCompareFunction != NULL)
   {
     for (index = 0; index < array->length; index++)
     {
-      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
+      if (array->arrayCompareFunction(array->data+index*array->elementSize,data,array->arrayCompareUserData) == 0)
       {
         return TRUE;
       }
@@ -593,16 +596,29 @@ long Array_find(const Array          *array,
                )
 {
   long i;
+  
+  assert(array != NULL);
 
   switch (arrayFindMode)
   {
     case ARRAY_FIND_FORWARD:
       i = 0;
-      if (arrayCompareFunction != NULL)
+      if      (arrayCompareFunction != NULL)
       {
         while (i < (long)array->length)
         {
           if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+          {
+            return i;
+          }
+          i++;
+        }
+      }
+      else if (array->arrayCompareFunction != NULL)
+      {
+        while (i < (long)array->length)
+        {
+          if (array->arrayCompareFunction(array->data+i*array->elementSize,data,array->arrayCompareUserData) == 0)
           {
             return i;
           }
@@ -623,11 +639,22 @@ long Array_find(const Array          *array,
       break;
     case ARRAY_FIND_BACKWARD:
       i = array->length-1;
-      if (arrayCompareFunction != NULL)
+      if      (arrayCompareFunction != NULL)
       {
         while (i >= 0)
         {
           if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+          {
+            return i;
+          }
+          i--;
+        }
+      }
+      else if (array->arrayCompareFunction != NULL)
+      {
+        while (i >= 0)
+        {
+          if (array->arrayCompareFunction(array->data+i*array->elementSize,data,array->arrayCompareUserData) == 0)
           {
             return i;
           }
@@ -660,6 +687,8 @@ long Array_findNext(const Array          *array,
                    )
 {
   long i;
+
+  assert(array != NULL);
 
   switch (arrayFindMode)
   {
@@ -729,6 +758,8 @@ void Array_sort(Array                *array,
                 void                 *arrayCompareUserData
                )
 {
+  assert(array != NULL);
+
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 UNUSED_VARIABLE(array);
 UNUSED_VARIABLE(arrayCompareFunction);
