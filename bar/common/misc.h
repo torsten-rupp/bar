@@ -639,9 +639,9 @@ INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo)
 *          WAIT_FOREVER
 \***********************************************************************/
 
-INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout);
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
-INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout)
+INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout)
 {
   uint64 timestamp;
 
@@ -651,12 +651,12 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, long maxTimeout)
   {
     timestamp = Misc_getTimestamp();
     return (timestamp <= timeoutInfo->endTimestamp)
-             ? MIN((long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),maxTimeout)
+             ? MIN((long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),(long)MIN(maxTimeout,MAX_LONG))
              : 0L;
   }
   else
   {
-    return maxTimeout;
+    return WAIT_FOREVER;
   }
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
