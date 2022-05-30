@@ -5083,7 +5083,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
         else
         {
-//fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
           // replace index: keep new storage
           storageId = storageMsg.storageId;
           AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
