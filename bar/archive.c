@@ -716,7 +716,6 @@ LOCAL CryptKey *findDecryptKey(ConstString         storageName,
                                 (decryptKeyNode->askedFlag == askedFlag)
                              && String_equals(decryptKeyNode->storageName,storageName)
                             );
-
   if (decryptKeyNode != NULL)
   {
     // check if salt/key length changed => calculate new key derivation
@@ -788,6 +787,7 @@ LOCAL CryptKey *updateDecryptKey(ConstString         storageName,
       HALT_INSUFFICIENT_MEMORY();
     }
     decryptKeyNode->storageName = String_duplicate(storageName);
+    decryptKeyNode->askedFlag   = FALSE;
     Crypt_initSalt(&decryptKeyNode->cryptSalt);
     Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
     decryptKeyNode->password    = Password_duplicate(password);
@@ -5796,9 +5796,14 @@ const CryptKey *Archive_appendCryptInfo(const Password *password)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-//      decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+// TODO: name
+      decryptKeyNode->storageName = String_new();
+      decryptKeyNode->askedFlag   = FALSE;
+      decryptKeyNode->storageName = String_new();
+      Crypt_initSalt(&decryptKeyNode->cryptSalt);
       Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
-      decryptKeyNode->password = Password_duplicate(password);
+      decryptKeyNode->password    = Password_duplicate(password);
+      decryptKeyNode->keyLength   = 0;
 
       // derive decrypt key from password with salt
 //TODO:
