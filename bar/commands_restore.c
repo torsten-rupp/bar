@@ -3307,7 +3307,6 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   byte          *buffer;
   uint          archiveIndex;
   ArchiveHandle archiveHandle;
-  Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
@@ -3323,7 +3322,6 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   archiveIndex = 0;
 
   // restore entries
-  failError = ERROR_NONE;
   while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
     if (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -3351,7 +3349,8 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
                      String_cString(entryMsg.archiveHandle->printableStorageName),
                      Error_getText(error)
                     );
-          if (failError == ERROR_NONE) failError = error;
+          if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+          freeEntryMsg(&entryMsg,NULL);
           break;
         }
 
@@ -3370,7 +3369,8 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
                    String_cString(entryMsg.archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
-        if (failError == ERROR_NONE) failError = error;
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
         break;
       }
 
@@ -3442,13 +3442,9 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
       }
       if (error != ERROR_NONE)
       {
-        if (failError == ERROR_NONE) failError = error;
-      }
-
-      // store fail error
-      if (failError != ERROR_NONE)
-      {
-        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = failError;
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
+        break;
       }
     }
 
@@ -3460,6 +3456,12 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   if (archiveIndex != 0)
   {
     Archive_close(&archiveHandle);
+  }
+
+  // discard processing all other entries
+  while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  {
+    freeEntryMsg(&entryMsg,NULL);
   }
 
   // free resources

@@ -935,8 +935,9 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                // input password and derive decrypt key
                if (decryptKeyIterator->getNamePasswordFunction != NULL)
                {
-                 // input password
                  Password_init(&newPassword);
+
+                 // input password
                  error = decryptKeyIterator->getNamePasswordFunction(NULL,  // loginName
                                                                      &newPassword,
                                                                      PASSWORD_TYPE_CRYPT,
@@ -947,17 +948,20 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                                                      FALSE,  // weakCheckFlag
                                                                      decryptKeyIterator->getNamePasswordUserData
                                                                     );
-// TODO: remove                 if ((error == ERROR_NONE) && !Password_isEmpty(&newPassword))
+                 if (error != ERROR_NONE)
                  {
-                   // add to decrypt key list
-                   decryptKey = updateDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
-                                                 TRUE,
-                                                 &newPassword,
-                                                 cryptKeyDeriveType,
-                                                 cryptSalt,
-                                                 keyLength
-                                                );
+                   Password_clear(&newPassword);
                  }
+
+                 // add to decrypt key list
+                 decryptKey = updateDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
+                                               TRUE,
+                                               &newPassword,
+                                               cryptKeyDeriveType,
+                                               cryptSalt,
+                                               keyLength
+                                              );
+
                  Password_done(&newPassword);
                }
              }
