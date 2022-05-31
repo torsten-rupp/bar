@@ -90,8 +90,7 @@
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
-//// TODO:#define SLEEP_TIME_PERSISTENCE_THREAD            (10*S_PER_MINUTE)
-#define SLEEP_TIME_PERSISTENCE_THREAD            (30)
+#define SLEEP_TIME_PERSISTENCE_THREAD            (10*S_PER_MINUTE)
 
 // id none
 #define ID_NONE                                  0
@@ -3441,6 +3440,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   moveToPathName    = String_new();
   storageName       = String_new();
   moveToJobUUID     = String_new();
+  moveToJobName     = String_new();
 
   error = ERROR_NONE;
   do
@@ -3457,7 +3457,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                  MoveToInfo *moveToInfo = (MoveToInfo*)data;
 
                  assert(moveToInfo != NULL);
-                 
+
                  UNUSED_VARIABLE(userData);
 
                  String_delete(moveToInfo->moveTo);
@@ -3475,19 +3475,19 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
           if (!String_isEmpty(persistenceNode->moveTo))
           {
             MoveToInfo moveToInfo;
-            
+
             moveToInfo.jobUUID     = String_duplicate(jobNode->job.uuid);
             moveToInfo.jobName     = String_duplicate(jobNode->name);
             moveToInfo.archiveType = persistenceNode->archiveType;
             moveToInfo.maxAge      = persistenceNode->maxAge;
             moveToInfo.moveTo      = String_duplicate(persistenceNode->moveTo);
-            
+
             Array_append(&moveToArray,&moveToInfo);
           }
         }
       }
     }
-   
+
     // find next storage to move
     now = Misc_getCurrentDateTime();
     ARRAY_ITERATEX(&moveToArray,moveToArrayIterator,moveToInfo,TRUE)
@@ -3638,7 +3638,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     if (!INDEX_ID_IS_NONE(moveToEntityId))
     {
       Array_append(&entityIdArray,&moveToEntityId);
-      
+
       error = ERROR_NONE;
 
       // mount devices
@@ -3715,13 +3715,14 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         );
 
   // free resources
-  Job_doneOptions(&jobOptions);
+  String_delete(moveToJobName);
+  String_delete(moveToJobUUID);
+  String_delete(storageName);
   String_delete(moveToPathName);
   String_delete(baseName);
   String_delete(pathName);
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageName);
-  String_delete(moveToJobName);
+  Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&moveToStorageSpecifier);
   Array_done(&entityIdArray);
 
@@ -4366,8 +4367,6 @@ LOCAL void autoIndexThreadCode(void)
                            String_cString(printableStorageName)
                           );
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-// TODO: cannot do forall+read/write database, because forall do a read-lock
-#if 0
                 (void)Storage_forAll(&storageSpecifier,
                                      baseName,
                                      String_cString(pattern),
@@ -4381,7 +4380,7 @@ LOCAL void autoIndexThreadCode(void)
                                        UNUSED_VARIABLE(userData);
 
                                        now = Misc_getCurrentDateTime();
-//fprintf(stderr,"%s:%d: file=%lld now=%lld\n",__FILE__,__LINE__,fileInfo->timeModified,now);
+//fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
 
                                        // to avoid add/update on currently created archive, wait for min. 30min after creation
                                        if (now > (fileInfo->timeLastChanged+30*60))
@@ -4490,7 +4489,6 @@ LOCAL void autoIndexThreadCode(void)
                                      },NULL),
                                      CALLBACK_(NULL,NULL)
                                     );
-#endif
               }
             }
           }

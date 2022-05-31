@@ -3779,7 +3779,7 @@ Dprintf.dprintf("");
                                                        name,
                                                        newestOnly
                                                       ),
-                                   1,  // debugLevel
+0,//                                   1,  // debugLevel
                                    valueMap
                                   );
           totalEntryCount = valueMap.getLong("totalEntryCount");
@@ -4328,6 +4328,7 @@ Dprintf.dprintf("");
     {
       widgetStorageTreeToolTip.dispose();
     }
+Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
 
     if (uuidIndexData != null)
     {
