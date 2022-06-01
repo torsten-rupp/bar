@@ -52,139 +52,148 @@ def tests()
       }
     }
 
-    stage("Tests")
+    timeout(time: 120, unit: 'MINUTES')
     {
-      // run tests
-      script
+      stage("Tests")
       {
-        if (params.TESTS)
+        // run tests
+        script
         {
-          switch (params.BINARY_TYPE)
+          if (params.TESTS)
           {
-            case "DEBUG":
-              binaryExtension="-debug";
-              break;
-            case "VALGRIND":
-              binaryExtension="-valgrind";
-              break;
-            case "GCOV":
-              binaryExtension="-gcov";
-              break;
-            case "GPROF":
-              binaryExtension="-gprof";
-              break;
-            default:
-              binaryExtension="";
-              break;
-          }
-          sh "echo binaryExtension="+binaryExtension
-          switch (params.TEST_TYPE)
-          {
-            case "SMOKE":
-            default:
-              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-              {
-                // start services
-                sh "sudo /etc/init.d/rsyslog start"
-                sh "sudo /etc/init.d/apache2 start"
-                sh "sudo /etc/init.d/ssh start"
-                sh "sudo /etc/init.d/vsftpd start"
+            switch (params.BINARY_TYPE)
+            {
+              case "DEBUG":
+                binaryExtension="-debug";
+                break;
+              case "VALGRIND":
+                binaryExtension="-valgrind";
+                break;
+              case "GCOV":
+                binaryExtension="-gcov";
+                break;
+              case "GPROF":
+                binaryExtension="-gprof";
+                break;
+              default:
+                binaryExtension="";
+                break;
+            }
+            sh "echo binaryExtension="+binaryExtension
+            switch (params.TEST_TYPE)
+            {
+              case "SMOKE":
+              default:
+                docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+                {
+                  // start services
+                  sh "sudo /etc/init.d/rsyslog start"
+                  sh "sudo /etc/init.d/apache2 start"
+                  sh "sudo /etc/init.d/ssh start"
+                  sh "sudo /etc/init.d/vsftpd start"
 
-                sh "rm -f bar-test.log"
-                sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
+                  sh "rm -f bar-test.log"
+                  sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
 
-                // stop services
-                sh "sudo /etc/init.d/vsftpd stop || true"
-                sh "sudo /etc/init.d/ssh stop || true"
-                sh "sudo /etc/init.d/apache2 stop || true"
-                sh "sudo /etc/init.d/rsyslog stop || true"
-              }
-              break;
-            case "FULL":
-              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-              {
-                // start services
-                sh "sudo /etc/init.d/rsyslog start"
-                sh "sudo /etc/init.d/apache2 start"
-                sh "sudo /etc/init.d/ssh start"
-                sh "sudo /etc/init.d/vsftpd start"
+                  // stop services
+                  sh "sudo /etc/init.d/vsftpd stop || true"
+                  sh "sudo /etc/init.d/ssh stop || true"
+                  sh "sudo /etc/init.d/apache2 stop || true"
+                  sh "sudo /etc/init.d/rsyslog stop || true"
+                }
+                break;
+              case "FULL":
+                docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+                {
+                  // start services
+                  sh "sudo /etc/init.d/rsyslog start"
+                  sh "sudo /etc/init.d/apache2 start"
+                  sh "sudo /etc/init.d/ssh start"
+                  sh "sudo /etc/init.d/vsftpd start"
 
-                sh "rm -f bar-test.log"
-                TEST_STEPS.each { step -> sh "make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1' | tee -a bar-test.log" }
+                  sh "rm -f bar-test.log"
+                  TEST_STEPS.each { step -> sh "make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1' | tee -a bar-test.log" }
 
-                // stop services
-                sh "sudo /etc/init.d/vsftpd stop || true"
-                sh "sudo /etc/init.d/ssh stop || true"
-                sh "sudo /etc/init.d/apache2 stop || true"
-                sh "sudo /etc/init.d/rsyslog stop || true"
-              }
-              break;
+                  // stop services
+                  sh "sudo /etc/init.d/vsftpd stop || true"
+                  sh "sudo /etc/init.d/ssh stop || true"
+                  sh "sudo /etc/init.d/apache2 stop || true"
+                  sh "sudo /etc/init.d/rsyslog stop || true"
+                }
+                break;
+            }
           }
         }
       }
     }
 
-    stage("Code coverage")
+    timeout(time: 120, unit: 'MINUTES')
     {
-      script
+      stage("Code coverage")
       {
-        if (params.CODE_COVERAGE)
+        script
         {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          if (params.CODE_COVERAGE)
           {
-            // start services
-            sh "sudo /etc/init.d/rsyslog start"
-            sh "sudo /etc/init.d/apache2 start"
-            sh "sudo /etc/init.d/ssh start"
-            sh "sudo /etc/init.d/vsftpd start"
+            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            {
+              // start services
+              sh "sudo /etc/init.d/rsyslog start"
+              sh "sudo /etc/init.d/apache2 start"
+              sh "sudo /etc/init.d/ssh start"
+              sh "sudo /etc/init.d/vsftpd start"
 
-            sh "make -C bar gcov_clean"
-            TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
-            sh "make -C bar gcov_html"
+              sh "make -C bar gcov_clean"
+              TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
+              sh "make -C bar gcov_html"
 
-            // stop services
-            sh "sudo /etc/init.d/vsftpd stop || true"
-            sh "sudo /etc/init.d/ssh stop || true"
-            sh "sudo /etc/init.d/apache2 stop || true"
-            sh "sudo /etc/init.d/rsyslog stop || true"
+              // stop services
+              sh "sudo /etc/init.d/vsftpd stop || true"
+              sh "sudo /etc/init.d/ssh stop || true"
+              sh "sudo /etc/init.d/apache2 stop || true"
+              sh "sudo /etc/init.d/rsyslog stop || true"
+            }
+
+            publishHTML([allowMissing:          false,
+                         alwaysLinkToLastBuild: false,
+                         keepAll:               true,
+                         reportDir:             'bar/coverage',
+                         reportFiles:           'index.html',
+                         reportName:            'Code Coverage Report',
+                         reportTitles:          'BAR Code Coverage'
+                        ]
+                       )
           }
-
-          publishHTML([allowMissing:          false,
-                       alwaysLinkToLastBuild: false,
-                       keepAll:               true,
-                       reportDir:             'bar/coverage',
-                       reportFiles:           'index.html',
-                       reportName:            'Code Coverage Report',
-                       reportTitles:          'BAR Code Coverage'
-                      ]
-                     )
         }
       }
     }
 
-    stage("Profiling")
+    timeout(time: 120, unit: 'MINUTES')
     {
-      script
+      stage("Profiling")
       {
-        if (params.PROFILING)
+        script
         {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          if (params.PROFILING)
           {
-            // start services
-            sh "sudo /etc/init.d/rsyslog start"
-            sh "sudo /etc/init.d/apache2 start"
-            sh "sudo /etc/init.d/ssh start"
-            sh "sudo /etc/init.d/vsftpd start"
+            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            {
+              // start services
+              sh "sudo /etc/init.d/rsyslog start"
+              sh "sudo /etc/init.d/apache2 start"
+              sh "sudo /etc/init.d/ssh start"
+              sh "sudo /etc/init.d/vsftpd start"
 
-            sh "make -C bar gprof_clean"
-            TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
-sh "ps auxw"
+              sh "make -C bar gprof_clean"
+              TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
+  sh "ps auxw"
 
-            // stop services
-            sh "sudo /etc/init.d/vsftpd stop || true"
-            sh "sudo /etc/init.d/ssh stop || true"
-            sh "sudo /etc/init.d/apache2 stop || true"
-            sh "sudo /etc/init.d/rsyslog stop || true"
+              // stop services
+              sh "sudo /etc/init.d/vsftpd stop || true"
+              sh "sudo /etc/init.d/ssh stop || true"
+              sh "sudo /etc/init.d/apache2 stop || true"
+              sh "sudo /etc/init.d/rsyslog stop || true"
+            }
           }
         }
       }
