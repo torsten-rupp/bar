@@ -34,30 +34,33 @@ def build()
 {
   try
   {
-    stage("Build")
+    timeout(time: 120, unit: 'MINUTES')
     {
-      docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+      stage("Build")
       {
-        checkout scm
-        script
+        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
         {
-          // configure
-          sh "./download-third-party-packages.sh --local-directory /media/extern"
-          sh "./download-third-party-packages.sh"
-          sh "./configure"
+          checkout scm
+          script
+          {
+            // configure
+            sh "./download-third-party-packages.sh --local-directory /media/extern"
+            sh "./download-third-party-packages.sh"
+            sh "./configure"
 
-          // make (Note: avoid race condition by not creating dependencies in parallel)
-          sh "make depend"
-          sh "make -j`nproc --ignore=1`"
-          if (params.CODE_COVERAGE)
-          {
-            sh "make -C bar bar-gcov"
+            // make (Note: avoid race condition by not creating dependencies in parallel)
+            sh "make depend"
+            sh "make -j`nproc --ignore=1`"
+            if (params.CODE_COVERAGE)
+            {
+              sh "make -C bar bar-gcov"
+            }
+            if (params.PROFILING)
+            {
+              sh "make -C bar bar-gprof"
+            }
+            sh "make dist"
           }
-          if (params.PROFILING)
-          {
-            sh "make -C bar bar-gprof"
-          }
-          sh "make dist"
         }
       }
     }
@@ -83,131 +86,146 @@ def build()
         binaryExtension="-debug";
         break;
     }
-    stage("Smoke tests")
+    timeout(time: 60, unit: 'MINUTES')
     {
-      // run tests
-      script
+      stage("Smoke tests")
       {
-        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+        // run tests
+        script
         {
-          sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
+          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          {
+            sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
+          }
         }
       }
     }
-    stage("Tests")
+    timeout(time: 240, unit: 'MINUTES')
     {
-      // run tests
-      script
+      stage("Tests")
       {
-        if (   params.TESTS
-//            || (env.BRANCH_NAME == "master")
-           )
+        // run tests
+        script
         {
-          switch (params.TEST_TYPE)
+          if (   params.TESTS
+  //            || (env.BRANCH_NAME == "master")
+             )
           {
-            case "FULL":
-              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-              {
-                // start services
-                sh "sudo /etc/init.d/apache2 start"
-                sh "sudo /etc/init.d/ssh start"
-                sh "sudo /etc/init.d/vsftpd start"
+            switch (params.TEST_TYPE)
+            {
+              case "FULL":
+                docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+                {
+                  // start services
+                  sh "sudo /etc/init.d/apache2 start"
+                  sh "sudo /etc/init.d/ssh start"
+                  sh "sudo /etc/init.d/vsftpd start"
 
-                TEST_STEPS.each { step -> sh "make test_${steps}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'" }
+                  TEST_STEPS.each { step -> sh "make test_${steps}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'" }
 
-                // stop services
-                sh "sudo /etc/init.d/vsftpd stop || true"
-                sh "sudo /etc/init.d/ssh stop || true"
-                sh "sudo /etc/init.d/apache2 stop || true"
-              }
-              break;
-            default:
-              break;
+                  // stop services
+                  sh "sudo /etc/init.d/vsftpd stop || true"
+                  sh "sudo /etc/init.d/ssh stop || true"
+                  sh "sudo /etc/init.d/apache2 stop || true"
+                }
+                break;
+              default:
+                break;
+            }
           }
         }
       }
     }
 
-    stage("Valgrind checks")
+    timeout(time: 240, unit: 'MINUTES')
     {
-      script
+      stage("Valgrind checks")
       {
-        if (params.VALGRIND)
+        script
         {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          if (params.VALGRIND)
           {
-            // start services
-            sh "sudo /etc/init.d/apache2 start"
-            sh "sudo /etc/init.d/ssh start"
-            sh "sudo /etc/init.d/vsftpd start"
+            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            {
+              // start services
+              sh "sudo /etc/init.d/apache2 start"
+              sh "sudo /etc/init.d/ssh start"
+              sh "sudo /etc/init.d/vsftpd start"
 
-            TEST_STEPS.each { step -> sh "make -C bar valgrind_${step}"+" "+TEST_SETTINGS }
+              TEST_STEPS.each { step -> sh "make -C bar valgrind_${step}"+" "+TEST_SETTINGS }
 
-            // stop services
-            sh "sudo /etc/init.d/vsftpd stop || true"
-            sh "sudo /etc/init.d/ssh stop || true"
-            sh "sudo /etc/init.d/apache2 stop || true"
+              // stop services
+              sh "sudo /etc/init.d/vsftpd stop || true"
+              sh "sudo /etc/init.d/ssh stop || true"
+              sh "sudo /etc/init.d/apache2 stop || true"
+            }
           }
         }
       }
     }
 
-    stage("Code coverage")
+    timeout(time: 120, unit: 'MINUTES')
     {
-      script
+      stage("Code coverage")
       {
-        if (params.CODE_COVERAGE)
+        script
         {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          if (params.CODE_COVERAGE)
           {
-            // start services
-            sh "sudo /etc/init.d/apache2 start"
-            sh "sudo /etc/init.d/ssh start"
-            sh "sudo /etc/init.d/vsftpd start"
+            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            {
+              // start services
+              sh "sudo /etc/init.d/apache2 start"
+              sh "sudo /etc/init.d/ssh start"
+              sh "sudo /etc/init.d/vsftpd start"
 
-            sh "make -C bar gcov_clean"
-            TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
-            sh "make -C bar gcov_html"
+              sh "make -C bar gcov_clean"
+              TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
+              sh "make -C bar gcov_html"
 
-            // stop services
-            sh "sudo /etc/init.d/vsftpd stop || true"
-            sh "sudo /etc/init.d/ssh stop || true"
-            sh "sudo /etc/init.d/apache2 stop || true"
+              // stop services
+              sh "sudo /etc/init.d/vsftpd stop || true"
+              sh "sudo /etc/init.d/ssh stop || true"
+              sh "sudo /etc/init.d/apache2 stop || true"
+            }
+
+            publishHTML([allowMissing:          false,
+                         alwaysLinkToLastBuild: false,
+                         keepAll:               true,
+                         reportDir:             'bar/coverage',
+                         reportFiles:           'index.html',
+                         reportName:            'Code Coverage Report',
+                         reportTitles:          'BAR Code Coverage'
+                        ]
+                       )
           }
-
-          publishHTML([allowMissing:          false,
-                       alwaysLinkToLastBuild: false,
-                       keepAll:               true,
-                       reportDir:             'bar/coverage',
-                       reportFiles:           'index.html',
-                       reportName:            'Code Coverage Report',
-                       reportTitles:          'BAR Code Coverage'
-                      ]
-                     )
         }
       }
     }
 
-    stage("Profiling")
+    timeout(time: 120, unit: 'MINUTES')
     {
-      script
+      stage("Profiling")
       {
-        if (params.PROFILING)
+        script
         {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          if (params.PROFILING)
           {
-            // start services
-            sh "sudo /etc/init.d/apache2 start"
-            sh "sudo /etc/init.d/ssh start"
-            sh "sudo /etc/init.d/vsftpd start"
+            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            {
+              // start services
+              sh "sudo /etc/init.d/apache2 start"
+              sh "sudo /etc/init.d/ssh start"
+              sh "sudo /etc/init.d/vsftpd start"
 
-            sh "make -C bar gprof_clean"
-            TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
+              sh "make -C bar gprof_clean"
+              TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
 
-            // stop services
-            sh "sudo /etc/init.d/vsftpd stop || true"
-            sh "sudo /etc/init.d/ssh stop || true"
-            sh "sudo /etc/init.d/apache2 stop || true"
+              // stop services
+              sh "sudo /etc/init.d/vsftpd stop || true"
+              sh "sudo /etc/init.d/ssh stop || true"
+              sh "sudo /etc/init.d/apache2 stop || true"
+            }
           }
         }
       }
