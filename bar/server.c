@@ -2882,8 +2882,11 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
         {
           if (   ((lastPersistenceNode == NULL) || (age >= lastPersistenceNode->maxAge))
               && (   (persistenceNode->maxAge == AGE_FOREVER)
-                  || (age < persistenceNode->maxAge)
-                  || ((nextPersistenceNode == NULL) || (age < nextPersistenceNode->maxAge))
+                  || (age <= persistenceNode->maxAge)
+                  || (   (nextPersistenceNode == NULL)
+                      || (nextPersistenceNode->maxAge == AGE_FOREVER)
+                      || (age < nextPersistenceNode->maxAge)
+                     )
                  )
              )
           {
