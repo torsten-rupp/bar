@@ -2816,6 +2816,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
 * Notes  : -
 \***********************************************************************/
 
+// TODO: jobExpirationEntityList -> jobExpirationEntityArray
 LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationEntityList,
                                       const ExpirationEntityList *expirationEntityList,
                                       ConstString                jobUUID,

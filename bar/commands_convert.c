@@ -1797,6 +1797,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 {
   byte          *buffer;
+  uint          archiveIndex;
   ArchiveHandle sourceArchiveHandle;
   EntryMsg      entryMsg;
   Errors        error;
@@ -1810,131 +1811,149 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  archiveIndex = 0;
 
   // convert entries
-  while (   (convertInfo->failError == ERROR_NONE)
-//TODO
-//         && !isAborted(convertInfo)
-         && MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
-        )
+  while (MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
 //fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
-//TODO: open only when changed
-    // open source archive
-    error = Archive_openHandle(&sourceArchiveHandle,
-                               entryMsg.archiveHandle
-                              );
-    if (error != ERROR_NONE)
+    if (   ((convertInfo->failError == ERROR_NONE) || !convertInfo->newJobOptions->noStopOnErrorFlag)
+//TODO
+//         && !isAborted(convertInfo)
+       )
     {
-      printError("Cannot open archive '%s' (error: %s)!",
-                 String_cString(entryMsg.archiveHandle->printableStorageName),
-                 Error_getText(error)
-                );
-      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-      break;
-    }
+      if (archiveIndex < entryMsg.archiveIndex)
+      {
+        // open source archive
+        error = Archive_openHandle(&sourceArchiveHandle,
+                                   entryMsg.archiveHandle
+                                  );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot open archive '%s' (error: %s)!",
+                     String_cString(entryMsg.archiveHandle->printableStorageName),
+                     Error_getText(error)
+                    );
+          if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+          freeEntryMsg(&entryMsg,NULL);
+          break;
+        }
 
-//TODO: required?
-    // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptInfo(&sourceArchiveHandle,entryMsg.archiveCryptInfo);
-//    Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
-//    Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
-//    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
+        // store current archive index
+        archiveIndex = entryMsg.archiveIndex;
+      }
 
-    // seek to start of entry
-    error = Archive_seek(&sourceArchiveHandle,entryMsg.offset);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot read storage '%s' (error: %s)!",
-                 String_cString(sourceArchiveHandle.printableStorageName),
-                 Error_getText(error)
-                );
-      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-      break;
-    }
+  //TODO: required?
+      // set crypt salt, crypt key derive type, and crypt mode
+      Archive_setCryptInfo(&sourceArchiveHandle,entryMsg.archiveCryptInfo);
+  //    Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
+  //    Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
+  //    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
 
-    switch (entryMsg.archiveEntryType)
-    {
-      case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-      case ARCHIVE_ENTRY_TYPE_FILE:
-        error = convertFileEntry(&sourceArchiveHandle,
-                                 &convertInfo->destinationArchiveHandle,
-                                 convertInfo->newJobOptions,
-                                 buffer,
-                                 BUFFER_SIZE
-                                );
+      // seek to start of entry
+      error = Archive_seek(&sourceArchiveHandle,entryMsg.offset);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot read storage '%s' (error: %s)!",
+                   String_cString(sourceArchiveHandle.printableStorageName),
+                   Error_getText(error)
+                  );
+        if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
         break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
-        error = convertImageEntry(&sourceArchiveHandle,
-                                  &convertInfo->destinationArchiveHandle,
-                                  convertInfo->newJobOptions,
-                                  buffer,
-                                  BUFFER_SIZE
-                                 );
-        break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        error = convertDirectoryEntry(&sourceArchiveHandle,
+      }
+
+      switch (entryMsg.archiveEntryType)
+      {
+        case ARCHIVE_ENTRY_TYPE_NONE:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+        case ARCHIVE_ENTRY_TYPE_FILE:
+          error = convertFileEntry(&sourceArchiveHandle,
+                                   &convertInfo->destinationArchiveHandle,
+                                   convertInfo->newJobOptions,
+                                   buffer,
+                                   BUFFER_SIZE
+                                  );
+          break;
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          error = convertImageEntry(&sourceArchiveHandle,
+                                    &convertInfo->destinationArchiveHandle,
+                                    convertInfo->newJobOptions,
+                                    buffer,
+                                    BUFFER_SIZE
+                                   );
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+          error = convertDirectoryEntry(&sourceArchiveHandle,
+                                        &convertInfo->destinationArchiveHandle,
+                                        convertInfo->newJobOptions
+                                       );
+          break;
+        case ARCHIVE_ENTRY_TYPE_LINK:
+          error = convertLinkEntry(&sourceArchiveHandle,
+                                   &convertInfo->destinationArchiveHandle,
+                                   convertInfo->newJobOptions
+                                  );
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          error = convertHardLinkEntry(&sourceArchiveHandle,
+                                       &convertInfo->destinationArchiveHandle,
+                                       convertInfo->newJobOptions,
+                                       buffer,
+                                       BUFFER_SIZE
+                                      );
+          break;
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          error = convertSpecialEntry(&sourceArchiveHandle,
                                       &convertInfo->destinationArchiveHandle,
                                       convertInfo->newJobOptions
                                      );
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
-        error = convertLinkEntry(&sourceArchiveHandle,
-                                 &convertInfo->destinationArchiveHandle,
-                                 convertInfo->newJobOptions
-                                );
-        break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        error = convertHardLinkEntry(&sourceArchiveHandle,
-                                     &convertInfo->destinationArchiveHandle,
-                                     convertInfo->newJobOptions,
-                                     buffer,
-                                     BUFFER_SIZE
-                                    );
-        break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        error = convertSpecialEntry(&sourceArchiveHandle,
-                                    &convertInfo->destinationArchiveHandle,
-                                    convertInfo->newJobOptions
-                                   );
-        break;
-      case ARCHIVE_ENTRY_TYPE_META:
-        error = convertMetaEntry(&sourceArchiveHandle,
-                                 &convertInfo->destinationArchiveHandle,
-                                 convertInfo->newJobUUID,
-                                 convertInfo->newScheduleUUID,
-                                 convertInfo->newCreatedDateTime,
-                                 convertInfo->newJobOptions
-                                );
-        break;
-      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #else
-          error = Archive_skipNextEntry(&sourceArchiveHandle);
-        #endif /* NDEBUG */
-        break;
-      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-    }
-    if (error != ERROR_NONE)
-    {
-      if (!convertInfo->newJobOptions->noStopOnErrorFlag)
+          break;
+        case ARCHIVE_ENTRY_TYPE_META:
+          error = convertMetaEntry(&sourceArchiveHandle,
+                                   &convertInfo->destinationArchiveHandle,
+                                   convertInfo->newJobUUID,
+                                   convertInfo->newScheduleUUID,
+                                   convertInfo->newCreatedDateTime,
+                                   convertInfo->newJobOptions
+                                  );
+          break;
+        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #else
+            error = Archive_skipNextEntry(&sourceArchiveHandle);
+          #endif /* NDEBUG */
+          break;
+        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+      }
+      if (error != ERROR_NONE)
       {
         if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
+        break;
       }
     }
 
-    // close archive
-    Archive_close(&sourceArchiveHandle);
+    freeEntryMsg(&entryMsg,NULL);
+  }
 
+  // close archive
+  if (archiveIndex != 0)
+  {
+    Archive_close(&sourceArchiveHandle);
+  }
+
+  // discard processing all other entries
+  while (MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  {
     freeEntryMsg(&entryMsg,NULL);
   }
 

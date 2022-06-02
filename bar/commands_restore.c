@@ -530,8 +530,8 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 }
 
 /***********************************************************************\
-* Name   : createParentDirectory
-* Purpose: create parent directory for file if it does not exists
+* Name   : createParentDirectories
+* Purpose: create parent directories for file if it does not exists
 * Input  : restoreInfo    - restore info
 *          fileName       - file name
 *          userId,groupId - user/group id
@@ -540,67 +540,75 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createParentDirectory(RestoreInfo  *restoreInfo,
-                                   ConstString  fileName,
-                                   uint32       userId,
-                                   uint32       groupId
-                                  )
+LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
+                                     ConstString fileName,
+                                     uint32      userId,
+                                     uint32      groupId
+                                    )
 {
   String parentDirectoryName;
+  String directoryName;
   Errors error;
 
   assert(fileName != NULL);
 
   parentDirectoryName = File_getDirectoryName(String_new(),fileName);
-
-  SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (!String_isEmpty(parentDirectoryName))
   {
-    if (!String_isEmpty(parentDirectoryName))
+    SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      // add to known names
-      if (!Dictionary_contains(&restoreInfo->namesDictionary,
-                               String_cString(parentDirectoryName),
-                               String_length(parentDirectoryName)
-                              )
-         )
+      // add all directories to known names
+      directoryName = String_duplicate(parentDirectoryName);
+      while (!String_isEmpty(directoryName))
       {
-        Dictionary_add(&restoreInfo->namesDictionary,
-                       String_cString(parentDirectoryName),
-                       String_length(parentDirectoryName),
-                       NULL,
-                       0
-                      );
+        if (!Dictionary_contains(&restoreInfo->namesDictionary,
+                                 String_cString(directoryName),
+                                 String_length(directoryName)
+                                )
+           )
+        {
+          Dictionary_add(&restoreInfo->namesDictionary,
+                         String_cString(directoryName),
+                         String_length(directoryName),
+                         NULL,
+                         0
+                        );
+        }
+
+        File_getDirectoryName(directoryName,directoryName);
+      }
+      String_delete(directoryName);
+    }
+
+    if (!File_exists(parentDirectoryName))
+    {
+      // create parent directories (ignore error if it already exists now)
+      error = File_makeDirectory(parentDirectoryName,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 TRUE
+                                );
+      if (error != ERROR_NONE)
+      {
+        String_delete(parentDirectoryName);
+        Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+        return error;
       }
 
-      if (!File_exists(parentDirectoryName))
+      // set parent directory owner/group
+      error = File_setOwner(parentDirectoryName,
+                            (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : userId,
+                            (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : groupId
+                           );
+      if (error != ERROR_NONE)
       {
-        // create parent directories (ignore error if it already exists now)
-        error = File_makeDirectory(parentDirectoryName,
-                                   FILE_DEFAULT_USER_ID,
-                                   FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSIONS,
-                                   TRUE
-                                  );
-        if (error != ERROR_NONE)
-        {
-          String_delete(parentDirectoryName);
-          Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-          return error;
-        }
-
-        // set parent directory owner/group
-        error = File_setOwner(parentDirectoryName,
-                              (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : userId,
-                              (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : groupId
-                             );
-        if (error != ERROR_NONE)
-        {
-          String_delete(parentDirectoryName);
-          Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-          return error;
-        }
+        String_delete(parentDirectoryName);
+        Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+        return error;
       }
     }
+
   }
 
   // free resources
@@ -881,7 +889,10 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRun)
     {
-      error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+      error = createParentDirectories(restoreInfo,destinationFileName,
+                                      (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
+                                      (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
+                                     );
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -1422,7 +1433,10 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRun)
     {
-      error = createParentDirectory(restoreInfo,destinationDeviceName,deviceInfo.userId,deviceInfo.groupId);
+      error = createParentDirectories(restoreInfo,destinationDeviceName,
+                                      (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : deviceInfo.userId,
+                                      (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : deviceInfo.groupId
+                                     );
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -1895,6 +1909,35 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       }
     }
 
+    // create parent directories if not existing
+    if (!restoreInfo->jobOptions->dryRun)
+    {
+      error = createParentDirectories(restoreInfo,destinationFileName,
+                                      (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
+                                      (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
+                                     );
+      if (error != ERROR_NONE)
+      {
+        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+    }
+
     // create directory
     if (!restoreInfo->jobOptions->dryRun)
     {
@@ -2206,7 +2249,10 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRun)
     {
-      error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+      error = createParentDirectories(restoreInfo,destinationFileName,
+                                      (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
+                                      (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
+                                     );
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -2624,7 +2670,10 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       // create parent directories if not existing
       if (!restoreInfo->jobOptions->dryRun)
       {
-        error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+        error = createParentDirectories(restoreInfo,destinationFileName,
+                                        (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
+                                        (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
+                                       );
         if (error != ERROR_NONE)
         {
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -3150,7 +3199,10 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRun)
     {
-      error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+      error = createParentDirectories(restoreInfo,destinationFileName,
+                                      (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
+                                      (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
+                                     );
       if (error != ERROR_NONE)
       {
         if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -3173,7 +3225,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    // create special device
+    // create special file
     if (!restoreInfo->jobOptions->dryRun)
     {
       error = File_makeSpecial(destinationFileName,
@@ -3307,7 +3359,6 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   byte          *buffer;
   uint          archiveIndex;
   ArchiveHandle archiveHandle;
-  Errors        failError;
   EntryMsg      entryMsg;
   Errors        error;
 
@@ -3323,7 +3374,6 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   archiveIndex = 0;
 
   // restore entries
-  failError = ERROR_NONE;
   while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
     if (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -3351,7 +3401,8 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
                      String_cString(entryMsg.archiveHandle->printableStorageName),
                      Error_getText(error)
                     );
-          if (failError == ERROR_NONE) failError = error;
+          if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+          freeEntryMsg(&entryMsg,NULL);
           break;
         }
 
@@ -3370,7 +3421,8 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
                    String_cString(entryMsg.archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
-        if (failError == ERROR_NONE) failError = error;
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
         break;
       }
 
@@ -3442,13 +3494,9 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
       }
       if (error != ERROR_NONE)
       {
-        if (failError == ERROR_NONE) failError = error;
-      }
-
-      // store fail error
-      if (failError != ERROR_NONE)
-      {
-        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = failError;
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+        freeEntryMsg(&entryMsg,NULL);
+        break;
       }
     }
 
@@ -3460,6 +3508,12 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   if (archiveIndex != 0)
   {
     Archive_close(&archiveHandle);
+  }
+
+  // discard processing all other entries
+  while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  {
+    freeEntryMsg(&entryMsg,NULL);
   }
 
   // free resources

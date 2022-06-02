@@ -1278,6 +1278,12 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     Archive_close(&archiveHandle);
   }
 
+  // discard processing all other entries
+  while (MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  {
+    freeEntryMsg(&entryMsg,NULL);
+  }
+
   // free resources
   free(buffer);
 }
