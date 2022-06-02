@@ -943,18 +943,10 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                          DatabaseId  entityId
                         )
 {
-  String       string;
-  uint         lockedCount;
-  Errors       error;
-  DatabaseId   uuidId;
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64       createdDateTime;
-  ArchiveTypes archiveType;
+  uint   lockedCount;
+  Errors error;
 
   assert(indexHandle != NULL);
-
-  // init variables
-  string = String_new();
 
   if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
   {
@@ -972,7 +964,6 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      String_delete(string);
       return error;
     }
 
@@ -986,7 +977,6 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                                );
       if (error != ERROR_NONE)
       {
-        String_delete(string);
         return error;
       }
 
@@ -994,13 +984,12 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                   LOG_TYPE_INDEX,
                   "INDEX",
                   "Purged entity #%"PRIu64": empty",
-                  uuidId
+                  entityId
                  );
     }
   }
 
   // free resources
-  String_delete(string);
 
   return ERROR_NONE;
 }

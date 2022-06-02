@@ -1965,7 +1965,6 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   String                 baseName;
   Thread                 storageThread;
   uint                   i;
-  Errors                 failError;
   ArchiveHandle          sourceArchiveHandle;
   CryptSignatureStates   sourceAllCryptSignatureState;
   uint64                 sourceLastSignatureOffset;
@@ -2051,6 +2050,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle); });
 
   // check signatures
+  sourceAllCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  sourceLastSignatureOffset    = Archive_tell(&sourceArchiveHandle);
   if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&sourceArchiveHandle,
@@ -2156,15 +2157,16 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     ThreadPool_run(&workerThreadPool,convertThreadCode,convertInfo);
   }
 
-  // read archive entries
+  // output info
   printInfo(0,
             "Convert storage '%s'%s",
             String_cString(printableStorageName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
-  failError = ERROR_NONE;
-  while (   !Archive_eof(&sourceArchiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
-         && (failError == ERROR_NONE)
+
+  // read archive entries
+  while (   (convertInfo->failError == ERROR_NONE)
+         && !Archive_eof(&sourceArchiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
         )
   {
     // get next archive entry type
@@ -2180,10 +2182,10 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
       break;
     }
-    DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 //TODO: remove
 //fprintf(stderr,"%s, %d: archiveEntryType=%s\n",__FILE__,__LINE__,Archive_archiveEntryTypeToString(archiveEntryType,NULL));
 
@@ -2226,11 +2228,10 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     error = Archive_skipNextEntry(&sourceArchiveHandle);
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
+      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
       break;
     }
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // wait for convert threads
   MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue);
@@ -2241,6 +2242,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   error = Archive_close(&convertInfo->destinationArchiveHandle);
   if (error != ERROR_NONE)
   {
+    if (!isPrintInfo(1)) printInfo(0,"FAIL\n");
     printError("Cannot close archive '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -2265,6 +2267,14 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // done storage
   (void)Storage_done(&convertInfo->storageInfo);
+
+  // output info
+  if (!isPrintInfo(1)) printInfo(0,
+                                 "%s",
+                                 (convertInfo->failError == ERROR_NONE)
+                                   ? "OK\n"
+                                   : "FAIL!\n"
+                                );
 
   // free resources
   String_delete(printableStorageName);

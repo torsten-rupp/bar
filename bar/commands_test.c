@@ -1519,7 +1519,7 @@ NULL, // masterSocketHandle
   ThreadPool_joinAll(&workerThreadPool);
 
   // close archive
-  Archive_close(&archiveHandle);
+  (void)Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);

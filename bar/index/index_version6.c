@@ -1392,336 +1392,87 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
                                                             DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
-
-                                                            error = Database_copyTable(oldDatabaseHandle,
-                                                                                       newDatabaseHandle,
-                                                                                       "entries",
-                                                                                       "entries",
-                                                                                       TRUE,  // transaction flag
-                                                                                       NULL,  // duration,
-                                                                                       CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                               DatabaseColumnInfo *toColumnInfo,
-                                                                                                               void               *userData
-                                                                                                              ),
-                                                                                       {
-                                                                                         UNUSED_VARIABLE(fromColumnInfo);
-                                                                                         UNUSED_VARIABLE(userData);
-
-                                                                                         (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
-
-                                                                                         return ERROR_NONE;
-                                                                                       },NULL),
-                                                                                       CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                               DatabaseColumnInfo *toColumnInfo,
-                                                                                                               void               *userData
-                                                                                                              ),
-                                                                                       {
-                                                                                         DatabaseId fromEntryId;
-                                                                                         DatabaseId toEntryId;
-                                                                                         Errors     error;
-
-                                                                                         UNUSED_VARIABLE(userData);
-
-                                                                                         fromEntryId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
-                                                                                         assert(fromEntryId != DATABASE_ID_NONE);
-                                                                                         toEntryId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
-                                                                                         assert(toEntryId != DATABASE_ID_NONE);
-                                                                                         DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
-
-                                                                                         error = ERROR_NONE;
-
-                                                                                         if (error == ERROR_NONE)
-                                                                                         {
-                                                                                           error = Database_copyTable(oldDatabaseHandle,
-                                                                                                                      newDatabaseHandle,
-                                                                                                                      "fileEntries",
-                                                                                                                      "fileEntries",
-                                                                                                                      FALSE,  // transaction flag
-                                                                                                                      NULL,  // duration,
-                                                                                                                      CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                                                              DatabaseColumnInfo *toColumnInfo,
-                                                                                                                                              void               *userData
-                                                                                                                                             ),
-                                                                                                                      {
-                                                                                                                        UNUSED_VARIABLE(fromColumnInfo);
-                                                                                                                        UNUSED_VARIABLE(userData);
-
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-
-                                                                                                                        DIMPORT("import file fragment %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnUInt64(fromColumnInfo,"fragmentOffset",0LL),Database_getTableColumnUInt64(fromColumnInfo,"fragmentSize",0LL));
-                                                                                                                        error = Database_insert(newDatabaseHandle,
-                                                                                                                                                NULL,  // changedRowCount
-                                                                                                                                                "entryFragments",
-                                                                                                                                                DATABASE_FLAG_NONE,
-                                                                                                                                                DATABASE_VALUES
-                                                                                                                                                (
-                                                                                                                                                  DATABASE_VALUE_KEY   ("entryId",  toEntryId  ),
-                                                                                                                                                  DATABASE_VALUE_KEY   ("storageId",toStorageId),
-                                                                                                                                                  DATABASE_VALUE_UINT64("offset",   Database_getTableColumnUInt64(fromColumnInfo,"fragmentOffset",0LL)),
-                                                                                                                                                  DATABASE_VALUE_UINT64("size",     Database_getTableColumnUInt64(fromColumnInfo,"fragmentSize",0LL))
-                                                                                                                                                ),
-                                                                                                                                                DATABASE_COLUMNS_NONE,
-                                                                                                                                                DATABASE_FILTERS_NONE
-                                                                                                                                               );
-                                                                                                                        if (error != ERROR_NONE)
-                                                                                                                        {
-                                                                                                                          return error;
-                                                                                                                        }
-
-                                                                                                                        return ERROR_NONE;
-                                                                                                                      },NULL),
-                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
-                                                                                                                      CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                                                                                      "entryId=?",
-                                                                                                                      DATABASE_FILTERS
-                                                                                                                      (
-                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
-                                                                                                                      ),
-                                                                                                                      "entryId",
-                                                                                                                      NULL,  // orderby
-                                                                                                                      0L,
-                                                                                                                      DATABASE_UNLIMITED
-                                                                                                                     );
-                                                                                         }
-                                                                                         if (error == ERROR_NONE)
-                                                                                         {
-                                                                                           error = Database_copyTable(oldDatabaseHandle,
-                                                                                                                      newDatabaseHandle,
-                                                                                                                      "imageEntries",
-                                                                                                                      "imageEntries",
-                                                                                                                      FALSE,  // transaction flag
-                                                                                                                      NULL,  // duration,
-                                                                                                                      CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                                                              DatabaseColumnInfo *toColumnInfo,
-                                                                                                                                              void               *userData
-                                                                                                                                             ),
-                                                                                                                      {
-                                                                                                                       ulong  blockSize;
-                                                                                                                       Errors error;
-
-                                                                                                                        UNUSED_VARIABLE(userData);
-
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-
-                                                                                                                        blockSize = (ulong)Database_getTableColumnUInt64(fromColumnInfo,"blockSize",DATABASE_ID_NONE);
-
-                                                                                                                        DIMPORT("import image fragment %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnUInt64(fromColumnInfo,"fragmentOffset",0LL),Database_getTableColumnUInt64(fromColumnInfo,"fragmentSize",0LL));
-                                                                                                                        error = Database_insert(newDatabaseHandle,
-                                                                                                                                                NULL,  // changedRowCount
-                                                                                                                                                "entryFragments",
-                                                                                                                                                DATABASE_FLAG_NONE,
-                                                                                                                                                DATABASE_VALUES
-                                                                                                                                                (
-                                                                                                                                                  DATABASE_VALUE_KEY   ("entryId",  toEntryId),
-                                                                                                                                                  DATABASE_VALUE_KEY   ("storageId",toStorageId),
-                                                                                                                                                  DATABASE_VALUE_UINT64("offset",   Database_getTableColumnUInt64(fromColumnInfo,"blockOffset",0LL)*(uint64)blockSize),
-                                                                                                                                                  DATABASE_VALUE_UINT64("size",     Database_getTableColumnUInt64(fromColumnInfo,"blockCount",0LL)*(uint64)blockSize)
-                                                                                                                                                ),
-                                                                                                                                                DATABASE_COLUMNS_NONE,
-                                                                                                                                                DATABASE_FILTERS_NONE
-                                                                                                                                               );
-                                                                                                                        if (error != ERROR_NONE)
-                                                                                                                        {
-                                                                                                                          return error;
-                                                                                                                        }
-
-                                                                                                                        return ERROR_NONE;
-                                                                                                                      },NULL),
-                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
-                                                                                                                      CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                                                                                      "entryId=?",
-                                                                                                                      DATABASE_FILTERS
-                                                                                                                      (
-                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
-                                                                                                                      ),
-                                                                                                                      "entryId",
-                                                                                                                      NULL,  // orderby
-                                                                                                                      0L,
-                                                                                                                      DATABASE_UNLIMITED
-                                                                                                                     );
-                                                                                         }
-                                                                                         if (error == ERROR_NONE)
-                                                                                         {
-                                                                                           error = Database_copyTable(oldDatabaseHandle,
-                                                                                                                      newDatabaseHandle,
-                                                                                                                      "directoryEntries",
-                                                                                                                      "directoryEntries",
-                                                                                                                      FALSE,  // transaction flag
-                                                                                                                      NULL,  // duration,
-                                                                                                                      CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                                                              DatabaseColumnInfo *toColumnInfo,
-                                                                                                                                              void               *userData
-                                                                                                                                             ),
-                                                                                                                      {
-                                                                                                                        UNUSED_VARIABLE(fromColumnInfo);
-                                                                                                                        UNUSED_VARIABLE(userData);
-
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
-
-                                                                                                                        return ERROR_NONE;
-                                                                                                                      },NULL),
-                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
-                                                                                                                      CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                                                                                      "entryId=?",
-                                                                                                                      DATABASE_FILTERS
-                                                                                                                      (
-                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
-                                                                                                                      ),
-                                                                                                                      "entryId",
-                                                                                                                      NULL,  // orderby
-                                                                                                                      0L,
-                                                                                                                      DATABASE_UNLIMITED
-                                                                                                                     );
-                                                                                         }
-                                                                                         if (error == ERROR_NONE)
-                                                                                         {
-                                                                                           error = Database_copyTable(oldDatabaseHandle,
-                                                                                                                      newDatabaseHandle,
-                                                                                                                      "linkEntries",
-                                                                                                                      "linkEntries",
-                                                                                                                      FALSE,  // transaction flag
-                                                                                                                      NULL,  // duration,
-                                                                                                                      CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                                                              DatabaseColumnInfo *toColumnInfo,
-                                                                                                                                               void               *userData
-                                                                                                                                             ),
-                                                                                                                      {
-                                                                                                                        UNUSED_VARIABLE(fromColumnInfo);
-                                                                                                                        UNUSED_VARIABLE(userData);
-
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
-
-                                                                                                                        return ERROR_NONE;
-                                                                                                                      },NULL),
-                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
-                                                                                                                      CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                                                                                      "entryId=?",
-                                                                                                                      DATABASE_FILTERS
-                                                                                                                      (
-                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
-                                                                                                                      ),
-                                                                                                                      "entryId",
-                                                                                                                      NULL,  // orderby
-                                                                                                                      0L,
-                                                                                                                      DATABASE_UNLIMITED
-                                                                                                                     );
-                                                                                         }
-                                                                                         if (error == ERROR_NONE)
-                                                                                         {
-                                                                                           error = Database_copyTable(oldDatabaseHandle,
-                                                                                                                      newDatabaseHandle,
-                                                                                                                      "hardlinkEntries",
-                                                                                                                      "hardlinkEntries",
-                                                                                                                      FALSE,  // transaction flag
-                                                                                                                      NULL,  // duration,
-                                                                                                                      CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                                                              DatabaseColumnInfo *toColumnInfo,
-                                                                                                                                              void               *userData
-                                                                                                                                             ),
-                                                                                                                      {
-                                                                                                                        UNUSED_VARIABLE(fromColumnInfo);
-                                                                                                                        UNUSED_VARIABLE(userData);
-
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-
-                                                                                                                        DIMPORT("import hardlink fragment %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnUInt64(fromColumnInfo,"fragmentOffset",0LL),Database_getTableColumnUInt64(fromColumnInfo,"fragmentSize",0LL));
-                                                                                                                        error = Database_insert(newDatabaseHandle,
-                                                                                                                                                NULL,  // changedRowCount
-                                                                                                                                                "entryFragments",
-                                                                                                                                                DATABASE_FLAG_NONE,
-                                                                                                                                                DATABASE_VALUES
-                                                                                                                                                (
-                                                                                                                                                  DATABASE_VALUE_KEY   ("entryId",  toEntryId),
-                                                                                                                                                  DATABASE_VALUE_KEY   ("storageId",toStorageId),
-                                                                                                                                                  DATABASE_VALUE_UINT64("offset",   Database_getTableColumnUInt64(fromColumnInfo,"fragmentOffset",0LL)),
-                                                                                                                                                  DATABASE_VALUE_UINT64("size",     Database_getTableColumnUInt64(fromColumnInfo,"fragmentSize",0LL))
-                                                                                                                                                ),
-                                                                                                                                                DATABASE_COLUMNS_NONE,
-                                                                                                                                                DATABASE_FILTERS_NONE
-                                                                                                                                               );
-                                                                                                                        if (error != ERROR_NONE)
-                                                                                                                        {
-                                                                                                                          return error;
-                                                                                                                        }
-
-                                                                                                                        return ERROR_NONE;
-                                                                                                                      },NULL),
-                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
-                                                                                                                      CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                                                                                      "entryId=?",
-                                                                                                                      DATABASE_FILTERS
-                                                                                                                      (
-                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
-                                                                                                                      ),
-                                                                                                                      "entryId",
-                                                                                                                      NULL,  // orderby
-                                                                                                                      0L,
-                                                                                                                      DATABASE_UNLIMITED
-                                                                                                                     );
-                                                                                         }
-                                                                                         if (error == ERROR_NONE)
-                                                                                         {
-                                                                                           error = Database_copyTable(oldDatabaseHandle,
-                                                                                                                      newDatabaseHandle,
-                                                                                                                      "specialEntries",
-                                                                                                                      "specialEntries",
-                                                                                                                      FALSE,  // transaction flag
-                                                                                                                      NULL,  // duration,
-                                                                                                                      CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                                                                                                              DatabaseColumnInfo *toColumnInfo,
-                                                                                                                                              void               *userData
-                                                                                                                                             ),
-                                                                                                                      {
-                                                                                                                        UNUSED_VARIABLE(fromColumnInfo);
-                                                                                                                        UNUSED_VARIABLE(userData);
-
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                                                                                                        (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
-
-                                                                                                                        return ERROR_NONE;
-                                                                                                                      },NULL),
-                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
-                                                                                                                      CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(ProgressInfo_step,&subProgressInfo),
-                                                                                                                      "entryId=?",
-                                                                                                                      DATABASE_FILTERS
-                                                                                                                      (
-                                                                                                                        DATABASE_FILTER_KEY(fromEntryId)
-                                                                                                                      ),
-                                                                                                                      "entryId",
-                                                                                                                      NULL,  // orderby
-                                                                                                                      0L,
-                                                                                                                      DATABASE_UNLIMITED
-                                                                                                                     );
-                                                                                         }
-
-                                                                                         return error;
-                                                                                       },NULL),
-                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                       CALLBACK_(NULL,NULL),  // progress
-                                                                                       "storageId=?",
-                                                                                       DATABASE_FILTERS
-                                                                                       (
-                                                                                         DATABASE_FILTER_KEY(fromStorageId)
-                                                                                       ),
-                                                                                       NULL,  // groupBy
-                                                                                       NULL,  // orderby
-                                                                                       0L,
-                                                                                       DATABASE_UNLIMITED
-                                                                                      );
-                                                            if (error != ERROR_NONE)
-                                                            {
-                                                              return error;
-                                                            }
+                                                            Dictionary_add(&storageIdDictionary,
+                                                                           &fromStorageId,
+                                                                           sizeof(DatabaseId),
+                                                                           &toStorageId,
+                                                                           sizeof(DatabaseId)
+                                                                          );
 
                                                             return ERROR_NONE;
+                                                          },NULL),
+                                                          CALLBACK_(getCopyPauseCallback(),NULL),
+                                                          CALLBACK_(ProgressInfo_step,&subProgressInfo),
+                                                          "entityId=?",
+                                                          DATABASE_FILTERS
+                                                          (
+                                                            DATABASE_FILTER_KEY(fromEntityId)
+                                                          ),
+                                                          NULL,  // groupBy
+                                                          NULL,  // orderby
+                                                          0L,
+                                                          DATABASE_UNLIMITED
+                                                         );
+                               if (error != ERROR_NONE)
+                               {
+                                 ProgressInfo_done(&subProgressInfo);
+                                 return error;
+                               }
+
+                               // transfer entries of entity
+                               error = Database_copyTable(oldDatabaseHandle,
+                                                          newDatabaseHandle,
+                                                          "entries",
+                                                          "entries",
+                                                          FALSE,  // transaction flag
+                                                          NULL,  // duration
+                                                          // pre: transfer entry
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
+                                                                                 ),
+                                                          {
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
+
+                                                            UNUSED_VARIABLE(fromColumnInfo);
+                                                            UNUSED_VARIABLE(toColumnInfo);
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
+
+                                                            return ERROR_NONE;
+                                                          },NULL),
+                                                          // post: transfer files, images, directories, links, special entries
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
+                                                                                 ),
+                                                          {
+                                                            DatabaseId fromEntryId;
+                                                            IndexTypes type;
+                                                            DatabaseId toEntryId;
+
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
+
+                                                            UNUSED_VARIABLE(toColumnInfo);
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            fromEntryId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
+                                                            assert(fromEntryId != DATABASE_ID_NONE);
+
+                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPE_NONE);
+                                                            toEntryId = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
+                                                            assert(toEntryId != DATABASE_ID_NONE);
+
+                                                            return upgradeFromVersion6_importEntry(oldDatabaseHandle,
+                                                                                                   newDatabaseHandle,
+                                                                                                   &storageIdDictionary,
+                                                                                                   type,
+                                                                                                   fromEntryId,
+                                                                                                   toEntryId
+                                                                                                  );
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
                                                           CALLBACK_(ProgressInfo_step,&subProgressInfo),

@@ -41,6 +41,7 @@
 #include "index/index_common.h"
 #include "index/index_entities.h"
 #include "index/index_entries.h"
+#include "index/index_uuids.h"
 
 #include "index/index_storages.h"
 
@@ -2050,101 +2051,6 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
   return error;
 }
 
-/***********************************************************************\
-* Name   : pruneStorage
-* Purpose: prune storage if empty, prune entity/UUID
-* Input  : indexHandle  - index handle
-*          storageId    - storage database id
-*          progressInfo - progress info (or NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
-                          DatabaseId   storageId,
-                          ProgressInfo *progressInfo
-                         )
-{
-  String              name;
-  String              string;
-  IndexStates         indexState;
-  Errors              error;
-  DatabaseId          entityId;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // init variables
-  name   = String_new();
-  string = String_new();
-
-  // get storage state
-  error = getStorageState(indexHandle,
-                          storageId,
-                          &indexState,
-                          NULL,  // lastCheckedDateTime
-                          NULL  // errorMessage
-                         );
-  if (error != ERROR_NONE)
-  {
-    String_delete(string);
-    String_delete(name);
-    return error;
-  }
-
-  // prune storage if not in error state/in use and empty
-  if ((indexState == INDEX_STATE_OK) && IndexStorage_isEmpty(indexHandle,storageId))
-  {
-    // get entity id
-    error = Database_getId(&indexHandle->databaseHandle,
-                           &entityId,
-                           "storages",
-                           "entityId",
-                           "id=?",
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY(storageId)
-                           )
-                          );
-    if (error != ERROR_NONE)
-    {
-      entityId = DATABASE_ID_NONE;
-    }
-
-    // purge storage
-    error = IndexStorage_purge(indexHandle,storageId);
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      String_delete(name);
-      return error;
-    }
-
-    // prune entity
-    if (entityId != DATABASE_ID_NONE)
-    {
-      error = IndexEntity_prune(indexHandle,
-                                NULL,  // doneFlag
-                                NULL,  // deletedCounter
-                                entityId
-                               );
-      if (error != ERROR_NONE)
-      {
-        String_delete(string);
-        String_delete(name);
-        return error;
-      }
-    }
-  }
-
-  // free resources
-  String_delete(string);
-  String_delete(name);
-
-  return ERROR_NONE;
-}
-
 #if 0
 //TODO: not used, remove
 /***********************************************************************\
@@ -2671,7 +2577,7 @@ Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
     // prune uuid index
     ARRAY_ITERATEX(&uuidIds,arrayIterator,indexId,error == ERROR_NONE)
     {
-      error = IndexUUID_prune(indexHandle,INDEX_DATABASE_ID_(indexId));
+      error = IndexUUID_prune(indexHandle,NULL,NULL,INDEX_DATABASE_ID_(indexId));
       if (error != ERROR_NONE)
       {
         break;
@@ -2717,14 +2623,19 @@ Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
   return ERROR_NONE;
 }
 
-Errors IndexStorage_prune(IndexHandle  *indexHandle,
-                          DatabaseId   storageId
+Errors IndexStorage_prune(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter,
+                          DatabaseId  storageId
                          )
 {
   Errors      error;
   IndexStates indexState;
 
   assert(indexHandle != NULL);
+
+  UNUSED_VARIABLE(doneFlag);
+  UNUSED_VARIABLE(deletedCounter);
 
   // get storage state
   error = getStorageState(indexHandle,
@@ -2757,8 +2668,9 @@ Errors IndexStorage_prune(IndexHandle  *indexHandle,
   return ERROR_NONE;
 }
 
-Errors IndexStorage_pruneAll(IndexHandle  *indexHandle,
-                             ProgressInfo *progressInfo
+Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
+                             bool        *doneFlag,
+                             ulong       *deletedCounter
                             )
 {
   Array         storageIds;
@@ -2793,7 +2705,7 @@ Errors IndexStorage_pruneAll(IndexHandle  *indexHandle,
   // prune storages
   ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
   {
-    error = IndexStorage_prune(indexHandle,storageId);
+    error = IndexStorage_prune(indexHandle,doneFlag,deletedCounter,storageId);
 // TODO: progressInfo
   }
   if (error != ERROR_NONE)
@@ -6634,6 +6546,8 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
             indexHandle,
   {
     return IndexStorage_prune(indexHandle,
+                              NULL,  // doneFlag
+                              NULL,  // deletedCounter
                               Index_getDatabaseId(indexId)
                              );
   });

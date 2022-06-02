@@ -118,15 +118,19 @@ Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
 /***********************************************************************\
 * Name   : IndexStorage_prune
 * Purpose: purge storage (mark as "deleted") if empty
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+*          storageId      - storage database id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_prune(IndexHandle  *indexHandle,
-                          DatabaseId   storageId
+Errors IndexStorage_prune(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter,
+                          DatabaseId  storageId
                          );
 
 /***********************************************************************\
@@ -134,15 +138,17 @@ Errors IndexStorage_prune(IndexHandle  *indexHandle,
 * Purpose: purge all storages (mark as "deleted") if
 *            - empty
 *            - with state OK or ERROR
-* Input  : indexHandle  - index handle
-*          progressInfo - progress info (or NULL)
+* Input  : indexHandle - index handle
+*          doneFlag       - done flag variable (can be NULL)
+*          deletedCounter - deleted entries count variable (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_pruneAll(IndexHandle  *indexHandle,
-                             ProgressInfo *progressInfo
+Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
+                             bool        *doneFlag,
+                             ulong       *deletedCounter
                             );
 
 /***********************************************************************\

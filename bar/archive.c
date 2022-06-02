@@ -947,7 +947,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                                                      FALSE,  // weakCheckFlag
                                                                      decryptKeyIterator->getNamePasswordUserData
                                                                     );
-// TODO: remove                 if ((error == ERROR_NONE) && !Password_isEmpty(&newPassword))
+                 if (error == ERROR_NONE)
                  {
                    // add to decrypt key list
                    decryptKey = updateDecryptKey(decryptKeyIterator->archiveHandle->printableStorageName,
