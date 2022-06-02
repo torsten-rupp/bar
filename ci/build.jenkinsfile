@@ -93,15 +93,11 @@ def build()
         // run tests
         script
         {
-<<<<<<< HEAD
-          sh "echo XXXXXXXXXXXXXXXXXXXXXXX && env"
-          sh "env && make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
-=======
           docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           {
+sh "echo XXXXXXXXXXXXXXXXXXXXXXX && env"
             sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
           }
->>>>>>> master
         }
       }
     }
