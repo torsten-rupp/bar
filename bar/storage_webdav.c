@@ -217,6 +217,10 @@ LOCAL CURLcode setWebDAVLogin(CURL        *curlHandle,
   CURLcode         curlCode;
   struct curl_blob curlBLOB;
 
+// TODO: use
+UNUSED_VARIABLE(privateKeyData);
+UNUSED_VARIABLE(privateKeyLength);
+
   // reset
   curl_easy_reset(curlHandle);
 
@@ -1572,12 +1576,10 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
   #ifdef HAVE_CURL
     String          baseURL;
     CURLcode        curlCode;
-    CURLMcode       curlMCode;
     String          directoryName,baseName;
     StringTokenizer nameTokenizer;
     ConstString     token;
     Errors          error;
-    int             runningHandles;
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
@@ -1747,88 +1749,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     }
 
     // init WebDAV upload
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(storageHandle->webdav.url));
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_UPLOAD,1L);
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READDATA,storageHandle);
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageHandle->webdav.size);
-    }
-    if (curlCode != CURLE_OK)
-    {
-      error = getResponseError(storageHandle->webdav.curlHandle);
-      String_delete(baseName);
-      String_delete(directoryName);
-      String_delete(baseURL);
-      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-      String_delete(storageHandle->webdav.url);
-      return error;
-    }
-
-// TODO:
-#if 0
-    // check response code
-    curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
-fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
-    if ((curlCode != CURLM_OK) || (responseCode >= 400))
-    {
-      String_delete(baseName);
-      String_delete(directoryName);
-      String_delete(baseURL);
-      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-      String_delete(storageHandle->webdav.url);
-      return ERRORX_(WEBDAV_UPLOAD,0,"%s",curl_multi_strerror(curlMCode));
-    }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-#endif
-
-    // add handle
-    curlMCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
-    if (curlMCode != CURLM_OK)
-    {
-      error = getResponseError(storageHandle->webdav.curlHandle);
-      String_delete(baseName);
-      String_delete(directoryName);
-      String_delete(baseURL);
-      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-      String_delete(storageHandle->webdav.url);
-      return error;
-    }
-
-    // start WebDAV upload
-    do
-    {
-      curlMCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
-    }
-    while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
-           && (runningHandles > 0)
-          );
-    if (curlMCode != CURLM_OK)
+    error = initUpload(storageHandle,storageHandle->webdav.url);
+    if (error != ERROR_NONE)
     {
       error = getResponseError(storageHandle->webdav.curlHandle);
       String_delete(baseName);

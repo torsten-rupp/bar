@@ -1397,6 +1397,20 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
                        IndexId     uuidId
                       );
 
+/***********************************************************************\
+* Name   : Index_purgeUUID
+* Purpose: purge UUID entry from index if empty
+* Input  : indexHandle - index handle
+*          indexId     - index id of UUID entry
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_purgeUUID(IndexHandle *indexHandle,
+                       IndexId     indexId
+                      );
+
 // ---------------------------------------------------------------------
 
 /***********************************************************************\

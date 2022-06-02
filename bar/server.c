@@ -14311,33 +14311,6 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
 }
 
 /***********************************************************************\
-* Name   : serverCommand_decryptPasswordsClear
-* Purpose: clear decrypt passwords in internal list
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(argumentMap);
-
-  // clear decrypt password list
-  Archive_clearDecryptPasswords();
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
 * Name   : serverCommand_decryptPasswordAdd
 * Purpose: add password to internal list of decrypt passwords
 * Input  : clientInfo  - client info

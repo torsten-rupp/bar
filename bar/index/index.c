@@ -913,6 +913,8 @@ LOCAL void outputProgressInit(const char *text,
   fflush(stdout);
 }
 
+// TODO: remove
+#if 0
 /***********************************************************************\
 * Name   : outputProgressInfo
 * Purpose: output progress info on console
@@ -968,6 +970,7 @@ LOCAL void outputProgressInfo(uint  progress,
 
   wheelIndex = (wheelIndex+1) % 4;
 }
+#endif
 
 /***********************************************************************\
 * Name   : outputProgressDone
@@ -2945,7 +2948,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     (void)IndexStorage_cleanUp(&indexHandle);
     (void)IndexUUID_cleanUp(&indexHandle);
 
-    (void)IndexStorage_pruneAll(&indexHandle,NULL);
+    (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
     (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
     (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
   #endif /* INDEX_INTIIAL_CLEANUP */

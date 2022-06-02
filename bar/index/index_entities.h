@@ -87,17 +87,17 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
 *            - is not locked
 *          purge UUID of entity if empty
 * Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
+*          doneFlag       - done flag variable (can be NULL)
+*          deletedCounter - deleted entries count variable (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
-                              bool        *doneFlag,
-                              ulong       *deletedCounter
-                             );
+                            bool        *doneFlag,
+                            ulong       *deletedCounter
+                           );
 
 /***********************************************************************\
 * Name   : IndexEntity_updateAggregates

@@ -556,7 +556,7 @@ typedef struct
   const void *data;
   ulong      length;
   uint       elementSize;
-  const char *(*toString)(const void *data); 
+  const char *(*toString)(const void *data);
 } DatabaseFilterArray;
 
 typedef struct
@@ -565,7 +565,7 @@ typedef struct
   union
   {
     intptr_t            p;
-                        
+
     DatabaseId          id;
     bool                b;
     int                 i;
@@ -1022,10 +1022,12 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE DatabaseFilterBlob __DatabaseFilterBlob(void *data, ulong length) 
+#pragma GCC diagnostic ignored "-Wunused-function"
+LOCAL_INLINE DatabaseFilterBlob __DatabaseFilterBlob(void *data, ulong length)
 {
   return (DatabaseFilterBlob){ data, length };
 }
+#pragma GCC diagnostic warning "-Wunused-function"
 
 /***********************************************************************\
 * Name   : __DatabaseFilterArray
@@ -1039,10 +1041,12 @@ LOCAL_INLINE DatabaseFilterBlob __DatabaseFilterBlob(void *data, ulong length)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE DatabaseFilterArray __DatabaseFilterArray(void *data, ulong length, uint elementSize, const char*(*toString)(const void *data)) 
+#pragma GCC diagnostic ignored "-Wunused-function"
+LOCAL_INLINE DatabaseFilterArray __DatabaseFilterArray(void *data, ulong length, uint elementSize, const char*(*toString)(const void *data))
 {
   return (DatabaseFilterArray){ data, length, elementSize, toString };
 }
+#pragma GCC diagnostic warning "-Wunused-function"
 
 #define DATABASE_FILTER_KEY(value)           { .type = DATABASE_DATATYPE_KEY,      { .id = value } }
 #define DATABASE_FILTER_BOOL(value)          { .type = DATABASE_DATATYPE_BOOL,     { .b  = ((value) == true) } }
@@ -1052,8 +1056,8 @@ LOCAL_INLINE DatabaseFilterArray __DatabaseFilterArray(void *data, ulong length,
 #define DATABASE_FILTER_UINT64(value)        { .type = DATABASE_DATATYPE_UINT64,   { .u64 = value } }
 #define DATABASE_FILTER_DOUBLE(value)        { .type = DATABASE_DATATYPE_DOUBLE,   { .d   = value } }
 #define DATABASE_FILTER_DATETIME(value)      { .type = DATABASE_DATATYPE_DATETIME, { .dateTime = value } }
-#define DATABASE_FILTER_STRING(value)        { .type = DATABASE_DATATYPE_STRING,   { .string   = value } }
-#define DATABASE_FILTER_CSTRING(value)       { .type = DATABASE_DATATYPE_CSTRING,  { .s        = value } }
+#define DATABASE_FILTER_STRING(value)        { .type = DATABASE_DATATYPE_STRING,   { .string = value } }
+#define DATABASE_FILTER_CSTRING(value)       { .type = DATABASE_DATATYPE_CSTRING,  { .s = value } }
 #define DATABASE_FILTER_BLOB(value,_length)  { .type = DATABASE_DATATYPE_BLOB,     { .blob  = __DatabaseFilterArray value } }
 #define DATABASE_FILTER_ARRAY(value)         { .type = DATABASE_DATATYPE_ARRAY,    { .array = __DatabaseFilterArray value } }
 
