@@ -945,7 +945,7 @@ class WidgetModifyListener
    */
   public void modified(Button button, WidgetVariable variable)
   {
-    modified((Widget)button,variable);
+    modified((Control)button,variable);
   }
 
   /** modified handler
@@ -954,7 +954,10 @@ class WidgetModifyListener
    */
   public void modified(Button button, WidgetVariable[] variables)
   {
-    modified((Control)button,variables);
+    for (WidgetVariable variable : variables)
+    {
+      modified(button,variable);
+    }
   }
 
   /** modified handler
