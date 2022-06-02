@@ -1066,7 +1066,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
     fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
   #endif /* INDEX_DEBUG_LIST_INFO */
-fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
 
   // get filters
   Database_filterAppend(filterString,!String_isEmpty(uuidIdsString),"AND","uuids.id IN (%S)",uuidIdsString);

@@ -16864,8 +16864,6 @@ throw new Error("NYI");
                                      TreeItem persistenceTreeItem = persistenceTreeItemMap.get(persistenceId);
                                      if (persistenceTreeItem != null)
                                      {
-//                                       PersistenceData persistenceData = (PersistenceData)persistenceTreeItem.getData();
-
                                        EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                              "", // scheuduleUUID
                                                                                              createdDateTime,
