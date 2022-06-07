@@ -5277,7 +5277,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   DatabaseId databaseId;
 
   assert(indexHandle != NULL);
-  assert(storageId != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
   // check init error
@@ -5383,7 +5382,10 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       return ERROR_NONE;
     });
 
-    (*storageId) = INDEX_ID_STORAGE(databaseId);
+    if (storageId != NULL)
+    {
+      (*storageId) = INDEX_ID_STORAGE(databaseId);
+    }
   }
   else
   {
