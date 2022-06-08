@@ -5307,7 +5307,7 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-14s %-19s %-16s %-5s %s",
+            System.out.println(String.format("%-8s %-14s %-19s %-16s %-6s %s",
                                              "Id",
                                              "Size",
                                              "Date/Time",
@@ -5334,7 +5334,7 @@ if (false) {
                                          IndexStates state       = valueMap.getEnum  ("indexState",IndexStates.class);
                                          IndexModes  mode        = valueMap.getEnum  ("indexMode",IndexModes.class  );
 
-                                         System.out.println(String.format("%8d %14d %-19s %-16s %-5s %s",
+                                         System.out.println(String.format("%8d %14d %-19s %-16s %-6s %s",
                                                                           getDatabaseId(storageId),
                                                                           size,
                                                                           DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -5517,7 +5517,7 @@ if (false) {
                                      }
                                     );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(String.format("%d entries",n[0]));
+            System.out.println(String.format("%d entries (max. 1024 shown)",n[0]));
           }
           catch (Exception exception)
           {
