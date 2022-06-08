@@ -182,7 +182,8 @@ rest time
 - gnutls 3.7.x: add support for brotli compression in gnutls
 - support brotli compression, https://brotli.org/
 - add libpsl for curl
-
+- call prctl+clear PR_SET_DUMPABLE
+  https://en.wikipedia.org/wiki/Ptrace
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'

@@ -1848,7 +1848,7 @@ bool Job_read(JobNode *jobNode)
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError("Cannot open job file '%s' (error: %s)!",
+    printError("cannot open job file '%s' (error: %s)!",
                String_cString(jobNode->fileName),
                Error_getText(error)
               );
@@ -1954,13 +1954,13 @@ bool Job_read(JobNode *jobNode)
           }
           else
           {
-            printError("Unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+            printError("unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
             failFlag = TRUE;
           }
         }
         else
         {
-          printError("Syntax error in %S, line %ld: '%s' - skipped",
+          printError("syntax error in %S, line %ld: '%s' - skipped",
                      jobNode->fileName,
                      lineNb,
                      String_cString(line)
@@ -2066,13 +2066,13 @@ bool Job_read(JobNode *jobNode)
             }
             else
             {
-              printError("Unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+              printError("unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
               failFlag = TRUE;
             }
           }
           else
           {
-            printError("Syntax error in %S, line %ld: '%s' - skipped",
+            printError("syntax error in %S, line %ld: '%s' - skipped",
                        jobNode->fileName,
                        lineNb,
                        String_cString(line)
@@ -2103,7 +2103,7 @@ bool Job_read(JobNode *jobNode)
       }
       else
       {
-        printError("Unknown archive type '%s' in section '%s' in %S, line %ld - skipped",
+        printError("unknown archive type '%s' in section '%s' in %S, line %ld - skipped",
                    String_cString(s),
                    "persistence",
                    jobNode->fileName,
@@ -2160,13 +2160,13 @@ bool Job_read(JobNode *jobNode)
       }
       else
       {
-        printError("Unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+        printError("unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
         failFlag = TRUE;
       }
     }
     else
     {
-      printError("Syntax error in %S, line %ld: '%s' - skipped",
+      printError("syntax error in %S, line %ld: '%s' - skipped",
                  jobNode->fileName,
                  lineNb,
                  String_cString(line)
@@ -2342,7 +2342,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
       {
         if (String_equals(jobNode1->job.uuid,jobNode2->job.uuid))
         {
-          printWarning("Duplicate UUID in jobs '%s' and '%s'!",String_cString(jobNode1->name),String_cString(jobNode2->name));
+          printWarning("duplicate UUID in jobs '%s' and '%s'!",String_cString(jobNode1->name),String_cString(jobNode2->name));
         }
         jobNode2 = jobNode2->next;
       }
@@ -2430,7 +2430,7 @@ void Job_writeAllModified(void)
         error = Job_write(jobNode);
         if (error != ERROR_NONE)
         {
-          printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+          printWarning("cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
         }
       }
     }

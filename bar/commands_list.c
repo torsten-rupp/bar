@@ -2521,7 +2521,7 @@ NULL, // masterSocketHandle
             if (jobOptions->forceVerifySignaturesFlag)
             {
               // signature error
-              printError("Invalid signature in '%s'!",
+              printError("invalid signature in '%s'!",
                          String_cString(printableStorageName)
                         );
               (void)Archive_close(&archiveHandle);
@@ -2532,7 +2532,7 @@ NULL, // masterSocketHandle
             else
             {
               // print signature warning
-              printWarning("Invalid signature in '%s'!",
+              printWarning("invalid signature in '%s'!",
                            String_cString(printableStorageName)
                           );
             }
@@ -2604,7 +2604,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'file' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'file' content from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2722,7 +2722,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'image' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'image' content from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2820,7 +2820,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'directory' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'directory' content from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2910,7 +2910,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'link' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'link' content from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3015,7 +3015,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'hard link' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'hard link' content from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3123,7 +3123,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'special' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'special' content from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3220,7 +3220,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("Cannot read 'meta' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'meta' content from storage '%s' (error: %s)!",
                                Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3319,7 +3319,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("No host name given!");
+            printError("no host name given!");
 #endif
             Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_HOST_NAME;
@@ -3329,7 +3329,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("Cannot SSH public key given!");
+            printError("cannot SSH public key given!");
 #endif
             Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PUBLIC_KEY;
@@ -3339,7 +3339,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("Cannot SSH private key given!");
+            printError("cannot SSH private key given!");
 #endif
             Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PRIVATE_KEY;
@@ -3392,7 +3392,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("Cannot connect to '%s:%d' (error: %s)!",
+            printError("cannot connect to '%s:%d' (error: %s)!",
                        String_cString(storageSpecifier->hostName),
                        storageSpecifier->hostPort,
                        Error_getText(error)
@@ -3423,7 +3423,7 @@ fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //TODO: remove
 #if 0
-          printError("Cannot execute remote BAR program '%s' (error: %s)!",
+          printError("cannot execute remote BAR program '%s' (error: %s)!",
                      String_cString(line),
                      Error_getText(error)
                     );
@@ -3438,7 +3438,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           exitcode = Network_terminate(&networkExecuteHandle);
 //TODO: remove
 #if 0
-          printError("No response from remote BAR program (error: %s, exitcode %d)!",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
+          printError("no response from remote BAR program (error: %s, exitcode %d)!",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
           String_delete(line);
           (void)Network_terminate(&networkExecuteHandle);
@@ -3451,7 +3451,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,TIMEOUT);
 //TODO: remove
 #if 0
-          printError("Invalid response from remote BAR program (error: %s, exitcode %d)!",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
+          printError("invalid response from remote BAR program (error: %s, exitcode %d)!",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
           String_delete(line);
           (void)Network_terminate(&networkExecuteHandle);
@@ -3462,7 +3462,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         {
 //TODO: remove
 #if 0
-          printError("Invalid BAR major protocol version (expected: %d, got %d)!",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMajor);
+          printError("invalid BAR major protocol version (expected: %d, got %d)!",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMajor);
 #endif
           String_delete(line);
           (void)Network_terminate(&networkExecuteHandle);
@@ -3471,7 +3471,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
         if (protocolVersionMinor != SERVER_PROTOCOL_VERSION_MINOR)
         {
-          printWarning("Invalid BAR minor protocol version (expected: %d, got %d)!",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMinor);
+          printWarning("invalid BAR minor protocol version (expected: %d, got %d)!",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMinor);
         }
         String_delete(line);
 
@@ -3641,7 +3641,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  printWarning("Parse 'file' entry '%s' fail",String_cString(arguments));
+                  printWarning("parse 'file' entry '%s' fail",String_cString(arguments));
                 }
 
                 // free resources
@@ -3734,7 +3734,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  printWarning("Parse 'image' entry '%s' fail",String_cString(arguments));
+                  printWarning("parse 'image' entry '%s' fail",String_cString(arguments));
                 }
 
                 // free resources
@@ -3807,7 +3807,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  printWarning("Parse 'directory' entry '%s' fail",String_cString(arguments));
+                  printWarning("parse 'directory' entry '%s' fail",String_cString(arguments));
                 }
 
                 // free resources
@@ -3883,7 +3883,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  printWarning("Parse 'link' entry '%s' fail",String_cString(arguments));
+                  printWarning("parse 'link' entry '%s' fail",String_cString(arguments));
                 }
 
                 // free resources
@@ -3988,7 +3988,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  printWarning("Parse 'hardlink' entry '%s' fail",String_cString(arguments));
+                  printWarning("parse 'hardlink' entry '%s' fail",String_cString(arguments));
                 }
 
                 // free resources
@@ -4069,7 +4069,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  printWarning("Parse 'special' entry '%s' fail",String_cString(arguments));
+                  printWarning("parse 'special' entry '%s' fail",String_cString(arguments));
                 }
 
                 // free resources
@@ -4087,7 +4087,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               }
               else
               {
-                printWarning("Unknown entry '%s' fail",String_cString(line));
+                printWarning("unknown entry '%s' fail",String_cString(line));
               }
             }
           }
@@ -4120,7 +4120,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     case STORAGE_TYPE_DEVICE:
 //TODO: remove
 #if 0
-      printError("List archives on device is not supported!");
+      printError("list archives on device is not supported!");
 #endif
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -4518,7 +4518,7 @@ Errors Command_list(StringList              *storageNameList,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
-      printError("Invalid storage '%s' (error: %s)!",
+      printError("invalid storage '%s' (error: %s)!",
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -4612,7 +4612,7 @@ Errors Command_list(StringList              *storageNameList,
 
     if (error != ERROR_NONE)
     {
-      printError("Cannot read storage '%s' (error: %s)!",
+      printError("cannot read storage '%s' (error: %s)!",
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -4621,7 +4621,7 @@ Errors Command_list(StringList              *storageNameList,
   }
   if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
-    printError("No matching storage files found!");
+    printError("no matching storage files found!");
     failError = ERROR_FILE_NOT_FOUND_;
   }
 

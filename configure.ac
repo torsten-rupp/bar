@@ -692,36 +692,6 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-dnl --- detect EPM version
-dnl usage: AC_PROG_EPM_VERSION
-AC_DEFUN([AC_PROG_EPM_VERSION],
-[
-  AC_REQUIRE([AC_PROG_EPM])
-  AC_MSG_CHECKING([$EPM version])
-  AC_CACHE_VAL(
-    ac_cv_prog_epm_version,
-    [
-      if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
-        AC_MSG_RESULT([4.x])
-        ac_cv_prog_epm_version="4.x"
-        EPM_VERSION_4=1
-        EPM_VERSION_3=
-      elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
-        AC_MSG_RESULT([3.x])
-        ac_cv_prog_epm_version="3.x"
-        EPM_VERSION_4=
-        EPM_VERSION_3=1
-      else
-        AC_MSG_RESULT([unknown - assume version 4 or newer])
-        ac_cv_prog_epm_version="unknown"
-        EPM_VERSION_4=1
-        EPM_VERSION_3=
-      fi
-    ]
-  )
-  AC_PROVIDE([$0])dnl
-])
-
 dnl --- check sudo command
 dnl usage: AC_PROG_SUDO_COMMAND(<text>,<command>,<if found>,<if not found>)
 AC_DEFUN([AC_PROG_SUDO_COMMAND],
@@ -849,7 +819,6 @@ AC_SUBST(ENABLE_ISO9660)                     dnl "yes" for iso9660 support, "no"
 AC_SUBST(ENABLE_PCRE)                        dnl "yes" for PCRE support, "no" otherwise
 AC_SUBST(ENABLE_GUI)                         dnl "yes" for GUI support, "no" otherwise
 AC_SUBST(ENABLE_GUI_I18N)                    dnl "yes" for GUI i18n support, "no" otherwise
-AC_SUBST(ENABLE_EPM)                         dnl "yes" for EPM support, "no" otherwise
 
 AC_SUBST(HAVE_ICU)                           dnl "1" for ICU support, "" otherwise
 AC_SUBST(HAVE_Z)                             dnl "1" for zlib support, "" otherwise
@@ -975,10 +944,6 @@ AC_SUBST(WINE)                               dnl wine
 AC_SUBST(WINE_C_DRIVE)                       dnl wine c:-drive path
 AC_SUBST(ISCC)                               dnl Inno Setup
 
-AC_SUBST(EPM)                                dnl EPM tool
-AC_SUBST(EPM_VERSION_3)                      dnl 1 if EPM version 3, otherwise empty
-AC_SUBST(EPM_VERSION_4)                      dnl 1 if EPM version 4, otherwise empty
-
 AC_SUBST(HAVE_SUDO_COMMANDS,1)               dnl sudo commands
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)         dnl sudo command chattr +-[ia] *
 AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)   dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
@@ -1037,7 +1002,6 @@ ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
-ENABLE_EPM="yes"
 ENABLE_EXTERN_COMPILE="yes"
 
 # temporary file
@@ -1273,11 +1237,6 @@ AC_ARG_ENABLE(
   [ENABLE_GUI_I18N=$enableval]
 )
 AC_ARG_ENABLE(
-  epm,
-  AC_HELP_STRING([--disable-epm],[disable EPM support]),
-  [ENABLE_EPM=$enableval]
-)
-AC_ARG_ENABLE(
   extern-compile,
   AC_HELP_STRING([--disable-extern-compile],[disable compilation of external software]),
   [ENABLE_EXTERN_COMPILE=$enableval]
@@ -1428,57 +1387,6 @@ fi
 
 AC_PATH_PROGS(SVNVERSION,svnversion)
 AC_PATH_PROGS(GIT,git)
-
-if test $ENABLE_EPM = "yes"; then
-  if test -d epm -o -d "`readlink epm`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile epm
-
-      cwd=`pwd`
-
-      AC_MSG_COMPILE([epm])
-      result=1
-      if test $result -eq 1; then
-        (cd epm; ./configure \
-          --host=$build \
-          --prefix=$cwd/extern \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd epm; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    fi
-
-    EPM=$cwd/extern/bin/epm
-    AC_PROVIDE(AC_PROG_EPM)
-  else
-    AC_PATH_PROGS(EPM,epm)
-  fi
-fi
-if test -n "$EPM"; then
-  AC_PROG_EPM_VERSION
-fi
 
 AC_PATH_PROGS(MD5SUM,md5sum)
 
@@ -4315,34 +4223,6 @@ if test $ENABLE_BFD = "yes"; then
   fi
 fi
 
-
-# compile/use epm
-if test $ENABLE_EPM = "yes"; then
-  if test -d epm -o -d "`readlink epm`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile binutils BFD library
-
-      cwd=`pwd`
-
-      AC_MSG_COMPILE([epm])
-      result=1
-      if test $result -eq 1; then
-       # patch to support creating RPM packages on different machines:
-       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
-       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
-    fi
-#TODO
-#  else
-#    dnl search for installed epm
-  fi
-fi
-
 # check mandatory extern software for full version
 AC_ARG_ENABLE(
   extern-check,
@@ -4637,6 +4517,14 @@ AC_CHECK_FUNCTION(libssh2_keepalive_send,               AC_DEFINE(HAVE_SSH2_KEEP
 AC_CHECK_FUNCTION(libssh2_scp_send64,                   AC_DEFINE(HAVE_SSH2_SCP_SEND64,                   1,[SSH2 has libssh2_scp_send64() function]))
 AC_CHECK_FUNCTION(libssh2_sftp_seek64,                  AC_DEFINE(HAVE_SSH2_SFTP_SEEK64,                  1,[SSH2 has libssh2_sftp_seek64() function]))
 AC_CHECK_FUNCTION(libssh2_sftp_seek2,                   AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,                   1,[SSH2 has libssh2_sftp_seek2() function]))
+
+AC_CHECK_FUNCTION(SHA256_Init,                          AC_DEFINE(HAVE_SHA256_INIT,                       1,[OpenSSL has SHA256_Init() function]))
+AC_CHECK_FUNCTION(SHA256_Final,                         AC_DEFINE(HAVE_SHA256_FINAL,                      1,[OpenSSL has SHA256_Final() function]))
+AC_CHECK_FUNCTION(SHA256_Update,                        AC_DEFINE(HAVE_SHA256_UPDATE,                     1,[OpenSSL has SHA256_Update() function]))
+
+AC_CHECK_FUNCTION(gcry_md_open,                         AC_DEFINE(HAVE_GCRY_MD_OPEN,                      1,[libgcrypt has gcry_md_open() function]))
+AC_CHECK_FUNCTION(gcry_md_close,                        AC_DEFINE(HAVE_GCRY_MD_CLOSE,                     1,[libgcrypt has gcry_md_close() function]))
+AC_CHECK_FUNCTION(gcry_md_write,                        AC_DEFINE(HAVE_GCRY_MD_WRITE,                     1,[libgcrypt has gcry_md_write() function]))
 
 AC_CHECK_FUNCTION(iso9660_open,              AC_DEFINE(HAVE_ISO9660_OPEN,              1,[iso9660_open() available]))
 AC_CHECK_FUNCTION(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,             1,[iso9660_close() available]))
@@ -4998,9 +4886,6 @@ AC_CONFIG_FILES(doc/Makefile)
 dnl config files
 AC_CONFIG_FILES(barcontrol/src/Config.java)
 
-dnl epm file
-AC_CONFIG_FILES(epm.list)
-
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
@@ -5096,7 +4981,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 
-                   EPM="$EPM"
                    DOCKER="$DOCKER"
                    ISCC="$ISCC"
 

@@ -6732,14 +6732,14 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
       else
       {
         if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError("Unknown value '%S' in %S, line %ld",name,fileName,*lineNb);
+        printError(_("unknown value '%S' in %S, line %ld"),name,fileName,*lineNb);
         error = ERROR_CONFIG;
       }
     }
     else
     {
       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-      printError(_("Syntax error in '%s', line %ld: '%s'"),
+      printError(_("syntax error in '%s', line %ld: '%s'"),
                  String_cString(fileName),
                  *lineNb,
                  String_cString(line)
@@ -7328,14 +7328,14 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       else
       {
         if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+        printError(_("unknown value '%S' in %S, line %ld"),name,fileName,lineNb);
         error = ERROR_CONFIG;
       }
     }
     else
     {
       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-      printError(_("Unknown config entry '%s' in %s, line %ld"),
+      printError(_("unknown config entry '%s' in %s, line %ld"),
                  String_cString(line),
                  String_cString(fileName),
                  lineNb
@@ -9413,9 +9413,9 @@ bool Configuration_validate(void)
 {
   if (!String_isEmpty(globalOptions.tmpDirectory))
   {
-    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
     if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
   }
 
   return TRUE;

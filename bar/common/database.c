@@ -8952,152 +8952,132 @@ void Database_doneAll(void)
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 }
 
-bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
-                             const char        *databaseURI,
-                             const char        *defaultDatabaseName
-                            )
+Errors Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
+                               const char        *databaseURI,
+                               const char        *defaultDatabaseName
+                              )
 {
-  bool       validURIFlag;
   const char *s1,*s2,*s3,*s4;
   size_t     n1,n2,n3,n4;
 
-  validURIFlag = FALSE;
+  assert(databaseURI != NULL);
 
-  if (databaseURI != NULL)
+  if      (stringStartsWith(databaseURI,"sqlite:"))
   {
-    if      (stringStartsWith(databaseURI,"sqlite:"))
+    databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+    databaseSpecifier->sqlite.fileName = String_setCString(String_new(),&databaseURI[7]);
+  }
+  else if (stringStartsWith(databaseURI,"sqlite3:"))
+  {
+    databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+    databaseSpecifier->sqlite.fileName = String_setCString(String_new(),&databaseURI[8]);
+  }
+  else if (stringStartsWith(databaseURI,"mariadb:"))
+  {
+    if      (stringMatch(&databaseURI[8],
+                         "^([^:]+):([^:]+):([^:]*):(.*)",
+                         STRING_NO_ASSIGN,
+                         STRING_NO_ASSIGN,
+                         &s1,&n1,
+                         &s2,&n2,
+                         &s3,&n3,
+                         &s4,&n4,
+                         NULL
+                        )
+            )
     {
-      databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-      databaseSpecifier->sqlite.fileName = String_setCString(String_new(),&databaseURI[7]);
-      validURIFlag = TRUE;
-    }
-    else if (stringStartsWith(databaseURI,"sqlite3:"))
-    {
-      databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-      databaseSpecifier->sqlite.fileName = String_setCString(String_new(),&databaseURI[8]);
-      validURIFlag = TRUE;
-    }
-    else if (stringStartsWith(databaseURI,"mariadb:"))
-    {
-      if      (stringMatch(&databaseURI[8],
-                           "^([^:]+):([^:]+):([^:]*):(.*)",
-                           STRING_NO_ASSIGN,
-                           STRING_NO_ASSIGN,
-                           &s1,&n1,
-                           &s2,&n2,
-                           &s3,&n3,
-                           &s4,&n4,
-                           NULL
-                          )
-              )
-      {
-        // mariadb:<server>:<user>:<password>:<database>
-        #if defined(HAVE_MARIADB)
-          databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
-          databaseSpecifier->mariadb.serverName  = String_setBuffer(String_new(),s1,n1);
-          databaseSpecifier->mariadb.userName    = String_setBuffer(String_new(),s2,n2);
-          Password_init(&databaseSpecifier->mariadb.password);
-          Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
-          databaseSpecifier->mariadb.databaseName = String_setBuffer(String_new(),s4,n4);
-        #else /* HAVE_MARIADB */
+      // mariadb:<server>:<user>:<password>:<database>
+      #if defined(HAVE_MARIADB)
+        databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
+        databaseSpecifier->mariadb.serverName  = String_setBuffer(String_new(),s1,n1);
+        databaseSpecifier->mariadb.userName    = String_setBuffer(String_new(),s2,n2);
+        Password_init(&databaseSpecifier->mariadb.password);
+        Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
+        databaseSpecifier->mariadb.databaseName = String_setBuffer(String_new(),s4,n4);
+      #else /* HAVE_MARIADB */
 // TODO:
-        #endif /* HAVE_MARIADB */
-        validURIFlag = TRUE;
-      }
-      else if (stringMatch(&databaseURI[8],
-                           "^([^:]+):([^:]+):(.*)",
-                           STRING_NO_ASSIGN,
-                           STRING_NO_ASSIGN,
-                           &s1,&n1,
-                           &s2,&n2,
-                           &s3,&n3,
-                           NULL
-                          )
-              )
-      {
-        // mariadb:<server>:<user>:<password>
-        #if defined(HAVE_MARIADB)
-          databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
-          databaseSpecifier->mariadb.serverName   = String_setBuffer(String_new(),s1,n1);
-          databaseSpecifier->mariadb.userName     = String_setBuffer(String_new(),s2,n2);
-          Password_init(&databaseSpecifier->mariadb.password);
-          Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
-          databaseSpecifier->mariadb.databaseName = String_newCString(defaultDatabaseName);
-        #else /* HAVE_MARIADB */
-          UNUSED_VARIABLE(defaultDatabaseName);
-        #endif /* HAVE_MARIADB */
-        validURIFlag = TRUE;
-      }
-      else
-      {
-        // default: sqlite
-        databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-        databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
-      }
+      #endif /* HAVE_MARIADB */
     }
-    else if (stringStartsWith(databaseURI,"postgresql:"))
+    else if (stringMatch(&databaseURI[8],
+                         "^([^:]+):([^:]+):(.*)",
+                         STRING_NO_ASSIGN,
+                         STRING_NO_ASSIGN,
+                         &s1,&n1,
+                         &s2,&n2,
+                         &s3,&n3,
+                         NULL
+                        )
+            )
     {
-      if      (stringMatch(&databaseURI[11],
-                           "^([^:]+):([^:]+):([^:]*):(.*)",
-                           STRING_NO_ASSIGN,
-                           STRING_NO_ASSIGN,
-                           &s1,&n1,
-                           &s2,&n2,
-                           &s3,&n3,
-                           &s4,&n4,
-                           NULL
-                          )
-              )
-      {
-        // postgresql:<server>:<user>:<password>:<database>
-        databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
-        #if defined(HAVE_POSTGRESQL)
-          databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
-          databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
-          Password_init(&databaseSpecifier->postgresql.password);
-          Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
-          databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
-        #else /* HAVE_POSTGRESQL */
-          UNUSED_VARIABLE(defaultDatabaseName);
-        #endif /* HAVE_POSTGRESQL */
-        validURIFlag = TRUE;
-      }
-      else if (stringMatch(&databaseURI[11],
-                           "^([^:]+):([^:]+):(.*)",
-                           STRING_NO_ASSIGN,
-                           STRING_NO_ASSIGN,
-                           &s1,&n1,
-                           &s2,&n2,
-                           &s3,&n3,
-                           NULL
-                          )
-              )
-      {
-        // postgresql:<server>:<user>:<password>
-        databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
-        #if defined(HAVE_POSTGRESQL)
-          databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
-          databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
-          Password_init(&databaseSpecifier->postgresql.password);
-          Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
-          databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
-        #else /* HAVE_POSTGRESQL */
-          UNUSED_VARIABLE(defaultDatabaseName);
-        #endif /* HAVE_POSTGRESQL */
-        validURIFlag = TRUE;
-      }
-      else
-      {
-        // default: sqlite
-        databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-        databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
-      }
+      // mariadb:<server>:<user>:<password>
+      #if defined(HAVE_MARIADB)
+        databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
+        databaseSpecifier->mariadb.serverName   = String_setBuffer(String_new(),s1,n1);
+        databaseSpecifier->mariadb.userName     = String_setBuffer(String_new(),s2,n2);
+        Password_init(&databaseSpecifier->mariadb.password);
+        Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
+        databaseSpecifier->mariadb.databaseName = String_newCString(defaultDatabaseName);
+      #else /* HAVE_MARIADB */
+        UNUSED_VARIABLE(defaultDatabaseName);
+      #endif /* HAVE_MARIADB */
     }
     else
     {
-      // default: sqlite
-      databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-      databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
+      return ERROR_DATABASE_INVALID;
+    }
+  }
+  else if (stringStartsWith(databaseURI,"postgresql:"))
+  {
+    if      (stringMatch(&databaseURI[11],
+                         "^([^:]+):([^:]+):([^:]*):(.*)",
+                         STRING_NO_ASSIGN,
+                         STRING_NO_ASSIGN,
+                         &s1,&n1,
+                         &s2,&n2,
+                         &s3,&n3,
+                         &s4,&n4,
+                         NULL
+                        )
+            )
+    {
+      // postgresql:<server>:<user>:<password>:<database>
+      databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
+      #if defined(HAVE_POSTGRESQL)
+        databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
+        databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
+        Password_init(&databaseSpecifier->postgresql.password);
+        Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
+        databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
+      #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(defaultDatabaseName);
+      #endif /* HAVE_POSTGRESQL */
+    }
+    else if (stringMatch(&databaseURI[11],
+                         "^([^:]+):([^:]+):(.*)",
+                         STRING_NO_ASSIGN,
+                         STRING_NO_ASSIGN,
+                         &s1,&n1,
+                         &s2,&n2,
+                         &s3,&n3,
+                         NULL
+                        )
+            )
+    {
+      // postgresql:<server>:<user>:<password>
+      databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+      #if defined(HAVE_POSTGRESQL)
+        databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
+        databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
+        Password_init(&databaseSpecifier->postgresql.password);
+        Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
+        databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
+      #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(defaultDatabaseName);
+      #endif /* HAVE_POSTGRESQL */
+    }
+    else
+    {
+      return ERROR_DATABASE_INVALID;
     }
   }
   else
@@ -9107,7 +9087,7 @@ bool Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
   }
 
-  return validURIFlag;
+  return ERROR_NONE;
 }
 
 void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
@@ -9184,7 +9164,7 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
                                         )
 {
   DatabaseSpecifier *databaseSpecifier;
-  bool              flag;
+  Errors            error;
 
   databaseSpecifier = (DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
   if (databaseSpecifier == NULL)
@@ -9192,8 +9172,8 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  flag = Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
-  if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = flag;
+  error = Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
+  if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = (error == ERROR_NONE);
 
   return databaseSpecifier;
 }

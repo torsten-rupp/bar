@@ -209,7 +209,7 @@ NULL, // masterIO
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %s)!",
+    printError("cannot initialize storage '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -301,7 +301,7 @@ NULL, // masterIO
             error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
             if (error != ERROR_NONE)
             {
-              printError("Cannot create/write to file '%s' (error: %s)",
+              printError("cannot create/write to file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -315,7 +315,7 @@ NULL, // masterIO
             error = File_seek(&fileHandle,fragmentOffset);
             if (error != ERROR_NONE)
             {
-              printError("Cannot write file '%s' (error: %s)",
+              printError("cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -352,7 +352,7 @@ NULL, // masterIO
               error = File_write(&fileHandle,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
-                printError("Cannot write file '%s' (error: %s)",
+                printError("cannot write file '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -448,7 +448,7 @@ NULL, // masterIO
             error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
             if (error != ERROR_NONE)
             {
-              printError("Cannot create/write to file '%s' (error: %s)",
+              printError("cannot create/write to file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -462,7 +462,7 @@ NULL, // masterIO
             error = File_seek(&fileHandle,blockOffset*(uint64)deviceInfo.blockSize);
             if (error != ERROR_NONE)
             {
-              printError("Cannot write file '%s' (error: %s)",
+              printError("cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -499,7 +499,7 @@ NULL, // masterIO
               error = File_write(&fileHandle,buffer,bufferBlockCount*(uint64)deviceInfo.blockSize);
               if (error != ERROR_NONE)
               {
-                printError("Cannot write file '%s' (error: %s)",
+                printError("cannot write file '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -575,7 +575,7 @@ NULL, // masterIO
             error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
             if (error != ERROR_NONE)
             {
-              printError("Cannot create/write to file '%s' (error: %s)",
+              printError("cannot create/write to file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -589,7 +589,7 @@ NULL, // masterIO
             error = File_seek(&fileHandle,fragmentOffset);
             if (error != ERROR_NONE)
             {
-              printError("Cannot write file '%s' (error: %s)",
+              printError("cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -626,7 +626,7 @@ NULL, // masterIO
               error = File_write(&fileHandle,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
-                printError("Cannot write file '%s' (error: %s)",
+                printError("cannot write file '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );

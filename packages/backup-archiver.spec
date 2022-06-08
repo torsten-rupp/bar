@@ -196,6 +196,7 @@ fi
 %{_bindir}/bar-debug
 %{_bindir}/bar-debug.sym
 %{_bindir}/bar-index
+%{_bindir}/bar-index-debug
 %{_bindir}/barcontrol
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar

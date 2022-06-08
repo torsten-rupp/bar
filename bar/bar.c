@@ -162,7 +162,7 @@ LOCAL void openLog(void)
     if (globalOptions.logFileName != NULL)
     {
       logFile = fopen(globalOptions.logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
+      if (logFile == NULL) printWarning("cannot open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
   }
 }
@@ -205,7 +205,7 @@ LOCAL void reopenLog(void)
     {
       fclose(logFile);
       logFile = fopen(globalOptions.logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
+      if (logFile == NULL) printWarning("cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
   }
 }
@@ -1249,7 +1249,7 @@ void fatalLogMessage(const char *text, void *userData)
     if (logFile == NULL)
     {
       logFile = fopen(globalOptions.logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
+      if (logFile == NULL) printWarning("cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
 
     if (logFile != NULL)
@@ -1392,7 +1392,7 @@ void logPostProcess(LogHandle        *logHandle,
                                    );
         if (error != ERROR_NONE)
         {
-          printError(_("Cannot post-process log file (error: %s)"),Error_getText(error));
+          printError(_("cannot post-process log file (error: %s)"),Error_getText(error));
           STRINGLIST_ITERATE(&stderrList,stringNode,string)
           {
             printError("  %s",String_cString(string));
@@ -1407,7 +1407,7 @@ void logPostProcess(LogHandle        *logHandle,
         logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
         if (logHandle->logFile == NULL)
         {
-          printWarning("Cannot re-open log file '%s' (error: %s)",String_cString(logHandle->logFileName),strerror(errno));
+          printWarning(_("cannot re-open log file '%s' (error: %s)"),String_cString(logHandle->logFileName),strerror(errno));
         }
       }
 
@@ -1640,7 +1640,7 @@ Errors mountAll(const MountList *mountList)
     {
       assert(mountNode != NULL);
 
-      printError("Cannot mount '%s' (error: %s)",
+      printError(_("cannot mount '%s' (error: %s)"),
                  String_cString(mountNode->name),
                  Error_getText(error)
                 );
@@ -1725,7 +1725,7 @@ void purgeMounts(bool forceFlag)
           error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
           if (error != ERROR_NONE)
           {
-            printWarning("Cannot unmount '%s' (error: %s)",
+            printWarning("cannot unmount '%s' (error: %s)",
                          String_cString(mountedNode->name),
                          Error_getText(error)
                         );
@@ -1828,7 +1828,7 @@ Errors getCryptPasswordFromConsole(String        name,
             // check password quality
             if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
             {
-              printWarning(_("Low password quality!"));
+              printWarning(_("low password quality!"));
             }
           }
 
@@ -2358,7 +2358,7 @@ LOCAL bool readFromJob(ConstString fileName)
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot open job file '%s' (error: %s)!"),
+    printError(_("cannot open job file '%s' (error: %s)!"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -2438,13 +2438,13 @@ LOCAL bool readFromJob(ConstString fileName)
       }
       else
       {
-        printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+        printError(_("unknown value '%S' in %S, line %ld"),name,fileName,lineNb);
         failFlag = TRUE;
       }
     }
     else
     {
-      printError(_("Syntax error in '%s', line %ld: '%s' - skipped"),
+      printError(_("syntax error in '%s', line %ld: '%s' - skipped"),
                  String_cString(fileName),
                  lineNb,
                  String_cString(line)
@@ -2487,7 +2487,7 @@ LOCAL Errors createPIDFile(void)
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      printError(_("Cannot create process id file '%s' (error: %s)"),globalOptions.pidFileName,Error_getText(error));
+      printError(_("cannot create process id file '%s' (error: %s)"),globalOptions.pidFileName,Error_getText(error));
       return error;
     }
     File_printLine(&fileHandle,"%d",(int)getpid());
@@ -2585,14 +2585,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     // check if key files already exists
     if (File_exists(publicKeyFileName))
     {
-      printError(_("Public key file '%s' already exists!"),String_cString(publicKeyFileName));
+      printError(_("public key file '%s' already exists!"),String_cString(publicKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
     }
     if (File_exists(privateKeyFileName))
     {
-      printError(_("Private key file '%s' already exists!"),String_cString(privateKeyFileName));
+      printError(_("private key file '%s' already exists!"),String_cString(privateKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -2612,7 +2612,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                        );
     if (error != ERROR_NONE)
     {
-      printError(_("No password given for private key!"));
+      printError(_("no password given for private key!"));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -2626,7 +2626,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,globalOptions.generateKeyBits,globalOptions.generateKeyMode);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot create encryption key pair (error: %s)!"),Error_getText(error));
+    printError(_("cannot create encryption key pair (error: %s)!"),Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
     String_delete(privateKeyFileName);
@@ -2649,7 +2649,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
         error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSIONS,FALSE);
         if (error != ERROR_NONE)
         {
-          printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
+          printError(_("cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
           String_delete(directoryName);
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
@@ -2681,7 +2681,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write encryption public key file (error: %s)!"),Error_getText(error));
+      printError(_("cannot write encryption public key file (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -2700,7 +2700,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write encryption private key file (error: %s)!"),Error_getText(error));
+      printError(_("cannot write encryption private key file (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(data);
@@ -2723,7 +2723,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get encryption public key (error: %s)!"),Error_getText(error));
+      printError(_("cannot get encryption public key (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -2746,7 +2746,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get encryption private key (error: %s)!"),Error_getText(error));
+      printError(_("cannot get encryption private key (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -2804,14 +2804,14 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     // check if key files already exists
     if (File_exists(publicKeyFileName))
     {
-      printError(_("Public key file '%s' already exists!"),String_cString(publicKeyFileName));
+      printError(_("public key file '%s' already exists!"),String_cString(publicKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
     }
     if (File_exists(privateKeyFileName))
     {
-      printError(_("Private key file '%s' already exists!"),String_cString(privateKeyFileName));
+      printError(_("private key file '%s' already exists!"),String_cString(privateKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -2825,7 +2825,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,globalOptions.generateKeyBits,globalOptions.generateKeyMode);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot create signature key pair (error: %s)!"),Error_getText(error));
+    printError(_("cannot create signature key pair (error: %s)!"),Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
     String_delete(privateKeyFileName);
@@ -2846,7 +2846,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
         error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSIONS,FALSE);
         if (error != ERROR_NONE)
         {
-          printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
+          printError(_("cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
           String_delete(directoryName);
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
@@ -2878,7 +2878,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write signature public key file!"));
+      printError(_("cannot write signature public key file!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -2897,7 +2897,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write signature private key file!"));
+      printError(_("cannot write signature private key file!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -2919,7 +2919,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get signature public key!"));
+      printError(_("cannot get signature public key!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -2942,7 +2942,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get signature private key!"));
+      printError(_("cannot get signature private key!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -3009,7 +3009,7 @@ LOCAL Errors runServer(void)
   error = Continuous_init(globalOptions.continuousDatabaseFileName);
   if (error != ERROR_NONE)
   {
-    printWarning("Continuous support is not available (reason: %s)",Error_getText(error));
+    printWarning("continuous support is not available (reason: %s)",Error_getText(error));
   }
   Job_updateAllNotifies();
 
@@ -3100,7 +3100,7 @@ LOCAL Errors runJob(ConstString jobUUIDName)
     if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
     if      (jobNode == NULL)
     {
-      printError(_("Cannot find job '%s'!"),
+      printError(_("cannot find job '%s'!"),
                  String_cString(jobUUIDName)
                 );
       Job_listUnlock();
@@ -3185,7 +3185,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromFile(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileListFileName));
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get included list (error: %s)!"),
+      printError(_("cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
       if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
@@ -3197,7 +3197,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageListFileName));
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get included list (error: %s)!"),
+      printError(_("cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
       if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
@@ -3209,7 +3209,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addExcludeListFromFile(&globalOptions.excludePatternList,String_cString(globalOptions.excludeListFileName));
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get excluded list (error: %s)!"),
+      printError(_("cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
       if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
@@ -3223,7 +3223,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileCommand));
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get included list (error: %s)!"),
+      printError(_("cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
       if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
@@ -3235,7 +3235,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageCommand));
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get included list (error: %s)!"),
+      printError(_("cannot get included list (error: %s)!"),
                  Error_getText(error)
                 );
       if (CmdOption_isSet(globalOptions.logFileName)) closeLog();
@@ -3247,7 +3247,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addExcludeListFromCommand(&globalOptions.excludePatternList,String_cString(globalOptions.excludeCommand));
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get excluded list (error: %s)!"),
+      printError(_("cannot get excluded list (error: %s)!"),
                  Error_getText(error)
                 );
       if (CmdOption_isSet(&globalOptions.logFileName)) closeLog();
@@ -3284,7 +3284,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         }
         else
         {
-          printError(_("No archive file name given!"));
+          printError(_("no archive file name given!"));
           error = ERROR_INVALID_ARGUMENT;
         }
 
@@ -3313,7 +3313,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = Storage_parseName(&storageSpecifier,globalOptions.storageName);
           if (error != ERROR_NONE)
           {
-            printError(_("Invalid storage '%s' (error: %s)"),
+            printError(_("invalid storage '%s' (error: %s)"),
                        String_cString(globalOptions.storageName),
                        Error_getText(error)
                       );
@@ -3433,7 +3433,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromFile(&storageNameList,NULL);
           if (error != ERROR_NONE)
           {
-            printError(_("Cannot get storage names (error: %s)!"),
+            printError(_("cannot get storage names (error: %s)!"),
                        Error_getText(error)
                       );
             StringList_done(&storageNameList);
@@ -3445,7 +3445,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromFile(&storageNameList,String_cString(globalOptions.storageNameListFileName));
           if (error != ERROR_NONE)
           {
-            printError(_("Cannot get storage names (error: %s)!"),
+            printError(_("cannot get storage names (error: %s)!"),
                        Error_getText(error)
                       );
             StringList_done(&storageNameList);
@@ -3457,7 +3457,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromCommand(&storageNameList,String_cString(globalOptions.storageNameCommand));
           if (error != ERROR_NONE)
           {
-            printError(_("Cannot get storage names (error: %s)!"),
+            printError(_("cannot get storage names (error: %s)!"),
                        Error_getText(error)
                       );
             StringList_done(&storageNameList);
@@ -3586,7 +3586,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       }
       break;
     default:
-      printError(_("No command given!"));
+      printError(_("no command given!"));
       error = ERROR_INVALID_ARGUMENT;
       break;
   }
@@ -3601,11 +3601,11 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 LOCAL Errors runDebug(void)
 {
   AutoFreeList      autoFreeList;
+  Errors            error;
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;
   IndexHandle       *indexHandle;
   uint              deletedStorageCount;
-  Errors            error;
   JobOptions        jobOptions;
   StorageSpecifier  storageSpecifier;
   IndexId           entityId,storageId;
@@ -3620,14 +3620,17 @@ LOCAL Errors runDebug(void)
   // init index database
   if (stringIsEmpty(globalOptions.indexDatabaseURI))
   {
-    printError("No index database!");
+    printError("no index database!");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_DATABASE;
   }
 
-  if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
+  error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  if (error != ERROR_NONE)
   {
-    printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
+    printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_DATABASE;
   }
   AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
   printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
@@ -3636,7 +3639,7 @@ LOCAL Errors runDebug(void)
   error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
   if (error != ERROR_NONE)
   {
-    printError("Cannot init index database '%s' (error: %s)!",
+    printError("cannot init index database '%s' (error: %s)!",
                String_cString(printableDatabaseURI),
                Error_getText(error)
               );
@@ -3649,7 +3652,7 @@ LOCAL Errors runDebug(void)
   error = Continuous_init(globalOptions.continuousDatabaseFileName);
   if (error != ERROR_NONE)
   {
-    printWarning("Continuous support is not available (reason: %s)",Error_getText(error));
+    printWarning("continuous support is not available (reason: %s)",Error_getText(error));
   }
 
   // open index
@@ -3694,7 +3697,7 @@ LOCAL Errors runDebug(void)
     error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRemoveStorage);
     if (error != ERROR_NONE)
     {
-      printError("Cannot parse storage name '%s' (error: %s)!",
+      printError("cannot parse storage name '%s' (error: %s)!",
                  globalOptions.debug.indexRemoveStorage,
                  Error_getText(error)
                 );
@@ -3722,7 +3725,7 @@ LOCAL Errors runDebug(void)
                                 )
        )
     {
-      printError("Cannot find storage '%s' (error: %s)!",
+      printError("cannot find storage '%s' (error: %s)!",
                  globalOptions.debug.indexRemoveStorage,
                  Error_getText(error)
                 );
@@ -3736,7 +3739,7 @@ LOCAL Errors runDebug(void)
                                );
     if (error != ERROR_NONE)
     {
-      printError("Cannot delete storage '%s' (error: %s)!",
+      printError("cannot delete storage '%s' (error: %s)!",
                  globalOptions.debug.indexRemoveStorage,
                  Error_getText(error)
                 );
@@ -3760,7 +3763,7 @@ LOCAL Errors runDebug(void)
     error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexAddStorage);
     if (error != ERROR_NONE)
     {
-      printError("Cannot parse storage name '%s' (error: %s)!",
+      printError("cannot parse storage name '%s' (error: %s)!",
                  globalOptions.debug.indexAddStorage,
                  Error_getText(error)
                 );
@@ -3784,7 +3787,7 @@ LOCAL Errors runDebug(void)
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialize storage '%s' (error: %s)!",
+      printError("cannot initialize storage '%s' (error: %s)!",
                  globalOptions.debug.indexAddStorage,
                  Error_getText(error)
                 );
@@ -3817,7 +3820,7 @@ LOCAL Errors runDebug(void)
       error = Index_deleteStorage(indexHandle,storageId);
       if (error != ERROR_NONE)
       {
-        printError("Cannot delete storage '%s' (error: %s)!",
+        printError("cannot delete storage '%s' (error: %s)!",
                    String_cString(globalOptions.debug.indexAddStorage),
                    Error_getText(error)
                   );
@@ -3867,7 +3870,7 @@ LOCAL Errors runDebug(void)
                                );
         if (error != ERROR_NONE)
         {
-          printError("Cannot create new entity for storage '%s' (error: %s)!",
+          printError("cannot create new entity for storage '%s' (error: %s)!",
                      String_cString(globalOptions.debug.indexAddStorage),
                      Error_getText(error)
                     );
@@ -3892,7 +3895,7 @@ LOCAL Errors runDebug(void)
                             );
     if (error != ERROR_NONE)
     {
-      printError("Cannot create new storage '%s' (error: %s)!",
+      printError("cannot create new storage '%s' (error: %s)!",
                  String_cString(globalOptions.debug.indexAddStorage),
                  Error_getText(error)
                 );
@@ -3956,7 +3959,7 @@ LOCAL Errors runDebug(void)
     }
     if (error != ERROR_NONE)
     {
-      printError("Cannot set state of storage '%s' (error: %s)!",
+      printError("cannot set state of storage '%s' (error: %s)!",
                  String_cString(globalOptions.debug.indexAddStorage),
                  Error_getText(error)
                 );
@@ -3984,7 +3987,7 @@ LOCAL Errors runDebug(void)
     error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRefreshStorage);
     if (error != ERROR_NONE)
     {
-      printError("Cannot parse storage name '%s' (error: %s)!",
+      printError("cannot parse storage name '%s' (error: %s)!",
                  globalOptions.debug.indexRefreshStorage,
                  Error_getText(error)
                 );
@@ -4012,7 +4015,7 @@ LOCAL Errors runDebug(void)
                                 )
        )
     {
-      printError("Cannot find storage '%s' (error: %s)!",
+      printError("cannot find storage '%s' (error: %s)!",
                  globalOptions.debug.indexRefreshStorage,
                  Error_getText(error)
                 );
@@ -4036,7 +4039,7 @@ LOCAL Errors runDebug(void)
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialzie storage '%s' (error: %s)!",
+      printError("cannot initialzie storage '%s' (error: %s)!",
                  globalOptions.debug.indexRefreshStorage,
                  Error_getText(error)
                 );
@@ -4101,7 +4104,7 @@ LOCAL Errors runDebug(void)
     }
     if (error != ERROR_NONE)
     {
-      printError("Cannot refresh storage '%s' (error: %s)!",
+      printError("cannot refresh storage '%s' (error: %s)!",
                  globalOptions.debug.indexRefreshStorage,
                  Error_getText(error)
                 );
@@ -4293,7 +4296,7 @@ LOCAL Errors bar(int argc, const char *argv[])
         }
         else
         {
-          printError(_("Cannot find job '%s'!"),
+          printError(_("cannot find job '%s'!"),
                      String_cString(globalOptions.jobUUIDOrName)
                     );
           Job_listUnlock();
@@ -4317,7 +4320,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   // check parameters
   if (!Configuration_validate())
   {
-    printError(_("Validate configuration fail (error: %s)"),Error_getText(error));
+    printError(_("validate configuration fail (error: %s)"),Error_getText(error));
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -4363,7 +4366,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot create temporary directory in '%s' (error: %s)!"),
+    printError(_("cannot create temporary directory in '%s' (error: %s)!"),
                String_cString(globalOptions.tmpDirectory),
                Error_getText(error)
               );
@@ -4380,7 +4383,7 @@ LOCAL Errors bar(int argc, const char *argv[])
      )
   {
     (void)File_delete(tmpDirectory,TRUE);
-    printError(_("Cannot initialize client thread pool!"));
+    printError(_("cannot initialize client thread pool!"));
     return ERROR_INIT;
   }
   if (!ThreadPool_init(&workerThreadPool,
@@ -4393,7 +4396,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     ThreadPool_done(&clientThreadPool);
     (void)File_delete(tmpDirectory,TRUE);
-    printError(_("Cannot initialize worker thread pool!"));
+    printError(_("cannot initialize worker thread pool!"));
     return ERROR_INIT;
   }
 
@@ -4488,7 +4491,7 @@ int main(int argc, const char *argv[])
     error = Configuration_readAllServerKeys();
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot read server keys/certificates (error: %s)!"),
+      printError(_("cannot read server keys/certificates (error: %s)!"),
                  Error_getText(error)
                 );
     }
@@ -4502,7 +4505,7 @@ int main(int argc, const char *argv[])
       error = File_changeDirectoryCString(globalOptions.changeToDirectory);
       if (error != ERROR_NONE)
       {
-        printError(_("Cannot change to directory '%s' (error: %s)!"),
+        printError(_("cannot change to directory '%s' (error: %s)!"),
                    globalOptions.changeToDirectory,
                    Error_getText(error)
                   );

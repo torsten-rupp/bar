@@ -1040,7 +1040,11 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   uint64            t1;
   IndexId           uuidId,entityId,storageId;
 
-  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
+  error = Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   // open old index (Note: must be read/write to fix errors in database)
   error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);

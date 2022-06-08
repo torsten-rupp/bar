@@ -523,9 +523,11 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   Errors            error;
 
   // parse URI and fill int default values
-  if (!Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME))
+  error = Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  if (error != ERROR_NONE)
   {
-    printWarning("No valid database URI '%s'",databaseURI);
+    printError("no valid database URI '%s'",databaseURI);
+    return error;
   }
   switch (databaseSpecifier.type)
   {
@@ -1115,7 +1117,11 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   DatabaseHandle    oldDatabaseHandle;
 
   // parse URI and fill in default values
-  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  error = Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   switch (databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -1224,7 +1230,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   }
   if (error != ERROR_NONE)
   {
-    printError("Import database fail: %s!\n",Error_getText(error));
+    printError("import database fail: %s!\n",Error_getText(error));
   }
 
   // free resources
@@ -1665,7 +1671,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
   if (totalCount > 0LL)
   {
-    printWarning("Found %lu orphaned entries. Clean is recommented",totalCount);
+    printWarning("found %lu orphaned entries. Clean is recommented",totalCount);
   }
 
   // free resources
@@ -1744,7 +1750,7 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
 
   if (totalCount > 0LL)
   {
-    printWarning("Found %lu duplicate entries. Clean is recommented",totalCount);
+    printWarning("found %lu duplicate entries. Clean is recommented",totalCount);
   }
 
   // free resources
@@ -10063,7 +10069,7 @@ else if (stringEquals(argv[i],"--xxx"))
     error = File_changeDirectoryCString(changeToDirectory);
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot change to directory '%s' (error: %s)!"),
+      printError(_("cannot change to directory '%s' (error: %s)!"),
                  changeToDirectory,
                  Error_getText(error)
                 );
@@ -10086,7 +10092,7 @@ else if (stringEquals(argv[i],"--xxx"))
   error = Database_setEnabledForeignKeys(&databaseHandle,foreignKeysFlag);
   if (error != ERROR_NONE)
   {
-    printError("Cannot set foreign key support (error: %s)",Error_getText(error));
+    printError("cannot set foreign key support (error: %s)",Error_getText(error));
     closeDatabase(&databaseHandle);
     Array_done(&storageIds);
     Array_done(&entityIds);
@@ -10785,7 +10791,7 @@ if (xxxId != DATABASE_ID_NONE)
       error = Database_beginTransaction(&databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER);
       if (error != ERROR_NONE)
       {
-        printError("Init transaction fail: %s!",Error_getText(error));
+        printError("init transaction fail: %s!",Error_getText(error));
         Array_done(&storageIds);
         Array_done(&entityIds);
         Array_done(&uuIds);
@@ -10842,7 +10848,7 @@ if (xxxId != DATABASE_ID_NONE)
       error = Database_endTransaction(&databaseHandle);
       if (error != ERROR_NONE)
       {
-        printError("Done transaction fail: %s!",Error_getText(error));
+        printError("done transaction fail: %s!",Error_getText(error));
         Array_done(&storageIds);
         Array_done(&entityIds);
         Array_done(&uuIds);
