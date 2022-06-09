@@ -1457,7 +1457,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src.tar.gz $fileName
          result=1
        else
-         url="https://mirror.kumi.systems/mariadb/connector-c-$MARIADB_CLIENT_VERSION/$fileName"
+         url="https://archive.mariadb.org/connector-c-$MARIADB_CLIENT_VERSION/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
