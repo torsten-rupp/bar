@@ -667,9 +667,6 @@ HAVE_SUDO_COMMAND_LOSETUP
 HAVE_SUDO_COMMAND_MOUNT_UMOUNT
 HAVE_SUDO_COMMAND_CHATTR
 HAVE_SUDO_COMMANDS
-EPM_VERSION_4
-EPM_VERSION_3
-EPM
 ISCC
 WINE_C_DRIVE
 WINE
@@ -769,7 +766,6 @@ HAVE_LZMA
 HAVE_BZ2
 HAVE_Z
 HAVE_ICU
-ENABLE_EPM
 ENABLE_GUI_I18N
 ENABLE_GUI
 ENABLE_PCRE
@@ -878,7 +874,6 @@ enable_crashdump
 enable_bfd
 enable_gui
 enable_gui_i18n
-enable_epm
 enable_extern_compile
 enable_extern_check
 '
@@ -1542,7 +1537,6 @@ Optional Features:
   --disable-bfd           disable BFD support
   --disable-gui           disable GUI support (barcontrol)
   --disable-gui-i18n      disable GUI localization support (barcontrol)
-  --disable-epm           disable EPM support
   --disable-extern-compile
                           disable compilation of external software
   --enable-extern-check   enable check extern software
@@ -2696,7 +2690,6 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
-
 HAVE_SUDO_COMMANDS=1
                HAVE_SUDO_COMMAND_CHATTR=1
          HAVE_SUDO_COMMAND_MOUNT_UMOUNT=1
@@ -2753,7 +2746,6 @@ ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
-ENABLE_EPM="yes"
 ENABLE_EXTERN_COMPILE="yes"
 
 # temporary file
@@ -3012,12 +3004,6 @@ fi
 # Check whether --enable-gui-i18n was given.
 if test "${enable_gui_i18n+set}" = set; then :
   enableval=$enable_gui_i18n; ENABLE_GUI_I18N=$enableval
-
-fi
-
-# Check whether --enable-epm was given.
-if test "${enable_epm+set}" = set; then :
-  enableval=$enable_epm; ENABLE_EPM=$enableval
 
 fi
 
@@ -4500,149 +4486,6 @@ fi
   test -n "$GIT" && break
 done
 
-
-if test $ENABLE_EPM = "yes"; then
-  if test -d epm -o -d "`readlink epm`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
-      cwd=`pwd`
-
-
-  $as_echo_n "compile epm... " >&6
-
-      result=1
-      if test $result -eq 1; then
-        (cd epm; ./configure \
-          --host=$build \
-          --prefix=$cwd/extern \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-$as_echo "fail (configure)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-$as_echo "fail (make)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd epm; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-$as_echo "fail (make)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
-$as_echo "done" >&6; }
-      fi
-    fi
-
-    EPM=$cwd/extern/bin/epm
-
-  else
-    for ac_prog in epm
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_EPM+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $EPM in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_EPM="$EPM" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_EPM="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-EPM=$ac_cv_path_EPM
-if test -n "$EPM"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $EPM" >&5
-$as_echo "$EPM" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-  test -n "$EPM" && break
-done
-
-  fi
-fi
-if test -n "$EPM"; then
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking $EPM version" >&5
-$as_echo_n "checking $EPM version... " >&6; }
-  if ${ac_cv_prog_epm_version+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: 4.x" >&5
-$as_echo "4.x" >&6; }
-        ac_cv_prog_epm_version="4.x"
-        EPM_VERSION_4=1
-        EPM_VERSION_3=
-      elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: 3.x" >&5
-$as_echo "3.x" >&6; }
-        ac_cv_prog_epm_version="3.x"
-        EPM_VERSION_4=
-        EPM_VERSION_3=1
-      else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: unknown - assume version 4 or newer" >&5
-$as_echo "unknown - assume version 4 or newer" >&6; }
-        ac_cv_prog_epm_version="unknown"
-        EPM_VERSION_4=1
-        EPM_VERSION_3=
-      fi
-
-
-fi
-
-
-fi
 
 for ac_prog in md5sum
 do
@@ -14842,7 +14685,7 @@ $as_echo "done" >&6; }
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
-# TODO: temporary disabled brotli compression
+# TODO: temporary disabled brotli compression, psl
           (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
             --host=$host \
             --build=$build \
@@ -18390,36 +18233,6 @@ fi
       { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libbfd not compiled: binutils package missing" >&5
 $as_echo "$as_me: WARNING: libbfd not compiled: binutils package missing" >&2;}
     fi
-  fi
-fi
-
-
-# compile/use epm
-if test $ENABLE_EPM = "yes"; then
-  if test -d epm -o -d "`readlink epm`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
-      cwd=`pwd`
-
-
-  $as_echo_n "compile epm... " >&6
-
-      result=1
-      if test $result -eq 1; then
-       # patch to support creating RPM packages on different machines:
-       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
-       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
-      fi
-      if test $result -eq 1; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
-$as_echo "done" >&6; }
-      fi
-    else
-      result=1
-    fi
-#TODO
-#  else
-#    dnl search for installed epm
   fi
 fi
 
@@ -25339,6 +25152,320 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SHA256_Init" >&5
+$as_echo_n "checking for SHA256_Init... " >&6; }
+if ${ac_cv_func_SHA256_Init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_SHA256_Init="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void SHA256_Init();"; fi`
+                                         #ifdef SHA256_Init
+                                         #else
+                                           return (intptr_t)SHA256_Init;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_SHA256_Init=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_SHA256_Init" >&5
+$as_echo "$ac_cv_func_SHA256_Init" >&6; }
+  if test "$ac_cv_func_SHA256_Init" != no; then :
+
+$as_echo "#define HAVE_SHA256_INIT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SHA256_Final" >&5
+$as_echo_n "checking for SHA256_Final... " >&6; }
+if ${ac_cv_func_SHA256_Final+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_SHA256_Final="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void SHA256_Final();"; fi`
+                                         #ifdef SHA256_Final
+                                         #else
+                                           return (intptr_t)SHA256_Final;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_SHA256_Final=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_SHA256_Final" >&5
+$as_echo "$ac_cv_func_SHA256_Final" >&6; }
+  if test "$ac_cv_func_SHA256_Final" != no; then :
+
+$as_echo "#define HAVE_SHA256_FINAL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SHA256_Update" >&5
+$as_echo_n "checking for SHA256_Update... " >&6; }
+if ${ac_cv_func_SHA256_Update+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_SHA256_Update="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void SHA256_Update();"; fi`
+                                         #ifdef SHA256_Update
+                                         #else
+                                           return (intptr_t)SHA256_Update;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_SHA256_Update=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_SHA256_Update" >&5
+$as_echo "$ac_cv_func_SHA256_Update" >&6; }
+  if test "$ac_cv_func_SHA256_Update" != no; then :
+
+$as_echo "#define HAVE_SHA256_UPDATE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_md_open" >&5
+$as_echo_n "checking for gcry_md_open... " >&6; }
+if ${ac_cv_func_gcry_md_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gcry_md_open="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gcry_md_open();"; fi`
+                                         #ifdef gcry_md_open
+                                         #else
+                                           return (intptr_t)gcry_md_open;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gcry_md_open=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gcry_md_open" >&5
+$as_echo "$ac_cv_func_gcry_md_open" >&6; }
+  if test "$ac_cv_func_gcry_md_open" != no; then :
+
+$as_echo "#define HAVE_GCRY_MD_OPEN 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_md_close" >&5
+$as_echo_n "checking for gcry_md_close... " >&6; }
+if ${ac_cv_func_gcry_md_close+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gcry_md_close="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gcry_md_close();"; fi`
+                                         #ifdef gcry_md_close
+                                         #else
+                                           return (intptr_t)gcry_md_close;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gcry_md_close=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gcry_md_close" >&5
+$as_echo "$ac_cv_func_gcry_md_close" >&6; }
+  if test "$ac_cv_func_gcry_md_close" != no; then :
+
+$as_echo "#define HAVE_GCRY_MD_CLOSE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_md_write" >&5
+$as_echo_n "checking for gcry_md_write... " >&6; }
+if ${ac_cv_func_gcry_md_write+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gcry_md_write="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gcry_md_write();"; fi`
+                                         #ifdef gcry_md_write
+                                         #else
+                                           return (intptr_t)gcry_md_write;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gcry_md_write=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gcry_md_write" >&5
+$as_echo "$ac_cv_func_gcry_md_write" >&6; }
+  if test "$ac_cv_func_gcry_md_write" != no; then :
+
+$as_echo "#define HAVE_GCRY_MD_WRITE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iso9660_open" >&5
 $as_echo_n "checking for iso9660_open... " >&6; }
 if ${ac_cv_func_iso9660_open+:} false; then :
@@ -28430,9 +28557,6 @@ ac_config_files="$ac_config_files doc/Makefile"
 ac_config_files="$ac_config_files barcontrol/src/Config.java"
 
 
-ac_config_files="$ac_config_files epm.list"
-
-
 ac_config_commands="$ac_config_commands BUILD_NOTE"
 
 
@@ -29156,7 +29280,6 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 
-                   EPM="$EPM"
                    DOCKER="$DOCKER"
                    ISCC="$ISCC"
 
@@ -29209,7 +29332,6 @@ do
     "barcontrol/Makefile") CONFIG_FILES="$CONFIG_FILES barcontrol/Makefile" ;;
     "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "barcontrol/src/Config.java") CONFIG_FILES="$CONFIG_FILES barcontrol/src/Config.java" ;;
-    "epm.list") CONFIG_FILES="$CONFIG_FILES epm.list" ;;
     "BUILD_NOTE") CONFIG_COMMANDS="$CONFIG_COMMANDS BUILD_NOTE" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

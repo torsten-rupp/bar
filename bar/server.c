@@ -1507,7 +1507,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
         else
         {
           // short sleep
-          delayThread(5,NULL);
+          delayThread(30,NULL);
         }
         break;
       case SERVER_MODE_SLAVE:
@@ -1685,7 +1685,7 @@ LOCAL void schedulerThreadCode(void)
     Errors  error = Continuous_open(&continuousDatabaseHandle);
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialise continuous database (error: %s)!",
+      printError("cannot initialise continuous database (error: %s)!",
                  Error_getText(error)
                 );
       return;
@@ -10586,7 +10586,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       error = Job_write(jobNode);
       if (error != ERROR_NONE)
       {
-        printWarning("Cannot create job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+        printWarning("cannot create job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
       }
 
       // add new job to list
@@ -10721,7 +10721,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     error = Job_write(newJobNode);
     if (error != ERROR_NONE)
     {
-      printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+      printWarning("cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
     }
 
     // write initial schedule info
@@ -21127,7 +21127,7 @@ Errors Server_socket(void)
                                 );
       if (error != ERROR_NONE)
       {
-        printError("Cannot create directory '%s' (error: %s)",
+        printError("cannot create directory '%s' (error: %s)",
                    String_cString(globalOptions.jobsDirectory),
                    Error_getText(error)
                   );
@@ -21149,16 +21149,19 @@ Errors Server_socket(void)
     DatabaseSpecifier databaseSpecifier;
     String            printableDatabaseURI;
 
-    if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
+    error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    if (error != ERROR_NONE)
     {
-      printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
+      printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
     }
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
-      printError("Cannot init index database '%s' (error: %s)!",
+      printError("cannot init index database '%s' (error: %s)!",
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
@@ -21205,7 +21208,7 @@ Errors Server_socket(void)
     }
     else
     {
-      printError("Cannot initialize server at port %u (error: %s)!",
+      printError("cannot initialize server at port %u (error: %s)!",
                  globalOptions.serverPort,
                  Error_getText(error)
                 );
@@ -21237,7 +21240,7 @@ Errors Server_socket(void)
         }
         else
         {
-          printError("Cannot initialize TLS/SSL server at port %u (error: %s)!",
+          printError("cannot initialize TLS/SSL server at port %u (error: %s)!",
                      globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
@@ -21248,27 +21251,27 @@ Errors Server_socket(void)
     }
     else
     {
-      if (!Configuration_isCertificateAvailable(&globalOptions.serverCA)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started");
-      if (!Configuration_isCertificateAvailable(&globalOptions.serverCert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started");
-      if (!Configuration_isKeyAvailable(&globalOptions.serverKey)) printWarning("No key data (bar-server-key.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(&globalOptions.serverCA)) printWarning("no certificate authority data (bar-ca.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(&globalOptions.serverCert)) printWarning("no certificate data (bar-server-cert.pem file) - TLS server not started");
+      if (!Configuration_isKeyAvailable(&globalOptions.serverKey)) printWarning("no key data (bar-server-key.pem file) - TLS server not started");
     }
   }
   if (!serverFlag && !serverTLSFlag)
   {
     if ((globalOptions.serverPort == 0) && (globalOptions.serverTLSPort == 0))
     {
-      printError("Cannot start any server (error: no port numbers specified)!");
+      printError("cannot start any server (error: no port numbers specified)!");
     }
     else
     {
-      printError("Cannot start any server!");
+      printError("cannot start any server!");
     }
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
   if (Configuration_isHashAvailable(&globalOptions.serverPasswordHash))
   {
-    printWarning("No server password set!");
+    printWarning("no server password set!");
   }
 
   // initial update statics data
@@ -21364,7 +21367,7 @@ Errors Server_socket(void)
   #ifndef NDEBUG
     if (globalOptions.debug.serverLevel >= 1)
     {
-      printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
+      printWarning("server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
     }
   #endif
 
@@ -21518,14 +21521,14 @@ Errors Server_socket(void)
             }
             else
             {
-              printError("Cannot establish client connection (error: %s)!",
+              printError("cannot establish client connection (error: %s)!",
                          Error_getText(error)
                         );
             }
           }
           else
           {
-            printError("Establish client connection rejected (error: too many clients)!");
+            printError("establish client connection rejected (error: too many clients)!");
             rejectNetworkClient(&serverSocketHandle);
           }
         }
@@ -21558,7 +21561,7 @@ Errors Server_socket(void)
                                       );
               if (error != ERROR_NONE)
               {
-                printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
+                printError("cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
                            String_cString(clientNode->clientInfo.io.network.name),
                            clientNode->clientInfo.io.network.port,
                            Error_getText(error)
@@ -21611,14 +21614,14 @@ Errors Server_socket(void)
             }
             else
             {
-              printError("Cannot establish client TLS connection (error: %s)!",
+              printError("cannot establish client TLS connection (error: %s)!",
                          Error_getText(error)
                         );
             }
           }
           else
           {
-            printError("Establish client connection rejected (error: too many clients)!");
+            printError("establish client connection rejected (error: too many clients)!");
             rejectNetworkClient(&serverSocketHandle);
           }
         }
@@ -21997,16 +22000,19 @@ Errors Server_batch(int inputDescriptor,
     DatabaseSpecifier databaseSpecifier;
     String            printableDatabaseURI;
 
-    if (!Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME))
+    error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    if (error != ERROR_NONE)
     {
-      printWarning("No valid database URI '%s'",globalOptions.indexDatabaseURI);
+      printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
     }
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
-      printError("Cannot init index database '%s' (error: %s)!",
+      printError("cannot init index database '%s' (error: %s)!",
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
@@ -22062,7 +22068,7 @@ Errors Server_batch(int inputDescriptor,
   #ifndef NDEBUG
     if (globalOptions.debug.serverLevel >= 1)
     {
-      printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
+      printWarning("server is running in debug mode. No authorization is done and additional debug commands are enabled!");
     }
   #endif
 

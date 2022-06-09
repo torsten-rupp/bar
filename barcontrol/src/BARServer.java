@@ -2143,7 +2143,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       if (valueMap.getInt("minor") != PROTOCOL_VERSION_MINOR)
       {
-        BARControl.printWarning("Incompatible minor protocol version for "+name+":"+socket.getPort()+": expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
+        BARControl.printWarning("incompatible minor protocol version for "+name+":"+socket.getPort()+": expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
       }
       mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
 

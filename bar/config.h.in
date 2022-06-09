@@ -154,6 +154,15 @@
 /* gcrypt installed */
 #undef HAVE_GCRYPT
 
+/* libgcrypt has gcry_md_close() function */
+#undef HAVE_GCRY_MD_CLOSE
+
+/* libgcrypt has gcry_md_open() function */
+#undef HAVE_GCRY_MD_OPEN
+
+/* libgcrypt has gcry_md_write() function */
+#undef HAVE_GCRY_MD_WRITE
+
 /* getdate_r() available */
 #undef HAVE_GETDATE_R
 
@@ -435,6 +444,15 @@
 
 /* setlocale() available */
 #undef HAVE_SETLOCALE
+
+/* OpenSSL has SHA256_Final() function */
+#undef HAVE_SHA256_FINAL
+
+/* OpenSSL has SHA256_Init() function */
+#undef HAVE_SHA256_INIT
+
+/* OpenSSL has SHA256_Update() function */
+#undef HAVE_SHA256_UPDATE
 
 /* sigaction() available */
 #undef HAVE_SIGACTION

@@ -1,10 +1,10 @@
-2022-05-18 0.22
+2022-06-10 0.22
   * added option --save-configuration: format and
     save configuration file
   * added support for external index database engines
     MariaDB, PostgreSQL
   * added optional move-to in persistence
-  * use threads pools for client connections+worker
+  * use thread pools for client connections+worker
     threads
   * added option --test-created-archives
   * added option --sparse
@@ -16,8 +16,7 @@
   * fixed CD/DVD/BD blank command: use
     "dvd+rw-format -force" to create medium in
     restricted overwrite mode
-  * parallel restore
-  * use thread-pool
+  * implemented parallel restore
   * execute pre/post command for BAR in non-server mode,
     too
   * create log file in non-server mode if command line
@@ -48,6 +47,7 @@
   * fixed abort restore job if client connection is lost
   * renamed bar-sqlite3 to bar-index and support MariaDB
     and PostgreSQL
+  * added option --import to bar-index
   * fixed parsing permissions, fixed set permissions on
     restore
   * fixed band width calculation: use last specified
@@ -56,6 +56,7 @@
   * fixed pattern type for archive names
   * fixed purge entities
   * improved tests
+  * removed support for EPM (not needed anymore)
   * BARControl: added create directory/delete file in
     file requester
   * BARControl: fixed display of entry progress: count

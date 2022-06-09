@@ -76,7 +76,6 @@ DIFF                   = diff
 DOCKER                 = @DOCKER@
 ECHO                   = echo
 ECHO_NO_LF             = echo -n
-EPM                    = @EPM@
 GREP                   = grep
 INSTALL                = @INSTALL@
 LN                     = ln

@@ -3845,7 +3845,7 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %s)",
+    printError("cannot initialize storage '%s' (error: %s)",
                String_cString(storageName),
                Error_getText(error)
               );
@@ -3874,7 +3874,7 @@ CALLBACK_(NULL,NULL),//                       CALLBACK_(storageRequestVolumeFunc
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %s)",
+    printError("cannot initialize storage '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
               );
