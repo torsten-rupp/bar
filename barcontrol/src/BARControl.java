@@ -2212,9 +2212,9 @@ public class BARControl
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
     System.out.println("         --index-database-remove=<text>             - remove matching storage archives from index");
     System.out.println("         --index-database-refresh=<text>            - refresh matching storage archive in index");
-    System.out.println("         -n|--index-database-entities-list[=<text>] - list index entities");
-    System.out.println("         -a|--index-database-storages-list=<text>   - list index storage archives");
-    System.out.println("         -e|--index-database-entries-list=<text>    - list index entries");
+    System.out.println("         -n|--index-database-entities-list <text>   - list index entities");
+    System.out.println("         -a|--index-database-storages-list <text>   - list index storage archives");
+    System.out.println("         -e|--index-database-entries-list <text>    - list index entries");
     System.out.println("         --index-database-entries-newest            - list index newest entries only");
     System.out.println("         --index-database-history-list              - list index history");
     System.out.println("");
@@ -5373,8 +5373,8 @@ if (false) {
                                              "Name"
                                             )
                               );
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
 //TODO: add storage names
-
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=* name=%'S newestOnly=%y  selectedOnly=no fragmentsCount=no",
                                                          Settings.indexDatabaseEntriesListName,
                                                          Settings.indexDatabaseEntriesNewestOnly
@@ -5390,8 +5390,6 @@ if (false) {
                                      }
                                     );
 
-
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=* name=%'S newestOnly=%y limit=1024",
                                                          Settings.indexDatabaseEntriesListName,
                                                          Settings.indexDatabaseEntriesNewestOnly
