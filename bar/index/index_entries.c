@@ -1512,7 +1512,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
-DATABASE_FLAG_DEBUG|                                     DATABASE_FLAG_NONE,
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
