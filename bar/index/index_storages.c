@@ -915,7 +915,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_UINT    ("state"),
+                        DATABASE_COLUMN_ENUM    ("state"),
                         DATABASE_COLUMN_DATETIME("lastChecked"),
                         DATABASE_COLUMN_STRING  ("errorMessage")
                       ),
@@ -4531,7 +4531,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_UINT   ("state",        indexState),
+                                    DATABASE_VALUE_ENUM   ("state",        indexState),
                                     DATABASE_VALUE_CSTRING("errorMessage", "")
                                   ),
                                   "entityId=?",
@@ -4574,7 +4574,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_UINT   ("state",        indexState),
+                                    DATABASE_VALUE_ENUM   ("state",        indexState),
                                     DATABASE_VALUE_CSTRING("errorMessage", "")
                                   ),
                                   "id=?",
@@ -5309,8 +5309,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                 DATABASE_VALUE_STRING  ("name",        String_isEmpty(storageName) ? s : storageName),
                                 DATABASE_VALUE_DATETIME("created",     dateTime),
                                 DATABASE_VALUE_UINT64  ("size",        size),
-                                DATABASE_VALUE_UINT    ("state",       indexState),
-                                DATABASE_VALUE_UINT    ("mode",        indexMode),
+                                DATABASE_VALUE_ENUM    ("state",       indexState),
+                                DATABASE_VALUE_ENUM    ("mode",        indexMode),
                                 DATABASE_VALUE_DATETIME("lastChecked", "NOW()")
                               ),
                               DATABASE_COLUMNS_NONE,

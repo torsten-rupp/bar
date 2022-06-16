@@ -1075,7 +1075,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                             UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
-                                                            (void)Database_setTableColumnInt64(toColumnInfo,"state",INDEX_STATE_CREATE);
+                                                            (void)Database_setTableColumnEnum(toColumnInfo,"state",INDEX_STATE_CREATE);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -1096,7 +1096,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
                                                             DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
-                                                            (void)Database_setTableColumnInt64(toColumnInfo,"state",Database_getTableColumnInt64(fromColumnInfo,"state",INDEX_STATE_OK));
+                                                            (void)Database_setTableColumnEnum(toColumnInfo,"state",Database_getTableColumnEnum(fromColumnInfo,"state",INDEX_STATE_OK));
 
                                                             Dictionary_add(&storageIdDictionary,
                                                                            &fromStorageId,

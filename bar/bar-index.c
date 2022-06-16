@@ -7017,7 +7017,7 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
       case DATABASE_DATATYPE_UINT:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%u",values[i].u); break;
       case DATABASE_DATATYPE_UINT64:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
       case DATABASE_DATATYPE_DOUBLE:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%lf",values[i].d); break;
-//      case DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
+      case DATABASE_DATATYPE_ENUM:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%u",values[i].u); break;
       case DATABASE_DATATYPE_DATETIME:    n = stringFormatLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL)); break;
       case DATABASE_DATATYPE_STRING:      n = String_lengthCodepointsUTF8(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     n = stringLengthCodepointsUTF8(values[i].s); break;
@@ -7096,7 +7096,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
       case DATABASE_DATATYPE_UINT:        s = stringFormat(buffer,sizeof(buffer),"%u",values[i].u); break;
       case DATABASE_DATATYPE_UINT64:      s = stringFormat(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
       case DATABASE_DATATYPE_DOUBLE:      s = stringFormat(buffer,sizeof(buffer),"%lf",values[i].d); break;
-//      case DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
+      case DATABASE_DATATYPE_ENUM:        s = stringFormat(buffer,sizeof(buffer),"%u",values[i].u); break;
       case DATABASE_DATATYPE_DATETIME:    s = Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL); break;
       case DATABASE_DATATYPE_STRING:      s = String_cString(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     s = values[i].s; break;

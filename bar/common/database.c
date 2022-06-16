@@ -722,6 +722,8 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
              || (dataType1 == DATABASE_DATATYPE_DATETIME);
     case DATABASE_DATATYPE_DOUBLE:
       return (dataType1 == DATABASE_DATATYPE_DOUBLE);
+    case DATABASE_DATATYPE_ENUM:
+      return (dataType1 == DATABASE_DATATYPE_ENUM);
     case DATABASE_DATATYPE_DATETIME:
       return    (dataType1 == DATABASE_DATATYPE_INT)
              || (dataType1 == DATABASE_DATATYPE_INT64)
@@ -5613,6 +5615,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               break;
             case DATABASE_DATATYPE_DOUBLE:
               break;
+            case DATABASE_DATATYPE_ENUM:
+              break;
             case DATABASE_DATATYPE_DATETIME:
               break;
             case DATABASE_DATATYPE_STRING:
@@ -5701,6 +5705,13 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                 databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
                 databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
                 break;
+              case DATABASE_DATATYPE_ENUM:
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+                databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+                break;
               case DATABASE_DATATYPE_DATETIME:
                 databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
                 databaseStatementHandle->mariadb.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].dateTime;
@@ -5772,6 +5783,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_UINT64:
                 break;
               case DATABASE_DATATYPE_DOUBLE:
+                break;
+              case DATABASE_DATATYPE_ENUM:
                 break;
               case DATABASE_DATATYPE_DATETIME:
                 break;
@@ -5859,6 +5872,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
       case DATABASE_DATATYPE_UINT64:
         break;
       case DATABASE_DATATYPE_DOUBLE:
+        break;
+      case DATABASE_DATATYPE_ENUM:
         break;
       case DATABASE_DATATYPE_DATETIME:
         break;
@@ -6092,8 +6107,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_UINT:
                 databaseStatementHandle->results[i].u = (uint)sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,
-                                                                           i
-                                                                          );
+                                                                                 i
+                                                                                );
                 break;
               case DATABASE_DATATYPE_UINT64:
                 databaseStatementHandle->results[i].u64 = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
@@ -6104,6 +6119,11 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 databaseStatementHandle->results[i].d = sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,
                                                                               i
                                                                              );
+                break;
+              case DATABASE_DATATYPE_ENUM:
+                databaseStatementHandle->results[i].u = (uint)sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,
+                                                                                 i
+                                                                                );
                 break;
               case DATABASE_DATATYPE_DATETIME:
                 databaseStatementHandle->results[i].dateTime = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
@@ -6198,6 +6218,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                     break;
                   case DATABASE_DATATYPE_DOUBLE:
                     break;
+                  case DATABASE_DATATYPE_ENUM:
+                    break;
                   case DATABASE_DATATYPE_DATETIME:
                     // Note: always UNIX_TIMESTAMP
                     break;
@@ -6290,6 +6312,9 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                   break;
                 case DATABASE_DATATYPE_DOUBLE:
                   stringToDouble(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].d,&tail);
+                  break;
+                case DATABASE_DATATYPE_ENUM:
+                  stringToUInt(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].u,&tail);
                   break;
                 case DATABASE_DATATYPE_DATETIME:
                   stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].dateTime,NULL);
@@ -6623,6 +6648,19 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                     statement.parameterFormats[i] = 0;
                   #endif
                   break;
+                case DATABASE_DATATYPE_ENUM:
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u = htobe32(parameters[i].u);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%u",parameters[i].u);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
+                  break;
                 case DATABASE_DATATYPE_DATETIME:
                   #ifdef POSTGRESQL_BINARY_INTERFACE
                     statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
@@ -6842,6 +6880,13 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                                                   );
                 databaseStatementHandle->parameterIndex++;
                 break;
+              case DATABASE_DATATYPE_ENUM:
+                sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
+                                                1+databaseStatementHandle->parameterIndex,
+                                                (int)values[i].u
+                                               );
+                databaseStatementHandle->parameterIndex++;
+                break;
               case DATABASE_DATATYPE_DATETIME:
                 sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                   1+databaseStatementHandle->parameterIndex,
@@ -6972,6 +7017,14 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].d;
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->parameterIndex++;
+                break;
+              case DATABASE_DATATYPE_ENUM:
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&values[i].u;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 databaseStatementHandle->parameterIndex++;
                 break;
               case DATABASE_DATATYPE_DATETIME:
@@ -7156,6 +7209,20 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 #endif
                 databaseStatementHandle->parameterIndex++;
                 break;
+              case DATABASE_DATATYPE_ENUM:
+                #ifdef POSTGRESQL_BINARY_INTERFACE
+                  databaseStatementHandle->postgresql.bind[i].u = htobe32(values[i].u);
+                  databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = (const char*)&databaseStatementHandle->postgresql.bind[i].u;;
+                  databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].u);
+                  databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
+                #else
+                  stringFormat(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),"%u",values[i].u);
+                  databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
+                  databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
+                  databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
+                #endif
+                databaseStatementHandle->parameterIndex++;
+                break;
               case DATABASE_DATATYPE_DATETIME:
                 #ifdef POSTGRESQL_BINARY_INTERFACE
                   databaseStatementHandle->postgresql.bind[i].dateTime = htobe64(((int64)values[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
@@ -7333,6 +7400,12 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                                  filters[i].d
                                                 );
               break;
+            case DATABASE_DATATYPE_ENUM:
+              sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
+                                              1+databaseStatementHandle->parameterIndex,
+                                              (int)filters[i].u
+                                             );
+              break;
             case DATABASE_DATATYPE_DATETIME:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->parameterIndex,
@@ -7470,6 +7543,13 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].d;
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
                 databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                break;
+              case DATABASE_DATATYPE_ENUM:
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_LONG;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char *)&filters[i].u;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].length        = NULL;
+                databaseStatementHandle->mariadb.values.bind[databaseStatementHandle->parameterIndex].error         = NULL;
                 break;
               case DATABASE_DATATYPE_DATETIME:
 // TODO: function to convert unix timestamp to mysql internal format?
@@ -7639,6 +7719,19 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
                   stringFormat(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),"%lf",filters[i].d);
+                  databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
+                  databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
+                  databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
+                #endif
+                break;
+              case DATABASE_DATATYPE_ENUM:
+                #ifdef POSTGRESQL_BINARY_INTERFACE
+                  databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].u = htobe32(filters[i].u);
+                  databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = (const char*)&databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].u;
+                  databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].u);
+                  databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
+                #else
+                  stringFormat(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),"%u",filters[i].u);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -12749,6 +12842,27 @@ double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char 
   }
 }
 
+uint Database_getTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue)
+{
+  DatabaseValue *databaseValue;
+
+  assert(columnInfo != NULL);
+  assert(columnName != NULL);
+
+  databaseValue = findTableColumn(columnInfo,columnName);
+  if (databaseValue != NULL)
+  {
+    assert(   (databaseValue->type == DATABASE_DATATYPE_INT )
+           || (databaseValue->type == DATABASE_DATATYPE_UINT)
+          );
+    return databaseValue->u;
+  }
+  else
+  {
+    return defaultValue;
+  }
+}
+
 uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -12875,6 +12989,46 @@ bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *col
   }
 }
 
+bool Database_setTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int value)
+{
+  DatabaseValue *databaseValue;
+
+  assert(columnInfo != NULL);
+  assert(columnName != NULL);
+
+  databaseValue = findTableColumn(columnInfo,columnName);
+  if (databaseValue != NULL)
+  {
+    assert(databaseValue->type == DATABASE_DATATYPE_INT64);
+    databaseValue->i = value;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool Database_setTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint value)
+{
+  DatabaseValue *databaseValue;
+
+  assert(columnInfo != NULL);
+  assert(columnName != NULL);
+
+  databaseValue = findTableColumn(columnInfo,columnName);
+  if (databaseValue != NULL)
+  {
+    assert(databaseValue->type == DATABASE_DATATYPE_UINT);
+    databaseValue->u = value;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 value)
 {
   DatabaseValue *databaseValue;
@@ -12895,6 +13049,26 @@ bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *co
   }
 }
 
+bool Database_setTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value)
+{
+  DatabaseValue *databaseValue;
+
+  assert(columnInfo != NULL);
+  assert(columnName != NULL);
+
+  databaseValue = findTableColumn(columnInfo,columnName);
+  if (databaseValue != NULL)
+  {
+    assert(databaseValue->type == DATABASE_DATATYPE_UINT64);
+    databaseValue->u64 = value;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double value)
 {
   DatabaseValue *databaseValue;
@@ -12907,6 +13081,28 @@ bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *c
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DOUBLE);
     databaseValue->d = value;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool Database_setTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *columnName, uint value)
+{
+  DatabaseValue *databaseValue;
+
+  assert(columnInfo != NULL);
+  assert(columnName != NULL);
+
+  databaseValue = findTableColumn(columnInfo,columnName);
+  if (databaseValue != NULL)
+  {
+    assert(   (databaseValue->type == DATABASE_DATATYPE_INT )
+           || (databaseValue->type == DATABASE_DATATYPE_UINT)
+          );
+    databaseValue->u = value;
     return TRUE;
   }
   else
@@ -13044,6 +13240,9 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
       break;
     case DATABASE_DATATYPE_DOUBLE:
       columnTypeString = "REAL DEFAULT 0.0";
+      break;
+    case DATABASE_DATATYPE_ENUM:
+      columnTypeString = "INT DEFAULT 0";
       break;
     case DATABASE_DATATYPE_DATETIME:
       columnTypeString = "DATETIME DEFAULT 0";
@@ -13753,6 +13952,9 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
     case DATABASE_DATATYPE_DOUBLE:
       String_format(string,"%lf",databaseValue->d);
       break;
+    case DATABASE_DATATYPE_ENUM:
+      String_format(string,"%lld",databaseValue->i);
+      break;
     case DATABASE_DATATYPE_DATETIME:
       Misc_formatDateTime(string,databaseValue->dateTime,FALSE,NULL);
       break;
@@ -13805,6 +14007,9 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       break;
     case DATABASE_DATATYPE_DOUBLE:
       stringFormat(buffer,bufferSize,"%lf",databaseValue->d);
+      break;
+    case DATABASE_DATATYPE_ENUM:
+      stringFormat(buffer,bufferSize,"%u",databaseValue->i);
       break;
     case DATABASE_DATATYPE_DATETIME:
       Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,FALSE,NULL);
@@ -14081,6 +14286,13 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           if (value.d != NULL)
           {
             (*value.d) = (ulong)databaseStatementHandle->results[i].d;
+          }
+          break;
+        case DATABASE_DATATYPE_ENUM:
+          value.u = va_arg(arguments,uint*);
+          if (value.u != NULL)
+          {
+            (*value.u) = (int)databaseStatementHandle->results[i].u;
           }
           break;
         case DATABASE_DATATYPE_DATETIME:
