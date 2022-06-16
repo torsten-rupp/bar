@@ -1724,24 +1724,37 @@ Errors Continuous_init(const char *databaseURI)
 
   // get database specifier
   assert(continuousDatabaseSpecifier == NULL);
-  continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
+  continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,"continuous.db",NULL);
   if (continuousDatabaseSpecifier == NULL)
   {
     return ERROR_DATABASE;
   }
-  assert(continuousDatabaseSpecifier->type == DATABASE_TYPE_SQLITE3);
+  if (continuousDatabaseSpecifier->type != DATABASE_TYPE_SQLITE3)
+  {
+    Database_deleteSpecifier(continuousDatabaseSpecifier);
+    continuousDatabaseSpecifier = NULL;
+    return ERROR_DATABASE_NOT_SUPPORTED;
+  }
 
   createFlag = FALSE;
-  if (Database_exists(continuousDatabaseSpecifier,NULL))
+  if (databaseURI != NULL)
   {
-    // check if continuous database exists in expected version, create database
-    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
-    if (error == ERROR_NONE)
+    if (Database_exists(continuousDatabaseSpecifier,NULL))
     {
-      if (continuousVersion < CONTINUOUS_VERSION)
+      // check if continuous database exists in expected version, create database
+      error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
+      if (error == ERROR_NONE)
       {
-        // insufficient version -> create new
-        createFlag = TRUE;
+        if (continuousVersion < CONTINUOUS_VERSION)
+        {
+          // insufficient version -> create new
+          createFlag = TRUE;
+        }
+        else
+        {
+          // unknown version -> create new
+          createFlag = TRUE;
+        }
       }
       else
       {
@@ -1751,14 +1764,9 @@ Errors Continuous_init(const char *databaseURI)
     }
     else
     {
-      // unknown version -> create new
+      // does not exists -> create new
       createFlag = TRUE;
     }
-  }
-  else
-  {
-    // does not exists -> create new
-    createFlag = TRUE;
   }
   if (createFlag)
   {

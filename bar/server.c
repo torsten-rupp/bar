@@ -8704,15 +8704,15 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 *            jobUUID=<uuid>|""
 *            directory=<name>
 *          Result:
-*            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
-*            fileType=LINK destinationFileType=<type> name=<name> dateTime=<time stamp> noDump=yes|no
-*            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<name> specialType=DEVICE_CHARACTER dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<name> specialType=DEVICE_BLOCK dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<name> specialType=FIFO dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<name> specialType=SOCKET dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<name> specialType=OTHER dateTime=<time stamp> noDump=yes|no
+*            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=DIRECTORY name=<name> dateTime=<time stamp> hidden=yes|no noBackup=yes|no noDump=yes|no
+*            fileType=LINK destinationFileType=<type> name=<name> dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=DEVICE_CHARACTER dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=DEVICE_BLOCK dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=FIFO dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=SOCKET dateTime=<time stamp> hidden=yes|no noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=OTHER dateTime=<time stamp> hidden=yes|no noDump=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -8724,8 +8724,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   DirectoryListHandle directoryListHandle;
   String              name;
   FileInfo            fileInfo;
-  bool                noBackupExists;
-  FileTypes           destinationFileType;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8816,40 +8814,41 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             {
               case FILE_TYPE_FILE:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_TYPE_DIRECTORY:
-                // check if .nobackup exists
-                noBackupExists = hasNoBackup(name);
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
+                                    "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" hidden=%y noBackup=%y noDump=%y",
                                     name,
                                     fileInfo.timeModified,
-                                    noBackupExists,
+                                    File_isHidden(name),
+                                    hasNoBackup(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_TYPE_LINK:
-                destinationFileType = File_getRealType(name);
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" noDump=%y",
-                                    File_fileTypeToString(destinationFileType,NULL),
+                                    "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" hidden=%y noDump=%y",
+                                    File_fileTypeToString(File_getRealType(name),NULL),
                                     name,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
                 break;
               case FILE_TYPE_HARDLINK:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" hidden=%y noDump=%y",
                                     name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
+                                    File_isHidden(name),
                                     File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
@@ -8858,42 +8857,47 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 {
                   case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                        "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
+                                        "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" hidden=%y noDump=%y",
                                         name,
                                         fileInfo.timeModified,
+                                        File_isHidden(name),
                                         File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                        "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
+                                        "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" hidden=%y noDump=%y",
                                         name,
                                         fileInfo.size,
                                         fileInfo.timeModified,
+                                        File_isHidden(name),
                                         File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   case FILE_SPECIAL_TYPE_FIFO:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                        "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
+                                        "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" hidden=%y noDump=%y",
                                         name,
                                         fileInfo.timeModified,
+                                        File_isHidden(name),
                                         File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   case FILE_SPECIAL_TYPE_SOCKET:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                        "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
+                                        "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" hidden=%y noDump=%y",
                                         name,
                                         fileInfo.timeModified,
+                                        File_isHidden(name),
                                         File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   default:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                        "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
+                                        "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" hidden=%y noDump=%y",
                                         name,
                                         fileInfo.timeModified,
+                                        File_isHidden(name),
                                         File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
@@ -9346,26 +9350,20 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       else if (String_equalsCString(attribute,"NODUMP"))
       {
         error = File_getAttributes(&fileAttributes,name);
-        if (error != ERROR_NONE)
+        if (error == ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attributes fail for '%S'",name);
-          Job_listUnlock();
-          String_delete(attribute);
-          String_delete(name);
-          return;
-        }
-
-        if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-        {
-          fileAttributes &= ~FILE_ATTRIBUTE_NO_DUMP;
-          error = File_setAttributes(fileAttributes,name);
-          if (error != ERROR_NONE)
+          if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
           {
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S'",name);
-            Job_listUnlock();
-            String_delete(attribute);
-            String_delete(name);
-            return;
+            fileAttributes &= ~FILE_ATTRIBUTE_NO_DUMP;
+            error = File_setAttributes(fileAttributes,name);
+            if (error != ERROR_NONE)
+            {
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"xxx1set attribute no-dump fail for '%S'",name);
+              Job_listUnlock();
+              String_delete(attribute);
+              String_delete(name);
+              return;
+            }
           }
         }
 
@@ -10948,6 +10946,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *          Result:
 *            state=<state>
 *            errorCode=<n>
+*            errorNumber=<n>
 *            errorData=<text>
 *            doneCount=<n>
 *            doneSize=<n [bytes]>
@@ -11006,9 +11005,10 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%s errorCode=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%s errorCode=%u errorNumber=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                         Error_getCode(jobNode->runningInfo.error),
+                        Error_getErrno(jobNode->runningInfo.error),
                         Error_getData(jobNode->runningInfo.error),
                         jobNode->statusInfo.done.count,
                         jobNode->statusInfo.done.size,

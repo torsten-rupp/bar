@@ -58,6 +58,22 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              ProgressInfo *progressInfo
                             );
 
+/***********************************************************************\
+* Name   : IndexEntry_pruneAll
+* Purpose: purge all entries (mark as "deleted") without fragments
+* Input  : indexHandle - index handle
+*          doneFlag       - done flag variable (can be NULL)
+*          deletedCounter - deleted entries count variable (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
+                           bool        *doneFlag,
+                           ulong       *deletedCounter
+                          );
+
 #ifdef __cplusplus
   }
 #endif

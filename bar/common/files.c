@@ -292,18 +292,15 @@ LOCAL Errors __getLastError(const char *__fileName__,
   {
     case ENOSPC:
       {
-        String s;
+        String deviceName;
 
-        s = String_new();
-
-        File_getDeviceNameCString(s,fileName);
+        deviceName = File_getDeviceNameCString(String_new(),fileName);
         #ifdef NDEBUG
-          error = Errorx_(ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(s));
+          error = Errorx_(ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(deviceName));
         #else /* not NDEBUG */
-          error = Errorx_(__fileName__,__lineNb__,ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(s));
+          error = Errorx_(__fileName__,__lineNb__,ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(deviceName));
         #endif /* NDEBUG */
-
-        String_delete(s);
+        String_delete(deviceName);
       }
       break;
     default:
@@ -1022,19 +1019,19 @@ String File_getDirectoryName(String pathName, ConstString fileName)
 
 String File_getDirectoryNameCString(String pathName, const char *fileName)
 {
-  const char *lastPathSeparator;
+  long i;
 
   assert(pathName != NULL);
 
   if (fileName != NULL)
   {
     // find last path separator
-    lastPathSeparator = strrchr(fileName,FILE_PATH_SEPARATOR_CHAR);
+    i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
 
     // get path
-    if (lastPathSeparator != NULL)
+    if (i >= 0L)
     {
-      String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
+      String_setBuffer(pathName,fileName,i);
     }
     else
     {
@@ -1058,19 +1055,19 @@ String File_getBaseName(String baseName, ConstString fileName)
 
 String File_getBaseNameCString(String baseName, const char *fileName)
 {
-  const char *lastPathSeparator;
+  long i;
 
   assert(baseName != NULL);
 
   if (fileName != NULL)
   {
     // find last path separator
-    lastPathSeparator = strrchr(fileName,FILE_PATH_SEPARATOR_CHAR);
+    i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
 
     // get path
-    if (lastPathSeparator != NULL)
+    if (i >= 0L)
     {
-      String_setCString(baseName,lastPathSeparator+1);
+      String_setCString(baseName,fileName+i+1);
     }
     else
     {
@@ -1180,6 +1177,11 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
           }
         }
         fclose(handle);
+
+        if (stringStartsWith(fileName,"/"))
+        {
+          String_setCString(deviceName,"/");
+        }
       }
     #elif defined(PLATFORM_WINDOWS)
       n = stringLength(fileName);
@@ -3890,11 +3892,19 @@ bool File_isHidden(ConstString fileName)
 
 bool File_isHiddenCString(const char *fileName)
 {
+  long       i;
+  const char *s;
+
   assert(fileName != NULL);
 
-  return    !stringEquals(fileName,".")
-         && !stringEquals(fileName,"..")
-         && stringStartsWith(fileName,".");
+  i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
+  s = (i >= 0L)
+        ? &fileName[i+1]
+        : fileName;
+
+  return    !stringEquals(s,".")
+         && !stringEquals(s,"..")
+         && stringStartsWith(s,".");
 }
 
 bool File_isNetworkFileSystemCString(const char *fileName)

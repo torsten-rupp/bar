@@ -142,7 +142,7 @@ typedef enum
   DATABASE_DATATYPE_UINT,
   DATABASE_DATATYPE_UINT64,
   DATABASE_DATATYPE_DOUBLE,
-//  DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
+  DATABASE_DATATYPE_ENUM,
   DATABASE_DATATYPE_DATETIME,
   DATABASE_DATATYPE_STRING,
   DATABASE_DATATYPE_CSTRING,
@@ -150,7 +150,7 @@ typedef enum
 
   DATABASE_DATATYPE_ARRAY,
 
-  DATABASE_DATATYPE_UNKNOWN
+  DATABASE_DATATYPE_UNKNOWN,
 } DatabaseDataTypes;
 
 #define DATABASE_FLAG_NONE         0
@@ -839,10 +839,10 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   { name, \
     _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
     ( \
-      __VA_ARGS__, DATABASE_DATATYPE_UINT \
+      __VA_ARGS__, DATABASE_DATATYPE_ENUM \
     ) \
     ( \
-      0, DATABASE_DATATYPE_UINT \
+      0, DATABASE_DATATYPE_ENUM \
     ) \
   }
 #define DATABASE_COLUMN_DATETIME(name,...) \
@@ -971,7 +971,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
       data, DATABASE_DATATYPE_UINT, { (intptr_t)(__VA_ARGS__) } \
     ) \
     ( \
-      NULL, DATABASE_DATATYPE_UINT, { (intptr_t)(data) } \
+      0, DATABASE_DATATYPE_UINT, { (intptr_t)(data) } \
     ) \
   }
 #define DATABASE_VALUE_DATETIME(name,data,...) \
@@ -1164,6 +1164,7 @@ void Database_doneAll(void);
 *                                    for sqlite3 "in memory",
 *                                  - mariadb:<server>:<user>:<passwored>[:<database>]
 *                                  - postgresql:<server>:<user>:<passwored>[:<database>]
+*                                if NULL use sqlite3 in memory
 *          defaultDatabaseName - default database name
 * Output : databaseSpecifier - database specifier
 * Return : ERROR_NONE or error code
@@ -1949,6 +1950,7 @@ uint Database_getTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *col
 int64 Database_getTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 defaultValue);
 uint64 Database_getTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue);
 double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double defaultValue);
+uint Database_getTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue);
 uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue);
 String Database_getTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, String value, const char *defaultValue);
 const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *defaultValue);
@@ -1967,8 +1969,12 @@ void Database_getTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *col
 
 bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId value);
 bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *columnName, bool value);
+bool Database_setTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int value);
+bool Database_setTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint value);
 bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 value);
+bool Database_setTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value);
 bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double value);
+bool Database_setTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *columnName, uint value);
 bool Database_setTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value);
 bool Database_setTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, ConstString value);
 bool Database_setTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *value);

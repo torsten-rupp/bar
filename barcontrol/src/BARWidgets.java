@@ -1596,7 +1596,7 @@ public class BARWidgets
     PRIVATE_KEY,
   };
 
-  /** FTP super widget
+  /** File super widget
    */
   static class File extends Composite
   {
@@ -1819,7 +1819,7 @@ public class BARWidgets
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             archiveFileMode = Widgets.newOptionMenu(subSubComposite);
-            archiveFileMode.setToolTipText(BARControl.tr("If set to ''rename'' then the archive is renamed if it already exists.\nIf set to ''append'' then data is appended to the existing archive files.\nIf set to ''overwrite'' then existing archive files are overwritten."));
+            archiveFileMode.setToolTipText(BARControl.tr("If set to ''rename'' then the archive is renamed if it already exists.\nIf set to ''append'' then data is appended to the existing archive files.\nIf set to ''overwrite'' then existing archive files are overwritten.\nOtherwise stop with an error."));
             Widgets.setComboItems(archiveFileMode,new Object[]{BARControl.tr("stop if exists"  ),"stop",
                                                                BARControl.tr("rename if exists"),"rename",
                                                                BARControl.tr("append"          ),"append",

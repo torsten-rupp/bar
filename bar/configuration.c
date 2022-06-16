@@ -7765,7 +7765,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT("worker thread nice level [0..19]"),
+  CONFIG_VALUE_COMMENT("worker threads nice level [0..19]"),
   CONFIG_VALUE_INTEGER           ("nice-level",                       &globalOptions.niceLevel,-1,                                   0,19,NULL,"<level>"),
   CONFIG_VALUE_COMMENT("max. number of worker threads"),
   CONFIG_VALUE_INTEGER           ("max-threads",                      &globalOptions.maxThreads,-1,                                  0,65535,NULL,"<n>"),

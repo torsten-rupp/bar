@@ -915,7 +915,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_UINT    ("state"),
+                        DATABASE_COLUMN_ENUM    ("state"),
                         DATABASE_COLUMN_DATETIME("lastChecked"),
                         DATABASE_COLUMN_STRING  ("errorMessage")
                       ),
@@ -4531,7 +4531,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_UINT   ("state",        indexState),
+                                    DATABASE_VALUE_ENUM   ("state",        indexState),
                                     DATABASE_VALUE_CSTRING("errorMessage", "")
                                   ),
                                   "entityId=?",
@@ -4574,7 +4574,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_UINT   ("state",        indexState),
+                                    DATABASE_VALUE_ENUM   ("state",        indexState),
                                     DATABASE_VALUE_CSTRING("errorMessage", "")
                                   ),
                                   "id=?",
@@ -5309,8 +5309,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                 DATABASE_VALUE_STRING  ("name",        String_isEmpty(storageName) ? s : storageName),
                                 DATABASE_VALUE_DATETIME("created",     dateTime),
                                 DATABASE_VALUE_UINT64  ("size",        size),
-                                DATABASE_VALUE_UINT    ("state",       indexState),
-                                DATABASE_VALUE_UINT    ("mode",        indexMode),
+                                DATABASE_VALUE_ENUM    ("state",       indexState),
+                                DATABASE_VALUE_ENUM    ("mode",        indexMode),
                                 DATABASE_VALUE_DATETIME("lastChecked", "NOW()")
                               ),
                               DATABASE_COLUMNS_NONE,
@@ -5806,38 +5806,27 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
       DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         // set deleted flag in entries
-// TODO:
-#if 1
         error = Database_get(&indexHandle->databaseHandle,
                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                              {
                                DatabaseId entryId;
+                               uint64     entrySize;
+                               uint64     fragmentSizeSum;
                                Errors     error;
 
                                assert(values != NULL);
-                               assert(valueCount == 1);
+                               assert(valueCount == 3);
 
                                UNUSED_VARIABLE(userData);
                                UNUSED_VARIABLE(valueCount);
 
-                               entryId = values[0].id;
+                               entryId         = values[0].id;
                                assert(entryId != DATABASE_ID_NONE);
+                               entrySize       = values[1].u64;
+                               fragmentSizeSum = values[2].u64;
 
-                               // check if entry fragment from other storage exists
-                               if (!Database_existsValue(&indexHandle->databaseHandle,
-                                                         "entryFragments",
-                                                         DATABASE_FLAG_NONE,
-                                                         "id",
-                                                         "    entryId=? \
-                                                          AND storageId!=? \
-                                                         ",
-                                                         DATABASE_FILTERS
-                                                         (
-                                                           DATABASE_FILTER_KEY (entryId),
-                                                           DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
-                                                         )
-                                                        )
-                                  )
+                               // check if entry is completely covery by fragments
+                               if (entrySize == fragmentSizeSum)
                                {
                                  error = Database_update(&indexHandle->databaseHandle,
                                                          NULL,  // changedRowCount
@@ -5871,14 +5860,16 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              DATABASE_FLAG_NONE,
                              DATABASE_COLUMNS
                              (
-                               DATABASE_COLUMN_KEY   ("entries.id")
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_UINT64("entries.size"),
+                               DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
                              ),
                              "entryFragments.storageId=?",
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-                             NULL,  // groupBy
+                             "entries.id",
                              NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
@@ -6077,101 +6068,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;
         }
-#else
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId entryId;
-                               Errors     error;
-
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               entryId = values[0].id;
-                               assert(entryId != DATABASE_ID_NONE);
-
-                               // check if entry fragment from other storage exists
-                               if (!Database_existsValue(&indexHandle->databaseHandle,
-                                                         "entryFragments",
-                                                         DATABASE_FLAG_NONE,
-                                                         "id",
-                                                         "    entryId=? \
-                                                          AND storageId!=? \
-                                                         ",
-                                                         DATABASE_FILTERS
-                                                         (
-                                                           DATABASE_FILTER_KEY (entryId),
-                                                           DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
-                                                         )
-                                                        )
-                                  )
-                               {
-                                 error = Database_update(&indexHandle->databaseHandle,
-                                                         NULL,  // changedRowCount
-                                                         "entries",
-                                                         DATABASE_FLAG_NONE,
-                                                         DATABASE_VALUES
-                                                         (
-                                                           DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
-                                                         ),
-                                                         "id=?",
-                                                         DATABASE_FILTERS
-                                                         (
-                                                           DATABASE_FILTER_KEY   (entryId)
-                                                         )
-                                                        );
-                               }
-                               else
-                               {
-                                 error = ERROR_NONE;
-                               }
-
-                               return error;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "entryFragments \
-                                 LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                                 LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                               ",
-                               "directoryEntries \
-                                 LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                               ",
-                               "linkEntries \
-                                 LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                               ",
-                               "specialEntries \
-                                 LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY   ("entries.id")
-                             ),
-                             "storages.id=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
-                             ),
-                             NULL,  // groupBy
-                             NULL,  // orderBy
-                             0LL,
-                             DATABASE_UNLIMITED
-                            );
-        if (error != ERROR_NONE)
-        {
-          DATABASE_TRANSACTION_ABORT(databaseHandle);
-          return error;
-        }
-#endif
 
         // set deleted flag in storages
         error = Database_update(&indexHandle->databaseHandle,

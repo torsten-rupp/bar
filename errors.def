@@ -926,6 +926,8 @@ ERROR DATABASE_INVALID
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_NOT_SUPPORTED           TR("database type not supported")
+
 ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_NOT_FOUND               TR("database not found")
 ERROR DATABASE_CONNECTION_LOST         TR("database connection lost")

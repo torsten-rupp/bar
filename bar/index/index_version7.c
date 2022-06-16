@@ -91,7 +91,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
 
                            size = values[0].u64;
 
-                           DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                           DIMPORT("import file entry %ld -> %ld: %"PRIi64" bytes",fromEntryId,toEntryId,size);
                            error = Database_insert(newDatabaseHandle,
                                                    NULL,  // insertRowId
                                                    "fileEntries",
@@ -431,7 +431,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
 
                            size = values[0].u64;
 
-                           DIMPORT("import hardlink entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                           DIMPORT("import hardlink entry %ld -> %ld: %"PRIi64" bytes",fromEntryId,toEntryId,size);
                            error = Database_insert(newDatabaseHandle,
                                                    NULL,  // insertRowId
                                                    "hardlinkEntries",
@@ -601,7 +601,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                                   );
       break;
     case INDEX_TYPE_DIRECTORY:
-      DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
+      DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
       error = Database_copyTable(oldDatabaseHandle,
                                  newDatabaseHandle,
                                  "directoryEntries",
@@ -661,7 +661,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                 );
       break;
     case INDEX_TYPE_LINK:
-      DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
+      DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
       error = Database_copyTable(oldDatabaseHandle,
                                  newDatabaseHandle,
                                  "linkEntries",
@@ -728,7 +728,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                                      );
       break;
     case INDEX_TYPE_SPECIAL:
-      DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
+      DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
       error = Database_copyTable(oldDatabaseHandle,
                                  newDatabaseHandle,
                                  "specialEntries",
@@ -1075,6 +1075,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                             UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnEnum(toColumnInfo,"state",INDEX_STATE_CREATE);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -1095,6 +1096,8 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
                                                             DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
+                                                            (void)Database_setTableColumnEnum(toColumnInfo,"state",Database_getTableColumnEnum(fromColumnInfo,"state",INDEX_STATE_OK));
+
                                                             Dictionary_add(&storageIdDictionary,
                                                                            &fromStorageId,
                                                                            sizeof(DatabaseId),

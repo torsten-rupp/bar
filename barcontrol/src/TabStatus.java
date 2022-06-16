@@ -2562,7 +2562,7 @@ public class TabStatus
       {
         final ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
-                                 3,  // debugLevel
+1,//                                 3,  // debugLevel
                                  valueMap
                                 );
 
@@ -2570,9 +2570,10 @@ public class TabStatus
         {
           public void run()
           {
-            JobData.States state     = valueMap.getEnum  ("state",JobData.States.class);
-            int            errorCode = valueMap.getInt   ("errorCode");
-            String         errorData = valueMap.getString("errorData");
+            JobData.States state       = valueMap.getEnum  ("state",JobData.States.class);
+            int            errorCode   = valueMap.getInt   ("errorCode");
+            int            errorNumber = valueMap.getInt   ("errorNumber");
+            String         errorData   = valueMap.getString("errorData");
 
             doneCount.set            (valueMap.getLong   ("doneCount"            ));
             doneSize.set             (valueMap.getLong   ("doneSize"             ));
@@ -2643,7 +2644,7 @@ public class TabStatus
               case DONE:
               case ERROR:
               case ABORTED:
-                message.set(BARException.getText(errorCode,0,errorData));
+                message.set(BARException.getText(errorCode,errorNumber,errorData));
                 break;
             }
           }
@@ -3124,7 +3125,6 @@ public class TabStatus
 
     try
     {
-Dprintf.dprintf("jobData.uuid=%s",jobData.uuid);
       final ValueMap valueMap = new ValueMap();
       BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",jobData.uuid),
                                0,  // debugLevel
@@ -3146,8 +3146,6 @@ Dprintf.dprintf("jobData.uuid=%s",jobData.uuid);
       long totalStorageSize            = valueMap.getLong("totalStorageSize");
       long totalEntryCount             = valueMap.getLong("totalEntryCount");
       long totalEntrySize              = valueMap.getLong("totalEntrySize");
-Dprintf.dprintf("executionCountFull=%d",executionCountFull);
-Dprintf.dprintf("averageDurationFull=%d",averageDurationFull);
 
       widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);

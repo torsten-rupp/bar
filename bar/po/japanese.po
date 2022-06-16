@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-06-07 08:54+0200\n"
+"POT-Creation-Date: 2022-06-10 07:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -873,95 +873,99 @@ msgstr ""
 msgid "database"
 msgstr ""
 
-#: errors.def:922
-msgid "database already exists"
-msgstr ""
-
-#: errors.def:923
-msgid "database not found"
-msgstr ""
-
-#: errors.def:924
-msgid "database connection lost"
+#: errors.def:925
+msgid "invalid database URI"
 msgstr ""
 
 #: errors.def:929
+msgid "database already exists"
+msgstr ""
+
+#: errors.def:930
+msgid "database not found"
+msgstr ""
+
+#: errors.def:931
+msgid "database connection lost"
+msgstr ""
+
+#: errors.def:936
 msgid "insufficient database version"
 msgstr ""
 
-#: errors.def:933
+#: errors.def:940
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:937
+#: errors.def:944
 msgid "missing table"
 msgstr ""
 
-#: errors.def:944
+#: errors.def:951
 msgid "missing column"
 msgstr ""
 
-#: errors.def:951
+#: errors.def:958
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:958
+#: errors.def:965
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:965
+#: errors.def:972
 msgid "database bind fail"
 msgstr ""
 
-#: errors.def:972
+#: errors.def:979
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:976
+#: errors.def:983
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:977
+#: errors.def:984
 msgid "index not found"
 msgstr ""
 
-#: errors.def:978
+#: errors.def:985
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:982
+#: errors.def:989
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:989
+#: errors.def:996
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:993
+#: errors.def:1000
 msgid "database busy"
 msgstr ""
 
-#: errors.def:994
+#: errors.def:1001
 msgid "database operation interupted"
 msgstr ""
 
-#: errors.def:995
+#: errors.def:1002
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:998
+#: errors.def:1005
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:999
+#: errors.def:1006
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1000
+#: errors.def:1007
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1001
+#: errors.def:1008
 msgid "instance is not a slave"
 msgstr ""
 

@@ -2420,19 +2420,19 @@ LOCAL bool readFromJob(ConstString fileName)
         ConfigValue_parse(&JOB_CONFIG_VALUES[i],
                           NULL, // sectionName,
                           String_cString(value),
-                          LAMBDA(void,(const char *errorMessage, void *userData),
+                          CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
                             printError("%s in %S, line %ld",errorMessage,fileName,lineNb);
                             failFlag = TRUE;
-                          }),NULL,
-                          LAMBDA(void,(const char *warningMessage, void *userData),
+                          },NULL),
+                          CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
                             printWarning("%s in %S, line %ld",warningMessage,fileName,lineNb);
-                          }),NULL,
+                          },NULL),
                           NULL  // variable
                          );
       }
@@ -4320,7 +4320,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   // check parameters
   if (!Configuration_validate())
   {
-    printError(_("validate configuration fail (error: %s)"),Error_getText(error));
     return ERROR_INVALID_ARGUMENT;
   }
 
