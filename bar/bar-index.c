@@ -1327,7 +1327,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1348,7 +1348,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1395,7 +1395,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1419,7 +1419,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1443,7 +1443,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1467,7 +1467,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1491,7 +1491,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1515,7 +1515,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1538,7 +1538,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -1564,7 +1564,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
       if (error == ERROR_NONE)
       {
-        printInfo("%"PRIi64"\n",n);
+        printInfo("%u\n",n);
       }
       else
       {
@@ -1587,7 +1587,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
       if (error == ERROR_NONE)
       {
-        printInfo("%"PRIi64"\n",n);
+        printInfo("%u\n",n);
       }
       else
       {
@@ -1610,7 +1610,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
       if (error == ERROR_NONE)
       {
-        printInfo("%"PRIi64"\n",n);
+        printInfo("%u\n",n);
       }
       else
       {
@@ -1634,7 +1634,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
       if (error == ERROR_NONE)
       {
-        printInfo("%"PRIi64"\n",n);
+        printInfo("%u\n",n);
       }
       else
       {
@@ -1658,7 +1658,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
       if (error == ERROR_NONE)
       {
-        printInfo("%"PRIi64"\n",n);
+        printInfo("%u\n",n);
       }
       else
       {
@@ -1668,6 +1668,32 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
       totalCount += (ulong)n;
       break;
   }
+
+  // check entities without storages
+  printInfo("  entities without storages...");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "    id!=? \
+                            AND NOT EXISTS(SELECT id FROM storages WHERE storages.entityId=entities.id LIMIT 1) \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                           ),
+                           NULL//"entities.id"
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
 
   if (totalCount > 0LL)
   {
@@ -1739,7 +1765,7 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
                       );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -5671,11 +5697,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
+    printPercentage(0,Array_length(&ids));
     n = 0L;
-    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    for (i = 0; i < Array_length(&ids); i += 1000)
     {
-      printPercentage(0,Array_length(&ids));
-      for (i = 0; i < Array_length(&ids); i += 1000)
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         (void)Database_deleteArray(databaseHandle,
                                    &n,
@@ -5687,11 +5713,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    MIN(Array_length(&ids)-i,1000),
                                    DATABASE_UNLIMITED
                                   );
-        printPercentage(n,Array_length(&ids));
       }
-      clearPercentage();
+      printPercentage(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
+    clearPercentage();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -5712,11 +5738,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
+    printPercentage(0,Array_length(&ids));
     n = 0L;
-    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    for (i = 0; i < Array_length(&ids); i += 1000)
     {
-      printPercentage(0,Array_length(&ids));
-      for (i = 0; i < Array_length(&ids); i += 1000)
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         (void)Database_deleteArray(databaseHandle,
                                    &n,
@@ -5728,13 +5754,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    MIN(Array_length(&ids)-i,1000),
                                    DATABASE_UNLIMITED
                                   );
-        printPercentage(n,Array_length(&ids));
       }
-      clearPercentage();
+      printPercentage(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
+    clearPercentage();
   }
-  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
@@ -5754,11 +5779,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
+    printPercentage(0,Array_length(&ids));
     n = 0L;
-    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    for (i = 0; i < Array_length(&ids); i += 1000)
     {
-      printPercentage(0,Array_length(&ids));
-      for (i = 0; i < Array_length(&ids); i += 1000)
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         (void)Database_deleteArray(databaseHandle,
                                    &n,
@@ -5770,11 +5795,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    MIN(Array_length(&ids)-i,1000),
                                    DATABASE_UNLIMITED
                                   );
-        printPercentage(n,Array_length(&ids));
       }
-      clearPercentage();
+      printPercentage(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
+    clearPercentage();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -5795,11 +5820,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
+    printPercentage(0,Array_length(&ids));
     n = 0L;
-    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    for (i = 0; i < Array_length(&ids); i += 1000)
     {
-      printPercentage(0,Array_length(&ids));
-      for (i = 0; i < Array_length(&ids); i += 1000)
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         (void)Database_deleteArray(databaseHandle,
                                    &n,
@@ -5811,11 +5836,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    MIN(Array_length(&ids)-i,1000),
                                    DATABASE_UNLIMITED
                                   );
-        printPercentage(n,Array_length(&ids));
       }
-      clearPercentage();
+      printPercentage(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
+    clearPercentage();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -5836,11 +5861,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
+    printPercentage(0,Array_length(&ids));
     n = 0L;
-    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    for (i = 0; i < Array_length(&ids); i += 1000)
     {
-      printPercentage(0,Array_length(&ids));
-      for (i = 0; i < Array_length(&ids); i += 1000)
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         (void)Database_deleteArray(databaseHandle,
                                    &n,
@@ -5852,11 +5877,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    MIN(Array_length(&ids)-i,1000),
                                    DATABASE_UNLIMITED
                                   );
-        printPercentage(n,Array_length(&ids));
       }
-      clearPercentage();
+      printPercentage(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
+    clearPercentage();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -5877,11 +5902,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
+    printPercentage(0,Array_length(&ids));
     n = 0L;
-    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    for (i = 0; i < Array_length(&ids); i += 1000)
     {
-      printPercentage(0,Array_length(&ids));
-      for (i = 0; i < Array_length(&ids); i += 1000)
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         (void)Database_deleteArray(databaseHandle,
                                    &n,
@@ -5893,11 +5918,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    MIN(Array_length(&ids)-i,1000),
                                    DATABASE_UNLIMITED
                                   );
-        printPercentage(n,Array_length(&ids));
       }
-      clearPercentage();
+      printPercentage(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
+    clearPercentage();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -5936,6 +5961,29 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR)
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+  }
+  (void)Database_flush(databaseHandle);
+  printInfo("%lu\n",n);
+  total += n;
+
+  // clean entities without storages
+  printInfo("  entities without storages...");
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    (void)Database_delete(databaseHandle,
+                          &n,
+                          "entities",
+                          DATABASE_FLAG_NONE,
+                          "    id!=? \
+                           AND NOT EXISTS(SELECT id FROM storages WHERE storages.entityId=entities.id LIMIT 1) \
+                          ",
+                          DATABASE_FILTERS
+                          (
+                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
                           ),
                           DATABASE_UNLIMITED
                          );
