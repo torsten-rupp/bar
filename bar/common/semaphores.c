@@ -2518,7 +2518,7 @@ void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle)
         fprintf(handle,", not locked\n");
         break;
       case SEMAPHORE_LOCK_TYPE_READ:
-        fprintf(handle,", locked %s %d\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ],semaphore->readLockCount);
+        fprintf(handle,", LOCKED %s %d\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ],semaphore->readLockCount);
         for (i = 0; i < semaphore->debug.lockedByCount; i++)
         {
           fprintf(handle,
@@ -2542,7 +2542,7 @@ void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle)
         }
         break;
       case SEMAPHORE_LOCK_TYPE_READ_WRITE:
-        fprintf(handle,", locked %s %d\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ_WRITE],semaphore->readWriteLockCount);
+        fprintf(handle,", LOCKED %s %d\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ_WRITE],semaphore->readWriteLockCount);
         for (i = 0; i < semaphore->debug.lockedByCount; i++)
         {
           fprintf(handle,

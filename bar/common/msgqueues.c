@@ -169,39 +169,44 @@ LOCAL void unlock(MsgQueue *msgQueue)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initTimespec(struct timespec *timespec, long timeout)
+LOCAL void initTimespec(struct timespec *timespec, ulong timeout)
 {
-  struct timeval timeval;
-  long           s,ns;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    __int64 windowsTime;
+  #endif /* PLATFORM_... */
 
   assert(timespec != NULL);
 
-  gettimeofday(&timeval,NULL);
-  s  = timeval.tv_sec       +timeout/1000L;
-  ns = timeval.tv_usec*1000L+(timeout%1000L)*1000000L;
-  if (ns > 1000000000L)
-  {
-    s  += ns/1000000000L;
-    ns = ns%1000000000L;
-  }
-  timespec->tv_sec  = s;
-  timespec->tv_nsec = ns;
+  #if   defined(PLATFORM_LINUX)
+    clock_gettime(CLOCK_REALTIME,timespec);
+  #elif defined(PLATFORM_WINDOWS)
+    GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
+    windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
+    timespec->tv_sec  = (windowsTime/10000000LL);
+    timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
+  #endif /* PLATFORM_... */
+  timespec->tv_nsec = timespec->tv_nsec+((timeout)%1000L)*1000000L; \
+  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000000L)+(timeout))/1000L; \
+  timespec->tv_nsec %= 1000000000L; \
 }
 
 /***********************************************************************\
 * Name   : waitModified
 * Purpose: wait until message is modified
 * Input  : msgQueue - message queue
+*          timeout  - timeout [ms]
 * Output : -
 * Return : TRUE iff modified, timeout otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
+LOCAL bool waitModified(MsgQueue *msgQueue, ulong timeout)
 {
-  uint lockCount;
-  uint i;
-  int  result;
+  uint            lockCount;
+  uint            i;
+  struct timespec timespec;
+  int             result;
 
   assert(msgQueue != NULL);
   assert(msgQueue->lockCount > 0);
@@ -213,16 +218,10 @@ LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
     pthread_mutex_unlock(&msgQueue->lock);
   }
 
-  // wait modified
+  // wait modified or timeout
   msgQueue->lockCount  = 0;
-  if (timeout != NULL)
-  {
-    result = pthread_cond_timedwait(&msgQueue->modified,&msgQueue->lock,timeout);
-  }
-  else
-  {
-    result = pthread_cond_wait(&msgQueue->modified,&msgQueue->lock);
-  }
+  initTimespec(&timespec,timeout);
+  result = pthread_cond_timedwait(&msgQueue->modified,&msgQueue->lock,&timespec);
 
   // restore lock count > 1
   msgQueue->lockCount  = lockCount;
@@ -381,9 +380,8 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
 
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
 {
-  struct timespec timespec;
-  MsgNode         *msgNode;
-  ulong           n;
+  MsgNode *msgNode;
+  ulong   n;
 
   assert(msgQueue != NULL);
 
@@ -392,13 +390,11 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
     // wait for message
     if (timeout != WAIT_FOREVER)
     {
-      initTimespec(&timespec,timeout);
-
       while (   !msgQueue->endOfMsgFlag
              && (List_count(&msgQueue->list) <= 0)
             )
       {
-        if (!waitModified(msgQueue,&timespec))
+        if (!waitModified(msgQueue,(ulong)timeout))
         {
           unlock(msgQueue);
           return FALSE;
@@ -411,7 +407,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
              && (List_count(&msgQueue->list) <= 0)
             )
       {
-        (void)waitModified(msgQueue,NULL);
+        (void)waitModified(msgQueue,500);
       }
     }
 
