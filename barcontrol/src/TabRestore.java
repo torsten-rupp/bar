@@ -2233,9 +2233,6 @@ Dprintf.dprintf("");
                                 );
         if (isRequestUpdate()) return;
 
-        // get comperator
-        final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
-
         // insert/update tree items
         display.syncExec(new Runnable()
         {
@@ -2243,6 +2240,8 @@ Dprintf.dprintf("");
           {
             if (!widgetStorageTree.isDisposed())
             {
+              final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+
               for (UUIDIndexData uuidIndexData : uuidIndexDataList)
               {
                 TreeItem uuidTreeItem = Widgets.updateInsertTreeItem(widgetStorageTree,
@@ -2393,35 +2392,37 @@ Dprintf.dprintf("");
                                 );
         if (isRequestUpdate()) return;
 
-        // get comperator
-        final IndexDataComparator<EntityIndexData> indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.CREATED_DATETIME);
-
         // insert/update tree items
         display.syncExec(new Runnable()
         {
           public void run()
           {
-            for (final EntityIndexData entityIndexData : entityIndexDataList)
+            if (!widgetStorageTree.isDisposed())
             {
-              assert entityIndexData != null;
+              final IndexDataComparator<EntityIndexData> indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.CREATED_DATETIME);
 
-              TreeItem entityTreeItem = Widgets.updateInsertTreeItem(uuidTreeItem,
-                                                                     indexDataComparator,
-                                                                     Widgets.TREE_ITEM_FLAG_FOLDER,
-                                                                     entityIndexData,
-                                                                     entityIndexData.archiveType.toString(),
-                                                                     "",  // hostName
-                                                                     "",  // date/time drawn in tree item renderer
-                                                                     Units.formatByteSize(entityIndexData.totalSize),
-                                                                     ""
-                                                                    );
-              Widgets.setTreeItemChecked(entityTreeItem,checkedIndexIdSet.contains(entityIndexData.id));
-
-              if ((expandedEntityTreeItems != null) && entityTreeItem.getExpanded())
+              for (final EntityIndexData entityIndexData : entityIndexDataList)
               {
-                expandedEntityTreeItems.add(entityTreeItem);
+                assert entityIndexData != null;
+
+                TreeItem entityTreeItem = Widgets.updateInsertTreeItem(uuidTreeItem,
+                                                                       indexDataComparator,
+                                                                       Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                                       entityIndexData,
+                                                                       entityIndexData.archiveType.toString(),
+                                                                       "",  // hostName
+                                                                       "",  // date/time drawn in tree item renderer
+                                                                       Units.formatByteSize(entityIndexData.totalSize),
+                                                                       ""
+                                                                      );
+                Widgets.setTreeItemChecked(entityTreeItem,checkedIndexIdSet.contains(entityIndexData.id));
+
+                if ((expandedEntityTreeItems != null) && entityTreeItem.getExpanded())
+                {
+                  expandedEntityTreeItems.add(entityTreeItem);
+                }
+                removeTreeItemSet.remove(entityTreeItem);
               }
-              removeTreeItemSet.remove(entityTreeItem);
             }
           }
         });
@@ -2638,30 +2639,32 @@ Dprintf.dprintf("");
                                 );
         if (isRequestUpdate()) return;
 
-        // get comperator
-        final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
-
         // insert/update tree items
         display.syncExec(new Runnable()
         {
           public void run()
           {
-            for (StorageIndexData storageIndexData : storageIndexDataList)
+            if (!widgetStorageTree.isDisposed())
             {
-              if (!entityTreeItem.isDisposed())
-              {
-                TreeItem storageTreeItem = Widgets.updateInsertTreeItem(entityTreeItem,
-                                                                        indexDataComparator,
-                                                                        Widgets.TREE_ITEM_FLAG_NONE,
-                                                                        storageIndexData,
-                                                                        storageIndexData.name,
-                                                                        storageIndexData.hostName,
-                                                                        "",  // date/time drawn in tree item renderer
-                                                                        Units.formatByteSize(storageIndexData.size),
-                                                                        storageIndexData.indexState.toString()
-                                                                       );
+              final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
 
-                removeTreeItemSet.remove(storageTreeItem);
+              for (StorageIndexData storageIndexData : storageIndexDataList)
+              {
+                if (!entityTreeItem.isDisposed())
+                {
+                  TreeItem storageTreeItem = Widgets.updateInsertTreeItem(entityTreeItem,
+                                                                          indexDataComparator,
+                                                                          Widgets.TREE_ITEM_FLAG_NONE,
+                                                                          storageIndexData,
+                                                                          storageIndexData.name,
+                                                                          storageIndexData.hostName,
+                                                                          "",  // date/time drawn in tree item renderer
+                                                                          Units.formatByteSize(storageIndexData.size),
+                                                                          storageIndexData.indexState.toString()
+                                                                         );
+
+                  removeTreeItemSet.remove(storageTreeItem);
+                }
               }
             }
           }

@@ -2532,22 +2532,24 @@ if (false) {
                 && (System.currentTimeMillis() > (lastRemindedTimestamp+REMINDER_TIME))
                )
             {
-//Dprintf.dprintf("file=%s %d -> %d",file,file.lastModified(),classModifiedMap.get(file));
               display.syncExec(new Runnable()
               {
                 public void run()
                 {
-                  switch (Dialogs.select(shell,"Warning","Class/JAR file '"+file.getName()+"' changed. Is is recommended to restart BARControl now.",new String[]{"Restart","Remind me again in 5min","Ignore"},0))
+                  if (!shell.isDisposed())
                   {
-                    case 0:
-                      // send close event with restart
-                      Widgets.notify(shell,SWT.Close,ExitCodes.RESTART);
-                      break;
-                    case 1:
-                      break;
-                    case 2:
-                      reminderFlag[0] = false;
-                      break;
+                    switch (Dialogs.select(shell,"Warning","Class/JAR file '"+file.getName()+"' changed. Is is recommended to restart BARControl now.",new String[]{"Restart","Remind me again in 5min","Ignore"},0))
+                    {
+                      case 0:
+                        // send close event with restart
+                        Widgets.notify(shell,SWT.Close,ExitCodes.RESTART);
+                        break;
+                      case 1:
+                        break;
+                      case 2:
+                        reminderFlag[0] = false;
+                        break;
+                    }
                   }
                 }
               });

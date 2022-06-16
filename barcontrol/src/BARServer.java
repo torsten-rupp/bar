@@ -1364,7 +1364,7 @@ public class BARServer
   public final static String            DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String            DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
-  public static String                  pathSeparator;
+  public static String                  pathSeparator = "/";
 
   private final static int              SOCKET_READ_TIMEOUT    =  60*1000;                      // timeout reading socket [ms]
   private final static int              TIMEOUT                = 120*1000;                      // global timeout [ms]
@@ -3050,6 +3050,32 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   // ----------------------------------------------------------------------
 
+  private static int setLockCounter = 0;
+
+  /** lock set values
+  */
+  public static synchronized void lockSet()
+  {
+    setLockCounter++;
+  }
+
+  /** unlock set values
+  */
+  public static synchronized void unlockSet()
+  {
+    assert(setLockCounter > 0);
+
+    setLockCounter--;
+  }
+
+  /** check if set values locked
+   * @return true iff locked
+  */
+  public static synchronized boolean isLockedSet()
+  {
+    return setLockCounter != 0;
+  }
+
   /** set boolean value on BAR server
    * @param name name of value
    * @param value value
@@ -3057,7 +3083,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void set(String name, boolean value)
     throws BARException, IOException
   {
-    executeCommand(StringParser.format("SET name=%s value=%s",name,value ? "yes" : "no"),0);
+    if (!isLockedSet())
+    {
+      executeCommand(StringParser.format("SET name=%s value=%s",name,value ? "yes" : "no"),0);
+    }
   }
 
   /** set long value on BAR server
@@ -3067,7 +3096,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void set(String name, long value)
     throws BARException, IOException
   {
-    executeCommand(StringParser.format("SET name=%s value=%d",name,value),0);
+    if (!isLockedSet())
+    {
+      executeCommand(StringParser.format("SET name=%s value=%d",name,value),0);
+    }
   }
 
   /** set string value on BAR server
@@ -3077,7 +3109,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void set(String name, String value)
     throws BARException, IOException
   {
-    executeCommand(StringParser.format("SET name=% value=%S",name,value),0);
+    if (!isLockedSet())
+    {
+      executeCommand(StringParser.format("SET name=% value=%S",name,value),0);
+    }
   }
 
   /** get job option value from BAR server
@@ -3180,13 +3215,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void setJobOption(String jobUUID, String name, boolean value)
     throws BARException, IOException
   {
-    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
-                                       jobUUID,
-                                       name,
-                                       value ? "yes" : "no"
-                                      ),
-                   0  // debugLevel
-                  );
+    if (!isLockedSet())
+    {
+      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                         jobUUID,
+                                         name,
+                                         value ? "yes" : "no"
+                                        ),
+                     0  // debugLevel
+                    );
+    }
   }
 
   /** set long job option value on BAR server
@@ -3197,13 +3235,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void setJobOption(String jobUUID, String name, long value)
     throws BARException, IOException
   {
-    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
-                                       jobUUID,
-                                       name,
-                                       value
-                                      ),
-                   0  // debugLevel
-                  );
+    if (!isLockedSet())
+    {
+      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                         jobUUID,
+                                         name,
+                                         value
+                                        ),
+                     0  // debugLevel
+                    );
+    }
   }
 
   /** set string job option value on BAR server
@@ -3214,13 +3255,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void setJobOption(String jobUUID, String name, String value)
     throws BARException, IOException
   {
-    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",
-                                       jobUUID,
-                                       name,
-                                       value
-                                      ),
-                   0  // debugLevel
-                  );
+    if (!isLockedSet())
+    {
+      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",
+                                         jobUUID,
+                                         name,
+                                         value
+                                        ),
+                     0  // debugLevel
+                    );
+    }
   }
 
   /** get string value from BAR server
@@ -3275,72 +3319,75 @@ throw new Error("NYI");
   public static void setJobOption(String jobUUID, WidgetVariable widgetVariable)
     throws BARException, IOException
   {
-    if      (widgetVariable.getType() == Boolean.class)
+    if (!isLockedSet())
     {
-      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
-                                         jobUUID,
-                                         widgetVariable.getName(),
-                                         widgetVariable.getBoolean() ? "yes" : "no"
-                                        ),
-                     0  // debugLevel
-                    );
-    }
-    else if (widgetVariable.getType() == Integer.class)
-    {
-      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
-                                         jobUUID,
-                                         widgetVariable.getName(),
-                                         widgetVariable.getInteger()
-                                        ),
-                     0  // debugLevel
-                    );
-    }
-    else if (widgetVariable.getType() == Long.class)
-    {
-      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%ld",
-                                         jobUUID,
-                                         widgetVariable.getName(),
-                                         widgetVariable.getLong()
-                                        ),
-                     0  // debugLevel
-                    );
-    }
-    else if (widgetVariable.getType() == Double.class)
-    {
-      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%f",
-                                         jobUUID,
-                                         widgetVariable.getName(),
-                                         widgetVariable.getDouble()
-                                        ),
-                     0  // debugLevel
-                    );
-    }
-    else if (widgetVariable.getType() == String.class)
-    {
-      executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%'S",
-                                         jobUUID,
-                                         widgetVariable.getName(),
-                                         widgetVariable.getString()
-                                        ),
-                     0  // debugLevel
-                    );
-    }
-    else if (widgetVariable.getType() == Enum.class)
-    {
-/*
+      if      (widgetVariable.getType() == Boolean.class)
+      {
         executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getBoolean() ? "yes" : "no"
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Integer.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getInteger()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Long.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%ld",
                                            jobUUID,
                                            widgetVariable.getName(),
                                            widgetVariable.getLong()
                                           ),
-                     0  // debugLevel
+                       0  // debugLevel
                       );
+      }
+      else if (widgetVariable.getType() == Double.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%f",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getDouble()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == String.class)
+      {
+        executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%'S",
+                                           jobUUID,
+                                           widgetVariable.getName(),
+                                           widgetVariable.getString()
+                                          ),
+                       0  // debugLevel
+                      );
+      }
+      else if (widgetVariable.getType() == Enum.class)
+      {
+/*
+          executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                             jobUUID,
+                                             widgetVariable.getName(),
+                                             widgetVariable.getLong()
+                                            ),
+                       0  // debugLevel
+                        );
 */
-        throw new Error("NYI");
-    }
-    else
-    {
-      throw new Error("Type not supported");
+          throw new Error("NYI");
+      }
+      else
+      {
+        throw new Error("Type not supported");
+      }
     }
   }
 
@@ -3823,10 +3870,11 @@ throw new Error("NYI");
      * @param fileType file type
      * @param dateTime last modified date/time
      */
-    public RemoteFile(String absolutePath, FileTypes fileType, long dateTime)
+/*    public RemoteFile(String absolutePath, FileTypes fileType, long dateTime)
     {
       this(absolutePath,fileType,dateTime,false);
     }
+*/
 
     /** create remote file
      * @param absolutePath absolute path
@@ -3842,10 +3890,10 @@ throw new Error("NYI");
      * @param absolutePath absolute path
      * @param fileType file type
      */
-    public RemoteFile(String absolutePath, FileTypes fileType)
+/*    public RemoteFile(String absolutePath, FileTypes fileType)
     {
       this(absolutePath,fileType,false);
-    }
+    }*/
 
     /** create remote file
      * @param absolutePath absolute path
@@ -3861,10 +3909,10 @@ throw new Error("NYI");
      * @param absolutePath absolute path
      * @param dateTime last modified date/time
      */
-    public RemoteFile(String absolutePath, long dateTime)
+/*    public RemoteFile(String absolutePath, long dateTime)
     {
       this(absolutePath,FileTypes.DIRECTORY,dateTime,false);
-    }
+    }*/
 
     /** create remote file
      * @param absolutePath absolute path
@@ -3878,10 +3926,10 @@ throw new Error("NYI");
     /** create remote file
      * @param absolutePath absolute path
      */
-    public RemoteFile(String absolutePath)
+/*    public RemoteFile(String absolutePath)
     {
       this(absolutePath,false);
-    }
+    }*/
 
     /** get absolute file
      * @return absolute file
@@ -3889,7 +3937,7 @@ throw new Error("NYI");
     @Override
     public RemoteFile getAbsoluteFile()
     {
-      return new RemoteFile(absoluteFile.getPath());
+      return new RemoteFile(absoluteFile.getPath(),hiddenFlag);
     }
 
     /** get absolute path
@@ -3901,8 +3949,8 @@ throw new Error("NYI");
       return absoluteFile.getPath();
     }
 
-    /** get absolute file
-     * @return absolute file
+    /** get parent file
+     * @return parent file
      */
 
     @Override
@@ -3913,11 +3961,11 @@ throw new Error("NYI");
       int i = path.lastIndexOf(BARServer.pathSeparator);
       if      (i >= 1)
       {
-        return new RemoteFile(path.substring(0,i));
+        return new RemoteFile(path.substring(0,i),false);
       }
       else if (i == 0)
       {
-        return new RemoteFile(BARServer.pathSeparator);
+        return new RemoteFile(BARServer.pathSeparator,false);
       }
       else
       {
@@ -3984,8 +4032,6 @@ throw new Error("NYI");
    */
   static class RemoteListDirectory extends ListDirectory<RemoteFile>
   {
-    private String jobUUID;
-
     RemoteListDirectory(String jobUUID)
     {
       this.jobUUID = jobUUID;
@@ -4028,6 +4074,7 @@ throw new Error("NYI");
                                 );
 
         fileType = valueMap.getEnum  ("fileType",FileTypes.class);
+        name     = valueMap.getString("name");
         switch (fileType)
         {
           case FILE:
@@ -4052,6 +4099,9 @@ throw new Error("NYI");
       {
         // ignored
       }
+
+      // force an absolute path
+      if (!name.startsWith(BARServer.pathSeparator)) name = BARServer.pathSeparator+name;
 
       return new RemoteFile(name,fileType,size,dateTime,hiddenFlag);
     }
@@ -4087,7 +4137,7 @@ throw new Error("NYI");
       // add manual shortcuts
       for (String name : Settings.shortcuts)
       {
-        shortcutMap.put(name,new RemoteFile(name,FileTypes.DIRECTORY));
+        shortcutMap.put(name,new RemoteFile(name,FileTypes.DIRECTORY,false));
       }
 
       // add root shortcuts
@@ -4104,7 +4154,7 @@ throw new Error("NYI");
                                    {
                                      String name = valueMap.getString("name");
 
-                                     shortcutMap.put(name,new RemoteFile(name));
+                                     shortcutMap.put(name,new RemoteFile(name,false));
                                    }
                                  }
                                 );
@@ -4355,6 +4405,7 @@ throw new Error("NYI");
       }
     }
 
+    private String                jobUUID;
     private ArrayList<RemoteFile> fileList = new ArrayList<RemoteFile>();
     private Iterator<RemoteFile>  iterator;
   };

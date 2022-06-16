@@ -175,23 +175,7 @@ public class ServerSettings
     {
       assert (month == ANY) || ((month >= 1) && (month <= 12)) : month;
 
-      switch (month)
-      {
-        case ANY: return "*";
-        case 1:   return "Jan";
-        case 2:   return "Feb";
-        case 3:   return "Mar";
-        case 4:   return "Apr";
-        case 5:   return "May";
-        case 6:   return "Jun";
-        case 7:   return "Jul";
-        case 8:   return "Aug";
-        case 9:   return "Sep";
-        case 10:  return "Oct";
-        case 11:  return "Nov";
-        case 12:  return "Dec";
-        default:  return "*";
-      }
+      return (day != ANY) ? String.format("%02d",month) : "*";
     }
 
     /** get day value
@@ -331,32 +315,9 @@ public class ServerSettings
      */
     private void setDate(String year, String month, String day)
     {
-      this.year = !year.equals("*") ? Integer.parseInt(year) : ANY;
-      if      (month.equals("*")) this.month = ANY;
-      else if (month.toLowerCase().equals("jan")) this.month =  1;
-      else if (month.toLowerCase().equals("feb")) this.month =  2;
-      else if (month.toLowerCase().equals("mar")) this.month =  3;
-      else if (month.toLowerCase().equals("apr")) this.month =  4;
-      else if (month.toLowerCase().equals("may")) this.month =  5;
-      else if (month.toLowerCase().equals("jun")) this.month =  6;
-      else if (month.toLowerCase().equals("jul")) this.month =  7;
-      else if (month.toLowerCase().equals("aug")) this.month =  8;
-      else if (month.toLowerCase().equals("sep")) this.month =  9;
-      else if (month.toLowerCase().equals("oct")) this.month = 10;
-      else if (month.toLowerCase().equals("nov")) this.month = 11;
-      else if (month.toLowerCase().equals("dec")) this.month = 12;
-      else
-      {
-        try
-        {
-          this.month = Integer.parseInt(month);
-        }
-        catch (NumberFormatException exception)
-        {
-          this.month = ANY;
-        }
-      }
-      this.day = !day.equals("*") ? Integer.parseInt(day) : ANY;
+      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
+      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
     }
 
     /** set date
@@ -1468,16 +1429,16 @@ public class ServerSettings
       {
         widgetMaintenanceTable = Widgets.newTable(subComposite);
         Widgets.layout(widgetMaintenanceTable,0,0,TableLayoutData.WE,0,0,0,0,200,200);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Date"),     SWT.LEFT,120,false);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Date"),     SWT.LEFT,100,true);
         tableColumn.setToolTipText(BARControl.tr("Click to sort by date."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Week days"),SWT.LEFT,250,false);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Week days"),SWT.LEFT,180,true);
         tableColumn.setToolTipText(BARControl.tr("Click to sort by week days."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,1,BARControl.tr("Begin"),    SWT.LEFT,120,true );
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,1,BARControl.tr("Begin"),    SWT.LEFT,80,true );
         tableColumn.setToolTipText(BARControl.tr("Click to sort by begin time."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,2,BARControl.tr("End"),      SWT.LEFT,120,true );
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,2,BARControl.tr("End"),      SWT.LEFT,80,true );
         tableColumn.setToolTipText(BARControl.tr("Click to sort by end time."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
         maintenanceDataComparator = new MaintenanceDataComparator(widgetMaintenanceTable);
@@ -3298,7 +3259,7 @@ public class ServerSettings
                                        BARControl.tr("Save settings"),
                                        300,
                                        SWT.DEFAULT,
-                                       BusyDialog.AUTO_ANIMATE
+                                       BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE
                                       );
 
         Dialogs.close(dialog,true);
@@ -3314,324 +3275,336 @@ public class ServerSettings
     {
       int i = 0;
 
-      busyDialog[0].setMaximum(87);
-
-      BARServer.getServerOption(tmpDirectory               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(maxTmpSize                 ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(niceLevel                  ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(maxThreads                 ); busyDialog[0].updateProgressBar(i); i++;
-//      BARServer.getServerOption(maxBandWidth               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(compressMinSize            ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(continuousMaxSize          ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(indexDatabase              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(indexDatabaseUpdate        ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(indexDatabaseAutoUpdate    ); busyDialog[0].updateProgressBar(i); i++;
-//      BARServer.getServerOption(indexDatabaseMaxBandWidth  ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(indexDatabaseKeepTime      ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(cdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdUnloadCommand            ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdLoadCommand              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdVolumeSize               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdImagePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdImagePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdImageCommandCommand      ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdECCPreCommand            ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdECCPostCommand           ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdECCCommand               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdBlankCommand             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdWritePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdWritePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdWriteCommand             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(cdWriteImageCommand        ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(dvdDevice                  ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdRequestVolumeCommand    ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdUnloadCommand           ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdLoadCommand             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdVolumeSize              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdImagePreCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdImagePostCommand        ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdImageCommandCommand     ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdECCPreCommand           ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdECCPostCommand          ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdECCCommand              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdBlankCommand            ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdWritePreCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdWritePostCommand        ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdWriteCommand            ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(dvdWriteImageCommand       ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(bdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdUnloadCommand            ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdLoadCommand              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdVolumeSize               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdImagePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdImagePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdImageCommandCommand      ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdECCPreCommand            ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdECCPostCommand           ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdECCCommand               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdBlankCommand             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdWritePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdWritePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdWriteCommand             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(bdWriteImageCommand        ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(deviceName                 ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceRequestVolumeCommand ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceUnloadCommand        ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceLoadCommand          ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceVolumeSize           ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceImagePreCommand      ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceImagePostCommand     ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceImageCommandCommand  ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceECCPreCommand        ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceECCPostCommand       ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceECCCommand           ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceBlankCommand         ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceWritePreCommand      ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceWritePostCommand     ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(deviceWriteCommand         ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(serverPort                 ); busyDialog[0].updateProgressBar(i); i++;
-//      BARServer.getServerOption(serverTLSPort              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(serverCAFile               ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(serverCertFile             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(serverKeyFile              ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(serverPassword             ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(serverJobsDirectory        ); busyDialog[0].updateProgressBar(i); i++;
-
-      BARServer.getServerOption(verbose                    ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(log                        ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(logFile                    ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(logFormat                  ); busyDialog[0].updateProgressBar(i); i++;
-      BARServer.getServerOption(logPostCommand             ); busyDialog[0].updateProgressBar(i); i++;
-
-      Widgets.removeAllTableItems(widgetMaintenanceTable);
+      busyDialog[0].setMaximum(86);
+      {
+        BARServer.lockSet();
+      }
       try
       {
-        BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST"),
-                                 0,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                     throws BARException
+        BARServer.getServerOption(tmpDirectory               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(maxTmpSize                 ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(niceLevel                  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(maxThreads                 ); busyDialog[0].updateProgressBar(i); i++;
+//        BARServer.getServerOption(maxBandWidth               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(compressMinSize            ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(continuousMaxSize          ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(indexDatabase              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(indexDatabaseUpdate        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(indexDatabaseAutoUpdate    ); busyDialog[0].updateProgressBar(i); i++;
+//        BARServer.getServerOption(indexDatabaseMaxBandWidth  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(indexDatabaseKeepTime      ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(cdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdUnloadCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdLoadCommand              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdVolumeSize               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdImagePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdImagePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdImageCommandCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdECCPreCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdECCPostCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdECCCommand               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdBlankCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdWritePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdWritePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdWriteCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(cdWriteImageCommand        ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(dvdDevice                  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdRequestVolumeCommand    ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdUnloadCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdLoadCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdVolumeSize              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdImagePreCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdImagePostCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdImageCommandCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdECCPreCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdECCPostCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdECCCommand              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdBlankCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdWritePreCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdWritePostCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdWriteCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(dvdWriteImageCommand       ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(bdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdUnloadCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdLoadCommand              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdVolumeSize               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdImagePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdImagePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdImageCommandCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdECCPreCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdECCPostCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdECCCommand               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdBlankCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdWritePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdWritePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdWriteCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(bdWriteImageCommand        ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(deviceName                 ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceRequestVolumeCommand ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceUnloadCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceLoadCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceVolumeSize           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceImagePreCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceImagePostCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceImageCommandCommand  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceECCPreCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceECCPostCommand       ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceECCCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceBlankCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceWritePreCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceWritePostCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(deviceWriteCommand         ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(serverPort                 ); busyDialog[0].updateProgressBar(i); i++;
+//        BARServer.getServerOption(serverTLSPort              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(serverCAFile               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(serverCertFile             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(serverKeyFile              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(serverPassword             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(serverJobsDirectory        ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(verbose                    ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(log                        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(logFile                    ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(logFormat                  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(logPostCommand             ); busyDialog[0].updateProgressBar(i); i++;
+
+        Widgets.removeAllTableItems(widgetMaintenanceTable);
+        try
+        {
+          BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST"),
+                                   0,  // debugLevel
+                                   new Command.ResultHandler()
                                    {
-                                     // get data
-                                     int    id        = valueMap.getInt   ("id"       );
-                                     String date      = valueMap.getString("date"     );
-                                     String weekDays  = valueMap.getString("weekDays" );
-                                     String beginTime = valueMap.getString("beginTime");
-                                     String endTime   = valueMap.getString("endTime"  );
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                       throws BARException
+                                     {
+                                       // get data
+                                       int    id        = valueMap.getInt   ("id"       );
+                                       String date      = valueMap.getString("date"     );
+                                       String weekDays  = valueMap.getString("weekDays" );
+                                       String beginTime = valueMap.getString("beginTime");
+                                       String endTime   = valueMap.getString("endTime"  );
 
-                                     // create server data
-                                     MaintenanceData maintenanceData = new MaintenanceData(id,date,weekDays,beginTime,endTime);
+                                       // create server data
+                                       MaintenanceData maintenanceData = new MaintenanceData(id,date,weekDays,beginTime,endTime);
 
-                                     // add table entry
-                                     Widgets.insertTableItem(widgetMaintenanceTable,
-                                                             maintenanceDataComparator,
-                                                             maintenanceData,
-                                                             maintenanceData.getDate(),
-                                                             maintenanceData.getWeekDays(),
-                                                             maintenanceData.getBeginTime(),
-                                                             maintenanceData.getEndTime()
-                                                            );
+                                       // add table entry
+                                       Widgets.insertTableItem(widgetMaintenanceTable,
+                                                               maintenanceDataComparator,
+                                                               maintenanceData,
+                                                               maintenanceData.getDate(),
+                                                               maintenanceData.getWeekDays(),
+                                                               maintenanceData.getBeginTime(),
+                                                               maintenanceData.getEndTime()
+                                                              );
+                                     }
                                    }
-                                 }
-                                );
-      }
-      catch (Exception exception)
-      {
-        Dialogs.error(dialog,BARControl.tr("Get maintenance list fail:\n\n{0}",exception.getMessage()));
-        return;
-      }
-      busyDialog[0].updateProgressBar(i); i++;
+                                  );
+        }
+        catch (Exception exception)
+        {
+          Dialogs.error(dialog,BARControl.tr("Get maintenance list fail:\n\n{0}",exception.getMessage()));
+          return;
+        }
+        busyDialog[0].updateProgressBar(i); i++;
 
-      Widgets.removeAllTableItems(widgetServerTable);
-      ServerData serverData;
-      serverData = new ServerData(0,"default",ServerTypes.FTP);
-      Widgets.insertTableItem(widgetServerTable,
-                              serverDataComparator,
-                              serverData,
-                              ServerTypes.FTP.toString(),
-                              "default",
-                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                             );
-      serverData = new ServerData(0,"default",ServerTypes.SSH);
-      Widgets.insertTableItem(widgetServerTable,
-                              serverDataComparator,
-                              serverData,
-                              ServerTypes.SSH.toString(),
-                              "default",
-                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                             );
-      serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
-      Widgets.insertTableItem(widgetServerTable,
-                              serverDataComparator,
-                              serverData,
-                              ServerTypes.WEBDAV.toString(),
-                              "default",
-                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                             );
-      busyDialog[0].updateProgressBar(i); i++;
+        Widgets.removeAllTableItems(widgetServerTable);
+        ServerData serverData;
+        serverData = new ServerData(0,"default",ServerTypes.FTP);
+        Widgets.insertTableItem(widgetServerTable,
+                                serverDataComparator,
+                                serverData,
+                                ServerTypes.FTP.toString(),
+                                "default",
+                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                               );
+        serverData = new ServerData(0,"default",ServerTypes.SSH);
+        Widgets.insertTableItem(widgetServerTable,
+                                serverDataComparator,
+                                serverData,
+                                ServerTypes.SSH.toString(),
+                                "default",
+                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                               );
+        serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
+        Widgets.insertTableItem(widgetServerTable,
+                                serverDataComparator,
+                                serverData,
+                                ServerTypes.WEBDAV.toString(),
+                                "default",
+                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                               );
+        busyDialog[0].updateProgressBar(i); i++;
 
-      try
-      {
-        BARServer.executeCommand(StringParser.format("SERVER_LIST"),
-                                 0,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                     throws BARException
+        try
+        {
+          BARServer.executeCommand(StringParser.format("SERVER_LIST"),
+                                   0,  // debugLevel
+                                   new Command.ResultHandler()
                                    {
-                                     // get data
-                                     int         id                 = valueMap.getInt   ("id"                          );
-                                     String      name               = valueMap.getString("name"                        );
-                                     ServerTypes serverType         = valueMap.getEnum  ("serverType",ServerTypes.class);
-                                     int         port               = valueMap.getInt   ("port",0                      );
-                                     String      loginName          = valueMap.getString("loginName",""                );
-                                     int         maxConnectionCount = valueMap.getInt   ("maxConnectionCount",0        );
-                                     long        maxStorageSize     = valueMap.getLong  ("maxStorageSize"              );
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                       throws BARException
+                                     {
+                                       // get data
+                                       int         id                 = valueMap.getInt   ("id"                          );
+                                       String      name               = valueMap.getString("name"                        );
+                                       ServerTypes serverType         = valueMap.getEnum  ("serverType",ServerTypes.class);
+                                       int         port               = valueMap.getInt   ("port",0                      );
+                                       String      loginName          = valueMap.getString("loginName",""                );
+                                       int         maxConnectionCount = valueMap.getInt   ("maxConnectionCount",0        );
+                                       long        maxStorageSize     = valueMap.getLong  ("maxStorageSize"              );
 
-                                     // create server data
-                                     ServerData serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
+                                       // create server data
+                                       ServerData serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
 
-                                     // add table entry
-                                     Widgets.insertTableItem(widgetServerTable,
-                                                             serverDataComparator,
-                                                             serverData,
-                                                             serverType.toString(),
-                                                             serverData.name,
-                                                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                                             (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                                                            );
+                                       // add table entry
+                                       Widgets.insertTableItem(widgetServerTable,
+                                                               serverDataComparator,
+                                                               serverData,
+                                                               serverType.toString(),
+                                                               serverData.name,
+                                                               (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                                               (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                                              );
+                                     }
                                    }
-                                 }
-                                );
+                                  );
+//Dprintf.dprintf("i=%d",i);
+        }
+        catch (Exception exception)
+        {
+          Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getMessage()));
+          return;
+        }
+        busyDialog[0].updateProgressBar(i); i++;
       }
-      catch (Exception exception)
+      finally
       {
-        Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getMessage()));
-        return;
+        BARServer.unlockSet();
       }
-      busyDialog[0].updateProgressBar(i); i++;
 //Dprintf.dprintf("i=%d",i);
     }
     busyDialog[0].close();
 
     if ((Boolean)Dialogs.run(dialog,false))
     {
+      int i = 0;
+
+      busyDialog[0].setMaximum(85);
+
       try
       {
-        BARServer.setServerOption(tmpDirectory               );
-        BARServer.setServerOption(maxTmpSize                 );
-        BARServer.setServerOption(niceLevel                  );
-        BARServer.setServerOption(maxThreads                 );
-  //      BARServer.setServerOption(maxBandWidth);
-        BARServer.setServerOption(compressMinSize            );
+        BARServer.setServerOption(tmpDirectory               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(maxTmpSize                 ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(niceLevel                  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(maxThreads                 ); busyDialog[0].updateProgressBar(i); i++;
+  //      BARServer.setServerOption(maxBandWidth               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(compressMinSize            ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(continuousMaxSize          );
+        BARServer.setServerOption(continuousMaxSize          ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(indexDatabase);
-        BARServer.setServerOption(indexDatabaseUpdate        );
-        BARServer.setServerOption(indexDatabaseAutoUpdate    );
-  //      BARServer.setServerOption(indexDatabaseMaxBandWidth);
-        BARServer.setServerOption(indexDatabaseKeepTime      );
+        BARServer.setServerOption(indexDatabase              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(indexDatabaseUpdate        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(indexDatabaseAutoUpdate    ); busyDialog[0].updateProgressBar(i); i++;
+  //      BARServer.setServerOption(indexDatabaseMaxBandWidth  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(indexDatabaseKeepTime      ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(cdDevice                   );
-        BARServer.setServerOption(cdRequestVolumeCommand     );
-        BARServer.setServerOption(cdUnloadCommand            );
-        BARServer.setServerOption(cdLoadCommand              );
-        BARServer.setServerOption(cdVolumeSize               );
-        BARServer.setServerOption(cdImagePreCommand          );
-        BARServer.setServerOption(cdImagePostCommand         );
-        BARServer.setServerOption(cdImageCommandCommand      );
-        BARServer.setServerOption(cdECCPreCommand            );
-        BARServer.setServerOption(cdECCPostCommand           );
-        BARServer.setServerOption(cdECCCommand               );
-        BARServer.setServerOption(cdBlankCommand             );
-        BARServer.setServerOption(cdWritePreCommand          );
-        BARServer.setServerOption(cdWritePostCommand         );
-        BARServer.setServerOption(cdWriteCommand             );
-        BARServer.setServerOption(cdWriteImageCommand        );
+        BARServer.setServerOption(cdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdUnloadCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdLoadCommand              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdVolumeSize               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdImagePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdImagePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdImageCommandCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdECCPreCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdECCPostCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdECCCommand               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdBlankCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdWritePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdWritePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdWriteCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(cdWriteImageCommand        ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(dvdDevice                  );
-        BARServer.setServerOption(dvdRequestVolumeCommand    );
-        BARServer.setServerOption(dvdUnloadCommand           );
-        BARServer.setServerOption(dvdLoadCommand             );
-        BARServer.setServerOption(dvdVolumeSize              );
-        BARServer.setServerOption(dvdImagePreCommand         );
-        BARServer.setServerOption(dvdImagePostCommand        );
-        BARServer.setServerOption(dvdImageCommandCommand     );
-        BARServer.setServerOption(dvdECCPreCommand           );
-        BARServer.setServerOption(dvdECCPostCommand          );
-        BARServer.setServerOption(dvdECCCommand              );
-        BARServer.setServerOption(dvdBlankCommand            );
-        BARServer.setServerOption(dvdWritePreCommand         );
-        BARServer.setServerOption(dvdWritePostCommand        );
-        BARServer.setServerOption(dvdWriteCommand            );
-        BARServer.setServerOption(dvdWriteImageCommand       );
+        BARServer.setServerOption(dvdDevice                  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdRequestVolumeCommand    ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdUnloadCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdLoadCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdVolumeSize              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdImagePreCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdImagePostCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdImageCommandCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdECCPreCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdECCPostCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdECCCommand              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdBlankCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdWritePreCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdWritePostCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdWriteCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(dvdWriteImageCommand       ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(bdDevice                   );
-        BARServer.setServerOption(bdRequestVolumeCommand     );
-        BARServer.setServerOption(bdUnloadCommand            );
-        BARServer.setServerOption(bdLoadCommand              );
-        BARServer.setServerOption(bdVolumeSize               );
-        BARServer.setServerOption(bdImagePreCommand          );
-        BARServer.setServerOption(bdImagePostCommand         );
-        BARServer.setServerOption(bdImageCommandCommand      );
-        BARServer.setServerOption(bdECCPreCommand            );
-        BARServer.setServerOption(bdECCPostCommand           );
-        BARServer.setServerOption(bdECCCommand               );
-        BARServer.setServerOption(bdBlankCommand             );
-        BARServer.setServerOption(bdWritePreCommand          );
-        BARServer.setServerOption(bdWritePostCommand         );
-        BARServer.setServerOption(bdWriteCommand             );
-        BARServer.setServerOption(bdWriteImageCommand        );
+        BARServer.setServerOption(bdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdUnloadCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdLoadCommand              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdVolumeSize               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdImagePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdImagePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdImageCommandCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdECCPreCommand            ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdECCPostCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdECCCommand               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdBlankCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdWritePreCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdWritePostCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdWriteCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(bdWriteImageCommand        ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(deviceName                 );
-        BARServer.setServerOption(deviceRequestVolumeCommand );
-        BARServer.setServerOption(deviceUnloadCommand        );
-        BARServer.setServerOption(deviceLoadCommand          );
-        BARServer.setServerOption(deviceVolumeSize           );
-        BARServer.setServerOption(deviceImagePreCommand      );
-        BARServer.setServerOption(deviceImagePostCommand     );
-        BARServer.setServerOption(deviceImageCommandCommand  );
-        BARServer.setServerOption(deviceECCPreCommand        );
-        BARServer.setServerOption(deviceECCPostCommand       );
-        BARServer.setServerOption(deviceECCCommand           );
-        BARServer.setServerOption(deviceBlankCommand         );
-        BARServer.setServerOption(deviceWritePreCommand      );
-        BARServer.setServerOption(deviceWritePostCommand     );
-        BARServer.setServerOption(deviceWriteCommand         );
+        BARServer.setServerOption(deviceName                 ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceRequestVolumeCommand ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceUnloadCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceLoadCommand          ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceVolumeSize           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceImagePreCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceImagePostCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceImageCommandCommand  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceECCPreCommand        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceECCPostCommand       ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceECCCommand           ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceBlankCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceWritePreCommand      ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceWritePostCommand     ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(deviceWriteCommand         ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(serverPort                 );
-//        BARServer.setServerOption(serverTLSPort              );
-        BARServer.setServerOption(serverCAFile               );
-        BARServer.setServerOption(serverCertFile             );
-        BARServer.setServerOption(serverKeyFile              );
-        BARServer.setServerOption(serverPassword             );
-        BARServer.setServerOption(serverJobsDirectory        );
+        BARServer.setServerOption(serverPort                 ); busyDialog[0].updateProgressBar(i); i++;
+//        BARServer.setServerOption(serverTLSPort              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(serverCAFile               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(serverCertFile             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(serverKeyFile              ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(serverPassword             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(serverJobsDirectory        ); busyDialog[0].updateProgressBar(i); i++;
 
-        BARServer.setServerOption(verbose                    );
-        BARServer.setServerOption(log                        );
-        BARServer.setServerOption(logFile                    );
-        BARServer.setServerOption(logFormat                  );
-        BARServer.setServerOption(logPostCommand             );
+        BARServer.setServerOption(verbose                    ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(log                        ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(logFile                    ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(logFormat                  ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(logPostCommand             ); busyDialog[0].updateProgressBar(i); i++;
 
         BARServer.flushServerOption();
-
-        busyDialog[0].close();
       }
       catch (Exception exception)
       {
@@ -3640,6 +3613,9 @@ public class ServerSettings
           Dialogs.error(shell,BARControl.tr("Save server options fail (error: {0})",exception.getMessage()));
         }
       }
+
+//Dprintf.dprintf("i=%d",i);
+      busyDialog[0].close();
     }
   }
 
@@ -3686,7 +3662,7 @@ public class ServerSettings
 
         widgetMonth = Widgets.newOptionMenu(subComposite);
         widgetMonth.setToolTipText(BARControl.tr("Month to execute job. Leave to '*' for each month."));
-        widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
+        widgetMonth.setItems(new String[]{"*","01","02","03","04","05","06","07","08","09","10","11","12"});
         widgetMonth.setText(maintenanceData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
 
