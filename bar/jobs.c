@@ -193,19 +193,26 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->archiveType               = fromScheduleNode->archiveType;
   scheduleNode->interval                  = fromScheduleNode->interval;
   scheduleNode->customText                = String_duplicate(fromScheduleNode->customText);
-  scheduleNode->deprecatedPersistenceFlag = fromScheduleNode->deprecatedPersistenceFlag;
-  scheduleNode->minKeep                   = fromScheduleNode->minKeep;
-  scheduleNode->maxKeep                   = fromScheduleNode->maxKeep;
-  scheduleNode->maxAge                    = fromScheduleNode->maxAge;
+  scheduleNode->beginTime                 = fromScheduleNode->beginTime;
+  scheduleNode->endTime                   = fromScheduleNode->endTime;
+  scheduleNode->testCreatedArchives       = fromScheduleNode->testCreatedArchives;
   scheduleNode->noStorage                 = fromScheduleNode->noStorage;
   scheduleNode->enabled                   = fromScheduleNode->enabled;
 
   scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
+
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
   scheduleNode->totalEntryCount           = 0LL;
   scheduleNode->totalEntrySize            = 0LL;
+
+// TODO: remove
+  // deprecated
+  scheduleNode->deprecatedPersistenceFlag = fromScheduleNode->deprecatedPersistenceFlag;
+  scheduleNode->minKeep                   = fromScheduleNode->minKeep;
+  scheduleNode->maxKeep                   = fromScheduleNode->maxKeep;
+  scheduleNode->maxAge                    = fromScheduleNode->maxAge;
 
   return scheduleNode;
 }
@@ -1357,7 +1364,6 @@ JobNode *Job_copy(const JobNode *jobNode,
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-
   Job_resetRunningInfo(newJobNode);
 
   newJobNode->executionCount.normal            = 0L;
@@ -1936,18 +1942,18 @@ bool Job_read(JobNode *jobNode)
             ConfigValue_parse(&JOB_CONFIG_VALUES[i],
                               "schedule",
                               String_cString(value),
-                              LAMBDA(void,(const char *errorMessage, void *userData),
+                              CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
                                 printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
-                              }),NULL,
-                              LAMBDA(void,(const char *warningMessage, void *userData),
+                              },NULL),
+                              CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
                                 printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
-                              }),NULL,
+                              },NULL),
                               scheduleNode,
                               &commentList
                              );
@@ -2048,18 +2054,18 @@ bool Job_read(JobNode *jobNode)
               ConfigValue_parse(&JOB_CONFIG_VALUES[i],
                                 "persistence",
                                 String_cString(value),
-                                LAMBDA(void,(const char *errorMessage, void *userData),
+                                CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
                                 {
                                   UNUSED_VARIABLE(userData);
 
                                   printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
-                                }),NULL,
-                                LAMBDA(void,(const char *warningMessage, void *userData),
+                                },NULL),
+                                CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                                 {
                                   UNUSED_VARIABLE(userData);
 
                                   printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
-                                }),NULL,
+                                },NULL),
                                 persistenceNode,
                                 &commentList
                                );
@@ -2142,18 +2148,18 @@ bool Job_read(JobNode *jobNode)
         ConfigValue_parse(&JOB_CONFIG_VALUES[i],
                           NULL, // sectionName
                           String_cString(value),
-                          LAMBDA(void,(const char *errorMessage, void *userData),
+                          CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
                             printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
-                          }),NULL,
-                          LAMBDA(void,(const char *warningMessage, void *userData),
+                          },NULL),
+                          CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
                             printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
-                          }),NULL,
+                          },NULL),
                           jobNode,
                           &commentList
                          );
