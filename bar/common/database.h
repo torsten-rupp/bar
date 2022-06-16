@@ -1164,6 +1164,7 @@ void Database_doneAll(void);
 *                                    for sqlite3 "in memory",
 *                                  - mariadb:<server>:<user>:<passwored>[:<database>]
 *                                  - postgresql:<server>:<user>:<passwored>[:<database>]
+*                                if NULL use sqlite3 in memory
 *          defaultDatabaseName - default database name
 * Output : databaseSpecifier - database specifier
 * Return : ERROR_NONE or error code
