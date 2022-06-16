@@ -136,7 +136,7 @@ Errors IndexStorage_prune(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : IndexStorage_pruneAll
 * Purpose: purge all storages (mark as "deleted") if
-*            - empty
+*            - empty and
 *            - with state OK or ERROR
 * Input  : indexHandle - index handle
 *          doneFlag       - done flag variable (can be NULL)

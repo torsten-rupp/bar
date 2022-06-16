@@ -2224,10 +2224,10 @@ LOCAL void indexThreadCode(void)
   storageName = String_new();
   while (!indexQuitFlag)
   {
-    #ifdef INDEX_SUPPORT_DELETE
-      // remove deleted storages from index if maintenance time
-      if (IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()))
-      {
+    // remove deleted storages from index if maintenance time
+    if (IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()))
+    {
+      #ifdef INDEX_SUPPORT_DELETE
         do
         {
           error = ERROR_NONE;
@@ -2352,8 +2352,13 @@ LOCAL void indexThreadCode(void)
                && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
                && !indexQuitFlag
               );
-      }
-    #endif /* INDEX_SUPPORT_DELETE */
+      #endif /* INDEX_SUPPORT_DELETE */
+
+      (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
+      (void)IndexEntry_pruneAll(&indexHandle,NULL,NULL);
+      (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
+      (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
+    }
 
     // sleep and check quit flag/trigger
     sleepTime = 0;
@@ -2951,10 +2956,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     (void)cleanUpIncompleteCreate(&indexHandle);
     (void)IndexStorage_cleanUp(&indexHandle);
     (void)IndexUUID_cleanUp(&indexHandle);
-
-    (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
-    (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
-    (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
 

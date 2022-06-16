@@ -197,151 +197,6 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
 }
 #endif
 
-#if 0
-//TODO: still not used
-/***********************************************************************\
-* Name   : pruneEntries
-* Purpose: prune all entries (file, image, hardlink) with no fragments
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntries(IndexHandle *indexHandle,
-                          bool        *doneFlag,
-                          ulong       *deletedCounter
-                         )
-{
-  Array         databaseIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
-
-  assert(indexHandle != NULL);
-  assert(doneFlag != NULL);
-  assert(deletedCounter != NULL);
-
-  // init vairables
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  // get all file entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "fileEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id \
-                          ",
-                          "fileEntries.id",
-                          "entryFragments.id IS NULL",
-                          DATABASE_FILTERS
-                          (
-                          )
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // purge file entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !indexQuitFlag)
-  {
-    error = purge(indexHandle,
-                  doneFlag,
-                  deletedCounter,
-                  "fileEntries",
-                  "id=%"PRIi64,
-                  databaseId
-                 );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // get all image entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "imageEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id \
-                          ",
-                          "imageEntries.id",
-                          "entryFragments.id IS NULL",
-                          DATABASE_FILTERS
-                          (
-                          )
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // purge image entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !indexQuitFlag)
-  {
-    error = purge(indexHandle,
-                  doneFlag,
-                  deletedCounter,
-                  "imageEntries",
-                  "id=%"PRIi64,
-                  databaseId
-                 );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // get all hardlink entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "hardlinkEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id \
-                          ",
-                          "hardlinkEntries.id",
-                          "entryFragments.id IS NULL",
-                          DATABASE_FILTERS
-                          (
-                          )
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // purge hardlink entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !indexQuitFlag)
-  {
-    error = purge(indexHandle,
-                  doneFlag,
-                  deletedCounter,
-                  "hardlinkEntries",
-                  "id=%"PRIi64,
-                  databaseId
-                 );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // free resources
-  Array_done(&databaseIds);
-
-  return ERROR_NONE;
-}
-#endif
-
 /***********************************************************************\
 * Name   : clearStorageFragments
 * Purpose: purge storage fragments
@@ -846,18 +701,6 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
 
 // ----------------------------------------------------------------------
 
-/***********************************************************************\
-* Name   : IndexEntry_collectIds
-* Purpose: collect entry ids for storage
-* Input  : entryIds     - entry ids array variable
-*          indexHandle  - index handle
-*          storageId    - storage id
-*          progressInfo - progress info
-* Output : entryIds     - entry ids array
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
 Errors IndexEntry_collectIds(Array        *entryIds,
                              IndexHandle  *indexHandle,
                              DatabaseId   storageId,
@@ -983,6 +826,144 @@ Errors IndexEntry_collectIds(Array        *entryIds,
   #endif
 
   return error;
+}
+
+Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
+                           bool        *doneFlag,
+                           ulong       *deletedCounter
+                          )
+{
+  Array         databaseIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    databaseId;
+
+  assert(indexHandle != NULL);
+
+  // init vairables
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all file entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "fileEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id \
+                          ",
+                          "fileEntries.id",
+                          "entryFragments.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge file entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
+  {
+    error = IndexCommon_purge(indexHandle,
+                              doneFlag,
+                              deletedCounter,
+                              "fileEntries",
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              )
+                             );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // get all image entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "imageEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id \
+                          ",
+                          "imageEntries.id",
+                          "entryFragments.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge image entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
+  {
+    error = IndexCommon_purge(indexHandle,
+                              doneFlag,
+                              deletedCounter,
+                              "imageEntries",
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              )
+                             );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // get all hardlink entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "hardlinkEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id \
+                          ",
+                          "hardlinkEntries.id",
+                          "entryFragments.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge hardlink entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
+  {
+    error = IndexCommon_purge(indexHandle,
+                              doneFlag,
+                              deletedCounter,
+                              "hardlinkEntries",
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              )
+                             );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&databaseIds);
+
+  return ERROR_NONE;
 }
 
 // ----------------------------------------------------------------------
