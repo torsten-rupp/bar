@@ -859,15 +859,15 @@ LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void 
 #endif /* !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG) */
 
 /***********************************************************************\
-* Name   : getTimeSpec
+* Name   : initTimeSpec
 * Purpose: get POSIX compatible timespec with offset
-* Input  : timeOffset - time offset [ms]
+* Input  : timeout - time ouot [ms]
 * Output : timespec - time
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE void getTimeSpec(struct timespec *timespec, ulong timeOffset)
+LOCAL_INLINE void initTimeSpec(struct timespec *timespec, ulong timeout)
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
@@ -884,9 +884,9 @@ LOCAL_INLINE void getTimeSpec(struct timespec *timespec, ulong timeOffset)
     timespec->tv_sec  = (windowsTime/10000000LL);
     timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
   #endif /* PLATFORM_... */
-  timespec->tv_nsec = timespec->tv_nsec+((timeOffset)%1000L)*1000000L; \
-  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000L)+(timeOffset))/1000L; \
-  timespec->tv_nsec %= 1000000L; \
+  timespec->tv_nsec = timespec->tv_nsec+((timeout)%1000L)*1000000L;
+  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000000L)+(timeout))/1000L;
+  timespec->tv_nsec %= 1000000000L;
 }
 
 #ifndef NDEBUG
@@ -4413,7 +4413,7 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      getTime(&timespec,timeout);
+      initTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
@@ -4429,7 +4429,7 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      getTimeSpec(&timespec,timeout);
+      initTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,&databaseLock,&timespec) == ETIMEDOUT)
       {
 //TODO
@@ -4497,7 +4497,7 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      getTime(&timespec,timeout);
+      initTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
@@ -4513,7 +4513,7 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      getTimeSpec(&timespec,timeout);
+      initTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,&databaseLock,&timespec) == ETIMEDOUT)
       {
 //TODO
