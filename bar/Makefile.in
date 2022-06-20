@@ -669,6 +669,7 @@ TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
                               $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                               bar-keygen@SHELLEXT@ \
                               bar-index@EXEEXT@ \
+                              bar-index-debug@EXEEXT@ \
                               $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
                               $(BAR_MO) \
 
@@ -2083,6 +2084,7 @@ install: \
 	$(INSTALL) -m 644 bar.sym bar-debug.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-index@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-index-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
@@ -2103,6 +2105,7 @@ uninstall:
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-index@EXEEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-index-debug@EXEEXT@"
 	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
