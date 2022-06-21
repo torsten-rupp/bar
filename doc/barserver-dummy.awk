@@ -8,7 +8,7 @@ function send(id,done,error, data)
 }
 
 BEGIN {
-  debugFlag=0
+  debugFlag=1
   restoreSelectFlag=0
   print "SESSION id=22c8d237c43fff83854286ec7473207a5b6fea7ab17c511c4e3f0593c4f36bd464f923fcef2ff8f95c481c73a1c2330d9488e3d7f0ca412bd1c841105882c199 encryptTypes=RSA,NONE n=00BA6067D81E677FCB74A8C08FFF2184174E7FFCDCAA0D941F20F4FAC85FA3E8D0E45E99CDDDA1F616C396B6E31923CF962F6E6ADF1F8BF42047738143ADB8BBA1685CEB4D1E977A7B42CF68B5D1E9F99CF8C4A3F5AF351937397DE3FF7A63F43D9580AC7CB2357578D3F37291FC27842146E9AD7A2BF6A3AB2E0F7D161B05966D e=010001";
 }
@@ -26,10 +26,10 @@ BEGIN {
   next;
 }
 /^[0-9]+ VERSION/ {
-  send($1,1,0,"major=5 minor=0 mode=MASTER");
+  send($1,1,0,"major=6 minor=0 mode=MASTER");
   next;
 }
-/^[0-9]+ GET name=FILE_SEPARATOR/ {
+/^[0-9]+ GET name=PATH_SEPARATOR/ {
   send($1,1,0,"value='/'");
   next;
 }
@@ -267,8 +267,8 @@ BEGIN {
   next;
 }
 /^[0-9]+ SCHEDULE_LIST/ {
-  send($1,0,0,"scheduleUUID=5e1cbe0b-f54b-45bc-89c1-469111e81ee3 archiveType=full date=*-*-01 weekDays=* time=23:00 interval=0 customText='' noStorage=no enabled=yes lastExecutedDateTime=0 totalEntities=0 totalStorageCount=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 archiveType=incremental date=*-*-* weekDays=* time=23:00 interval=0 customText='' noStorage=no enabled=yes lastExecutedDateTime=1582346747 totalEntities=12 totalStorageCount=7 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"scheduleUUID=5e1cbe0b-f54b-45bc-89c1-469111e81ee3 archiveType=full date=*-*-01 weekDays=* time=23:00 interval=0 beginTime=*:* endTime=*:* customText='' testCreatedArchives=no noStorage=no enabled=yes lastExecutedDateTime=0 totalEntities=0 totalStorageCount=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 archiveType=incremental date=*-*-* weekDays=* time=23:00 interval=0 beginTime=*:* endTime=*:* customText='' testCreatedArchives=no noStorage=no enabled=yes lastExecutedDateTime=1582346747 totalEntities=12 totalStorageCount=7 totalEntryCount=0 totalEntrySize=0");
   send($1,1,0);
   next;
 }
@@ -286,6 +286,7 @@ BEGIN {
 /^[0-9]+ JOB_STATUS/ {
   send($1,1,0,"state=RUNNING \
                errorCode=0 \
+               errorNumber=0 \
                errorData='' \
                doneCount=34995 \
                doneSize=8518263208 \
@@ -337,7 +338,6 @@ BEGIN {
 }
 
 /^[0-9]+ INDEX_LIST_INFO/ {
-debugFlag=1
   if (restoreSelectFlag==0)
   {
     send($1,1,0,"totalStorageCount=4303 totalStorageSize=93534903298 totalEntryCount=1069214 totalEntrySize=363682158906 totalEntryContentSize=0");
@@ -346,20 +346,6 @@ debugFlag=1
   {
     send($1,1,0,"totalStorageCount=4 totalStorageSize=9393298 totalEntryCount=1014 totalEntrySize=36358906 totalEntryContentSize=0");
   }
-debugFlag=0
-  next;
-}
-/^[0-9]+ INDEX_ENTRY_LIST_INFO/ {
-debugFlag=1
-  if (restoreSelectFlag==0)
-  {
-    send($1,1,0,"totalEntryCount=2147295 totalEntrySize=583330009011 totalEntryContentSize=583330009011");
-  }
-  else
-  {
-    send($1,1,0,"totalEntryCount=4 totalEntrySize=54230911 totalEntryContentSize=3309011");
-  }
-debugFlag=0
   next;
 }
 /^[0-9]+ INDEX_LIST_CLEAR/ {
@@ -400,6 +386,17 @@ debugFlag=0
   send($1,1,0);
   next;
 }
+/^[0-9]+ INDEX_ENTRY_LIST_INFO/ {
+  if (restoreSelectFlag==0)
+  {
+    send($1,1,0,"totalEntryCount=2147295 totalEntrySize=583330009011 totalEntryContentSize=583330009011");
+  }
+  else
+  {
+    send($1,1,0,"totalEntryCount=4 totalEntrySize=54230911 totalEntryContentSize=3309011");
+  }
+  next;
+}
 /^[0-9]+ INDEX_ENTRY_LIST/ {
   send($1,0,0,"jobName='system' archiveType=full hostName='tooku' entryId=21  entryType=FILE name='/usr/bin/grub-editenv' size=245688 dateTime=1581800646 userId=1001 groupId=1001 permission=33152 fragmentCount=0");
   send($1,0,0,"jobName='system' archiveType=full hostName='tooku' entryId=21  entryType=FILE name='/usr/bin/pphs' size=404 dateTime=1575219888 userId=1001 groupId=1001 permission=33152 fragmentCount=0");
@@ -425,22 +422,25 @@ debugFlag=0
   send($1,1,0);
   next;
 }
+/^[0-9]+ INDEX_STORAGE_LIST_INFO/ {
+  if (restoreSelectFlag==0)
+  {
+    send($1,1,0,"totalStorageCount=5 totalStorageSize=467330345410 totalEntryCount=34860 totalEntrySize=6319474553 totalEntryContentSize=6319474553");
+  }
+  else
+  {
+    send($1,1,0,"totalStorageCount=4 totalStorageSize=3035505 totalEntryCount=4 totalEntrySize=54230911 totalEntryContentSize=3309011");
+  }
+  next;
+}
 /^[0-9]+ INDEX_STORAGE_LIST/ {
   if (restoreSelectFlag==0)
   {
-    send($1,0,0,"uuidId=81 jobUUID=a4cf9808-6a0c-482a-a9c1-4afb1deb0113 jobName='projects-webdav' entityId=2786 scheduleUUID=2c52dde6-b8e9-422c-956f-e40a8468a800 hostName='tooku' archiveType='full' storageId=27475 name='' dateTime=1582031128 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582031128 errorMessage='' totalEntryCount=0 totalEntrySize=0");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2994 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=29011 name='' dateTime=1582154308 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582154308 errorMessage='' totalEntryCount=0 totalEntrySize=0");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3138 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=30707 name='' dateTime=1582236744 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582236744 errorMessage='' totalEntryCount=0 totalEntrySize=0");
-    send($1,0,0,"uuidId=33 jobUUID=d4a5e196-ca66-44f7-b95e-cfbf9c8e86a4 jobName='home-torsten-hd' entityId=3410 scheduleUUID=4c95afc2-f346-477f-a2e4-ff3608a89f6e hostName='tooku' archiveType='incremental' storageId=40451 name='' dateTime=1582370147 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582370147 errorMessage='' totalEntryCount=0 totalEntrySize=0");
-    send($1,0,0,"uuidId=81 jobUUID=a4cf9808-6a0c-482a-a9c1-4afb1deb0113 jobName='projects-webdav' entityId=3474 scheduleUUID=2c52dde6-b8e9-422c-956f-e40a8468a800 hostName='tooku' archiveType='full' storageId=40979 name='' dateTime=1582380409 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582380409 errorMessage='' totalEntryCount=0 totalEntrySize=0");
-    send($1,0,0,"uuidId=81 jobUUID=a4cf9808-6a0c-482a-a9c1-4afb1deb0113 jobName='projects-webdav' entityId=3474 scheduleUUID=2c52dde6-b8e9-422c-956f-e40a8468a800 hostName='tooku' archiveType='full' storageId=40995 name='' dateTime=1582380530 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582380530 errorMessage='' totalEntryCount=0 totalEntrySize=0");
-    send($1,0,0,"uuidId=81 jobUUID=a4cf9808-6a0c-482a-a9c1-4afb1deb0113 jobName='projects-webdav' entityId=3474 scheduleUUID=2c52dde6-b8e9-422c-956f-e40a8468a800 hostName='tooku' archiveType='full' storageId=41011 name='' dateTime=1582380657 size=0 indexState='CREATE' indexMode='AUTO' lastCheckedDateTime=1582380657 errorMessage='' totalEntryCount=0 totalEntrySize=0");
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=66 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=67 name='/media/backup/2020-02-15/system-000.bar' dateTime=1581807232 size=171982692 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581811813 errorMessage='' totalEntryCount=6386 totalEntrySize=1485024576");
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=1154 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=14643 name='/media/backup/2020-02-16/system-000.bar' dateTime=1581891395 size=269795718 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581896270 errorMessage='' totalEntryCount=12010 totalEntrySize=1308150220");
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2562 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=23043 name='/media/backup/2020-02-17/system-000.bar' dateTime=1581977795 size=109502524 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581982741 errorMessage='' totalEntryCount=5471 totalEntrySize=785522513");
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2866 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=27555 name='/media/backup/2020-02-18/system-000.bar' dateTime=1582093564 size=146739802 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582097475 errorMessage='' totalEntryCount=5500 totalEntrySize=1080935743");
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3330 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=39635 name='/media/backup/2020-02-21/system-000.bar' dateTime=1582342906 size=181545558 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582346743 errorMessage='' totalEntryCount=5493 totalEntrySize=1659806641");
-    send($1,1,0);
   }
   else
   {
@@ -449,6 +449,369 @@ debugFlag=0
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2866 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=27555 name='/media/backup/2020-02-18/system-000.bar' dateTime=1582093564 size=146739802 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582097475 errorMessage='' totalEntryCount=5500 totalEntrySize=1080935743");
     send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3330 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=39635 name='/media/backup/2020-02-21/system-000.bar' dateTime=1582342906 size=181545558 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582346743 errorMessage='' totalEntryCount=5493 totalEntrySize=1659806641");
   }
+  send($1,1,0);
+  next;
+}
+
+/^[0-9]+ SERVER_OPTION_GET name="tmp-directory"/ {
+  send($1,1,0,"value=/tmp");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="max-tmp-size"/ {
+  send($1,1,0,"value=50G");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="nice-level"/ {
+  send($1,1,0,"value=19");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="max-threads"/ {
+  send($1,1,0,"value=32");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="compress-min-size"/ {
+  send($1,1,0,"value=64");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="continuous-max-size"/ {
+  send($1,1,0,"value=128M");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="index-database"/ {
+  send($1,1,0,"value=sqlite3:/var/lib/bar/index.db");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="index-database-update"/ {
+  send($1,1,0,"value=yes");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="index-database-auto-update"/ {
+  send($1,1,0,"value=yes");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="index-database-keep-time"/ {
+  send($1,1,0,"value=7days");
+  next;
+}
+
+/^[0-9]+ SERVER_OPTION_GET name="cd-device"/ {
+  send($1,1,0,"value=/dev/cdrw");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-request-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-unload-volume-command"/ {
+  send($1,1,0,"value='eject %device'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-load-volume-command"/ {
+  send($1,1,0,"value='eject -t %device'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-volume-size"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-image-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-image-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-image-command"/ {
+  send($1,1,0,"value='nice mkisofs -V Backup -volset %number -J -r -o %image %directory'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-ecc-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-ecc-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-ecc-command/ {
+  send($1,1,0,"value='nice dvdisaster -mRS03 -x %j1 -c -i %image -v'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-blank-command"/ {
+  send($1,1,0,"value='nice dvd+rw-format -force %device'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-write-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-write-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-write-command"/ {
+  send($1,1,0,"value='nice sh -c \\'mkisofs -V Backup -volset %number -J -r -o %image %directory && cdrecord dev=%device %image\\''");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="cd-write-image-command"/ {
+  send($1,1,0,"value='nice cdrecord dev=%device %image'");
+  next;
+}
+
+/^[0-9]+ SERVER_OPTION_GET name="dvd-device"/ {
+  send($1,1,0,"value=/dev/dvd");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-request-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-unload-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-load-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-volume-size"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-image-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-image-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-image-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-ecc-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-ecc-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-ecc-command/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-blank-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-write-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-write-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-write-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="dvd-write-image-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+
+/^[0-9]+ SERVER_OPTION_GET name="bd-device"/ {
+  send($1,1,0,"value=/dev/bd");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-request-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-unload-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-load-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-volume-size"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-image-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-image-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-image-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-ecc-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-ecc-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-ecc-command/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-blank-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-write-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-write-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-write-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="bd-write-image-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+
+/^[0-9]+ SERVER_OPTION_GET name="device"/ {
+  send($1,1,0,"value=/dev/bd");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-request-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-unload-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-load-volume-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-volume-size"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-image-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-image-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-image-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-ecc-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-ecc-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-ecc-command/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-blank-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-write-pre-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-write-post-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-write-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="device-write-image-command"/ {
+  send($1,1,0,"value=");
+  next;
+}
+
+/^[0-9]+ SERVER_OPTION_GET name="server-port"/ {
+  send($1,1,0,"value=10000");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="server-tls-port"/ {
+  send($1,1,0,"value=10000");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="server-ca-file"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="server-cert-file"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="server-key-file"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="server-password"/ {
+  send($1,1,0,"value=");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="jobs-directory"/ {
+  send($1,1,0,"value=/etc/bar/jobs");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="verbose"/ {
+  send($1,1,0,"value=0");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="log"/ {
+  send($1,1,0,"value=errors,warnings,skipped,storage,index");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="log-file/ {
+  send($1,1,0,"value='/var/log/bar.log'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="log-format"/ {
+  send($1,1,0,"value='%Y-%m-%d %H:%M:%S'");
+  next;
+}
+/^[0-9]+ SERVER_OPTION_GET name="log-post-command"/ {
+  send($1,1,0,"value='sh -c \\'cat %file\\'|mail -s \\'Backup log\\' torsten'");
+  next;
+}
+/^[0-9]+ MAINTENANCE_LIST/ {
+  send($1,0,0,"id=1 date=*-*-* weekDays=Mo,Tu,We,Th,Fr beginTime=23:00 endTime=05:00");
+  send($1,0,0,"id=2 date=*-*-* weekDays=Su beginTime=*:* endTime=*:*");
+  send($1,1,0);
+  next;
+}
+/^[0-9]+ SERVER_LIST/ {
+  send($1,0,0,"id=1 name='archive' serverType=ftp path='archive.com/backup' loginName=bar port=0 maxConnectionCount=0 maxStorageSize=0");
+  send($1,0,0,"id=2 name='cloud-storage' serverType=webdav path='archive.com/backup' loginName=bar port=0 maxConnectionCount=0 maxStorageSize=0");
+  send($1,1,0);
   next;
 }
 
