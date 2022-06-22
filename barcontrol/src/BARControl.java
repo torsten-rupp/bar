@@ -2502,10 +2502,6 @@ if (false) {
                         serverKeyFileName
                        );
     }
-    catch (CommunicationError error)
-    {
-      throw new ConnectionError(error.getMessage());
-    }
     finally
     {
       if (busyDialog != null) busyDialog.close();
@@ -6085,6 +6081,7 @@ Dprintf.dprintf("still not supported");
     }
     catch (CommunicationError error)
     {
+      Dialogs.error(new Shell(),error.getMessage());
       printError("communication: %s",error.getMessage());
       if (Settings.debugLevel > 0)
       {
