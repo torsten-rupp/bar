@@ -5366,7 +5366,6 @@ LOCAL void formatParameters(String               sqlString,
         DATABASE_DEBUG_TIME_END(databaseStatementHandle);
         if (error != ERROR_NONE)
         {
-          Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
             String_delete(databaseStatementHandle->debug.sqlString);
           #endif /* not NDEBUG */
@@ -5413,7 +5412,6 @@ LOCAL void formatParameters(String               sqlString,
           if (error != ERROR_NONE)
           {
             mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
-            Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
             #ifndef NDEBUG
               String_delete(databaseStatementHandle->debug.sqlString);
             #endif /* not NDEBUG */
@@ -5483,7 +5481,6 @@ LOCAL void formatParameters(String               sqlString,
           DATABASE_DEBUG_TIME_END(databaseStatementHandle);
           if (error != ERROR_NONE)
           {
-            Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
             #ifndef NDEBUG
               String_delete(databaseStatementHandle->debug.sqlString);
             #endif /* not NDEBUG */

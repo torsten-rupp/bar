@@ -592,7 +592,7 @@ LOCAL bool getIntegerValue(int                   *value,
                            void                  *errorReportUserData
                           )
 {
-  uint                  i,j;
+  uint                  i0,i1,i2,i3;
   char                  number[128],unitName[32];
   const ConfigValueUnit *unit;
   char                  buffer[256];
@@ -602,17 +602,23 @@ LOCAL bool getIntegerValue(int                   *value,
   assert(string != NULL);
 
   // split number, unit
-  i = stringLength(string);
-  if (i > 0)
+  i0 = 0;
+  while (isspace(string[i0])) { i0++; }
+  i3 = stringLength(string);
+  while ((i3 > 1) && isspace(string[i3-1])) { i3--; }
+  if (i3 > i0)
   {
-    while ((i > 1) && !isdigit(string[i-1])) { i--; }
-    j = MIN(i,                     sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
-    j = MIN(stringLength(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
+    i2 = i3;
+    while ((i2 > i0) && !isdigit(string[i2-1]) && !isspace(string[i2-1])) { i2--; }
+    i1 = i2;
+    while ((i1 > i0) && isspace(string[i1-1])) { i1--; }
+    stringSetBuffer(number,  sizeof(number  ),&string[i0],i1-i0);
+    stringSetBuffer(unitName,sizeof(unitName),&string[i2],i3-i2);
   }
   else
   {
-    number[0]   = '\0';
-    unitName[0] = '\0';
+    stringClear(number);
+    stringClear(unitName);
   }
 
   // find factor
@@ -630,7 +636,7 @@ LOCAL bool getIntegerValue(int                   *value,
         }
         reportMessage(errorReportFunction,
                       errorReportUserData,
-                      "Invalid unit in integer value '%s'! Valid units: %s",
+                      "Invalid unit in integer value '%s'! Valid units:%s",
                       string,
                       buffer
                      );
@@ -679,7 +685,7 @@ LOCAL bool getInteger64Value(int64                 *value,
                              void                  *errorReportUserData
                             )
 {
-  uint                  i,j;
+  uint                  i0,i1,i2,i3;
   char                  number[128],unitName[32];
   const ConfigValueUnit *unit;
   char                  buffer[256];
@@ -689,17 +695,23 @@ LOCAL bool getInteger64Value(int64                 *value,
   assert(string != NULL);
 
   // split number, unit
-  i = stringLength(string);
-  if (i > 0)
+  i0 = 0;
+  while (isspace(string[i0])) { i0++; }
+  i3 = stringLength(string);
+  while ((i3 > 1) && isspace(string[i3-1])) { i3--; }
+  if (i3 > i0)
   {
-    while ((i > 1) && !isdigit(string[i-1])) { i--; }
-    j = MIN(i,                     sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
-    j = MIN(stringLength(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
+    i2 = i3;
+    while ((i2 > i0) && !isdigit(string[i2-1]) && !isspace(string[i2-1])) { i2--; }
+    i1 = i2;
+    while ((i1 > i0) && isspace(string[i1-1])) { i1--; }
+    stringSetBuffer(number,  sizeof(number  ),&string[i0],i1-i0);
+    stringSetBuffer(unitName,sizeof(unitName),&string[i2],i3-i2);
   }
   else
   {
-    number[0]   = '\0';
-    unitName[0] = '\0';
+    stringClear(number);
+    stringClear(unitName);
   }
 
   // find factor
@@ -717,7 +729,7 @@ LOCAL bool getInteger64Value(int64                 *value,
         }
         reportMessage(errorReportFunction,
                       errorReportUserData,
-                      "Invalid unit in integer value '%s'! Valid units: %s",
+                      "Invalid unit in integer value '%s'! Valid units:%s",
                       string,
                       buffer
                      );
@@ -1942,7 +1954,14 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 //TODO: compare with default
         if (valueFlag && (value != 0))
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %d%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,
+                                                          "%*C%s = %d%s",
+                                                          indent,
+                                                          ' ',
+                                                          configValue->name,
+                                                          value,
+                                                          (unit != NULL) ? stringFormat(buffer,sizeof(buffer)," %s",unit->name) : ""
+                                                         );
         }
       }
       break;
@@ -2016,7 +2035,14 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 //TODO: compare with default
         if (valueFlag && (value != 0))
         {
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %"PRIi64"%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,
+                                                          "%*C%s = %"PRIi64"%s",
+                                                          indent,
+                                                          ' ',
+                                                          configValue->name,
+                                                          value,
+                                                          (unit != NULL) ? stringFormat(buffer,sizeof(buffer)," %s",unit->name) : ""
+                                                         );
         }
       }
       break;
@@ -2089,7 +2115,14 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         if (valueFlag && (value != 0))
         {
           // write value
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %"PRIi64"%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,
+                                                          "%*C%s = %lf%s",
+                                                          indent,
+                                                          ' ',
+                                                          configValue->name,
+                                                          value,
+                                                          (unit != NULL) ? stringFormat(buffer,sizeof(buffer)," %s",unit->name) : ""
+                                                         );
         }
       }
       break;
@@ -4332,7 +4365,7 @@ const char *ConfigValue_formatUnitsTemplate(char *buffer, uint bufferSize, const
 
     if (n > 0)
     {
-      stringAppendChar(buffer,bufferSize,'[');
+      stringAppend(buffer,bufferSize," [");
       for (i = 0; i < n; i++)
       {
         if (i > 0) stringAppendChar(buffer,bufferSize,'|');
