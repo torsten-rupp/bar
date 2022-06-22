@@ -593,6 +593,134 @@ public class BARWidgets
     return newRadio(parentComposite,toolTipText,widgetVariable,(Listener)null,text);
   }
 
+  /** get size
+   * @param items items array (string, value)
+   * @param string string
+   * @param defaultItemIndex item to use on parse error or -1
+   * @return size
+   */
+  private static long getSize(Object[] items, String string, int defaultItemIndex)
+  {
+    long n = 0;
+    int  i;
+
+    assert (items.length % 2) == 0;
+
+    // find matching item string
+    i = 0;
+    while (i < items.length/2)
+    {
+      if (string.equals(items[i*2+0]))
+      {
+        n = (Long)items[i*2+1];
+        break;
+      }
+      i++;
+    }
+
+    // find matching item value
+    if (i >= items.length/2)
+    {
+      try
+      {
+        n = Units.parseByteSize(string);
+      }
+      catch (NumberFormatException exception)
+      {
+        if (defaultItemIndex >= 0)
+        {
+          n = (Long)items[defaultItemIndex*2+1];
+        }
+        else
+        {
+          throw exception;
+        }
+      }
+    }
+    
+    return n;
+  }
+
+  /** get size
+   * @param items items array (string, value)
+   * @param string string
+   * @return size
+   */
+  private static long getSize(Object[] items, String string)
+  {
+    return getSize(items,string,-1);
+  }
+
+  /** get size string
+   * @param items items array (string, value)
+   * @param string string
+   * @param defaultItemIndex item to use on parse error or -1
+   * @return size string
+   */
+  private static String getSizeString(Object[] items, String string, int defaultItemIndex)
+  {
+    int i;
+
+    assert (items.length % 2) == 0;
+
+    // find matching item string
+    i = 0;
+    while (i < items.length/2)
+    {
+      if (string.equals(items[i*2+0]))
+      {
+        break;
+      }
+      i++;
+    }
+
+    // find matching item value
+    if (i >= items.length/2)
+    {
+      try
+      {
+        long n = Units.parseByteSize(string);
+        i = 0;
+        while (i < items.length/2)
+        {
+          if (n == (Long)(items[i*2+1]))
+          {
+            string = (String)items[i*2+0];
+            break;
+          }
+          i++;
+        }
+        if (i >= items.length/2)
+        {
+          string = Units.getSize(n)+" "+Units.getUnit(n);
+        }
+      }
+      catch (NumberFormatException exception)
+      {
+        if (defaultItemIndex >= 0)
+        {
+          string = (String)items[defaultItemIndex*2+0];
+        }
+        else
+        {
+          throw exception;
+        }
+      }
+    }
+    
+    return string;
+  }
+
+  /** get size string
+   * @param items items array (string, value)
+   * @param string string
+   * @return size string
+   */
+  private static String getSizeString(Object[] items, String string)
+  {
+    return getSizeString(items,string,-1);
+  }
+
   /** create new byte size widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
@@ -601,48 +729,50 @@ public class BARWidgets
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize(Composite            parentComposite,
+  public static Combo newByteSize2(Composite            parentComposite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
                                   final Listener       listener,
-                                  String[]             values
+                                  final Object[]       items
                                  )
   {
-    final Shell shell = parentComposite.getShell();
-    final Combo combo;
+    final Shell  shell = parentComposite.getShell();
+    final String values[];
+    final Combo  combo;
 
+    assert (items.length % 2) == 0;
+
+    // get values
+    values = new String[items.length/2];
+    for (int i = 0; i < items.length/2; i++)
+    {
+      values[i] = (String)items[i*2+0];
+    }
+
+    // create combo widget
     combo = Widgets.newCombo(parentComposite);
     combo.setToolTipText(toolTipText);
     combo.setItems(values);
-    combo.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
     combo.setData("showedErrorDialog",false);
 
+    // listener
     combo.addModifyListener(new ModifyListener()
     {
       public void modifyText(ModifyEvent modifyEvent)
       {
-        Combo  widget = (Combo)modifyEvent.widget;
-        String string = widget.getText();
+        Combo widget = (Combo)modifyEvent.widget;
+        long  n0     = getSize(items,widget.getText(),0);
+        long  n1;
 
-        Color color = COLOR_MODIFIED;
         if (listener != null)
         {
-          if (listener.getString(widgetVariable).equals(string)) color = null;
+          n1 = getSize(items,listener.getString(widgetVariable),0);
         }
         else
         {
-          if (widgetVariable.getString().equals(string)) color = null;
+          n1 = getSize(items,widgetVariable.getString(),0);
         }
-/*
-        try
-        {
-          long n = Units.parseByteSize(widget.getText());
-          if (widgetVariable.getLong() == n) color = null;
-        }
-        catch (NumberFormatException exception)
-        {
-        }*/
-        widget.setBackground(color);
+        widget.setBackground((n0 != n1) ? COLOR_MODIFIED : null);
         widget.setData("showedErrorDialog",false);
       }
     });
@@ -651,17 +781,16 @@ public class BARWidgets
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         Combo  widget = (Combo)selectionEvent.widget;
-        String string = widget.getText();
 
+        String string = widget.getText();
         if (!string.isEmpty())
         {
+          long n = 0;
+
           try
           {
-            if (!string.isEmpty())
-            {
-              long n = Units.parseByteSize(string);
-              string = Units.formatByteSize(n);
-            }
+            string = getSizeString(items,string);
+            n      = getSize(items,string);
           }
           catch (NumberFormatException exception)
           {
@@ -675,12 +804,13 @@ public class BARWidgets
 
           if (listener != null)
           {
-            listener.setString(widgetVariable,string);
+            listener.setString(widgetVariable,Units.formatSize(n));
           }
           else
           {
-            widgetVariable.set(string);
+            widgetVariable.set(Units.formatSize(n));
           }
+
           widget.setText(string);
           widget.setBackground(null);
         }
@@ -688,17 +818,16 @@ public class BARWidgets
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Combo  widget = (Combo)selectionEvent.widget;
-        String string = widget.getText();
 
+        String string = widget.getText();
         if (!string.isEmpty())
         {
+          long n = 0;
+
           try
           {
-            if (!string.isEmpty())
-            {
-              long  n = Units.parseByteSize(string);
-              string = Units.formatByteSize(n);
-            }
+            string = getSizeString(items,string);
+            n      = getSize(items,string);
           }
           catch (NumberFormatException exception)
           {
@@ -712,11 +841,11 @@ public class BARWidgets
 
           if (listener != null)
           {
-            listener.setString(widgetVariable,string);
+            listener.setString(widgetVariable,Units.formatSize(n));
           }
           else
           {
-            widgetVariable.set(string);
+            widgetVariable.set(Units.formatSize(n));
           }
 
           widget.setText(string);
@@ -738,10 +867,12 @@ public class BARWidgets
 
         if (!string.isEmpty())
         {
+          long n = 0;
+
           try
           {
-            long n = Units.parseByteSize(string);
-            string = Units.formatByteSize(n);
+            string = getSizeString(items,string);
+            n      = getSize(items,string);
           }
           catch (NumberFormatException exception)
           {
@@ -755,11 +886,11 @@ public class BARWidgets
 
           if (listener != null)
           {
-            listener.setString(widgetVariable,string);
+            listener.setString(widgetVariable,Units.formatSize(n));
           }
           else
           {
-            widgetVariable.set(string);
+            widgetVariable.set(Units.formatSize(n));
           }
 
           widget.setText(string);
@@ -774,7 +905,7 @@ public class BARWidgets
           @Override
           public void modified(Combo combo, WidgetVariable variable)
           {
-            combo.setText(listener.getString(widgetVariable));
+            combo.setText(getSizeString(items,listener.getString(widgetVariable),0));
           }
         }
       : new WidgetModifyListener(combo,widgetVariable)
@@ -782,7 +913,8 @@ public class BARWidgets
           @Override
           public String getString(WidgetVariable variable)
           {
-            return variable.getString();
+
+            return Units.formatSize(getSize(items,variable.getString(),0));
           }
         };
     Widgets.addModifyListener(widgetModifiedListener);
@@ -794,14 +926,17 @@ public class BARWidgets
       }
     });
 
+    // set value
+    String string;
     if (listener != null)
     {
-      combo.setText(listener.getString(widgetVariable));
+      string = listener.getString(widgetVariable);
     }
     else
     {
-      combo.setText(widgetVariable.getString());
+      string = widgetVariable.getString();
     }
+    combo.setText(getSizeString(items,string,0));
 
     return combo;
   }
@@ -813,13 +948,13 @@ public class BARWidgets
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize(Composite      parentComposite,
+  public static Combo newByteSize2(Composite      parentComposite,
                                   String         toolTipText,
                                   WidgetVariable widgetVariable,
-                                  String[]       values
+                                  Object[]       items
                                  )
   {
-    return newByteSize(parentComposite,toolTipText,widgetVariable,(Listener)null,values);
+    return newByteSize2(parentComposite,toolTipText,widgetVariable,(Listener)null,items);
   }
 
   /** create new time widget

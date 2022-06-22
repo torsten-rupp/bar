@@ -41,7 +41,7 @@
 #include "archive_format_const.h"
 
 /****************** Conditional compilation switches *******************/
-#define _INDEX_DEBUG_IMPORT_DATABASE
+#define INDEX_DEBUG_IMPORT_DATABASE
 
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE

@@ -293,10 +293,11 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES[] =
 
 const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
-  {"T",1024LL*1024LL*1024LL*1024LL},
-  {"G",1024LL*1024LL*1024LL},
-  {"M",1024LL*1024LL},
-  {"K",1024LL},
+  {"P",PB},
+  {"T",TB},
+  {"G",GB},
+  {"M",MB},
+  {"K",KB},
 );
 
 const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] = CONFIG_VALUE_UNIT_ARRAY

@@ -885,27 +885,57 @@ enum ArchiveTypes
  */
 class Units
 {
-  /** get byte size string
-   * @param n byte value
+  public static long K = 1024L;
+  public static long M = 1024L*K;
+  public static long G = 1024L*M;
+  public static long T = 1024L*G;
+  public static long P = 1024L*T;
+
+  public static long SECOND = 1L;
+  public static long MINUTE = 60L*SECOND;
+  public static long HOUR   = 60L*MINUTE;
+  public static long DAY    = 24L*HOUR;
+  public static long WEEK   = 7L*DAY;
+
+  /** get size string
+   * @param n value
    * @return string
    */
-  public static String getByteSize(double n)
+  public static String getSize(double n)
   {
     final DecimalFormat DECIMAL_FORMAT = new DecimalFormat(".#");
 
     String result;
 
-    if      ((n % (1024L*1024L*1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L*1024L*1024L));
-    else if (n >= (1024L*1024L*1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L*1024L*1024L));
-    else if ((n % (      1024L*1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L*1024L));
-    else if (n >= (      1024L*1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L*1024L));
-    else if ((n % (            1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L));
-    else if (n >= (            1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L));
-    else if ((n % (                  1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L));
-    else if (n >= (                  1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L));
-    else if ((n % (                        1024L)) == 0) result = String.format("%d",(long)n/(1024L));
-    else if (n >= (                        1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L));
-    else                                                 result = String.format("%d",(long)n);
+    if      ((n % P) == 0) result = String.format("%d",(long)n/P);
+    else if (n >= P      ) result = DECIMAL_FORMAT.format(n/P);
+    else if ((n % T) == 0) result = String.format("%d",(long)n/T);
+    else if (n >= T      ) result = DECIMAL_FORMAT.format(n/T);
+    else if ((n % G) == 0) result = String.format("%d",(long)n/G);
+    else if (n >= G      ) result = DECIMAL_FORMAT.format(n/G);
+    else if ((n % M) == 0) result = String.format("%d",(long)n/M);
+    else if (n >= M      ) result = DECIMAL_FORMAT.format(n/M);
+    else if ((n % K) == 0) result = String.format("%d",(long)n/K);
+    else if (n >= K      ) result = DECIMAL_FORMAT.format(n/K);
+    else                   result = String.format("%d",(long)n);
+
+    return result;
+  }
+
+  /** get size short unit
+   * @param n byte value
+   * @return unit
+   */
+  public static String getUnit(double n)
+  {
+    String result;
+
+    if      (n >= P) result =  "P";
+    else if (n >= T) result =  "T";
+    else if (n >= G) result =  "G";
+    else if (n >= M) result =  "M";
+    else if (n >= K) result =  "K";
+    else             result =  "";
 
     return result;
   }
@@ -918,12 +948,12 @@ class Units
   {
     String result;
 
-    if      (n >= 1024L*1024L*1024L*1024L*1024L) result =  BARControl.tr("PBytes");
-    else if (n >=       1024L*1024L*1024L*1024L) result =  BARControl.tr("TBytes");
-    else if (n >=             1024L*1024L*1024L) result =  BARControl.tr("GBytes");
-    else if (n >=                   1024L*1024L) result =  BARControl.tr("MBytes");
-    else if (n >=                         1024L) result =  BARControl.tr("KBytes");
-    else                                         result =  BARControl.tr("bytes");
+    if      (n >= P) result =  BARControl.tr("PBytes");
+    else if (n >= T) result =  BARControl.tr("TBytes");
+    else if (n >= G) result =  BARControl.tr("GBytes");
+    else if (n >= M) result =  BARControl.tr("MBytes");
+    else if (n >= K) result =  BARControl.tr("KBytes");
+    else             result =  BARControl.tr("bytes");
 
     return result;
   }
@@ -936,12 +966,12 @@ class Units
   {
     String result;
 
-    if      (n >= 1024L*1024L*1024L*1024L*1024L) result =  "PB";
-    else if (n >=       1024L*1024L*1024L*1024L) result =  "TB";
-    else if (n >=             1024L*1024L*1024L) result =  "GB";
-    else if (n >=                   1024L*1024L) result =  "MB";
-    else if (n >=                         1024L) result =  "KB";
-    else                                         result =  "B";
+    if      (n >= P) result =  "PB";
+    else if (n >= T) result =  "TB";
+    else if (n >= G) result =  "GB";
+    else if (n >= M) result =  "MB";
+    else if (n >= K) result =  "KB";
+    else             result =  "B";
 
     return result;
   }
@@ -958,37 +988,45 @@ class Units
     // try to parse with default locale
     try
     {
-      if      (string.endsWith("TB"))
+      if      (string.endsWith("PB"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L*1024L*1024L*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*P);
+      }
+      else if (string.endsWith("P"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*P);
+      }
+      else if  (string.endsWith("TB"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*T);
       }
       else if (string.endsWith("T"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L*1024L*1024L*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*T);
       }
       else if (string.endsWith("GB"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L*1024L*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*G);
       }
       else if (string.endsWith("G"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L*1024L*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*G);
       }
       else if (string.endsWith("MB"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*M);
       }
       else if (string.endsWith("M"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*M);
       }
       else if (string.endsWith("KB"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*K);
       }
       else if (string.endsWith("K"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*K);
       }
       else if (string.endsWith("B"))
       {
@@ -1026,13 +1064,22 @@ class Units
     return n;
   }
 
+  /** format size
+   * @param n value
+   * @return string with unit
+   */
+  public static String formatSize(long n)
+  {
+    return getSize(n)+" "+getUnit(n);
+  }
+
   /** format byte size
    * @param n byte value
    * @return string with unit
    */
   public static String formatByteSize(long n)
   {
-    return getByteSize(n)+" "+getByteShortUnit(n);
+    return getSize(n)+" "+getByteShortUnit(n);
   }
 
   /** get time string
@@ -1041,12 +1088,12 @@ class Units
    */
   public static String getTime(double n)
   {
-    if      (((long)n                   ) == 0) return "";
-    else if (((long)n % (7L*24L*60L*60L)) == 0) return String.format("%d",(long)(n/(7L*24L*60L*60L)));
-    else if (((long)n % (   24L*60L*60L)) == 0) return String.format("%d",(long)(n/(   24L*60L*60L)));
-    else if (((long)n % (       60L*60L)) == 0) return String.format("%d",(long)(n/(       60L*60L)));
-    else if (((long)n % (           60L)) == 0) return String.format("%d",(long)(n/(           60L)));
-    else                                        return String.format("%d",(long)n                   );
+    if      (((long)n         ) == 0) return "";
+    else if (((long)n % WEEK  ) == 0) return String.format("%d",(long)(n/WEEK  ));
+    else if (((long)n % DAY   ) == 0) return String.format("%d",(long)(n/DAY   ));
+    else if (((long)n % HOUR  ) == 0) return String.format("%d",(long)(n/HOUR  ));
+    else if (((long)n % MINUTE) == 0) return String.format("%d",(long)(n/MINUTE));
+    else                              return String.format("%d",(long)n         );
   }
 
   /** get time unit
@@ -1055,12 +1102,12 @@ class Units
    */
   public static String getTimeUnit(double n)
   {
-    if      (((long)n                   ) == 0) return "";
-    else if (((long)n % (7L*24L*60L*60L)) == 0) return (((long)n / (7L*24L*60L*60L)) != 1) ? "weeks" : "week";
-    else if (((long)n % (   24L*60L*60L)) == 0) return (((long)n / (   24L*60L*60L)) != 1) ? "days"  : "day";
-    else if (((long)n % (       60L*60L)) == 0) return "h";
-    else if (((long)n % (           60L)) == 0) return "min";
-    else                                        return "s";
+    if      (((long)n         ) == 0) return "";
+    else if (((long)n % WEEK  ) == 0) return (((long)n / WEEK) != 1) ? "weeks" : "week";
+    else if (((long)n % DAY   ) == 0) return (((long)n / DAY ) != 1) ? "days"  : "day";
+    else if (((long)n % HOUR  ) == 0) return "h";
+    else if (((long)n % MINUTE) == 0) return "min";
+    else                              return "s";
   }
 
   /** get localized time unit
@@ -1069,13 +1116,13 @@ class Units
    */
   public static String getLocalizedTimeUnit(double n)
   {
-    if      (((long)n                                     ) == 0 ) return "";
-    else if (((long)n > 0) && (((long)n % (7L*24L*60L*60L)) == 0)) return (((long)n / (7L*24L*60L*60L)) != 1) ? BARControl.tr("weeks") : BARControl.tr("week");
-    else if (((long)n > 0) && (((long)n % (   24L*60L*60L)) == 0)) return (((long)n / (   24L*60L*60L)) != 1) ? BARControl.tr("days" ) : BARControl.tr("day" );
-    else if (((long)n > 0) && (((long)n % (       60L*60L)) == 0)) return BARControl.tr("h");
-    else if (((long)n > 0) && (((long)n % (           60L)) == 0)) return BARControl.tr("min");
-    else if ((long)n > 0)                                          return BARControl.tr("s");
-    else                                                           return "";
+    if      (((long)n                           ) == 0 ) return "";
+    else if (((long)n > 0) && (((long)n % WEEK  ) == 0)) return (((long)n / WEEK) != 1) ? BARControl.tr("weeks") : BARControl.tr("week");
+    else if (((long)n > 0) && (((long)n % DAY   ) == 0)) return (((long)n / DAY ) != 1) ? BARControl.tr("days" ) : BARControl.tr("day" );
+    else if (((long)n > 0) && (((long)n % HOUR  ) == 0)) return BARControl.tr("h");
+    else if (((long)n > 0) && (((long)n % MINUTE) == 0)) return BARControl.tr("min");
+    else if ((long)n > 0)                                return BARControl.tr("s");
+    else                                                 return "";
   }
 
   /** parse time string
@@ -1092,43 +1139,43 @@ class Units
     {
       if       (string.endsWith("WEEK"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*7L*24L*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*WEEK);
       }
       if       (string.endsWith("WEEKS"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-5)).doubleValue()*7L*24L*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-5)).doubleValue()*WEEK);
       }
       else if (string.endsWith("DAY"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-3)).doubleValue()*24L*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-3)).doubleValue()*DAY);
       }
       else if (string.endsWith("DAYS"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*24L*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*DAY);
       }
       else if (string.endsWith("H"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*HOUR);
       }
       else if (string.endsWith("HOUR"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*HOUR);
       }
       else if (string.endsWith("HOURS"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-5)).doubleValue()*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-5)).doubleValue()*HOUR);
       }
       else if (string.endsWith("M"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*60L*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*MINUTE);
       }
       else if (string.endsWith("MIN"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-3)).doubleValue()*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-3)).doubleValue()*MINUTE);
       }
       else if (string.endsWith("MINS"))
       {
-        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*60L);
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*MINUTE);
       }
       else if (string.endsWith("S"))
       {
@@ -1160,74 +1207,74 @@ class Units
   public static long parseLocalizedTime(String string)
     throws NumberFormatException
   {
-    final String WEEK    = BARControl.tr("week"   ).toUpperCase();
-    final String WEEKS   = BARControl.tr("weeks"  ).toUpperCase();
-    final String DAY     = BARControl.tr("day"    ).toUpperCase();
-    final String DAYS    = BARControl.tr("days"   ).toUpperCase();
-    final String H       = BARControl.tr("h"      ).toUpperCase();
-    final String HOUR    = BARControl.tr("hour"   ).toUpperCase();
-    final String HOURS   = BARControl.tr("hours"  ).toUpperCase();
-    final String M       = BARControl.tr("m"      ).toUpperCase();
-    final String MIN     = BARControl.tr("min"    ).toUpperCase();
-    final String MINS    = BARControl.tr("mins"   ).toUpperCase();
-    final String S       = BARControl.tr("s"      ).toUpperCase();
-    final String SECOND  = BARControl.tr("second" ).toUpperCase();
-    final String SECONDS = BARControl.tr("seconds").toUpperCase();
+    final String SUFFIX_WEEK    = BARControl.tr("week"   ).toUpperCase();
+    final String SUFFIX_WEEKS   = BARControl.tr("weeks"  ).toUpperCase();
+    final String SUFFIX_DAY     = BARControl.tr("day"    ).toUpperCase();
+    final String SUFFIX_DAYS    = BARControl.tr("days"   ).toUpperCase();
+    final String SUFFIX_H       = BARControl.tr("h"      ).toUpperCase();
+    final String SUFFIX_HOUR    = BARControl.tr("hour"   ).toUpperCase();
+    final String SUFFIX_HOURS   = BARControl.tr("hours"  ).toUpperCase();
+    final String SUFFIX_M       = BARControl.tr("m"      ).toUpperCase();
+    final String SUFFIX_MIN     = BARControl.tr("min"    ).toUpperCase();
+    final String SUFFIX_MINS    = BARControl.tr("mins"   ).toUpperCase();
+    final String SUFFIX_S       = BARControl.tr("s"      ).toUpperCase();
+    final String SUFFIX_SECOND  = BARControl.tr("second" ).toUpperCase();
+    final String SUFFIX_SECONDS = BARControl.tr("seconds").toUpperCase();
 
     string = string.toUpperCase();
 
     // try to parse with default locale
-    if       (string.endsWith(WEEK))
+    if       (string.endsWith(SUFFIX_WEEK))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-WEEK.length()))*7L*24L*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_WEEK.length()))*WEEK);
     }
-    if       (string.endsWith(WEEKS))
+    if       (string.endsWith(SUFFIX_WEEKS))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-WEEKS.length()))*7L*24L*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_WEEKS.length()))*WEEK);
     }
-    else if (string.endsWith(DAY))
+    else if (string.endsWith(SUFFIX_DAY))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-DAY.length()))*24L*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_DAY.length()))*DAY);
     }
-    else if (string.endsWith(DAYS))
+    else if (string.endsWith(SUFFIX_DAYS))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-DAYS.length()))*24L*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_DAYS.length()))*DAY);
     }
-    else if (string.endsWith(H))
+    else if (string.endsWith(SUFFIX_H))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-H.length()))*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_H.length()))*HOUR);
     }
-    else if (string.endsWith(HOUR))
+    else if (string.endsWith(SUFFIX_HOUR))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-HOUR.length()))*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_HOUR.length()))*HOUR);
     }
-    else if (string.endsWith(HOURS))
+    else if (string.endsWith(SUFFIX_HOURS))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-HOURS.length()))*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_HOURS.length()))*HOUR);
     }
-    else if (string.endsWith(M))
+    else if (string.endsWith(SUFFIX_M))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-M.length()))*60L*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_M.length()))*MINUTE);
     }
-    else if (string.endsWith(MIN))
+    else if (string.endsWith(SUFFIX_MIN))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-MIN.length()))*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_MIN.length()))*MINUTE);
     }
-    else if (string.endsWith(MINS))
+    else if (string.endsWith(SUFFIX_MINS))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-MINS.length()))*60L);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_MINS.length()))*MINUTE);
     }
-    else if (string.endsWith(S))
+    else if (string.endsWith(SUFFIX_S))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-S.length())));
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_S.length())));
     }
-    else if (string.endsWith(SECOND))
+    else if (string.endsWith(SUFFIX_SECOND))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-SECOND.length())));
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_SECOND.length())));
     }
-    else if (string.endsWith(SECONDS))
+    else if (string.endsWith(SUFFIX_SECONDS))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-SECONDS.length())));
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SUFFIX_SECONDS.length())));
     }
     else
     {

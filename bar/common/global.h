@@ -199,8 +199,10 @@
 
 // memory sizes
 #define KB 1024
-#define MB (1024*1024)
-#define GB (1024L*1024L*1024L)
+#define MB (1024*KB)
+#define GB (1024L*MB)
+#define TB (1024L*GB)
+#define PB (1024L*TB)
 
 // special constants
 #define NO_WAIT      0L

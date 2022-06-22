@@ -1085,12 +1085,31 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("Max. size")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        combo = BARWidgets.newByteSize(subComposite,
+        combo = BARWidgets.newByteSize2(subComposite,
                                        BARControl.tr("Size limit for temporary files."),
                                        maxTmpSize,
-                                       new String[]{"","32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                       new Object[]{BARControl.tr("unlimited"), 0L,
+                                                    Units.formatSize( 32*Units.M), 32*Units.M,
+                                                    Units.formatSize( 64*Units.M), 64*Units.M,
+                                                    Units.formatSize(128*Units.M),128*Units.M,
+                                                    Units.formatSize(256*Units.M),256*Units.M,
+                                                    Units.formatSize(512*Units.M),512*Units.M,
+                                                    Units.formatSize(  1*Units.G),  1*Units.G,
+                                                    Units.formatSize(  2*Units.G),  2*Units.G,
+                                                    Units.formatSize(  4*Units.G),  4*Units.G,
+                                                    Units.formatSize(  8*Units.G),  8*Units.G,
+                                                    Units.formatSize( 64*Units.G), 64*Units.G,
+                                                    Units.formatSize(128*Units.G),128*Units.G,
+                                                    Units.formatSize(512*Units.G),512*Units.G,
+                                                    Units.formatSize(  1*Units.T),  1*Units.T,
+                                                    Units.formatSize(  2*Units.T),  2*Units.T,
+                                                    Units.formatSize(  4*Units.T),  4*Units.T,
+                                                    Units.formatSize(  8*Units.T),  8*Units.T
+                                                   }
                                       );
         Widgets.layout(combo,0,2,TableLayoutData.WE);
+        label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
+        Widgets.layout(label,0,3,TableLayoutData.W);
       }
       row++;
 
@@ -1119,10 +1138,28 @@ public class ServerSettings
 /*
       label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
-      combo = BARWidgets.newByteSize(composite,
+      combo = BARWidgets.newByteSize2(composite,
                                      BARControl.tr("Max. band width to use [bits/s]."),
                                      maxBandWidth,
                                      new String[]{"0","64K","128K","256K","512K","1M","2M","4M","8M","16M","32M","64M","128M","256M","512M","1G","10G"}
+                                     new Object[]{BARControl.tr("unlimited"), 0L,
+                                                  Units.formatSize( 64*Units.K), 64*Units.K,
+                                                  Units.formatSize(128*Units.K),128*Units.K,
+                                                  Units.formatSize(256*Units.K),256*Units.K,
+                                                  Units.formatSize(512*Units.K),512*Units.K,
+                                                  Units.formatSize(  1*Units.M),  1*Units.M,
+                                                  Units.formatSize(  2*Units.M),  2*Units.M,
+                                                  Units.formatSize(  4*Units.M),  4*Units.M,
+                                                  Units.formatSize(  8*Units.M),  8*Units.M,
+                                                  Units.formatSize( 16*Units.M), 16*Units.M,
+                                                  Units.formatSize( 32*Units.M), 32*Units.M,
+                                                  Units.formatSize( 64*Units.M), 64*Units.M,
+                                                  Units.formatSize(128*Units.M),128*Units.M,
+                                                  Units.formatSize(256*Units.M),256*Units.M,
+                                                  Units.formatSize(512*Units.M),512*Units.M,
+                                                  Units.formatSize(  1*Units.G),  1*Units.G,
+                                                  Units.formatSize( 10*Units.G), 10*Units.G
+                                                 }
                                     );
       Widgets.layout(combo,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       row++;
@@ -1134,10 +1171,21 @@ public class ServerSettings
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newByteSize(subComposite,
+        combo = BARWidgets.newByteSize2(subComposite,
                                        BARControl.tr("Min. size of files for compression."),
                                        compressMinSize,
-                                       new String[]{"0","32","64","128","256","512","1K","4K","8K"}
+                                       new Object[]{Units.formatSize(  0L       ),  0L,
+                                                    Units.formatSize( 32L       ), 32L,
+                                                    Units.formatSize( 64L       ), 64L,
+                                                    Units.formatSize(128L       ),128L,
+                                                    Units.formatSize(140L       ),140L,
+                                                    Units.formatSize(256L       ),256L,
+                                                    Units.formatSize(512L       ),512L,
+                                                    Units.formatSize(  1*Units.K),  1*Units.K,
+                                                    Units.formatSize(  2*Units.K),  2*Units.K,
+                                                    Units.formatSize(  4*Units.K),  4*Units.K,
+                                                    Units.formatSize(  8*Units.K),  8*Units.K
+                                                   }
                                       );
         Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
         label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
@@ -1160,12 +1208,30 @@ public class ServerSettings
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newByteSize(subComposite,
+        combo = BARWidgets.newByteSize2(subComposite,
                                        BARControl.tr("Size limit for continuous stored entries."),
                                        continuousMaxSize,
-                                       new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                       new Object[]{BARControl.tr("unlimited"), 0L,
+                                                    Units.formatSize( 32*Units.M), 32*Units.M,
+                                                    Units.formatSize( 64*Units.M), 64*Units.M,
+                                                    Units.formatSize(128*Units.M),128*Units.M,
+                                                    Units.formatSize(140*Units.M),140*Units.M,
+                                                    Units.formatSize(256*Units.M),256*Units.M,
+                                                    Units.formatSize(512*Units.M),512*Units.M,
+                                                    Units.formatSize(  1*Units.G),  1*Units.G,
+                                                    Units.formatSize(  2*Units.G),  2*Units.G,
+                                                    Units.formatSize(  4*Units.G),  4*Units.G,
+                                                    Units.formatSize(  8*Units.G),  8*Units.G,
+                                                    Units.formatSize( 64*Units.G), 64*Units.G,
+                                                    Units.formatSize(128*Units.G),128*Units.G,
+                                                    Units.formatSize(512*Units.G),512*Units.G,
+                                                    Units.formatSize(  1*Units.T),  1*Units.T,
+                                                    Units.formatSize(  2*Units.T),  2*Units.T,
+                                                    Units.formatSize(  4*Units.T),  4*Units.T,
+                                                    Units.formatSize(  8*Units.T),  8*Units.T
+                                                   }
                                       );
-        Widgets.layout(combo,0,0,TableLayoutData.WE);
+        Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
         label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
         Widgets.layout(label,0,1,TableLayoutData.W);
       }

@@ -1396,7 +1396,7 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
-          return Units.getByteSize(variable.getLong());
+          return Units.getSize(variable.getLong());
         }
       });
       label = Widgets.newLabel(composite,BARControl.tr("bytes"));
@@ -1446,7 +1446,7 @@ public class TabStatus
           @Override
           public String getString(WidgetVariable variable)
           {
-            return Units.getByteSize(variable.getDouble());
+            return Units.getSize(variable.getDouble());
           }
         });
         label = Widgets.newLabel(subComposite,BARControl.tr("bytes/s"));
@@ -1485,7 +1485,7 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
-          return Units.getByteSize(variable.getLong());
+          return Units.getSize(variable.getLong());
         }
       });
       label = Widgets.newLabel(composite,BARControl.tr("bytes"));
@@ -1537,7 +1537,7 @@ public class TabStatus
           @Override
           public String getString(WidgetVariable variable)
           {
-            return Units.getByteSize(variable.getDouble());
+            return Units.getSize(variable.getDouble());
           }
         });
         label = Widgets.newLabel(subComposite,BARControl.tr("bytes/s"));
@@ -1581,7 +1581,7 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
-          return Units.getByteSize(variable.getLong());
+          return Units.getSize(variable.getLong());
         }
       });
       label = Widgets.newLabel(composite,BARControl.tr("bytes"));
@@ -1624,7 +1624,7 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
-          return Units.getByteSize(variable.getLong());
+          return Units.getSize(variable.getLong());
         }
       });
       label = Widgets.newLabel(composite,BARControl.tr("bytes"));
@@ -1685,7 +1685,7 @@ public class TabStatus
         @Override
         public String getString(WidgetVariable variable)
         {
-          return Units.getByteSize(variable.getLong());
+          return Units.getSize(variable.getLong());
         }
       });
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
