@@ -9515,17 +9515,7 @@ throw new Error("NYI");
     clearScheduleTable();
     clearPersistenceTable();
 
-    // update data
-    try
-    {
-      updateJobData();
-    }
-    catch (ConnectionError error)
-    {
-      // ignored
-    }
-
-    // trigger selected job
+    // set selected job
     display.syncExec(new Runnable()
     {
       @Override
@@ -9537,6 +9527,16 @@ throw new Error("NYI");
         selectJobEvent.trigger();
       }
     });
+
+    // update data
+    try
+    {
+      updateJobData();
+    }
+    catch (ConnectionError error)
+    {
+      // ignored
+    }
   }
 
   /** clear selected
@@ -10241,11 +10241,17 @@ throw new Error("NYI");
 
         Image image;
         if      (includeHashMap.containsKey(deviceData.name) && !excludeHashSet.contains(deviceData.name))
+        {
           image = IMAGE_DEVICE_INCLUDED;
+        }
         else if (excludeHashSet.contains(deviceData.name))
+        {
           image = IMAGE_DEVICE;
+        }
         else
+        {
           image = IMAGE_DEVICE;
+        }
         tableItem.setImage(image);
       }
     }
