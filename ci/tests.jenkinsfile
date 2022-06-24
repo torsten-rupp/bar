@@ -186,7 +186,6 @@ def tests()
 
               sh "make -C bar gprof_clean"
               TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
-  sh "ps auxw"
 
               // stop services
               sh "sudo /etc/init.d/vsftpd stop || true"

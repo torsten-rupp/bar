@@ -163,6 +163,16 @@ LOCAL void *threadPoolStartCode(void *userData)
             }
             pthread_mutex_lock(&threadPool->lock);
 
+            // signal thread terminated
+            threadPoolNode->state = THREADPOOL_THREAD_STATE_TERMINATED;
+            pthread_cond_signal(&threadPoolNode->trigger);
+
+            // wait for join
+            while (threadPoolNode->state != THREADPOOL_THREAD_STATE_JOINED)
+            {
+              pthread_cond_wait(&threadPoolNode->trigger,&threadPool->lock);
+            }
+
             // re-add to idle list
             threadPoolNode->state = THREADPOOL_THREAD_STATE_IDLE;
             List_remove(&threadPool->running,threadPoolNode);
@@ -177,8 +187,12 @@ LOCAL void *threadPoolStartCode(void *userData)
   pthread_cleanup_pop(1);
 
   // quit
-  threadPoolNode->state = THREADPOOL_THREAD_STATE_QUIT;
-  pthread_cond_broadcast(&threadPool->modified);
+  pthread_mutex_lock(&threadPool->lock);
+  {
+    threadPoolNode->state = THREADPOOL_THREAD_STATE_QUIT;
+    pthread_cond_signal(&threadPoolNode->trigger);
+  }
+  pthread_mutex_unlock(&threadPool->lock);
 
   return NULL;
 }
@@ -267,67 +281,80 @@ LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
 }
 
 /***********************************************************************\
-* Name   : waitRunningThreads
-* Purpose: wait for running threads
+* Name   : waitQuitThreads
+* Purpose: wait for threads to quit
 * Input  : threadPool - thread pool
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void waitRunningThreads(ThreadPool *threadPool)
+LOCAL void waitQuitThreads(ThreadPool *threadPool)
 {
   ThreadPoolNode *threadPoolNode;
 
   assert(threadPool != NULL);
 
+  // wait until threads not running
+  while (threadPool->running.head != NULL)
+  {
+    assert(   (threadPool->running.head->state == THREADPOOL_THREAD_STATE_RUNNING)
+           || (threadPool->running.head->state == THREADPOOL_THREAD_STATE_TERMINATED)
+           || (threadPool->running.head->state == THREADPOOL_THREAD_STATE_JOINED)
+          );
+
+    pthread_cond_wait(&threadPool->running.head->trigger,&threadPool->lock);
+  }
+
+  // wait until threads quit
   do
   {
-    // find running thread pool thread started by this thread
-    threadPoolNode = LIST_FIND(&threadPool->running,
+    // find not terminated thread pool thread
+    threadPoolNode = LIST_FIND(&threadPool->idle,
                                threadPoolNode,
-                               pthread_equal(threadPoolNode->usedBy,pthread_self()) != 0
+                               threadPoolNode->state != THREADPOOL_THREAD_STATE_QUIT
                               );
-//fprintf(stderr,"%s:%d: runningThreadPoolNode=%p\n",__FILE__,__LINE__,runningThreadPoolNode);
 
-    // wait for thread termination
+    // wait for thread state change
     if (threadPoolNode != NULL)
     {
-      pthread_cond_broadcast(&threadPoolNode->trigger);
-      pthread_cond_wait(&threadPool->modified,&threadPool->lock);
+      pthread_cond_signal(&threadPoolNode->trigger);
+      pthread_cond_wait(&threadPoolNode->trigger,&threadPool->lock);
     }
   }
   while (threadPoolNode != NULL);
 }
 
 /***********************************************************************\
-* Name   : waitIdleThreads
-* Purpose: wait for idle threads to quit
-* Input  : threadPool - thread pool
+* Name   : joinThread
+* Purpose: join thread
+* Input  : threadPool     - thread pool
+*          threadPoolNode - thread to join
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void waitIdleThreads(ThreadPool *threadPool)
+LOCAL void joinThread(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode)
 {
-  ThreadPoolNode *threadPoolNode;
+  assert(threadPoolNode != NULL);
 
-  assert(threadPool != NULL);
+  assert(   (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING)
+         || (threadPoolNode->state == THREADPOOL_THREAD_STATE_TERMINATED)
+         || (threadPoolNode->state == THREADPOOL_THREAD_STATE_JOINED)
+        );
 
-  do
+  // wait until terminated
+  while (   (threadPoolNode->state != THREADPOOL_THREAD_STATE_TERMINATED)
+         && (threadPoolNode->state != THREADPOOL_THREAD_STATE_JOINED)
+        )
   {
-    // find not terminated thread pool thread
-    threadPoolNode = LIST_FIND(&threadPool->idle,threadPoolNode,threadPoolNode->state != THREADPOOL_THREAD_STATE_QUIT);
-
-    // wait for thread termination
-    if (threadPoolNode != NULL)
-    {
-      pthread_cond_broadcast(&threadPoolNode->trigger);
-      pthread_cond_wait(&threadPool->modified,&threadPool->lock);
-    }
+    pthread_cond_wait(&threadPoolNode->trigger,&threadPool->lock);
   }
-  while (threadPoolNode != NULL);
+
+  // signal thread joined
+  threadPoolNode->state = THREADPOOL_THREAD_STATE_JOINED;
+  pthread_cond_signal(&threadPoolNode->trigger);
 }
 
 /*---------------------------------------------------------------------*/
@@ -372,11 +399,11 @@ bool ThreadPool_init(ThreadPool *threadPool,
     threadPoolNode = newThread(threadPool);
     if (threadPoolNode == NULL)
     {
-      // stop threads
+      // quit all threads
       threadPool->quitFlag = TRUE;
       pthread_mutex_lock(&threadPool->lock);
       {
-        waitIdleThreads(threadPool);
+        waitQuitThreads(threadPool);
       }
       pthread_mutex_unlock(&threadPool->lock);
 
@@ -424,12 +451,9 @@ void ThreadPool_done(ThreadPool *threadPool)
   // signal quit
   threadPool->quitFlag = TRUE;
 
-  // wait running thrads
-  waitRunningThreads(threadPool);
+  // quit all threads
+  waitQuitThreads(threadPool);
   assert(List_isEmpty(&threadPool->running));
-
-  // quit idle thread
-  waitIdleThreads(threadPool);
 
   // free thread pool threads
   while (!List_isEmpty(&threadPool->idle))
@@ -522,7 +546,7 @@ ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
     threadPoolNode->argument      = argument;
     List_append(&threadPool->running,threadPoolNode);
 
-    // run thread with funciton
+    // signal thread running
     pthread_cond_signal(&threadPoolNode->trigger);
   }
   pthread_mutex_unlock(&threadPool->lock);
@@ -540,10 +564,7 @@ bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode)
   {
     pthread_mutex_lock(&threadPool->lock);
     {
-      while (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING)
-      {
-        pthread_cond_wait(&threadPool->modified,&threadPool->lock);
-      }
+      joinThread(threadPool,threadPoolNode);
     }
     pthread_mutex_unlock(&threadPool->lock);
   }
@@ -569,12 +590,31 @@ bool ThreadPool_joinSet(ThreadPoolSet *threadPoolSet)
 
 bool ThreadPool_joinAll(ThreadPool *threadPool)
 {
+  ThreadPoolNode *threadPoolNode;
+
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
 
   pthread_mutex_lock(&threadPool->lock);
   {
-    waitRunningThreads(threadPool);
+//    waitRunningThreads(threadPool);
+    do
+    {
+      // find running thread pool thread started by this thread
+      threadPoolNode = LIST_FIND(&threadPool->running,
+                                 threadPoolNode,
+                                    (pthread_equal(threadPoolNode->usedBy,pthread_self()) != 0)
+                                 && (threadPoolNode->state != THREADPOOL_THREAD_STATE_JOINED)
+                                 && (threadPoolNode->state != THREADPOOL_THREAD_STATE_QUIT)
+                                );
+
+      // join thread
+      if (threadPoolNode != NULL)
+      {
+        joinThread(threadPool,threadPoolNode);
+      }
+    }
+    while (threadPoolNode != NULL);
   }
   pthread_mutex_unlock(&threadPool->lock);
 

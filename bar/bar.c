@@ -4388,7 +4388,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (!ThreadPool_init(&workerThreadPool,
                        "BAR worker",
                        globalOptions.niceLevel,
-                       (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()+3,
+                       ((globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores())+3,
                        MAX_UINT
                       )
      )

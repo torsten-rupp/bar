@@ -38,16 +38,41 @@
 
 /***************************** Datatypes *******************************/
 
+/* state changes:
+
+                            ThreadPool_done()
+   (Start) --------> IDLE --------------------\
+                 ^    |                       |
+                 |    | ThreadPool_run()      |
+                 |    |                       |
+                 |    v                       |
+                 |   RUNNING                  |
+                 |    |                       |
+                 |    | return                |
+                 |    |                       |
+                 |    v                       |
+                 |   TERMINATED               |
+                 |    |                       |
+                 |    | Thread_join()         |
+                 |    v                       |
+                 \---JOINED                   |
+                                              |
+   (End) <------------------------------------/
+*/
+
 typedef enum
 {
   THREADPOOL_THREAD_STATE_IDLE,
   THREADPOOL_THREAD_STATE_RUNNING,
+  THREADPOOL_THREAD_STATE_TERMINATED,
+  THREADPOOL_THREAD_STATE_JOINED,
   THREADPOOL_THREAD_STATE_QUIT
 } ThreadPoolThreadStates;
 
 typedef struct ThreadPoolNode
 {
   LIST_NODE_HEADER(struct ThreadPoolNode);
+
   ThreadPoolThreadStates state;
   pthread_t              thread;
   pthread_t              usedBy;
