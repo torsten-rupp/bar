@@ -493,7 +493,7 @@ Errors Pattern_move(Pattern *pattern, const Pattern *fromPattern)
   DEBUG_REMOVE_RESOURCE_TRACE(fromPattern,Pattern);
 
   pattern->type        = fromPattern->type;
-  pattern->regexString = String_duplicate(fromPattern->regexString);
+  pattern->regexString = fromPattern->regexString;
   pattern->regexFlags  = fromPattern->regexFlags;
   pattern->regexBegin  = fromPattern->regexBegin;
   pattern->regexEnd    = fromPattern->regexEnd;

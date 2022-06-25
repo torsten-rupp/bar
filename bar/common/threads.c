@@ -543,7 +543,7 @@ LOCAL void debugThreadSignalSegVHandler(int signalNumber)
 {
   if (signalNumber == SIGSEGV)
   {
-    #ifdef HAVE_BACKTRACE
+    #ifdef HAVE_SIGQUIT
       pthread_mutex_lock(&debugThreadSignalLock);
       {
         debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** CRASHED ***");
