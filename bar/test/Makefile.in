@@ -5980,7 +5980,7 @@ endif
             $(SLEEP) 2; \
             $(call functionServerCommandBatch,CONTINUE); \
             \
-            $(call functionServerCommandBatch,DECRYPT_PASSWORD_CLEAR); \
+            $(call functionServerCommandBatch,PASSWORDS_CLEAR); \
             $(call functionServerCommandBatch,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
             $(call functionServerCommandBatch,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
             $(call functionServerCommandBatch,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
@@ -6253,7 +6253,7 @@ test_server_operations_socket_client: \
             $(SLEEP) 2; \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CONTINUE); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
+            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
             $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
