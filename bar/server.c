@@ -15305,7 +15305,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // close archive
-  Archive_close(&archiveHandle);
+  Archive_close(&archiveHandle,FALSE);
 
   // done storage
   (void)Storage_done(&storageInfo);

@@ -1082,14 +1082,18 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
 /***********************************************************************\
 * Name   : initCryptPassword
 * Purpose: initialize crypt password
-* Input  : archiveHandle - archive handle
-*          password      - crypt password to use or NULL
+* Input  : archiveHandle   - archive handle
+*          cryptAlgorithms - crypt algorithms
+*          password        - crypt password to use or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *password)
+LOCAL Errors initCryptPassword(ArchiveHandle         *archiveHandle,
+                               const CryptAlgorithms cryptAlgorithms[4],
+                               const Password        *password
+                              )
 {
   Password *cryptPassword;
   Errors   error;
@@ -1097,10 +1101,11 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(cryptAlgorithms != NULL);
 
   SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0])
+    if (   Crypt_isEncrypted(cryptAlgorithms[0])
         && (archiveHandle->cryptPassword == NULL)
        )
     {
@@ -2532,7 +2537,9 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeSalt(ArchiveHandle *archiveHandle)
+LOCAL Errors writeSalt(ArchiveHandle   *archiveHandle,
+                       const CryptSalt *cryptSalt
+                      )
 {
   Errors    error;
   ChunkSalt chunkSalt;
@@ -2541,6 +2548,7 @@ LOCAL Errors writeSalt(ArchiveHandle *archiveHandle)
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(Semaphore_isOwned(&archiveHandle->lock));
   assert(archiveHandle->archiveCryptInfo != NULL);
+  assert(cryptSalt != NULL);
 
   // init key chunk
   error = Chunk_init(&chunkSalt.info,
@@ -2560,8 +2568,8 @@ LOCAL Errors writeSalt(ArchiveHandle *archiveHandle)
   }
 
   // get salt
-  assert(sizeof(chunkSalt.salt) == archiveHandle->archiveCryptInfo->cryptSalt.length);
-  Crypt_getSalt(chunkSalt.salt,sizeof(chunkSalt.salt),&archiveHandle->archiveCryptInfo->cryptSalt);
+  assert(sizeof(chunkSalt.salt) == cryptSalt->length);
+  Crypt_getSalt(chunkSalt.salt,sizeof(chunkSalt.salt),cryptSalt);
 
   // write salt
   error = Chunk_create(&chunkSalt.info);
@@ -2654,13 +2662,17 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
 /***********************************************************************\
 * Name   : writeMeta
 * Purpose: write archive meta chunks
-* Input  : archiveHandle - archive handle
+* Input  : archiveHandle  - archive handle
+*          cryptAlgorithm - crypt algorithm
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
+LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
+// TODO: multi-crypt
+                       CryptAlgorithms cryptAlgorithm
+                      )
 {
   Errors         error;
   ChunkMeta      chunkMeta;
@@ -2694,7 +2706,7 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(cryptAlgorithm);
   chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
@@ -2793,7 +2805,9 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
+LOCAL Errors writeSignature(ArchiveHandle *archiveHandle,
+                            const Key     *signaturePrivateKey
+                           )
 {
   AutoFreeList   autoFreeList;
   CryptHash      signatureHash;
@@ -2809,8 +2823,9 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
   assert(archiveHandle != NULL);
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->tell != NULL);
+  assert(signaturePrivateKey != NULL);
 
-  if (Configuration_isKeyAvailable(&globalOptions.signaturePrivateKey))
+  if (Configuration_isKeyAvailable(signaturePrivateKey))
   {
     // init variables
     AutoFree_init(&autoFreeList);
@@ -2859,8 +2874,8 @@ TODO: support dynamic hash length?
     // get signature
     Crypt_initKey(&privateSignatureKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_setPublicPrivateKeyData(&privateSignatureKey,
-                                          globalOptions.signaturePrivateKey.data,
-                                          globalOptions.signaturePrivateKey.length,
+                                          signaturePrivateKey->data,
+                                          signaturePrivateKey->length,
                                           CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // salt
@@ -2995,7 +3010,9 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       if (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_NONE)
       {
         // write salt
-        error = writeSalt(archiveHandle);
+        error = writeSalt(archiveHandle,
+                          &archiveHandle->archiveCryptInfo->cryptSalt
+                         );
         if (error != ERROR_NONE)
         {
           AutoFree_cleanup(&autoFreeList);
@@ -3020,7 +3037,9 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       if (archiveHandle->createMeta)
       {
         // write meta data
-        error = writeMeta(archiveHandle);
+        error = writeMeta(archiveHandle,
+                          archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]
+                         );
         if (error != ERROR_NONE)
         {
           AutoFree_cleanup(&autoFreeList);
@@ -3165,7 +3184,9 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
     // add signature
     if (!archiveHandle->storageInfo->jobOptions->noSignatureFlag)
     {
-      error = writeSignature(archiveHandle);
+      error = writeSignature(archiveHandle,
+                             &globalOptions.signaturePrivateKey
+                            );
       if (error != ERROR_NONE)
       {
         (void)File_close(&archiveHandle->create.tmpFileHandle);
@@ -5870,7 +5891,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         bool                    dryRun,
                         uint64                  createdDateTime,
                         bool                    createMeta,
-                        const Password          *password,
+                        const Password          *cryptPassword,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -5902,7 +5923,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           bool                    dryRun,
                           uint64                  createdDateTime,
                           bool                    createMeta,
-                          const Password          *password,
+                          const Password          *cryptPassword,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -6037,6 +6058,7 @@ UNUSED_VARIABLE(storageInfo);
 
   // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
+  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (archiveHandle->blockLength > 0));
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -6049,6 +6071,7 @@ UNUSED_VARIABLE(storageInfo);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
   error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
+  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (keyLength > 0));
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -6063,12 +6086,13 @@ UNUSED_VARIABLE(storageInfo);
       break;
     case CRYPT_TYPE_SYMMETRIC:
       // init crypt password
-      error = initCryptPassword(archiveHandle,password);
+      error = initCryptPassword(archiveHandle,storageInfo->jobOptions->cryptAlgorithms,cryptPassword);
       if (error !=  ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+      AUTOFREE_ADD(&autoFreeList,archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
 
       // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
@@ -6118,7 +6142,7 @@ UNUSED_VARIABLE(storageInfo);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Crypt_doneKey(&publicCryptKey); });
+        AUTOFREE_ADD(&autoFreeList,&publicCryptKey,{ Crypt_doneKey(&publicCryptKey); });
 
         // create new random key for encryption
         maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
@@ -6158,6 +6182,7 @@ UNUSED_VARIABLE(storageInfo);
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
         // free resources
+        AUTOFREE_REMOVE(&autoFreeList,&publicCryptKey);
         Crypt_doneKey(&publicCryptKey);
       }
       break;
@@ -6464,62 +6489,100 @@ UNUSED_VARIABLE(storageInfo);
 }
 
 #ifdef NDEBUG
-  Errors Archive_close(ArchiveHandle *archiveHandle)
+  Errors Archive_close(ArchiveHandle *archiveHandle,
+                       bool          storeFlag
+                      )
 #else /* not NDEBUG */
   Errors __Archive_close(const char    *__fileName__,
                          ulong         __lineNb__,
-                         ArchiveHandle *archiveHandle
+                         ArchiveHandle *archiveHandle,
+                         bool          storeFlag
                         )
 #endif /* NDEBUG */
 {
-  Errors  result;
   Errors  error;
   IndexId storageId;
-  String  intermediateFileName;
   int     partNumber;
   uint64  archiveSize;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  result = ERROR_NONE;
-
   // close file/storage, store archive file (if created)
-  intermediateFileName = String_new();
+  error = ERROR_UNKNOWN;
   SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     switch (archiveHandle->mode)
     {
       case ARCHIVE_MODE_CREATE:
-        // close archive
-        error = closeArchiveFile(archiveHandle,
-                                 &storageId,
-                                 intermediateFileName,
-                                 &partNumber,
-                                 &archiveSize
-                                );
-        if (error != ERROR_NONE)
         {
-          if (result == ERROR_NONE) result = error;
-        }
+          String  intermediateFileName;
 
-        // update index aggregates
-        if (   (archiveHandle->indexHandle != NULL)
-            && !INDEX_ID_IS_NONE(storageId)
-           )
-        {
-          error = Index_updateStorageInfos(archiveHandle->indexHandle,
-                                           storageId
-                                          );
+          intermediateFileName = String_new();
+
+          // close archive
+          error = closeArchiveFile(archiveHandle,
+                                   &storageId,
+                                   intermediateFileName,
+                                   &partNumber,
+                                   &archiveSize
+                                  );
           if (error != ERROR_NONE)
           {
-            if (result == ERROR_NONE) result = error;
+            String_delete(intermediateFileName);
+            break;
           }
+
+          // update index aggregates
+          if (   (archiveHandle->indexHandle != NULL)
+              && !INDEX_ID_IS_NONE(storageId)
+             )
+          {
+            error = Index_updateStorageInfos(archiveHandle->indexHandle,
+                                             storageId
+                                            );
+            if (error != ERROR_NONE)
+            {
+              (void)File_delete(intermediateFileName,FALSE);
+              String_delete(intermediateFileName);
+              break;
+            }
+          }
+
+          // store
+          if (!String_isEmpty(intermediateFileName))
+          {
+            if (storeFlag)
+            {
+              error = storeArchiveFile(archiveHandle,
+                                       storageId,
+                                       intermediateFileName,
+                                       partNumber,
+                                       archiveSize
+                                      );
+              if (error != ERROR_NONE)
+              {
+                (void)File_delete(intermediateFileName,FALSE);
+                String_delete(intermediateFileName);
+                break;
+              }
+            }
+            else
+            {
+              (void)File_delete(intermediateFileName,FALSE);
+            }
+          }
+
+          String_delete(intermediateFileName);
         }
         break;
       case ARCHIVE_MODE_READ:
+        assert(!storeFlag);
+
         // close storage
         Storage_close(&archiveHandle->read.storageHandle);
+
+        error = ERROR_NONE;
         break;
       #ifndef NDEBUG
         default:
@@ -6528,23 +6591,7 @@ UNUSED_VARIABLE(storageInfo);
       #endif /* NDEBUG */
     }
   }
-  if (   (archiveHandle->mode == ARCHIVE_MODE_CREATE)
-      && !String_isEmpty(intermediateFileName)
-     )
-  {
-    error = storeArchiveFile(archiveHandle,
-                             storageId,
-                             intermediateFileName,
-                             partNumber,
-                             archiveSize
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)File_delete(intermediateFileName,FALSE);
-      if (result == ERROR_NONE) result = error;
-    }
-  }
-  String_delete(intermediateFileName);
+  assert(error != ERROR_UNKNOWN);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,ArchiveHandle);
@@ -6592,7 +6639,7 @@ UNUSED_VARIABLE(storageInfo);
   String_delete(archiveHandle->userName);
   String_delete(archiveHandle->hostName);
 
-  return result;
+  return error;
 }
 
 const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
@@ -6924,6 +6971,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                               ArchiveHandle                   *archiveHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
+                              CryptAlgorithms                 cryptAlgorithm,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -6938,6 +6986,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 ArchiveHandle                   *archiveHandle,
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
+                                CryptAlgorithms                 cryptAlgorithm,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -6970,15 +7019,13 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->archiveHandle                  = archiveHandle;
 
 #ifdef MULTI_CRYPT
-fprintf(stderr,"%s, %d: %d %d %d %d\n",__FILE__,__LINE__,
-archiveHandle->jobOptions->cryptAlgorithms[0],
-archiveHandle->jobOptions->cryptAlgorithms[1],
-archiveHandle->jobOptions->cryptAlgorithms[2],
-archiveHandle->jobOptions->cryptAlgorithms[3]
-);
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*sizeof(CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
 #else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
@@ -7079,19 +7126,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFile.compressAlgorithm  = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.byteCompressAlgorithm);
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->file.chunkFile.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->file.chunkFile.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->file.chunkFile.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->file.chunkFile.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->file.chunkFile.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->file.chunkFile.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->file.chunkFile.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->file.chunkFile.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->file.chunkFile.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->file.chunkFile.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7106,7 +7153,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7121,7 +7168,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7136,7 +7183,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7151,7 +7198,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7342,6 +7389,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                ArchiveHandle      *archiveHandle,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
+                               CryptAlgorithms    cryptAlgorithm,
                                ConstString        deviceName,
                                const DeviceInfo   *deviceInfo,
                                FileSystemTypes    fileSystemType,
@@ -7356,6 +7404,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                  ArchiveHandle      *archiveHandle,
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
+                                 CryptAlgorithms    cryptAlgorithm,
                                  ConstString        deviceName,
                                  const DeviceInfo   *deviceInfo,
                                  FileSystemTypes    fileSystemType,
@@ -7387,7 +7436,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle                   = archiveHandle;
 
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+#ifdef MULTI_CRYPT
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*sizeof(CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
   archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
@@ -7488,19 +7544,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImage.compressAlgorithm  = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->image.chunkImage.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->image.chunkImage.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->image.chunkImage.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->image.chunkImage.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->image.chunkImage.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->image.chunkImage.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->image.chunkImage.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->image.chunkImage.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->image.chunkImage.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->image.chunkImage.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7515,7 +7571,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7530,7 +7586,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7545,7 +7601,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7702,6 +7758,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
+                                   CryptAlgorithms                 cryptAlgorithm,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -7711,6 +7768,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
+                                     CryptAlgorithms                 cryptAlgorithm,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -7738,7 +7796,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
 
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+#ifdef MULTI_CRYPT
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*sizeof(CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
@@ -7761,19 +7826,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7787,7 +7852,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7941,6 +8006,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
+                              CryptAlgorithms                 cryptAlgorithm,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -7951,6 +8017,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
+                                CryptAlgorithms                 cryptAlgorithm,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -7979,7 +8046,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
 
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+#ifdef MULTI_CRYPT
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
@@ -8002,19 +8076,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->link.chunkLink.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->link.chunkLink.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->link.chunkLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->link.chunkLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->link.chunkLink.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->link.chunkLink.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->link.chunkLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->link.chunkLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->link.chunkLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->link.chunkLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLink.info,{ Chunk_done(&archiveEntryInfo->link.chunkLink.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8028,7 +8102,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8183,6 +8257,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                   ArchiveHandle                   *archiveHandle,
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
+                                  CryptAlgorithms                 cryptAlgorithm,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -8197,6 +8272,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                     ArchiveHandle                   *archiveHandle,
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
+                                    CryptAlgorithms                 cryptAlgorithm,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -8231,7 +8307,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle                      = archiveHandle;
 
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+#ifdef MULTI_CRYPT
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*sizeof(CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
   archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
@@ -8337,19 +8420,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
   archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm  = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.byteCompressAlgorithm);
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLink.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8363,7 +8446,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8377,7 +8460,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8391,7 +8474,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8405,7 +8488,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8419,7 +8502,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8627,6 +8710,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
+                                 CryptAlgorithms                 cryptAlgorithm,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -8636,6 +8720,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
+                                   CryptAlgorithms                 cryptAlgorithm,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -8663,7 +8748,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
 
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+#ifdef MULTI_CRYPT
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*sizeof(CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
@@ -8686,19 +8778,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecial.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8712,7 +8804,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8869,6 +8961,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
+                              CryptAlgorithms  cryptAlgorithm,
                               const char       *hostName,
                               const char       *userName,
                               const char       *jobUUID,
@@ -8882,6 +8975,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                                 ulong            __lineNb__,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
+                                CryptAlgorithms  cryptAlgorithm,
                                 const char       *hostName,
                                 const char       *userName,
                                 const char       *jobUUID,
@@ -8911,7 +9005,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
 
-  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+#ifdef MULTI_CRYPT
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,4*sizeof(CryptAlgorithms),cryptAlgorithms,4*sizeof(CryptAlgorithms));
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_META;
@@ -8933,12 +9034,12 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[1]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[2]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveEntryInfo->cryptAlgorithms[0]);
   archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
@@ -8948,7 +9049,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init crypt
   error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
 //TODO: multi crypt
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -9313,6 +9414,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 #ifdef NDEBUG
   Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveHandle    *archiveHandle,
+                               CryptTypes       *cryptType,
+                               CryptAlgorithms  *cryptAlgorithm,
                                String           hostName,
                                String           userName,
                                String           jobUUID,
@@ -9326,6 +9429,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveHandle    *archiveHandle,
+                                 CryptTypes       *cryptType,
+                                 CryptAlgorithms  *cryptAlgorithm,
                                  String           hostName,
                                  String           userName,
                                  String           jobUUID,
@@ -9638,6 +9743,10 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     else if (!foundMetaEntryFlag)                                                      return ERROR_NO_META_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
+
+  // init variables
+  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
+  if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
 
   // done resources
   AutoFree_done(&autoFreeList1);
@@ -15273,7 +15382,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                             );
   if (error != ERROR_NONE)
   {
-    (void)Archive_close(&archiveHandle);
+    (void)Archive_close(&archiveHandle,FALSE);
     String_delete(comment);
     String_delete(userName);
     String_delete(hostName);
@@ -15588,6 +15697,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read meta entry
           error = Archive_readMetaEntry(&archiveEntryInfo,
                                         &archiveHandle,
+                                        NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
                                         hostName,
                                         userName,
                                         jobUUID,
@@ -15796,7 +15907,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
 
   // close archive
-  Archive_close(&archiveHandle);
+  Archive_close(&archiveHandle,FALSE);
 
   // done progress info
   doneUpdateIndexProgress();
@@ -15891,7 +16002,7 @@ archiveHandle->archiveInitUserData              = NULL;
                         );
   if (error != ERROR_NONE)
   {
-    Archive_close(&sourceArchiveHandle);
+    Archive_close(&sourceArchiveHandle,FALSE);
     return error;
   }
 
@@ -17522,8 +17633,8 @@ archiveHandle->archiveInitUserData              = NULL;
 
 
   // free resources
-  Archive_close(&destinationArchiveHandle);
-  Archive_close(&sourceArchiveHandle);
+  Archive_close(&destinationArchiveHandle,TRUE);
+  Archive_close(&sourceArchiveHandle,FALSE);
 
   return ERROR_NONE;
 }
