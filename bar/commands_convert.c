@@ -51,7 +51,8 @@
 // convert info
 typedef struct
 {
-  StorageInfo             storageInfo;
+  StorageInfo             sourceStorageInfo;
+  StorageInfo             destinationStorageInfo;
   const char              *newJobUUID;
   const char              *newScheduleUUID;
   uint64                  newCreatedDateTime;
@@ -397,7 +398,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
     // get printable storage name
-    Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,convertInfo->archiveName);
+    Storage_getPrintableName(printableStorageName,&convertInfo->sourceStorageInfo.storageSpecifier,convertInfo->archiveName);
 
     // open file to store
     #ifndef NDEBUG
@@ -421,11 +422,11 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
     // rename original storage file to temporary file
-    if (Storage_exists(&convertInfo->storageInfo,convertInfo->archiveName))
+    if (Storage_exists(&convertInfo->sourceStorageInfo,convertInfo->archiveName))
     {
-      Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
+      Storage_getTmpName(tmpArchiveName,&convertInfo->sourceStorageInfo);
 //fprintf(stderr,"%s, %d: rename original %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->archiveName),String_cString(tmpArchiveName));
-      error = Storage_rename(&convertInfo->storageInfo,convertInfo->archiveName,tmpArchiveName);
+      error = Storage_rename(&convertInfo->sourceStorageInfo,convertInfo->archiveName,tmpArchiveName);
       if (error != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
@@ -437,7 +438,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
       }
-      AUTOFREE_ADD(&autoFreeList,&tmpArchiveName, { Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->archiveName); });
+      AUTOFREE_ADD(&autoFreeList,&tmpArchiveName, { Storage_rename(&convertInfo->sourceStorageInfo,tmpArchiveName,convertInfo->archiveName); });
     }
     else
     {
@@ -519,7 +520,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
         // create storage file
         error = Storage_create(&storageHandle,
-                               &convertInfo->storageInfo,
+                               &convertInfo->destinationStorageInfo,
                                convertInfo->archiveName,
                                fileInfo.size,
                                TRUE  // forceFlag
@@ -542,7 +543,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
           }
         }
         DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
-        AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); Storage_delete(&convertInfo->storageInfo,convertInfo->archiveName); });
+        AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); Storage_delete(&convertInfo->destinationStorageInfo,convertInfo->archiveName); });
 
         // transfer data from temporary file to storage
         File_seek(&fileHandle,0);
@@ -624,7 +625,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     {
       // delete original storage file
 //fprintf(stderr,"%s, %d: delete saved orginal %s\n",__FILE__,__LINE__,String_cString(tmpArchiveName));
-      error = Storage_delete(&convertInfo->storageInfo,tmpArchiveName);
+      error = Storage_delete(&convertInfo->sourceStorageInfo,tmpArchiveName);
       if (error != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
@@ -708,7 +709,6 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
-  CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
   String                    fileName;
   FileInfo                  fileInfo;
@@ -727,7 +727,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                 sourceArchiveHandle,
                                 &deltaCompressAlgorithm,
                                 &byteCompressAlgorithm,
-                                &cryptType,
+                                NULL,  // cryptType,
                                 &cryptAlgorithm,
                                 fileName,
                                 &fileInfo,
@@ -789,6 +789,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                destinationArchiveHandle,
                                deltaCompressAlgorithm,
                                byteCompressAlgorithm,
+                               cryptAlgorithm,
                                fileName,
                                &fileInfo,
                                &fileExtendedAttributeList,
@@ -920,10 +921,9 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                               )
 {
   Errors             error;
-  ArchiveFlags              archiveFlags;
+  ArchiveFlags       archiveFlags;
   ArchiveEntryInfo   sourceArchiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  CryptTypes         cryptType;
   CryptAlgorithms    cryptAlgorithm;
   String             deviceName;
   DeviceInfo         deviceInfo;
@@ -940,7 +940,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                  sourceArchiveHandle,
                                  &deltaCompressAlgorithm,
                                  &byteCompressAlgorithm,
-                                 &cryptType,
+                                 NULL,  // cryptType,
                                  &cryptAlgorithm,
                                  deviceName,
                                  &deviceInfo,
@@ -1013,6 +1013,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                 destinationArchiveHandle,
                                 deltaCompressAlgorithm,
                                 byteCompressAlgorithm,
+                                cryptAlgorithm,
                                 deviceName,
                                 &deviceInfo,
                                 fileSystemType,
@@ -1138,7 +1139,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
-  CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
@@ -1148,7 +1148,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readDirectoryEntry(&sourceArchiveEntryInfo,
                                      sourceArchiveHandle,
-                                     &cryptType,
+                                     NULL,  // cryptType,
                                      &cryptAlgorithm,
                                      directoryName,
                                      &fileInfo,
@@ -1174,6 +1174,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
+                                    cryptAlgorithm,
                                     directoryName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -1245,7 +1246,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 {
   String                    linkName;
   String                    fileName;
-  CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
@@ -1259,7 +1259,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readLinkEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
-                                &cryptType,
+                                NULL,  // cryptType,
                                 &cryptAlgorithm,
                                 linkName,
                                 fileName,
@@ -1287,6 +1287,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
+                               cryptAlgorithm,
                                linkName,
                                fileName,
                                &fileInfo,
@@ -1369,7 +1370,6 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
-  CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
@@ -1386,7 +1386,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                     sourceArchiveHandle,
                                     &deltaCompressAlgorithm,
                                     &byteCompressAlgorithm,
-                                    &cryptType,
+                                    NULL,  // cryptType,
                                     &cryptAlgorithm,
                                     &fileNameList,
                                     &fileInfo,
@@ -1444,6 +1444,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                    destinationArchiveHandle,
                                    deltaCompressAlgorithm,
                                    byteCompressAlgorithm,
+                                   cryptAlgorithm,
                                    &fileNameList,
                                    &fileInfo,
                                    &fileExtendedAttributeList,
@@ -1563,7 +1564,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
-  CryptTypes                cryptType;
   CryptAlgorithms           cryptAlgorithm;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
@@ -1573,7 +1573,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readSpecialEntry(&sourceArchiveEntryInfo,
                                    sourceArchiveHandle,
-                                   &cryptType,
+                                   NULL,  // cryptType,
                                    &cryptAlgorithm,
                                    fileName,
                                    &fileInfo,
@@ -1599,6 +1599,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
+                                  cryptAlgorithm,
                                   fileName,
                                   &fileInfo,
                                   &fileExtendedAttributeList
@@ -1674,15 +1675,16 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               const JobOptions *newJobOptions
                              )
 {
+  CryptAlgorithms  cryptAlgorithm;
   String           hostName;
   String           userName;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveEntryInfo sourceArchiveEntryInfo;
   ArchiveTypes     archiveType;
   uint64           createdDateTime;
   String           comment;
   Errors           error;
-  ArchiveEntryInfo sourceArchiveEntryInfo;
   ArchiveEntryInfo destinationArchiveEntryInfo;
 
   UNUSED_VARIABLE(newJobOptions);
@@ -1693,6 +1695,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   comment  = String_new();
   error = Archive_readMetaEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
+                                NULL,  // cryptType,
+                                &cryptAlgorithm,
                                 hostName,
                                 userName,
                                 jobUUID,
@@ -1717,6 +1721,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert meta      ...");
 
   // set new job UUID, schedule UUOD, created date/time comment
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
   if (!stringIsEmpty(newJobUUID)) String_setCString(jobUUID,newJobUUID);
   if (!stringIsEmpty(newScheduleUUID)) String_setCString(scheduleUUID,newScheduleUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
@@ -1725,6 +1730,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   // create new meta entry
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
+                               cryptAlgorithm,
                                String_cString(hostName),
                                String_cString(userName),
                                String_cString(jobUUID),
@@ -2012,8 +2018,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   // set printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
 
-  // init storage
-  error = Storage_init(&convertInfo->storageInfo,
+  // init source storage
+  error = Storage_init(&convertInfo->sourceStorageInfo,
                        NULL,  // masterIO
                        storageSpecifier,
                        convertInfo->newJobOptions,
@@ -2036,10 +2042,10 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     return error;
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&convertInfo->storageInfo,{ (void)Storage_done(&convertInfo->storageInfo); });
+  AUTOFREE_ADD(&autoFreeList,&convertInfo->sourceStorageInfo,{ (void)Storage_done(&convertInfo->sourceStorageInfo); });
 
   // check if storage exists
-  if (!Storage_exists(&convertInfo->storageInfo,archiveName))
+  if (!Storage_exists(&convertInfo->sourceStorageInfo,archiveName))
   {
     printError("achive not found '%s'!",
                String_cString(printableStorageName)
@@ -2050,7 +2056,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // open source archive
   error = Archive_open(&sourceArchiveHandle,
-                       &convertInfo->storageInfo,
+                       &convertInfo->sourceStorageInfo,
                        archiveName,
                        NULL,  // deltaSourceList,
                        CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
@@ -2110,6 +2116,32 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     }
   }
 
+  // init destination storage
+  error = Storage_init(&convertInfo->destinationStorageInfo,
+                       NULL,  // masterIO
+                       storageSpecifier,
+                       convertInfo->newJobOptions,
+                       &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // getPassword
+                       CALLBACK_(NULL,NULL),  // requestVolume
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
+                       NULL  // logHandle
+                      );
+  if (error != ERROR_NONE)
+  {
+    printError("cannot initialize storage '%s' (error: %s)!",
+               String_cString(printableStorageName),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&convertInfo->destinationStorageInfo,{ (void)Storage_done(&convertInfo->destinationStorageInfo); });
+
   // create destination archive name
   baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
   if (!String_isEmpty(convertInfo->newJobOptions->destination))
@@ -2127,10 +2159,11 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   error = Archive_create(&convertInfo->destinationArchiveHandle,
                          NULL,  // hostName
                          NULL,  // userName
-                         &convertInfo->storageInfo,
+                         &convertInfo->destinationStorageInfo,
                          NULL,  // archiveName,
                          INDEX_ID_NONE,  // uuidId,
                          INDEX_ID_NONE,  // entityId,
+// TODO:
                          NULL,  // jobUUID,
                          NULL,  // scheduleUUID,
 //TODO
@@ -2139,7 +2172,9 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                          FALSE, // dryRun
                          Misc_getCurrentDateTime(),
                          FALSE,  // createMeta
-                         &globalOptions.cryptNewPassword,
+                         CmdOption_isSet(&globalOptions.cryptNewPassword)
+                           ? &globalOptions.cryptNewPassword
+                           : &globalOptions.cryptPassword,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(NULL,NULL),  // archiveGetSizeFunction
@@ -2184,6 +2219,11 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
            );
 
   // read archive entries
+  error = Archive_seek(&sourceArchiveHandle,0LL);
+  if (error != ERROR_NONE)
+  {
+    if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+  }
   while (   (convertInfo->failError == ERROR_NONE)
          && !Archive_eof(&sourceArchiveHandle,
                          ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3)
@@ -2213,50 +2253,75 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
       break;
     }
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-//TODO: remove
-//fprintf(stderr,"%s, %d: archiveEntryType=%s\n",__FILE__,__LINE__,Archive_archiveEntryTypeToString(archiveEntryType,NULL));
 
     // convert entries
-    if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
+    switch (archiveEntryType)
     {
-      // send entry to convert threads
+      case ARCHIVE_ENTRY_TYPE_META:
+#if 0
+        error = convertMetaEntry(&sourceArchiveHandle,
+                                 &convertInfo->destinationArchiveHandle,
+                                 convertInfo->newJobUUID,
+                                 convertInfo->newScheduleUUID,
+                                 convertInfo->newCreatedDateTime,
+                                 convertInfo->newJobOptions
+                                );
+        if (error != ERROR_NONE)
+        {
+          if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+          break;
+        }
+        break;
+#endif
+      case ARCHIVE_ENTRY_TYPE_FILE:
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      case ARCHIVE_ENTRY_TYPE_LINK:
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        // send entry to convert threads
 //TODO: increment on multiple archives and when threads are not restarted each time
-      entryMsg.archiveIndex     = 1;
-      entryMsg.archiveHandle    = &sourceArchiveHandle;
-      entryMsg.archiveEntryType = archiveEntryType;
-      entryMsg.archiveCryptInfo = archiveCryptInfo;
-      entryMsg.offset           = offset;
-      if (!MsgQueue_put(&convertInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-      {
-        HALT_INTERNAL_ERROR("Send message to convert threads fail!");
-      }
+        entryMsg.archiveIndex     = 1;
+        entryMsg.archiveHandle    = &sourceArchiveHandle;
+        entryMsg.archiveEntryType = archiveEntryType;
+        entryMsg.archiveCryptInfo = archiveCryptInfo;
+        entryMsg.offset           = offset;
+        if (!MsgQueue_put(&convertInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+        {
+          HALT_INTERNAL_ERROR("Send message to convert threads fail!");
+        }
 
-      // skip entry
-      error = Archive_skipNextEntry(&sourceArchiveHandle);
-      if (error != ERROR_NONE)
-      {
-        if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-        break;
-      }
-    }
-    else
-    {
-      if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
-      {
-        // check signature
-        error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&sourceAllCryptSignatureState);
-      }
-      else
-      {
-        // skip signature
+        // skip entry
         error = Archive_skipNextEntry(&sourceArchiveHandle);
-      }
-      if (error != ERROR_NONE)
-      {
-        if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+        if (error != ERROR_NONE)
+        {
+          if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+          break;
+        }
         break;
-      }
-      sourceLastSignatureOffset = Archive_tell(&sourceArchiveHandle);
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+        if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
+        {
+          // check signature
+          error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&sourceAllCryptSignatureState);
+        }
+        else
+        {
+          // skip signature
+          error = Archive_skipNextEntry(&sourceArchiveHandle);
+        }
+        if (error != ERROR_NONE)
+        {
+          if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+          break;
+        }
+        sourceLastSignatureOffset = Archive_tell(&sourceArchiveHandle);
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
     }
   }
 
@@ -2293,8 +2358,9 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_REMOVE(&autoFreeList,&sourceArchiveHandle);
   (void)Archive_close(&sourceArchiveHandle,FALSE);
 
-  // done storage
-  (void)Storage_done(&convertInfo->storageInfo);
+  // done storages
+  (void)Storage_done(&convertInfo->destinationStorageInfo);
+  (void)Storage_done(&convertInfo->sourceStorageInfo);
 
   // output info
   if (!isPrintInfo(1)) printInfo(0,
@@ -2354,6 +2420,13 @@ Errors Command_convert(const StringList        *storageNameList,
 
   assert(storageNameList != NULL);
   assert(newJobOptions != NULL);
+
+  // check options
+  if (!Password_isEmpty(&newJobOptions->cryptPassword) && !Crypt_isEncrypted(newJobOptions->cryptAlgorithms[0]))
+  {
+    printError("crypt algorithm must be specified!");
+    return ERROR_INVALID_ARGUMENT;
+  }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);

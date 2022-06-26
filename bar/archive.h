@@ -700,7 +700,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          deltaSourceList         - delta source list or NULL
 *          archiveType             - archive type
 *          createdDateTime         - date/time created [s]
-*          password                - password
+*          cryptType               - crypt type; see CRYPT_TYPE_...
+*          cryptAlgorithms         - crypt algorithm; see CRYPT_ALGORIHTM_...
+*          cryptPassword           - crypt password
 *          createMeta              - TRUE to create meta-chunks
 *          storageFlags            - storage flags
 *          archiveInitFunction     - call back to initialize archive
@@ -735,7 +737,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         bool                    dryRun,
                         uint64                  createdDateTime,
                         bool                    createMeta,
-                        const Password          *password,
+                        const Password          *cryptPassword,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -767,7 +769,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           bool                    dryRun,
                           uint64                  createdDateTime,
                           bool                    createMeta,
-                          const Password          *password,
+                          const Password          *cryptPassword,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -854,7 +856,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_close(ArchiveHandle *archiveHandle
+  Errors Archive_close(ArchiveHandle *archiveHandle,
                        bool          storeFlag
                       );
 #else /* not NDEBUG */
@@ -902,6 +904,59 @@ INLINE void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
   archiveHandle->archiveCryptInfo = archiveCryptInfo;
 }
 #endif /* defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__) */
+
+// TODO:
+#if 0
+/***********************************************************************\
+* Name   : Archive_getCryptAlgorithms
+* Purpose: get crypt algorithms
+* Input  : archiveHandle  - archive handle
+* Output : -
+* Return : crypt algorithm; see CRYPT_ALGORITHM_...
+* Notes  : -
+\***********************************************************************/
+
+INLINE CryptAlgorithms Archive_getCryptAlgorithm(const ArchiveHandle *archiveHandle);
+#if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__)
+INLINE CryptAlgorithms Archive_getCryptAlgorithm(const ArchiveHandle *archiveHandle)
+{
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+
+// TODO: multi-crypt
+  return archiveHandle->cryptAlgorithms[0];
+}
+#endif /* defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__) */
+
+/***********************************************************************\
+* Name   : Archive_setCryptAlgorithms
+* Purpose: set crypt algorithms
+* Input  : archiveHandle  - archive handle
+*          cryptAlgorithm - crypt algorithm; see CRYPT_ALGORITHM_...
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Archive_setCryptAlgorithm(ArchiveHandle         *archiveHandle,
+                                      const CryptAlgorithms cryptAlgorithm
+                                     );
+#if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__)
+INLINE void Archive_setCryptAlgorithm(ArchiveHandle         *archiveHandle,
+                                      const CryptAlgorithms cryptAlgorithm
+                                     )
+{
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+
+// TODO: multi-crypt
+  archiveHandle->cryptAlgorithms[0] = cryptAlgorithm;
+  archiveHandle->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveHandle->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveHandle->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+}
+#endif /* defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__) */
+#endif
 
 #if 0
 /***********************************************************************\
@@ -962,6 +1017,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
+                              CryptAlgorithms  cryptAlgorithm,
                               const char       *userName,
                               const char       *hostName,
                               const char       *jobUUID,
@@ -975,6 +1031,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ulong            __lineNb__,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
+                                CryptAlgorithms  cryptAlgorithm,
                                 const char       *userName,
                                 const char       *hostName,
                                 const char       *jobUUID,
@@ -1009,6 +1066,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                               ArchiveHandle                   *archiveHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
+                              CryptAlgorithms                 cryptAlgorithm,
 //TOOD: use archiveHandle
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
@@ -1024,6 +1082,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ArchiveHandle                   *archiveHandle,
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
+                                CryptAlgorithms                 cryptAlgorithm,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1055,6 +1114,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                ArchiveHandle      *archiveHandle,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
+                               CryptAlgorithms    cryptAlgorithm,
                                ConstString        deviceName,
                                const DeviceInfo   *deviceInfo,
                                FileSystemTypes    fileSystemType,
@@ -1069,6 +1129,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                  ArchiveHandle      *archiveHandle,
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
+                                 CryptAlgorithms    cryptAlgorithm,
                                  ConstString        deviceName,
                                  const DeviceInfo   *deviceInfo,
                                  FileSystemTypes    fileSystemType,
@@ -1099,6 +1160,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
+                                   CryptAlgorithms                 cryptAlgorithm,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1108,6 +1170,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
+                                     CryptAlgorithms                 cryptAlgorithm,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1132,6 +1195,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
+                              CryptAlgorithms                 cryptAlgorithm,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -1142,6 +1206,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
+                                CryptAlgorithms                 cryptAlgorithm,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -1174,6 +1239,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                   ArchiveHandle                   *archiveHandle,
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
+                                  CryptAlgorithms                 cryptAlgorithm,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1188,6 +1254,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                     ArchiveHandle                   *archiveHandle,
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
+                                    CryptAlgorithms                 cryptAlgorithm,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1215,6 +1282,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
+                                 CryptAlgorithms                 cryptAlgorithm,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1224,6 +1292,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
+                                   CryptAlgorithms                 cryptAlgorithm,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1269,7 +1338,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *                                      (can be NULL)
 *          byteCompressAlgorithm     - used byte compression algorithm
 *                                      (can be NULL)
-*          cryptType                 - used crypt type (can be NULL)
+*          cryptType                 - used crypt type
 *          cryptAlgorithm            - used crypt algorithm (can be
 *                                      NULL)
 *          fileName                  - file name
@@ -1329,7 +1398,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *                                   (can be NULL)
 *          byteCompressAlgorithm  - used byte compression algorithm (can
 *                                   be NULL)
-*          cryptType              - used crypt type (can be NULL)
+*          cryptType              - used crypt type
 *          cryptAlgorithm         - used crypt algorithm (can be NULL)
 *          deviceName             - image name
 *          deviceInfo             - device info (can be NULL)
@@ -1382,7 +1451,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read directory info from archive
 * Input  : archiveEntryInfo - archive directory info
 *          archiveHandle    - archive handle
-* Output : cryptType                 - used crypt type (can be NULL)
+* Output : cryptType                 - used crypt type
 *          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          directoryName             - directory name
 *          fileInfo                  - file info
@@ -1419,7 +1488,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read link info from archive
 * Input  : archiveEntryInfo - archive link entry info
 *          archiveHandle    - archive handle
-* Output : cryptType                 - used crypt type (can be NULL)
+* Output : cryptType                 - used crypt type
 *          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          linkName                  - link name
 *          destinationName           - name of referenced file
@@ -1463,7 +1532,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *                                      (can be NULL)
 *          byteCompressAlgorithm     - used byte compression algorithm
 *                                      (can be NULL)
-*          cryptType                 - used crypt type (can be NULL)
+*          cryptType                 - used crypt type
 *          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          fileNameList              - list of file names
 *          fileInfo                  - file info
@@ -1518,7 +1587,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read special device info from archive
 * Input  : archiveEntryInfo - archive special entry info
 *          archiveHandle    - archive handle
-* Output : cryptType                 - used crypt type (can be NULL)
+* Output : cryptType                 - used crypt type
 *          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          name                      - link name
 *          fileInfo                  - file info
@@ -1555,7 +1624,9 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read meta info from archive
 * Input  : archiveEntryInfo - archive file entry info
 *          archiveHandle    - archive handle
-* Output : hostName        - host name (can be NULL)
+* Output : cryptType       - used crypt type
+*          cryptAlgorithm  - used crypt algorithm (can be NULL)
+*          hostName        - host name (can be NULL)
 *          userName        - user name (can be NULL)
 *          jobUUID         - job UUID (can be NULL)
 *          scheduleUUID    - schedule UUID (can be NULL)
@@ -1569,6 +1640,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 #ifdef NDEBUG
   Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveHandle    *archiveHandle,
+                               CryptTypes       *cryptType,
+                               CryptAlgorithms  *cryptAlgorithm,
                                String           hostName,
                                String           userName,
                                String           jobUUID,
@@ -1582,6 +1655,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveHandle    *archiveHandle,
+                                 CryptTypes       *cryptType,
+                                 CryptAlgorithms  *cryptAlgorithm,
                                  String           hostName,
                                  String           userName,
                                  String           jobUUID,

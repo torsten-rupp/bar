@@ -3208,6 +3208,8 @@ NULL, // masterSocketHandle
                   comment  = String_new();
                   error = Archive_readMetaEntry(&archiveEntryInfo,
                                                 &archiveHandle,
+                                                NULL,  // cryptType
+                                                NULL,  // cryptAlgorithm
                                                 hostName,
                                                 userName,
                                                 jobUUID,

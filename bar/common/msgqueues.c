@@ -463,7 +463,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
              && (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
             )
       {
-        waitModified(msgQueue,NULL);
+        waitModified(msgQueue,WAIT_FOREVER);
       }
       assert(msgQueue->endOfMsgFlag || List_count(&msgQueue->list) < msgQueue->maxMsgs);
     }
@@ -486,7 +486,7 @@ void MsgQueue_wait(MsgQueue *msgQueue)
   {
     if (!msgQueue->endOfMsgFlag)
     {
-      waitModified(msgQueue,NULL);
+      waitModified(msgQueue,WAIT_FOREVER);
     }
   }
 }
