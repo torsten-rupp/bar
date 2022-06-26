@@ -6464,62 +6464,99 @@ UNUSED_VARIABLE(storageInfo);
 }
 
 #ifdef NDEBUG
-  Errors Archive_close(ArchiveHandle *archiveHandle)
+  Errors Archive_close(ArchiveHandle *archiveHandle,
+                       bool          storeFlag
+                      )
 #else /* not NDEBUG */
   Errors __Archive_close(const char    *__fileName__,
                          ulong         __lineNb__,
-                         ArchiveHandle *archiveHandle
+                         ArchiveHandle *archiveHandle,
+                         bool          storeFlag
                         )
 #endif /* NDEBUG */
 {
-  Errors  result;
   Errors  error;
   IndexId storageId;
-  String  intermediateFileName;
   int     partNumber;
   uint64  archiveSize;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  result = ERROR_NONE;
-
   // close file/storage, store archive file (if created)
-  intermediateFileName = String_new();
+  error = ERROR_UNKNOWN;
   SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     switch (archiveHandle->mode)
     {
       case ARCHIVE_MODE_CREATE:
-        // close archive
-        error = closeArchiveFile(archiveHandle,
-                                 &storageId,
-                                 intermediateFileName,
-                                 &partNumber,
-                                 &archiveSize
-                                );
-        if (error != ERROR_NONE)
         {
-          if (result == ERROR_NONE) result = error;
-        }
+          String  intermediateFileName;
 
-        // update index aggregates
-        if (   (archiveHandle->indexHandle != NULL)
-            && !INDEX_ID_IS_NONE(storageId)
-           )
-        {
-          error = Index_updateStorageInfos(archiveHandle->indexHandle,
-                                           storageId
-                                          );
+          intermediateFileName = String_new();
+
+          // close archive
+          error = closeArchiveFile(archiveHandle,
+                                   &storageId,
+                                   intermediateFileName,
+                                   &partNumber,
+                                   &archiveSize
+                                  );
           if (error != ERROR_NONE)
           {
-            if (result == ERROR_NONE) result = error;
+            String_delete(intermediateFileName);
+            break;
           }
+
+          // update index aggregates
+          if (   (archiveHandle->indexHandle != NULL)
+              && !INDEX_ID_IS_NONE(storageId)
+             )
+          {
+            error = Index_updateStorageInfos(archiveHandle->indexHandle,
+                                             storageId
+                                            );
+            if (error != ERROR_NONE)
+            {
+              (void)File_delete(intermediateFileName,FALSE);
+              String_delete(intermediateFileName);
+              break;
+            }
+          }
+
+          if (!String_isEmpty(intermediateFileName))
+          {
+            if (storeFlag)
+            {
+              error = storeArchiveFile(archiveHandle,
+                                       storageId,
+                                       intermediateFileName,
+                                       partNumber,
+                                       archiveSize
+                                      );
+              if (error != ERROR_NONE)
+              {
+                (void)File_delete(intermediateFileName,FALSE);
+                String_delete(intermediateFileName);
+                break;
+              }
+            }
+            else
+            {
+              (void)File_delete(intermediateFileName,FALSE);
+            }
+          }
+
+          String_delete(intermediateFileName);
         }
         break;
       case ARCHIVE_MODE_READ:
+        assert(!storeFlag);
+
         // close storage
         Storage_close(&archiveHandle->read.storageHandle);
+
+        error = ERROR_NONE;
         break;
       #ifndef NDEBUG
         default:
@@ -6528,23 +6565,7 @@ UNUSED_VARIABLE(storageInfo);
       #endif /* NDEBUG */
     }
   }
-  if (   (archiveHandle->mode == ARCHIVE_MODE_CREATE)
-      && !String_isEmpty(intermediateFileName)
-     )
-  {
-    error = storeArchiveFile(archiveHandle,
-                             storageId,
-                             intermediateFileName,
-                             partNumber,
-                             archiveSize
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)File_delete(intermediateFileName,FALSE);
-      if (result == ERROR_NONE) result = error;
-    }
-  }
-  String_delete(intermediateFileName);
+  assert(error != ERROR_UNKNOWN);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,ArchiveHandle);
@@ -6592,7 +6613,7 @@ UNUSED_VARIABLE(storageInfo);
   String_delete(archiveHandle->userName);
   String_delete(archiveHandle->hostName);
 
-  return result;
+  return error;
 }
 
 const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
@@ -15273,7 +15294,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                             );
   if (error != ERROR_NONE)
   {
-    (void)Archive_close(&archiveHandle);
+    (void)Archive_close(&archiveHandle,FALSE);
     String_delete(comment);
     String_delete(userName);
     String_delete(hostName);
@@ -15796,7 +15817,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
 
   // close archive
-  Archive_close(&archiveHandle);
+  Archive_close(&archiveHandle,FALSE);
 
   // done progress info
   doneUpdateIndexProgress();
@@ -15891,7 +15912,7 @@ archiveHandle->archiveInitUserData              = NULL;
                         );
   if (error != ERROR_NONE)
   {
-    Archive_close(&sourceArchiveHandle);
+    Archive_close(&sourceArchiveHandle,FALSE);
     return error;
   }
 
@@ -17522,8 +17543,8 @@ archiveHandle->archiveInitUserData              = NULL;
 
 
   // free resources
-  Archive_close(&destinationArchiveHandle);
-  Archive_close(&sourceArchiveHandle);
+  Archive_close(&destinationArchiveHandle,TRUE);
+  Archive_close(&sourceArchiveHandle,FALSE);
 
   return ERROR_NONE;
 }

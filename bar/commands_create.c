@@ -4059,7 +4059,7 @@ Misc_udelay(1000*1000);
   }
 
   // close archive
-  (void)Archive_close(&archiveHandle);
+  (void)Archive_close(&archiveHandle,FALSE);
 
   return error;
 }
@@ -8049,8 +8049,8 @@ Errors Command_create(ServerIO                     *masterIO,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_close(&createInfo.archiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&createInfo.archiveHandle,{ Archive_close(&createInfo.archiveHandle); });
+  DEBUG_TESTCODE() { Archive_close(&createInfo.archiveHandle,FALSE); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&createInfo.archiveHandle,{ Archive_close(&createInfo.archiveHandle,FALSE); });
 
   // start collectors and storage thread
   collectorSumThreadNode = ThreadPool_run(&workerThreadPool,collectorSumThreadCode,&createInfo);
@@ -8088,7 +8088,7 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
-  error = Archive_close(&createInfo.archiveHandle);
+  error = Archive_close(&createInfo.archiveHandle,TRUE);
   if (error != ERROR_NONE)
   {
     printError("cannot close archive '%s' (error: %s)",

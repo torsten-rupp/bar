@@ -1948,7 +1948,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   // close archive
   if (archiveIndex != 0)
   {
-    Archive_close(&sourceArchiveHandle);
+    Archive_close(&sourceArchiveHandle,FALSE);
   }
 
   // discard processing all other entries
@@ -2065,8 +2065,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_close(&sourceArchiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle); });
+  DEBUG_TESTCODE() { Archive_close(&sourceArchiveHandle,FALSE); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle,FALSE); });
 
   // check signatures
   sourceAllCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
@@ -2157,8 +2157,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_close(&convertInfo->destinationArchiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&convertInfo->destinationArchiveHandle,{ Archive_close(&convertInfo->destinationArchiveHandle); });
+  DEBUG_TESTCODE() { Archive_close(&convertInfo->destinationArchiveHandle,FALSE); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&convertInfo->destinationArchiveHandle,{ Archive_close(&convertInfo->destinationArchiveHandle,FALSE); });
 
 //TODO: really required? If convert is done for each archive storage can be done as the final step without a separated thread
   // start storage thread
@@ -2185,7 +2185,12 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // read archive entries
   while (   (convertInfo->failError == ERROR_NONE)
-         && !Archive_eof(&sourceArchiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
+         && !Archive_eof(&sourceArchiveHandle,
+                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3)
+                                                            ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
+                                                            : ARCHIVE_FLAG_NONE
+                                                          )
+                        )
         )
   {
     // get next archive entry type
@@ -2193,7 +2198,10 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                                         &archiveEntryType,
                                         &archiveCryptInfo,
                                         &offset,
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
+                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3)
+                                                                           ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
+                                                                           : ARCHIVE_FLAG_NONE
+                                                                         )
                                        );
     if (error != ERROR_NONE)
     {
@@ -2222,6 +2230,14 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
       {
         HALT_INTERNAL_ERROR("Send message to convert threads fail!");
       }
+
+      // skip entry
+      error = Archive_skipNextEntry(&sourceArchiveHandle);
+      if (error != ERROR_NONE)
+      {
+        if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
+        break;
+      }
     }
     else
     {
@@ -2242,14 +2258,6 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
       }
       sourceLastSignatureOffset = Archive_tell(&sourceArchiveHandle);
     }
-
-    // next entry
-    error = Archive_skipNextEntry(&sourceArchiveHandle);
-    if (error != ERROR_NONE)
-    {
-      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-      break;
-    }
   }
 
   // wait for convert threads
@@ -2258,7 +2266,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // close destination archive
   AUTOFREE_REMOVE(&autoFreeList,&convertInfo->destinationArchiveHandle);
-  error = Archive_close(&convertInfo->destinationArchiveHandle);
+  error = Archive_close(&convertInfo->destinationArchiveHandle,convertInfo->failError == ERROR_NONE);
   if (error != ERROR_NONE)
   {
     if (!isPrintInfo(1)) printInfo(0,"FAIL\n");
@@ -2267,6 +2275,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
+    if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
     return error;
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
@@ -2282,7 +2291,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // close source archive
   AUTOFREE_REMOVE(&autoFreeList,&sourceArchiveHandle);
-  (void)Archive_close(&sourceArchiveHandle);
+  (void)Archive_close(&sourceArchiveHandle,FALSE);
 
   // done storage
   (void)Storage_done(&convertInfo->storageInfo);
@@ -2295,11 +2304,29 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                                    : "FAIL!\n"
                                 );
 
+  // output signature error/warning
+  if (!Crypt_isValidSignatureState(sourceAllCryptSignatureState))
+  {
+    if (convertInfo->newJobOptions->forceVerifySignaturesFlag)
+    {
+      printError("invalid signature in '%s'!",
+                 String_cString(printableStorageName)
+                );
+      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = ERROR_INVALID_SIGNATURE;
+    }
+    else
+    {
+      printWarning("invalid signature in '%s'!",
+                   String_cString(printableStorageName)
+                  );
+    }
+  }
+
   // free resources
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-  return error;
+  return convertInfo->failError;
 }
 
 /*---------------------------------------------------------------------*/

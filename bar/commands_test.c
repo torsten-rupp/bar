@@ -74,7 +74,6 @@ typedef struct
   MsgQueue                entryMsgQueue;                      // queue with entries to store
 
   Errors                  failError;                          // failure error
-
 } TestInfo;
 
 // entry message send to test threads
@@ -1151,7 +1150,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         // close previous archive
         if (archiveIndex != 0)
         {
-          Archive_close(&archiveHandle);
+          Archive_close(&archiveHandle,FALSE);
         }
 
         // open new archive
@@ -1275,7 +1274,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   // close archive
   if (archiveIndex != 0)
   {
-    Archive_close(&archiveHandle);
+    Archive_close(&archiveHandle,FALSE);
   }
 
   // discard processing all other entries
@@ -1289,7 +1288,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 }
 
 /***********************************************************************\
-* Name   : testArchiveContent
+* Name   : testArchive
 * Purpose: test archive content
 * Input  : storageSpecifier        - storage specifier
 *          archiveName             - archive name (can be NULL)
@@ -1305,10 +1304,10 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testArchiveContent(TestInfo         *testInfo,
-                                StorageSpecifier *storageSpecifier,
-                                ConstString      archiveName
-                               )
+LOCAL Errors testArchive(TestInfo         *testInfo,
+                         StorageSpecifier *storageSpecifier,
+                         ConstString      archiveName
+                        )
 {
   AutoFreeList           autoFreeList;
   String                 printableStorageName;
@@ -1388,8 +1387,8 @@ NULL, // masterSocketHandle
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
+  DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle,FALSE); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle,FALSE); });
 
   // check signatures
   if (!testInfo->jobOptions->skipVerifySignaturesFlag)
@@ -1525,7 +1524,7 @@ NULL, // masterSocketHandle
   ThreadPool_joinAll(&workerThreadPool);
 
   // close archive
-  (void)Archive_close(&archiveHandle);
+  (void)Archive_close(&archiveHandle,FALSE);
 
   // done storage
   (void)Storage_done(&storageInfo);
@@ -1633,7 +1632,7 @@ NULL,  //               requestedAbortFlag,
       if (String_isEmpty(storageSpecifier.archivePatternString))
       {
         // test archive content
-        error = testArchiveContent(&testInfo,
+        error = testArchive(&testInfo,
                                    &storageSpecifier,
                                    NULL  // fileName
                                   );
@@ -1675,7 +1674,7 @@ NULL,  //               requestedAbortFlag,
               || (fileInfo.type == FILE_TYPE_HARDLINK)
              )
           {
-            error = testArchiveContent(&testInfo,
+            error = testArchive(&testInfo,
                                        &storageSpecifier,
                                        fileName
                                       );

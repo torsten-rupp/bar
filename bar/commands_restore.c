@@ -3387,7 +3387,7 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
         // close previous archive
         if (archiveIndex != 0)
         {
-          Archive_close(&archiveHandle);
+          Archive_close(&archiveHandle,FALSE);
           archiveIndex = 0;
         }
 
@@ -3507,7 +3507,7 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   // close archive
   if (archiveIndex != 0)
   {
-    Archive_close(&archiveHandle);
+    Archive_close(&archiveHandle,FALSE);
   }
 
   // discard processing all other entries
@@ -3521,7 +3521,7 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
 }
 
 /***********************************************************************\
-* Name   : restoreArchiveContent
+* Name   : restoreArchive
 * Purpose: restore archive content
 * Input  : restoreInfo      - restore info
 *          storageSpecifier - storage to restore from
@@ -3531,10 +3531,10 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
-                                   StorageSpecifier *storageSpecifier,
-                                   ConstString       archiveName
-                                  )
+LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
+                            StorageSpecifier *storageSpecifier,
+                            ConstString       archiveName
+                           )
 {
   AutoFreeList           autoFreeList;
   String                 printableStorageName;
@@ -3635,7 +3635,7 @@ NULL, // masterIO
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ Archive_close(&archiveHandle); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ Archive_close(&archiveHandle,FALSE); });
 
   // check signatures
   if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
@@ -3797,7 +3797,7 @@ NULL, // masterIO
   ThreadPool_joinAll(&workerThreadPool);
 
   // close archive
-  Archive_close(&archiveHandle);
+  Archive_close(&archiveHandle,FALSE);
 
   // done storage
   (void)Storage_done(&storageInfo);
@@ -3916,7 +3916,7 @@ Errors Command_restore(const StringList                *storageNameList,
     if (String_isEmpty(storageSpecifier.archivePatternString))
     {
       // restore archive content
-      error = restoreArchiveContent(&restoreInfo,
+      error = restoreArchive(&restoreInfo,
                                     &storageSpecifier,
                                     NULL  // archiveName
                                    );
@@ -3957,7 +3957,7 @@ Errors Command_restore(const StringList                *storageNameList,
           }
 
           // restore archive content
-          error = restoreArchiveContent(&restoreInfo,
+          error = restoreArchive(&restoreInfo,
                                         &storageSpecifier,
                                         fileName
                                        );

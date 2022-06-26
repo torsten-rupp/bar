@@ -697,7 +697,7 @@ NULL, // masterIO
   }
 
   // close archive
-  Archive_close(&archiveHandle);
+  Archive_close(&archiveHandle,FALSE);
 
   // done storage
   (void)Storage_done(&storageInfo);

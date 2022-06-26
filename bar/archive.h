@@ -847,17 +847,21 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Name   : Archive_close
 * Purpose: close archive
 * Input  : archiveHandle - archive handle
+*          storeFlag     - TRUE to store archive (if in create mode)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_close(ArchiveHandle *archiveHandle);
+  Errors Archive_close(ArchiveHandle *archiveHandle
+                       bool          storeFlag
+                      );
 #else /* not NDEBUG */
   Errors __Archive_close(const char    *__fileName__,
                          ulong         __lineNb__,
-                         ArchiveHandle *archiveHandle
+                         ArchiveHandle *archiveHandle,
+                         bool          storeFlag
                         );
 #endif /* NDEBUG */
 

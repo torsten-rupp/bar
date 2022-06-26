@@ -2511,7 +2511,7 @@ NULL, // masterSocketHandle
             else
             {
               // signature error
-              (void)Archive_close(&archiveHandle);
+              (void)Archive_close(&archiveHandle,FALSE);
               (void)Storage_done(&storageInfo);
               break;
             }
@@ -2524,7 +2524,7 @@ NULL, // masterSocketHandle
               printError("invalid signature in '%s'!",
                          String_cString(printableStorageName)
                         );
-              (void)Archive_close(&archiveHandle);
+              (void)Archive_close(&archiveHandle,FALSE);
               (void)Storage_done(&storageInfo);
               String_delete(printableStorageName);
               return ERROR_INVALID_SIGNATURE;
@@ -3277,7 +3277,7 @@ NULL, // masterSocketHandle
         }
 
         // close archive
-        (void)Archive_close(&archiveHandle);
+        (void)Archive_close(&archiveHandle,FALSE);
 
         // done storage
         (void)Storage_done(&storageInfo);
