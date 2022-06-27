@@ -844,6 +844,12 @@ bool __Thread_init(const char *__fileName__,
     }
   #endif /* HAVE_PTHREAD_ATTR_SETNAME */
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(thread,Thread);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,Thread);
+  #endif /* not NDEBUG */
+
   // start thread
   thread->quitFlag   = FALSE;
   thread->joinedFlag = FALSE;
@@ -854,6 +860,11 @@ bool __Thread_init(const char *__fileName__,
                     ) != 0
      )
   {
+    #ifdef NDEBUG
+      DEBUG_REMOVE_RESOURCE_TRACE(thread,Thread);
+    #else /* not NDEBUG */
+      DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,Thread);
+    #endif /* NDEBUG */
     pthread_attr_destroy(&threadAttributes);
     sem_destroy(&startInfo.started);
     return FALSE;
@@ -873,12 +884,6 @@ bool __Thread_init(const char *__fileName__,
 
   // free resources
   sem_destroy(&startInfo.started);
-
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(thread,Thread);
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,thread,Thread);
-  #endif /* not NDEBUG */
 
   return TRUE;
 }
