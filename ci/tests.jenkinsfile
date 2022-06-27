@@ -16,7 +16,8 @@ TEST_STEPS = ["basic",
 // TODO: instable
 //              "storage_ftp",
               "storage_scp",
-              "storage_sftp",
+// TODO: instable
+//              "storage_sftp",
               "storage_webdav",
               "index",
               "server",
@@ -52,7 +53,7 @@ def tests()
       }
     }
 
-    timeout(time: 120, unit: 'MINUTES')
+    timeout(time: 180, unit: 'MINUTES')
     {
       stage("Tests")
       {
@@ -127,7 +128,7 @@ def tests()
       }
     }
 
-    timeout(time: 120, unit: 'MINUTES')
+    timeout(time: 180, unit: 'MINUTES')
     {
       stage("Code coverage")
       {
@@ -168,7 +169,7 @@ def tests()
       }
     }
 
-    timeout(time: 120, unit: 'MINUTES')
+    timeout(time: 180, unit: 'MINUTES')
     {
       stage("Profiling")
       {
