@@ -5142,6 +5142,15 @@ LOCAL void jobThreadCode(void)
         }
       }
 
+      // purge expired entities (only on master)
+      if (   (globalOptions.serverMode == SERVER_MODE_MASTER)
+          && (jobNode->jobType == JOB_TYPE_CREATE)
+         )
+      {
+//TODO: work-around: delete oldest entity if number of entities+1 > max. entities
+        (void)purgeExpiredEntities(indexHandle,jobUUID,archiveType);
+      }
+
       // create/restore operaton
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
@@ -5181,10 +5190,6 @@ LOCAL void jobThreadCode(void)
             case JOB_TYPE_NONE:
               break;
             case JOB_TYPE_CREATE:
-              // purge expired entities
-//TODO: work-around: delete oldest entity if number of entities+1 > max. entities
-              (void)purgeExpiredEntities(indexHandle,jobUUID,archiveType);
-
               // create archive
               jobNode->runningInfo.error = Command_create(jobNode->masterIO,
                                                           String_cString(jobUUID),
@@ -5238,6 +5243,8 @@ NULL,//                                                        scheduleTitle,
     else
     {
       // slave job -> send to slave and run on slave machine
+
+      // check if connected
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         if (connectorInfo == NULL)
