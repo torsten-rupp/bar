@@ -522,6 +522,7 @@ help_output:
 	@$(ECHO) "  test14[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test15_master[$(HELP_SUFFIXES)], test_master[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test15_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test15_master_slave[$(HELP_SUFFIXES)], test_master_slave[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_combined[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_arguments[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_config[$(HELP_SUFFIXES)]"

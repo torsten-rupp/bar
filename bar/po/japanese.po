@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-06-10 07:58+0200\n"
+"POT-Creation-Date: 2022-06-27 07:39+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/torsten/projects/bar/bar/archive.c:6326
+#: /home/torsten/projects/bar/bar/archive.c:6351
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
@@ -26,7 +26,7 @@ msgstr ""
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2464
+#: /home/torsten/projects/bar/bar/commands_convert.c:2564
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
@@ -36,7 +36,7 @@ msgstr ""
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_test.c:1751
+#: /home/torsten/projects/bar/bar/commands_test.c:1750
 #, c-format
 msgid "Test fail: %s\n"
 msgstr ""
@@ -878,94 +878,98 @@ msgid "invalid database URI"
 msgstr ""
 
 #: errors.def:929
-msgid "database already exists"
-msgstr ""
-
-#: errors.def:930
-msgid "database not found"
+msgid "database type not supported"
 msgstr ""
 
 #: errors.def:931
+msgid "database already exists"
+msgstr ""
+
+#: errors.def:932
+msgid "database not found"
+msgstr ""
+
+#: errors.def:933
 msgid "database connection lost"
 msgstr ""
 
-#: errors.def:936
+#: errors.def:938
 msgid "insufficient database version"
 msgstr ""
 
-#: errors.def:940
+#: errors.def:942
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:944
+#: errors.def:946
 msgid "missing table"
 msgstr ""
 
-#: errors.def:951
+#: errors.def:953
 msgid "missing column"
 msgstr ""
 
-#: errors.def:958
+#: errors.def:960
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:965
+#: errors.def:967
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:972
+#: errors.def:974
 msgid "database bind fail"
 msgstr ""
 
-#: errors.def:979
+#: errors.def:981
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:983
+#: errors.def:985
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:984
+#: errors.def:986
 msgid "index not found"
 msgstr ""
 
-#: errors.def:985
+#: errors.def:987
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:989
+#: errors.def:991
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:996
+#: errors.def:998
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:1000
+#: errors.def:1002
 msgid "database busy"
 msgstr ""
 
-#: errors.def:1001
+#: errors.def:1003
 msgid "database operation interupted"
 msgstr ""
 
-#: errors.def:1002
+#: errors.def:1004
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1005
+#: errors.def:1007
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1006
+#: errors.def:1008
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1007
+#: errors.def:1009
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1008
+#: errors.def:1010
 msgid "instance is not a slave"
 msgstr ""
 

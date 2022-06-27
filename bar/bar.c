@@ -4559,7 +4559,13 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     Array_debugDone();
     String_debugDone();
     List_debugDone();
-    fprintf(stderr,"DEBUG: exitcode %d\n",errorToExitcode(error));
+    fprintf(stderr,
+            "DEBUG: %s exitcode %d\n",
+            (globalOptions.serverMode == SERVER_MODE_MASTER)
+              ? "master"
+              : "slave",
+            errorToExitcode(error)
+           );
   #endif /* not NDEBUG */
 
   return errorToExitcode(error);
