@@ -637,7 +637,7 @@ public class BARWidgets
         }
       }
     }
-    
+
     return n;
   }
 
@@ -707,7 +707,7 @@ public class BARWidgets
         }
       }
     }
-    
+
     return string;
   }
 
@@ -724,12 +724,12 @@ public class BARWidgets
   /** create new byte size widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
-   * @param widgetVariable widget variable
+   * @param widgetVariable widget variable or null
    * @param listener listener or null
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize2(Composite            parentComposite,
+  public static Combo newByteSize(Composite            parentComposite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
                                   final Listener       listener,
@@ -756,26 +756,29 @@ public class BARWidgets
     combo.setData("showedErrorDialog",false);
 
     // listener
-    combo.addModifyListener(new ModifyListener()
+    if (widgetVariable != null)
     {
-      public void modifyText(ModifyEvent modifyEvent)
+      combo.addModifyListener(new ModifyListener()
       {
-        Combo widget = (Combo)modifyEvent.widget;
-        long  n0     = getSize(items,widget.getText(),0);
-        long  n1;
+        public void modifyText(ModifyEvent modifyEvent)
+        {
+          Combo widget = (Combo)modifyEvent.widget;
+          long  n0     = getSize(items,widget.getText(),0);
+          long  n1;
 
-        if (listener != null)
-        {
-          n1 = getSize(items,listener.getString(widgetVariable),0);
+          if (listener != null)
+          {
+            n1 = getSize(items,listener.getString(widgetVariable),0);
+          }
+          else
+          {
+            n1 = getSize(items,widgetVariable.getString(),0);
+          }
+          widget.setBackground((n0 != n1) ? COLOR_MODIFIED : null);
+          widget.setData("showedErrorDialog",false);
         }
-        else
-        {
-          n1 = getSize(items,widgetVariable.getString(),0);
-        }
-        widget.setBackground((n0 != n1) ? COLOR_MODIFIED : null);
-        widget.setData("showedErrorDialog",false);
-      }
-    });
+      });
+    }
     combo.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -802,13 +805,16 @@ public class BARWidgets
             }
           }
 
-          if (listener != null)
+          if (widgetVariable != null)
           {
-            listener.setString(widgetVariable,Units.formatSize(n));
-          }
-          else
-          {
-            widgetVariable.set(Units.formatSize(n));
+            if (listener != null)
+            {
+              listener.setString(widgetVariable,Units.formatSize(n));
+            }
+            else
+            {
+              widgetVariable.set(Units.formatSize(n));
+            }
           }
 
           widget.setText(string);
@@ -839,13 +845,16 @@ public class BARWidgets
             }
           }
 
-          if (listener != null)
+          if (widgetVariable != null)
           {
-            listener.setString(widgetVariable,Units.formatSize(n));
-          }
-          else
-          {
-            widgetVariable.set(Units.formatSize(n));
+            if (listener != null)
+            {
+              listener.setString(widgetVariable,Units.formatSize(n));
+            }
+            else
+            {
+              widgetVariable.set(Units.formatSize(n));
+            }
           }
 
           widget.setText(string);
@@ -884,13 +893,16 @@ public class BARWidgets
             }
           }
 
-          if (listener != null)
+          if (widgetVariable != null)
           {
-            listener.setString(widgetVariable,Units.formatSize(n));
-          }
-          else
-          {
-            widgetVariable.set(Units.formatSize(n));
+            if (listener != null)
+            {
+              listener.setString(widgetVariable,Units.formatSize(n));
+            }
+            else
+            {
+              widgetVariable.set(Units.formatSize(n));
+            }
           }
 
           widget.setText(string);
@@ -899,44 +911,50 @@ public class BARWidgets
       }
     });
 
-    final WidgetModifyListener widgetModifiedListener = (listener != null)
-      ? new WidgetModifyListener(combo,widgetVariable)
-        {
-          @Override
-          public void modified(Combo combo, WidgetVariable variable)
-          {
-            combo.setText(getSizeString(items,listener.getString(widgetVariable),0));
-          }
-        }
-      : new WidgetModifyListener(combo,widgetVariable)
-        {
-          @Override
-          public String getString(WidgetVariable variable)
-          {
-
-            return Units.formatSize(getSize(items,variable.getString(),0));
-          }
-        };
-    Widgets.addModifyListener(widgetModifiedListener);
-    combo.addDisposeListener(new DisposeListener()
+    if (widgetVariable != null)
     {
-      public void widgetDisposed(DisposeEvent disposedEvent)
+      final WidgetModifyListener widgetModifiedListener = (listener != null)
+        ? new WidgetModifyListener(combo,widgetVariable)
+          {
+            @Override
+            public void modified(Combo combo, WidgetVariable variable)
+            {
+              combo.setText(getSizeString(items,listener.getString(widgetVariable),0));
+            }
+          }
+        : new WidgetModifyListener(combo,widgetVariable)
+          {
+            @Override
+            public String getString(WidgetVariable variable)
+            {
+
+              return Units.formatSize(getSize(items,variable.getString(),0));
+            }
+          };
+      Widgets.addModifyListener(widgetModifiedListener);
+      combo.addDisposeListener(new DisposeListener()
       {
-        Widgets.removeModifyListener(widgetModifiedListener);
-      }
-    });
+        public void widgetDisposed(DisposeEvent disposedEvent)
+        {
+          Widgets.removeModifyListener(widgetModifiedListener);
+        }
+      });
+    }
 
     // set value
-    String string;
-    if (listener != null)
+    if (widgetVariable != null)
     {
-      string = listener.getString(widgetVariable);
+      String string;
+      if (listener != null)
+      {
+        string = listener.getString(widgetVariable);
+      }
+      else
+      {
+        string = widgetVariable.getString();
+      }
+      combo.setText(getSizeString(items,string,0));
     }
-    else
-    {
-      string = widgetVariable.getString();
-    }
-    combo.setText(getSizeString(items,string,0));
 
     return combo;
   }
@@ -948,15 +966,44 @@ public class BARWidgets
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize2(Composite      parentComposite,
+  public static Combo newByteSize(Composite      parentComposite,
                                   String         toolTipText,
                                   WidgetVariable widgetVariable,
                                   Object[]       items
                                  )
   {
-    return newByteSize2(parentComposite,toolTipText,widgetVariable,(Listener)null,items);
+    return newByteSize(parentComposite,toolTipText,widgetVariable,(Listener)null,items);
   }
 
+  /** create new byte size widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param listener listener or null
+   * @param values combo values
+   * @return number widgets
+   */
+  public static Combo newByteSize(Composite      parentComposite,
+                                  String         toolTipText,
+                                  final Listener listener,
+                                  final Object[] items
+                                 )
+  {
+    return newByteSize(parentComposite,toolTipText,(WidgetVariable)null,listener,items);
+  }
+
+  /** create new byte size widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param values combo values
+   * @return number widget
+   */
+  public static Combo newByteSize(Composite parentComposite,
+                                  String    toolTipText,
+                                  Object[]  items
+                                 )
+  {
+    return newByteSize(parentComposite,toolTipText,(Listener)null,items);
+  }
   /** create new time widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
