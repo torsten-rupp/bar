@@ -923,7 +923,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 
       // open file
       fileMode = FILE_OPEN_WRITE;
-      if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
+      if (restoreInfo->jobOptions->sparseFilesFlag) fileMode |= FILE_SPARSE;
       error = File_open(&fileHandle,destinationFileName,fileMode);
       if (error != ERROR_NONE)
       {
@@ -938,7 +938,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
       // set file length for sparse files
-      if (restoreInfo->jobOptions->sparseFlag)
+      if (restoreInfo->jobOptions->sparseFilesFlag)
       {
         error = File_truncate(&fileHandle,fileInfo.size);
         if (error != ERROR_NONE)
@@ -1485,7 +1485,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
 
         // open file
         fileMode = FILE_OPEN_WRITE;
-        if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
+        if (restoreInfo->jobOptions->sparseFilesFlag) fileMode |= FILE_SPARSE;
         error = File_open(&fileHandle,destinationDeviceName,fileMode);
         if (error != ERROR_NONE)
         {
@@ -1499,7 +1499,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
         // set file length for sparse files
-        if (restoreInfo->jobOptions->sparseFlag)
+        if (restoreInfo->jobOptions->sparseFilesFlag)
         {
           error = File_truncate(&fileHandle,deviceInfo.size);
           if (error != ERROR_NONE)
@@ -2708,7 +2708,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 
           // open file
           fileMode = FILE_OPEN_WRITE;
-          if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
+          if (restoreInfo->jobOptions->sparseFilesFlag) fileMode |= FILE_SPARSE;
           error = File_open(&fileHandle,destinationFileName,fileMode);
           if (error != ERROR_NONE)
           {
@@ -2723,7 +2723,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
           // set file length for sparse files
-          if (restoreInfo->jobOptions->sparseFlag)
+          if (restoreInfo->jobOptions->sparseFilesFlag)
           {
             error = File_truncate(&fileHandle,fileInfo.size);
             if (error != ERROR_NONE)

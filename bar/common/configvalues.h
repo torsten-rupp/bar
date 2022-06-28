@@ -1404,6 +1404,8 @@ bool ConfigValue_parseDeprecatedString(void       *userData,
                                        uint       errorMessageSize
                                       );
 
+bool ConfigValue_isCommentLine(const ConfigValue configValues[], ConstString line);
+
 /***********************************************************************\
 * Name   : ConfigValue_setComments
 * Purpose: set config value comments

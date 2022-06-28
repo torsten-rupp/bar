@@ -1048,7 +1048,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
 
   jobOptions->archiveFileMode            = ARCHIVE_FILE_MODE_STOP;
   jobOptions->restoreEntryMode           = RESTORE_ENTRY_MODE_STOP;
-  jobOptions->sparseFlag                 = FALSE;
+  jobOptions->sparseFilesFlag                 = FALSE;
 
   jobOptions->errorCorrectionCodesFlag   = FALSE;
   jobOptions->alwaysCreateImageFlag      = FALSE;
@@ -2678,7 +2678,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->ignoreNoDumpAttributeFlag                 = globalOptions.ignoreNoDumpAttributeFlag;
   jobOptions->archiveFileMode                           = globalOptions.archiveFileMode;
   jobOptions->restoreEntryMode                          = globalOptions.restoreEntryMode;
-  jobOptions->sparseFlag                                = globalOptions.sparseFlag;
+  jobOptions->sparseFilesFlag                                = globalOptions.sparseFilesFlag;
   jobOptions->errorCorrectionCodesFlag                  = globalOptions.errorCorrectionCodesFlag;
   jobOptions->alwaysCreateImageFlag                     = globalOptions.alwaysCreateImageFlag;
   jobOptions->blankFlag                                 = globalOptions.blankFlag;
@@ -2808,7 +2808,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->ignoreNoDumpAttributeFlag                 = fromJobOptions->ignoreNoDumpAttributeFlag;
   jobOptions->archiveFileMode                           = fromJobOptions->archiveFileMode;
   jobOptions->restoreEntryMode                          = fromJobOptions->restoreEntryMode;
-  jobOptions->sparseFlag                                = fromJobOptions->sparseFlag;
+  jobOptions->sparseFilesFlag                                = fromJobOptions->sparseFilesFlag;
   jobOptions->errorCorrectionCodesFlag                  = fromJobOptions->errorCorrectionCodesFlag;
   jobOptions->alwaysCreateImageFlag                     = fromJobOptions->alwaysCreateImageFlag;
   jobOptions->blankFlag                                 = fromJobOptions->blankFlag;

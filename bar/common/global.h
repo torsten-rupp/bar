@@ -161,7 +161,7 @@
 #define MAX_INT16          32767
 #define MIN_INT32          -2147483648
 #define MAX_INT32          2147483647
-#define MIN_INT64          9223372036854775808LL
+#define MIN_INT64          (-9223372036854775807LL-1LL)
 #define MAX_INT64          9223372036854775807LL
 
 #define MIN_UCHAR          0
