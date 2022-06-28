@@ -687,13 +687,17 @@ functionSQLList = $(call functionJoin,$1,',$(COMMA))
 functionExec = \
   $(EXE_PREFIX)$1
 
-# helper function for test files/databases
+# helper function for test files
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
+
+# helper function for test databases
+# call functionCleanTestDatabase,<test database>
 functionCleanTestDatabase = \
   case $1 in \
     $(TEST_INDEX_DATABASE_SQLITE)) \
+      $(RMF) $(TEST_SERVER_DATABASE) $(TEST_MASTER_DATABASE) $(TEST_SLAVE_DATABASE); \
       ;; \
     $(TEST_INDEX_DATABASE_MARIADB)) \
       MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
@@ -5879,8 +5883,9 @@ test_server_operations_batch: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_JOBS_DIRECTORY)
 	@#
-	# create test archive
 	@$(call functionCleanTestFiles)
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
+	# create test archive
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionTestDeviceReset)
@@ -6340,8 +6345,10 @@ test_server_operations_socket: \
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	# create test archive, test device
+	$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) || true
 	@$(call functionCleanTestFiles)
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
+	# create test archive, test device
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionTestDeviceReset)
@@ -6349,7 +6356,6 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
 endif
 	@#
-	$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) || true
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel@EXEEXT@ \
           "$(MAKE) test_server_operations_socket_server" \
           "$(MAKE) test_server_operations_socket_client"
@@ -6564,9 +6570,7 @@ test_master_slave_operations: \
 	@$(call functionCleanTestFiles)
 	@#
 	@$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
-	ls -la /home/test/intermediate
-	ls -la /home/test/intermediate/master
-	ls -la /home/test/intermediate/slave
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel@EXEEXT@ \
           "$(MAKE) test_master_slave_operations_master" \
           "$(MAKE) test_master_slave_operations_slave" \
