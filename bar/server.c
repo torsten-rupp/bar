@@ -18013,7 +18013,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   Types              type;
   bool               directoryContentFlag;
-  bool               sparseFlag;
+  bool               sparseFilesFlag;
   bool               skipVerifySignaturesFlag;
   String             storageName;
   IndexId            entryId;
@@ -18042,7 +18042,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
-  StringMap_getBool(argumentMap,"sparse",&sparseFlag,FALSE);
+  StringMap_getBool(argumentMap,"sparse",&sparseFilesFlag,FALSE);
   StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
   if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
   {
@@ -18236,7 +18236,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
              List_count(&storageNameList),
              List_count(&includeEntryList)
             );
-  jobOptions.sparseFlag               = sparseFlag;
+  jobOptions.sparseFilesFlag               = sparseFilesFlag;
   jobOptions.skipVerifySignaturesFlag = skipVerifySignaturesFlag;
   restoreCommandInfo.clientInfo  = clientInfo;
   restoreCommandInfo.id          = id;

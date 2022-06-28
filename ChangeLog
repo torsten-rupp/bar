@@ -7,7 +7,7 @@
   * use thread pools for client connections+worker
     threads
   * added option --test-created-archives
-  * added option --sparse
+  * added option --sparse-files
   * added option --no-stop-on-owner-error
   * added option --server
   * added begin/end time for continous schedules
