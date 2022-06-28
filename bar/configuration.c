@@ -6861,7 +6861,6 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   if (!headerLineFlag) File_ungetLine(&fileHandle,line,&lineNb);
 
   // parse
-  bool lineFlag;
   while (   (error == ERROR_NONE)
          && File_getLine(&fileHandle,line,&lineNb,NULL)
         )

@@ -2695,14 +2695,16 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                  );
               while ((data != NULL) && (error == ERROR_NONE))
               {
+                const StringList *commentList;
+
                 if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
 
                 // write comments before section
-                const StringList *commentList = configValues[index].section.iteratorFunction(&sectionIterator,
-                                                                                             CONFIG_VALUE_OPERATION_COMMENTS,
-                                                                                             NULL,  // data
-                                                                                             configValues[index].section.userData
-                                                                                            );
+                commentList = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                           CONFIG_VALUE_OPERATION_COMMENTS,
+                                                                           NULL,  // data
+                                                                           configValues[index].section.userData
+                                                                          );
                 if (commentList != NULL)
                 {
                   StringNode *stringNode;
