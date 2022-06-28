@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
@@ -1085,7 +1084,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("Max. size")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        combo = BARWidgets.newByteSize2(subComposite,
+        combo = BARWidgets.newByteSize(subComposite,
                                        BARControl.tr("Size limit for temporary files."),
                                        maxTmpSize,
                                        new Object[]{BARControl.tr("unlimited"), 0L,
@@ -1171,7 +1170,7 @@ public class ServerSettings
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newByteSize2(subComposite,
+        combo = BARWidgets.newByteSize(subComposite,
                                        BARControl.tr("Min. size of files for compression."),
                                        compressMinSize,
                                        new Object[]{Units.formatSize(  0L       ),  0L,
@@ -1208,7 +1207,7 @@ public class ServerSettings
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newByteSize2(subComposite,
+        combo = BARWidgets.newByteSize(subComposite,
                                        BARControl.tr("Size limit for continuous stored entries."),
                                        continuousMaxSize,
                                        new Object[]{BARControl.tr("unlimited"), 0L,
@@ -4161,7 +4160,7 @@ public class ServerSettings
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Max. connections")+":");
-      Widgets.layout(label,5,0,TableLayoutData.NW);
+      Widgets.layout(label,5,0,TableLayoutData.W);
       widgetMaxConnectionCount = Widgets.newSpinner(composite);
       widgetMaxConnectionCount.setToolTipText(BARControl.tr("Max. number of concurrent connections. 0 for unlimited number of concurrent connections."));
       widgetMaxConnectionCount.setMinimum(0);
@@ -4181,10 +4180,37 @@ public class ServerSettings
       });
 
       label = Widgets.newLabel(composite,BARControl.tr("Max. storage size")+":");
-      Widgets.layout(label,6,0,TableLayoutData.NW);
+      Widgets.layout(label,6,0,TableLayoutData.W);
+
+//// TODO:
+/*
+      widgetMaxStorageSize = BARWidgets.newByteSize(composite,
+                                                    BARControl.tr("Size limit for continuous stored entries."),
+                                                    continuousMaxSize,
+                                                    new Object[]{BARControl.tr("unlimited"), 0L,
+                                                                 Units.formatSize( 32*Units.M), 32*Units.M,
+                                                                 Units.formatSize( 64*Units.M), 64*Units.M,
+                                                                 Units.formatSize(128*Units.M),128*Units.M,
+                                                                 Units.formatSize(140*Units.M),140*Units.M,
+                                                                 Units.formatSize(256*Units.M),256*Units.M,
+                                                                 Units.formatSize(512*Units.M),512*Units.M,
+                                                                 Units.formatSize(  1*Units.G),  1*Units.G,
+                                                                 Units.formatSize(  2*Units.G),  2*Units.G,
+                                                                 Units.formatSize(  4*Units.G),  4*Units.G,
+                                                                 Units.formatSize(  8*Units.G),  8*Units.G,
+                                                                 Units.formatSize( 64*Units.G), 64*Units.G,
+                                                                 Units.formatSize(128*Units.G),128*Units.G,
+                                                                 Units.formatSize(512*Units.G),512*Units.G,
+                                                                 Units.formatSize(  1*Units.T),  1*Units.T,
+                                                                 Units.formatSize(  2*Units.T),  2*Units.T,
+                                                                 Units.formatSize(  4*Units.T),  4*Units.T,
+                                                                 Units.formatSize(  8*Units.T),  8*Units.T
+                                                                }
+                                                   );
+*/
       widgetMaxStorageSize = Widgets.newCombo(composite);
       widgetMaxStorageSize.setToolTipText(BARControl.tr("Total size limit for storage."));
-      widgetMaxStorageSize.setItems(new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
+      widgetMaxStorageSize.setItems(new String[]{"0","32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
       widgetMaxStorageSize.setData("showedErrorDialog",false);
       widgetMaxStorageSize.setText(Units.formatByteSize(serverData.maxStorageSize));
       Widgets.layout(widgetMaxStorageSize,6,1,TableLayoutData.W);
