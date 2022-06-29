@@ -3873,7 +3873,7 @@ endif
 	test `$(STAT) --format "%h" $(INTERMEDIATE_DIR)/restore/data/hardlink2.dat 2>/dev/null` -eq 3 $(LOG)
 endif
 ifeq ($(TEST_SPARSE_FILES),yes)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -\# data/sparse.dat --destination $(INTERMEDIATE_DIR)/restore --overwrite-files --sparse $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -\# data/sparse.dat --destination $(INTERMEDIATE_DIR)/restore --overwrite-files --sparse-files $(LOG))
 	test `$(FIND) $(INTERMEDIATE_DIR)/restore/data/sparse.dat -printf %k` = 128
 endif
 ifeq ($(PLATFORM),WINDOWS)
