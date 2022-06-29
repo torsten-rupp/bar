@@ -5311,7 +5311,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                 DATABASE_VALUE_UINT64  ("size",        size),
                                 DATABASE_VALUE_ENUM    ("state",       indexState),
                                 DATABASE_VALUE_ENUM    ("mode",        indexMode),
-                                DATABASE_VALUE_DATETIME("lastChecked", "NOW()")
+                                DATABASE_VALUE         ("lastChecked", "NOW()")
                               ),
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE
