@@ -126,7 +126,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 LOCAL bool              initFlag = FALSE;
-LOCAL DatabaseSpecifier *continuousDatabaseSpecifier;
+LOCAL DatabaseSpecifier *continuousDatabaseSpecifier = NULL;
 LOCAL Semaphore         notifyLock;                  // lock
 LOCAL Dictionary        notifyHandles;
 LOCAL Dictionary        notifyNames;
@@ -1727,14 +1727,23 @@ Errors Continuous_init(const char *databaseURI)
   continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,"continuous.db",NULL);
   if (continuousDatabaseSpecifier == NULL)
   {
+    MsgQueue_done(&initDoneNotifyMsgQueue);
+    Dictionary_done(&notifyNames);
+    Dictionary_done(&notifyHandles);
+    Semaphore_done(&notifyLock);
     return ERROR_DATABASE;
   }
   if (continuousDatabaseSpecifier->type != DATABASE_TYPE_SQLITE3)
   {
     Database_deleteSpecifier(continuousDatabaseSpecifier);
     continuousDatabaseSpecifier = NULL;
+    MsgQueue_done(&initDoneNotifyMsgQueue);
+    Dictionary_done(&notifyNames);
+    Dictionary_done(&notifyHandles);
+    Semaphore_done(&notifyLock);
     return ERROR_DATABASE_NOT_SUPPORTED;
   }
+  assert(continuousDatabaseSpecifier != NULL);
 
   createFlag = FALSE;
   if (Database_exists(continuousDatabaseSpecifier,NULL))
@@ -1769,16 +1778,20 @@ Errors Continuous_init(const char *databaseURI)
   {
     // create new database
     error = createContinuous(&databaseHandle,continuousDatabaseSpecifier);
-  }
-  else
-  {
-    // open continuous database
-    error = openContinuous(&databaseHandle,continuousDatabaseSpecifier);
-  }
-  if (error != ERROR_NONE)
-  {
-    Database_deleteSpecifier(continuousDatabaseSpecifier);
-    return error;
+    if (error == ERROR_NONE)
+    {
+      closeContinuous(&databaseHandle);
+    }
+    else
+    {
+      Database_deleteSpecifier(continuousDatabaseSpecifier);
+      continuousDatabaseSpecifier = NULL;
+      MsgQueue_done(&initDoneNotifyMsgQueue);
+      Dictionary_done(&notifyNames);
+      Dictionary_done(&notifyHandles);
+      Semaphore_done(&notifyLock);
+      return error;
+    }
   }
 
   initFlag = TRUE;
@@ -1819,6 +1832,7 @@ void Continuous_done(void)
     Thread_done(&continuousInitDoneThread);
 
     Database_deleteSpecifier(continuousDatabaseSpecifier);
+    continuousDatabaseSpecifier = NULL;
 
     // done notify event message queue
     MsgQueue_done(&initDoneNotifyMsgQueue);
