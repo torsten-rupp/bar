@@ -5227,6 +5227,7 @@ LOCAL void formatParameters(String               sqlString,
   assert(sqlString != NULL);
   assert(databaseHandle != NULL);
   assert(s != NULL);
+  assert(parameterCount != NULL);
 
   while ((*s) != NUL)
   {
@@ -5288,7 +5289,7 @@ LOCAL void formatParameters(String               sqlString,
             #endif /* HAVE_POSTGRESQL */
             break;
         }
-        if (parameterCount != NULL) (*parameterCount)++;
+        (*parameterCount)++;
         s++;
         break;
       default:
@@ -14443,13 +14444,12 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
     if (i > 0) String_appendChar(sqlString,',');
     if (values[i].value != NULL)
     {
-      formatParameters(sqlString,databaseHandle,values[i].value,NULL);
+      formatParameters(sqlString,databaseHandle,values[i].value,&parameterCount);
     }
     else
     {
-      formatParameters(sqlString,databaseHandle,"?",NULL);
+      formatParameters(sqlString,databaseHandle,"?",&parameterCount);
     }
-    parameterCount++;
   }
   String_appendChar(sqlString,')');
   switch (Database_getType(databaseHandle))
@@ -14483,14 +14483,13 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
             if (values[i].value != NULL)
             {
               String_formatAppend(sqlString,"%s=",values[i].name);
-              formatParameters(sqlString,databaseHandle,values[i].value,NULL);
+              formatParameters(sqlString,databaseHandle,values[i].value,&parameterCount);
             }
             else
             {
               String_formatAppend(sqlString,"%s=",values[i].name);
-              formatParameters(sqlString,databaseHandle,"?",NULL);
+              formatParameters(sqlString,databaseHandle,"?",&parameterCount);
             }
-            parameterCount++;
           }
           String_formatAppend(sqlString," WHERE ");
           formatParameters(sqlString,databaseHandle,filter,&parameterCount);
@@ -14858,14 +14857,13 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
     if (values[i].value != NULL)
     {
       String_formatAppend(sqlString,"%s=",values[i].name);
-      formatParameters(sqlString,databaseHandle,values[i].value,NULL);
+      formatParameters(sqlString,databaseHandle,values[i].value,&parameterCount);
     }
     else
     {
       String_formatAppend(sqlString,"%s=",values[i].name);
-      formatParameters(sqlString,databaseHandle,"?",NULL);
+      formatParameters(sqlString,databaseHandle,"?",&parameterCount);
     }
-    parameterCount++;
   }
   if (filter != NULL)
   {
