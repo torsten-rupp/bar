@@ -252,24 +252,32 @@ LOCAL void printNotifies(void)
                                )
 #endif /* NDEBUG */
 {
-  Errors error;
+  DatabaseOpenModes databaseOpenMode;
+  Errors            error;
 
   assert(databaseHandle != NULL);
+  assert(databaseSpecifier != NULL);
+  assert(databaseSpecifier->type != DATABASE_TYPE_SQLITE3);
 
   // open continuous database
+  databaseOpenMode = 0;
+  if (String_isEmpty(databaseSpecifier->sqlite.fileName))
+  {
+    databaseOpenMode |= DATABASE_OPEN_MODE_MEMORY|DATABASE_OPEN_MODE_SHARED;
+  }
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
-                          NULL,  // databaseName
-                          DATABASE_OPEN_MODE_READWRITE,
+                          "continuous.db",
+                          DATABASE_OPEN_MODE_READWRITE|databaseOpenMode,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
-                            NULL,  // databaseName
-                            DATABASE_OPEN_MODE_READWRITE,
+                            "continuous.db",
+                            DATABASE_OPEN_MODE_READWRITE|databaseOpenMode,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
@@ -278,16 +286,16 @@ LOCAL void printNotifies(void)
     #ifdef NDEBUG
       error = Database_open(databaseHandle,
                             databaseSpecifier,
-                            NULL,  // databaseName
-                            DATABASE_OPEN_MODE_CREATE,
+                            "continuous.db",
+                            DATABASE_OPEN_MODE_CREATE|databaseOpenMode,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
     #else /* not NDEBUG */
       error = __Database_open(__fileName__,__lineNb__,
                               databaseHandle,
                               databaseSpecifier,
-                              NULL,  // databaseName
-                              DATABASE_OPEN_MODE_CREATE,
+                              "continuous.db",
+                              DATABASE_OPEN_MODE_CREATE|databaseOpenMode,
                               CONTINUOUS_DATABASE_TIMEOUT
                              );
     #endif /* NDEBUG */
@@ -324,7 +332,8 @@ LOCAL void printNotifies(void)
                                  )
 #endif /* NDEBUG */
 {
-  Errors error;
+  DatabaseOpenModes databaseOpenMode;
+  Errors            error;
 
   assert(databaseHandle != NULL);
   assert(databaseSpecifier != NULL);
@@ -333,11 +342,16 @@ LOCAL void printNotifies(void)
   (void)Database_drop(databaseSpecifier,NULL);
 
   // create continuous database
+  databaseOpenMode = 0;
+  if (String_isEmpty(databaseSpecifier->sqlite.fileName))
+  {
+    databaseOpenMode |= DATABASE_OPEN_MODE_MEMORY|DATABASE_OPEN_MODE_SHARED;
+  }
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
                           NULL,  // databaseName
-                          DATABASE_OPEN_MODE_CREATE,
+                          DATABASE_OPEN_MODE_CREATE|databaseOpenMode,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
@@ -345,7 +359,7 @@ LOCAL void printNotifies(void)
                             databaseHandle,
                             databaseSpecifier,
                             NULL,  // databaseName
-                            DATABASE_OPEN_MODE_CREATE,
+                            DATABASE_OPEN_MODE_CREATE|databaseOpenMode,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
@@ -422,6 +436,7 @@ LOCAL Errors getContinuousVersion(uint *continuousVersion, const DatabaseSpecifi
 
   assert(continuousVersion != NULL);
   assert(databaseSpecifier != NULL);
+  assert(databaseSpecifier->type != DATABASE_TYPE_SQLITE3);
 
   (*continuousVersion) = 0;
 
@@ -2247,8 +2262,6 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
   uint       storedFlag;
 
   assert(databaseHandle != NULL);
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
 
   name = String_new();
 
@@ -2283,12 +2296,14 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                  DATABASE_COLUMN_STRING  ("name"),
                  DATABASE_COLUMN_BOOL    ("storedFlag")
                ),
-               "    jobUUID=? \
-                AND scheduleUUID=? \
+               "    (? OR jobUUID=?) \
+                AND (? OR scheduleUUID=?) \
                ",
                DATABASE_FILTERS
                (
+                 DATABASE_FILTER_BOOL   (jobUUID == NULL),
                  DATABASE_FILTER_CSTRING(jobUUID),
+                 DATABASE_FILTER_BOOL   (scheduleUUID == NULL),
                  DATABASE_FILTER_CSTRING(scheduleUUID)
                ),
                NULL,  // groupBy

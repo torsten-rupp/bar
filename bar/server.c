@@ -1875,7 +1875,7 @@ LOCAL void schedulerThreadCode(void)
                                                                    )
                                     )
                             {
-                              // schedule continuouss job
+                              // schedule continuous job
                               if (inTimeRange(dateTime.hour,dateTime.minute,
                                               jobScheduleNode->beginTime.hour,jobScheduleNode->beginTime.minute,
                                               jobScheduleNode->endTime.hour,jobScheduleNode->endTime.minute
