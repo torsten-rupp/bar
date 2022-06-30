@@ -1471,7 +1471,6 @@ fprintf(stderr,"\n");
                 // store into notify database
                 if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                 {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                   error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                   if (error == ERROR_NONE)
                   {
@@ -1492,9 +1491,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                );
                   }
                 }
-else {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-}
 
                 // add directory and sub-directories to notify
                 addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
@@ -1537,9 +1533,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                );
                   }
                 }
-else {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-}
 
                 // add directory and sub-directories to notify
                 addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
@@ -1547,7 +1540,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             }
             else
             {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
@@ -1573,9 +1565,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                );
                   }
                 }
-else {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-}
               }
             }
           }
