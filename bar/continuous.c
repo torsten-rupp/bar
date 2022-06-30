@@ -126,13 +126,12 @@ typedef struct
 
 /***************************** Variables *******************************/
 LOCAL bool              initFlag = FALSE;
-LOCAL DatabaseSpecifier *continuousDatabaseSpecifier;
-LOCAL DatabaseHandle    continuousDatabaseHandle;
+LOCAL DatabaseSpecifier *continuousDatabaseSpecifier = NULL;
 LOCAL Semaphore         notifyLock;                  // lock
 LOCAL Dictionary        notifyHandles;
 LOCAL Dictionary        notifyNames;
 LOCAL MsgQueue          initDoneNotifyMsgQueue;
-LOCAL Thread            continuousInitThread;
+LOCAL Thread            continuousInitDoneThread;
 LOCAL Thread            continuousThread;
 LOCAL bool              quitFlag;
 
@@ -1090,15 +1089,15 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
 }
 
 /***********************************************************************\
-* Name   : continuousInitThreadCode
-* Purpose: continuous file thread code
+* Name   : continuousInitDoneThreadCode
+* Purpose: continuous init/done thread code
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void continuousInitThreadCode(void)
+LOCAL void continuousInitDoneThreadCode(void)
 {
   StringList      nameList;
   String          baseName;
@@ -1673,9 +1672,10 @@ bool Continuous_isAvailable(void)
 
 Errors Continuous_init(const char *databaseURI)
 {
-  bool   createFlag;
-  Errors error;
-  uint   continuousVersion;
+  bool           createFlag;
+  Errors         error;
+  DatabaseHandle databaseHandle;
+  uint           continuousVersion;
 
   // init variables
   quitFlag = FALSE;
@@ -1727,34 +1727,35 @@ Errors Continuous_init(const char *databaseURI)
   continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,"continuous.db",NULL);
   if (continuousDatabaseSpecifier == NULL)
   {
+    MsgQueue_done(&initDoneNotifyMsgQueue);
+    Dictionary_done(&notifyNames);
+    Dictionary_done(&notifyHandles);
+    Semaphore_done(&notifyLock);
     return ERROR_DATABASE;
   }
   if (continuousDatabaseSpecifier->type != DATABASE_TYPE_SQLITE3)
   {
     Database_deleteSpecifier(continuousDatabaseSpecifier);
     continuousDatabaseSpecifier = NULL;
+    MsgQueue_done(&initDoneNotifyMsgQueue);
+    Dictionary_done(&notifyNames);
+    Dictionary_done(&notifyHandles);
+    Semaphore_done(&notifyLock);
     return ERROR_DATABASE_NOT_SUPPORTED;
   }
+  assert(continuousDatabaseSpecifier != NULL);
 
   createFlag = FALSE;
-  if (databaseURI != NULL)
+  if (Database_exists(continuousDatabaseSpecifier,NULL))
   {
-    if (Database_exists(continuousDatabaseSpecifier,NULL))
+    // check if continuous database exists in expected version, create database
+    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
+    if (error == ERROR_NONE)
     {
-      // check if continuous database exists in expected version, create database
-      error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
-      if (error == ERROR_NONE)
+      if (continuousVersion < CONTINUOUS_VERSION)
       {
-        if (continuousVersion < CONTINUOUS_VERSION)
-        {
-          // insufficient version -> create new
-          createFlag = TRUE;
-        }
-        else
-        {
-          // unknown version -> create new
-          createFlag = TRUE;
-        }
+        // insufficient version -> create new
+        createFlag = TRUE;
       }
       else
       {
@@ -1764,30 +1765,39 @@ Errors Continuous_init(const char *databaseURI)
     }
     else
     {
-      // does not exists -> create new
+      // unknown version -> create new
       createFlag = TRUE;
     }
+  }
+  else
+  {
+    // does not exists -> create new
+    createFlag = TRUE;
   }
   if (createFlag)
   {
     // create new database
-    error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-  }
-  else
-  {
-    // open continuous database
-    error = openContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
-  }
-  if (error != ERROR_NONE)
-  {
-    Database_deleteSpecifier(continuousDatabaseSpecifier);
-    return error;
+    error = createContinuous(&databaseHandle,continuousDatabaseSpecifier);
+    if (error == ERROR_NONE)
+    {
+      closeContinuous(&databaseHandle);
+    }
+    else
+    {
+      Database_deleteSpecifier(continuousDatabaseSpecifier);
+      continuousDatabaseSpecifier = NULL;
+      MsgQueue_done(&initDoneNotifyMsgQueue);
+      Dictionary_done(&notifyNames);
+      Dictionary_done(&notifyHandles);
+      Semaphore_done(&notifyLock);
+      return error;
+    }
   }
 
   initFlag = TRUE;
 
   // start threads
-  if (!Thread_init(&continuousInitThread,"BAR continuous init",globalOptions.niceLevel,continuousInitThreadCode,NULL))
+  if (!Thread_init(&continuousInitDoneThread,"BAR continuous init",globalOptions.niceLevel,continuousInitDoneThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize continuous init thread!");
   }
@@ -1815,14 +1825,14 @@ void Continuous_done(void)
       HALT_INTERNAL_ERROR("Cannot stop continuous thread!");
     }
     Thread_done(&continuousThread);
-    if (!Thread_join(&continuousInitThread))
+    if (!Thread_join(&continuousInitDoneThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop continuous init thread!");
     }
-    Thread_done(&continuousInitThread);
+    Thread_done(&continuousInitDoneThread);
 
-    (void)closeContinuous(&continuousDatabaseHandle);
     Database_deleteSpecifier(continuousDatabaseSpecifier);
+    continuousDatabaseSpecifier = NULL;
 
     // done notify event message queue
     MsgQueue_done(&initDoneNotifyMsgQueue);
@@ -1937,11 +1947,55 @@ Errors Continuous_doneNotify(ConstString name,
 
 Errors Continuous_open(DatabaseHandle *databaseHandle)
 {
+  bool   createFlag;
+  Errors error;
+  uint   continuousVersion;
+
   assert(initFlag);
   assert(databaseHandle != NULL);
   assert(continuousDatabaseSpecifier != NULL);
 
-  return openContinuous(databaseHandle,continuousDatabaseSpecifier);
+  createFlag = FALSE;
+  if (Database_exists(continuousDatabaseSpecifier,NULL))
+  {
+    // check if continuous database exists in expected version, create database
+    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
+    if (error == ERROR_NONE)
+    {
+      if (continuousVersion < CONTINUOUS_VERSION)
+      {
+        // insufficient version -> create new
+        createFlag = TRUE;
+      }
+      else
+      {
+        // unknown version -> create new
+        createFlag = TRUE;
+      }
+    }
+    else
+    {
+      // unknown version -> create new
+      createFlag = TRUE;
+    }
+  }
+  else
+  {
+    // does not exists -> create new
+    createFlag = TRUE;
+  }
+  if (createFlag)
+  {
+    // create new database
+    error = createContinuous(databaseHandle,continuousDatabaseSpecifier);
+  }
+  else
+  {
+    // open continuous database
+    error = openContinuous(databaseHandle,continuousDatabaseSpecifier);
+  }
+
+  return error;
 }
 
 void Continuous_close(DatabaseHandle *databaseHandle)

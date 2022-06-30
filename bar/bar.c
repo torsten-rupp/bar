@@ -3654,6 +3654,7 @@ LOCAL Errors runDebug(void)
   {
     printWarning("continuous support is not available (reason: %s)",Error_getText(error));
   }
+  AUTOFREE_ADD(&autoFreeList,globalOptions.continuousDatabaseFileName,{ Continuous_done(); });
 
   // open index
   indexHandle = NULL;
