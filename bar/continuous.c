@@ -257,7 +257,7 @@ LOCAL void printNotifies(void)
 
   assert(databaseHandle != NULL);
   assert(databaseSpecifier != NULL);
-  assert(databaseSpecifier->type != DATABASE_TYPE_SQLITE3);
+  assert(databaseSpecifier->type == DATABASE_TYPE_SQLITE3);
 
   // open continuous database
   databaseOpenMode = 0;
@@ -436,7 +436,7 @@ LOCAL Errors getContinuousVersion(uint *continuousVersion, const DatabaseSpecifi
 
   assert(continuousVersion != NULL);
   assert(databaseSpecifier != NULL);
-  assert(databaseSpecifier->type != DATABASE_TYPE_SQLITE3);
+  assert(databaseSpecifier->type == DATABASE_TYPE_SQLITE3);
 
   (*continuousVersion) = 0;
 
