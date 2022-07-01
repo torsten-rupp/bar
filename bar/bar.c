@@ -3896,7 +3896,7 @@ LOCAL Errors runDebug(void)
                             );
     if (error != ERROR_NONE)
     {
-      printError("cannot create new storage '%s' (error: %s)!",
+      printError("cannot create new storage for '%s' (error: %s)!",
                  String_cString(globalOptions.debug.indexAddStorage),
                  Error_getText(error)
                 );
