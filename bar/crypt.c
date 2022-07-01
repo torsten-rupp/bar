@@ -3109,7 +3109,7 @@ Errors __Crypt_initHash(const char          *__fileName__,
     case CRYPT_HASH_ALGORITHM_SHA2_512:
       #ifdef HAVE_GCRYPT
         {
-          int          hashAlgorithm;
+          int hashAlgorithm;
 
           hashAlgorithm = GCRY_MD_NONE;
           switch (cryptHashAlgorithm)
