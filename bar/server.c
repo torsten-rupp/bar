@@ -6094,88 +6094,89 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   else if (!String_isEmpty(encryptedUUID))
   {
     // master => verify/pair new master
-
     if (globalOptions.serverMode == SERVER_MODE_SLAVE)
     {
-    // decrypt UUID
-    error = ServerIO_decryptData(&clientInfo->io,
-                                 &buffer,
-                                 &bufferLength,
-                                 encryptType,
-                                 encryptedUUID
-                                );
-    if (error == ERROR_NONE)
-    {
-      assert(buffer != NULL);
-      assert(bufferLength > 0);
-
-      switch (newMaster.pairingMode)
+      // decrypt UUID
+      error = ServerIO_decryptData(&clientInfo->io,
+                                   &buffer,
+                                   &bufferLength,
+                                   encryptType,
+                                   encryptedUUID
+                                  );
+      if (error == ERROR_NONE)
       {
-        case PAIRING_MODE_NONE:
-          // not pairing -> verify master UUID
-          // calculate hash from UUID
-          (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
-          Crypt_updateHash(&uuidHash,buffer,bufferLength);
+        assert(buffer != NULL);
+        assert(bufferLength > 0);
 
-          // verify master UUID (UUID hash)
-          if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
-          {
-            error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
-                      ? ERROR_NOT_PAIRED
-                      : ERROR_INVALID_PASSWORD_;
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Authorization of %s fail (error: %s)",
-                       getClientInfoString(clientInfo,s,sizeof(s)),
-                       Error_getText(error)
-                      );
-          }
-
-          // free resources
-          Crypt_doneHash(&uuidHash);
-          break;
-        case PAIRING_MODE_AUTO:
-          // auto pairing -> done pairing
-          SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            // store name
-            String_set(newMaster.name,name);
+        switch (newMaster.pairingMode)
+        {
+          case PAIRING_MODE_NONE:
+            // not pairing -> verify master UUID
 
             // calculate hash from UUID
-            (void)Crypt_resetHash(&newMaster.uuidHash);
-            Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
-          }
+            (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
+            Crypt_updateHash(&uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
+            Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-          error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
-          break;
-        case PAIRING_MODE_MANUAL:
-          // manual pairing -> just store new master name+UUID hash
-          SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            // store name
-            String_set(newMaster.name,name);
+            // verify master UUID (UUID hash)
+            if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
+            {
+              error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+                        ? ERROR_NOT_PAIRED
+                        : ERROR_INVALID_PASSWORD_;
+              logMessage(NULL,  // logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Authorization of %s fail (error: %s)",
+                         getClientInfoString(clientInfo,s,sizeof(s)),
+                         Error_getText(error)
+                        );
+            }
 
-            // calculate hash from UUID
-            (void)Crypt_resetHash(&newMaster.uuidHash);
-            Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
-          }
+            // free resources
+            Crypt_doneHash(&uuidHash);
+            break;
+          case PAIRING_MODE_AUTO:
+            // auto pairing -> done pairing
+            SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              // store name
+              String_set(newMaster.name,name);
 
-          // still not paired: new master must be confirmed
-          error = ERROR_NOT_PAIRED;
-          break;
+              // calculate hash from UUID
+              (void)Crypt_resetHash(&newMaster.uuidHash);
+              Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
+            }
+
+            error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
+            break;
+          case PAIRING_MODE_MANUAL:
+            // manual pairing -> just store new master name+UUID hash
+            SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              // store name
+              String_set(newMaster.name,name);
+
+              // calculate hash from UUID
+              (void)Crypt_resetHash(&newMaster.uuidHash);
+              Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
+            }
+
+            // still not paired: new master must be confirmed
+            error = ERROR_NOT_PAIRED;
+            break;
+        }
+
+        // free resources
+        freeSecure(buffer);
       }
-
-      // free resources
-      freeSecure(buffer);
-    }
-    else
-    {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                   "Authorization of master %s fail (error: %s)",
-                   getClientInfoString(clientInfo,s,sizeof(s)),
-                   Error_getText(error)
-                  );
+      else
+      {
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                     "Authorization of master %s fail (error: %s)",
+                     getClientInfoString(clientInfo,s,sizeof(s)),
+                     Error_getText(error)
+                    );
       }
     }
     else
@@ -6205,8 +6206,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"authorization failure");
-//TODO: remove/replace
-printInfo(1,"Client authorization failure %s: %s \n",getClientInfoString(clientInfo,s,sizeof(s)),Error_getText(error));
     }
   }
 
