@@ -6081,7 +6081,14 @@ Dprintf.dprintf("still not supported");
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(new Shell(),error.getMessage());
+      try
+      {
+        Dialogs.error(new Shell(),error.getMessage());
+      }
+      catch (Throwable throwable)
+      {
+        // ignored
+      }
       printError("communication: %s",error.getMessage());
       if (Settings.debugLevel > 0)
       {
