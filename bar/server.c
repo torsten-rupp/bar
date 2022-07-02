@@ -414,22 +414,22 @@ LOCAL_INLINE bool isQuit(void)
 
 LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
 {
-  uint n;
+  TimeoutInfo timeoutInfo;
 
   // use delay trigger as a default
   if (trigger == NULL) trigger = &delayThreadTrigger;
 
+  Misc_initTimeout(&timeoutInfo,sleepTime*MS_PER_SECOND);
   SEMAPHORE_LOCKED_DO(trigger,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    n = 0;
     while (   !isQuit()
-           && (n < (sleepTime*MS_PER_SECOND))
-           && !Semaphore_waitModified(trigger,500)
+           && !Misc_isTimeout(&timeoutInfo)
+           && !Semaphore_waitModified(trigger,Misc_getRestTimeout(&timeoutInfo,5000))
           )
     {
-      n += 500;
     }
   }
+  Misc_doneTimeout(&timeoutInfo);
 }
 
 /***********************************************************************\

@@ -1356,7 +1356,7 @@ BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
 public class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int              PROTOCOL_VERSION_MAJOR = 6;
+  private final static int              PROTOCOL_VERSION_MAJOR = 7;
   private final static int              PROTOCOL_VERSION_MINOR = 0;
 
   public final static String            DEFAULT_CA_FILE_NAME          = "bar-ca.pem";           // default certificate authority file name

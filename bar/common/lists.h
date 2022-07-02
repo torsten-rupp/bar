@@ -88,7 +88,7 @@ typedef enum
   #define LIST_HEADER(type) \
     type                      *head; \
     type                      *tail; \
-    unsigned long             count; \
+    ulong                     count; \
     ListNodeDuplicateFunction duplicateFunction; \
     void                      *duplicateUserData; \
     ListNodeFreeFunction      freeFunction; \
@@ -100,7 +100,7 @@ typedef enum
   #define LIST_HEADER(type) \
     type                      *head; \
     type                      *tail; \
-    unsigned long             count; \
+    ulong                     count; \
     ListNodeDuplicateFunction duplicateFunction; \
     void                      *duplicateUserData; \
     ListNodeFreeFunction      freeFunction; \
@@ -682,9 +682,9 @@ INLINE bool List_isEmpty(const void *list)
 * Notes  : -
 \***********************************************************************/
 
-INLINE unsigned long List_count(const void *list);
+INLINE ulong List_count(const void *list);
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
-INLINE unsigned long List_count(const void *list)
+INLINE ulong List_count(const void *list)
 {
   assert(list != NULL);
   assert(((((const List*)list)->count == 0) && (((const List*)list)->head == NULL) && (((const List*)list)->tail == NULL)) ||

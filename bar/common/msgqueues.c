@@ -21,6 +21,7 @@
 
 #include "common/global.h"
 #include "common/lists.h"
+#include "common/misc.h"
 
 #include "msgqueues.h"
 
@@ -380,35 +381,31 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
 
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
 {
-  MsgNode *msgNode;
-  ulong   n;
+  TimeoutInfo timeoutInfo;
+  MsgNode     *msgNode;
+  ulong       n;
 
   assert(msgQueue != NULL);
 
+  Misc_initTimeout(&timeoutInfo,timeout);
   MSGQUEUE_LOCKED_DO(msgQueue)
   {
     // wait for message
-    if (timeout != WAIT_FOREVER)
+    while (   !msgQueue->endOfMsgFlag
+           && List_isEmpty(&msgQueue->list)
+           && !Misc_isTimeout(&timeoutInfo)
+          )
     {
-      while (   !msgQueue->endOfMsgFlag
-             && (List_count(&msgQueue->list) <= 0)
-            )
-      {
-        if (!waitModified(msgQueue,(ulong)timeout))
-        {
-          unlock(msgQueue);
-          return FALSE;
-        }
-      }
+      // work-around: wait with timeout to handle lost wake-ups
+      (void)waitModified(msgQueue,(ulong)Misc_getRestTimeout(&timeoutInfo,5000));
     }
-    else
+    if (   msgQueue->endOfMsgFlag
+        || List_isEmpty(&msgQueue->list)
+       )
     {
-      while (   !msgQueue->endOfMsgFlag
-             && (List_count(&msgQueue->list) <= 0)
-            )
-      {
-        (void)waitModified(msgQueue,500);
-      }
+      unlock(msgQueue);
+      Misc_doneTimeout(&timeoutInfo);
+      return FALSE;
     }
 
     // get message
@@ -417,6 +414,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
     // signal modify
     msgQueue->modifiedFlag = TRUE;
   }
+  Misc_doneTimeout(&timeoutInfo);
 
   // copy data, free message
   if (msgNode == NULL)

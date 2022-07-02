@@ -654,6 +654,10 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo, ulong maxTimeout
              ? MIN((long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS),(long)MIN(maxTimeout,MAX_LONG))
              : 0L;
   }
+  else if (maxTimeout <= (ulong)MAX_LONG)
+  {
+    return (long)maxTimeout;
+  }
   else
   {
     return WAIT_FOREVER;
