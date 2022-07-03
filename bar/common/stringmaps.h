@@ -106,7 +106,7 @@ typedef String(*StringMapFormatFunction)(void *value, void *userData);
 typedef bool(*StringMapParseFunction)(ConstString string, void *data, void *userData);
 
 // convert to enum value
-typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
+typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -502,8 +502,8 @@ bool StringMap_getUInt64(const StringMap stringMap, const char *name, uint64 *da
 bool StringMap_getDouble(const StringMap stringMap, const char *name, double *data, double defaultValue);
 bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, bool defaultValue);
 bool StringMap_getFlag(const StringMap stringMap, const char *name, ulong *data, ulong value);
-bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint defaultValue);
-bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint64 allValue, const char *separatorChars, uint64 defaultValue);
+bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, void *stringMapParseEnumUserData, uint defaultValue);
+bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, void *stringMapParseEnumUserData, uint64 allValue, const char *separatorChars, uint64 defaultValue);
 bool StringMap_getChar(const StringMap stringMap, const char *name, char *data, char defaultValue);
 bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, uint maxLength, const char *defaultValue);
 bool StringMap_getString(const StringMap stringMap, const char *name, String data, const char *defaultValue);

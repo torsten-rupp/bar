@@ -1283,7 +1283,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo   *connectorInfo,
     String_delete(hostName);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(userName);
@@ -1394,13 +1394,13 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
     String_delete(storageName);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
+  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     String_delete(storageName);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_MANUAL))
+  if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,CALLBACK_((StringMapParseEnumFunction)Index_parseMode,NULL),INDEX_MODE_MANUAL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexMode=MANUAL|AUTO");
     String_delete(storageName);
@@ -1678,7 +1678,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
     String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,(StringMapParseEnumFunction)FileSystem_parseFileSystemType,FILE_SYSTEM_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,CALLBACK_((StringMapParseEnumFunction)FileSystem_parseFileSystemType,NULL),FILE_SYSTEM_TYPE_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
@@ -2282,7 +2282,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
     String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"specialType",&specialType,(StringMapParseEnumFunction)File_parseFileSpecialType,FILE_SPECIAL_TYPE_OTHER))
+  if (!StringMap_getEnum(argumentMap,"specialType",&specialType,CALLBACK_((StringMapParseEnumFunction)File_parseFileSpecialType,NULL),FILE_SPECIAL_TYPE_OTHER))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
@@ -2618,7 +2618,7 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<n>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
+  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     return;
@@ -3298,7 +3298,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     String_delete(hostName);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(hostName);
@@ -3823,6 +3823,67 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo, long timeout)
   return ERROR_NONE;
 }
 
+Errors Connector_getVersion(ConnectorInfo *connectorInfo,
+                            uint          *protocolVersionMajor,
+                            uint          *protocolVersionMinor,
+                            ServerModes   *serverMode
+                           )
+{
+  /***********************************************************************\
+  * Name   : parseServerMode
+  * Purpose: parse server mode text
+  * Input  : serverModeText - server mode text
+  *          serverMode     - server mode variable
+  *          userData       - user data (not used)
+  * Output : serverMode - job state
+  * Return : always TRUE
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseServerMode(const char *serverModeText, ServerModes *serverMode, void *userData);
+  bool parseServerMode(const char *serverModeText, ServerModes *serverMode, void *userData)
+  {
+    assert(serverModeText != NULL);
+    assert(serverMode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEqualsIgnoreCase(serverModeText,"master")) (*serverMode) = SERVER_MODE_MASTER;
+    else if (stringEqualsIgnoreCase(serverModeText,"slave" )) (*serverMode) = SERVER_MODE_SLAVE;
+    else                                                      (*serverMode) = SERVER_MODE_MASTER;
+
+    return TRUE;
+  }
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(protocolVersionMajor != NULL);
+
+  return Connector_executeCommand(connectorInfo,
+                                  CONNECTOR_DEBUG_LEVEL,
+                                  CONNECTOR_COMMAND_TIMEOUT,
+                                  CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                  {
+                                    assert(resultMap != NULL);
+
+                                    UNUSED_VARIABLE(userData);
+
+                                    StringMap_getUInt(resultMap,"major",protocolVersionMajor,0);
+                                    if (protocolVersionMinor != NULL)
+                                    {
+                                      StringMap_getUInt(resultMap,"minor",protocolVersionMinor,0);
+                                    }
+                                    if (serverMode != NULL)
+                                    {
+                                      StringMap_getEnum(resultMap,"mode",serverMode,CALLBACK_((StringMapParseEnumFunction)parseServerMode,NULL),SERVER_MODE_MASTER);
+                                    }
+
+                                    return ERROR_NONE;
+                                  },NULL),
+                                  "VERSION"
+                                 );
+}
+
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
                              JobOptions    *jobOptions
@@ -4118,7 +4179,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                        UNUSED_VARIABLE(userData);
 
                                        // get status values
-                                       StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+                                       StringMap_getEnum  (resultMap,"state",                &state,CALLBACK_((StringMapParseEnumFunction)parseJobState,NULL),JOB_STATE_NONE);
                                        StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
                                        StringMap_getString(resultMap,"errorData",            errorData,NULL);
                                        StringMap_getULong (resultMap,"doneCount",            &statusInfo.done.count,0L);

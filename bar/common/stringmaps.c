@@ -1347,7 +1347,7 @@ bool StringMap_getFlag(const StringMap stringMap, const char *name, ulong *data,
   }
 }
 
-bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint defaultValue)
+bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, void *stringMapParseEnumUserData, uint defaultValue)
 {
   StringMapEntry *stringMapEntry;
 
@@ -1359,7 +1359,7 @@ bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, 
   stringMapEntry = findStringMapEntry(stringMap,name);
   if (   (stringMapEntry != NULL)
       && (stringMapEntry->value.text != NULL)
-      && stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(uint*)data)
+      && stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(uint*)data,stringMapParseEnumUserData)
      )
   {
     return TRUE;
@@ -1371,7 +1371,7 @@ bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, 
   }
 }
 
-bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint64 allValue, const char *separatorChars, uint64 defaultValue)
+bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, void *stringMapParseEnumUserData, uint64 allValue, const char *separatorChars, uint64 defaultValue)
 {
   StringMapEntry  *stringMapEntry;
   StringTokenizer stringTokenizer;
@@ -1395,7 +1395,7 @@ bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *d
       {
         (*data) = allValue;
       }
-      else if (stringMapParseEnumFunction(String_cString(token),&value))
+      else if (stringMapParseEnumFunction(String_cString(token),&value,stringMapParseEnumUserData))
       {
         (*data) |= (1 << value);
       }

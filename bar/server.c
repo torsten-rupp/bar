@@ -1155,7 +1155,7 @@ LOCAL_INLINE bool isSlavePaired(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getSlaveStateText(SlaveStates slaveState)
+LOCAL const char *getSlaveStateText(ServerStates slaveState)
 {
   const char *stateText;
 
@@ -1167,6 +1167,12 @@ LOCAL const char *getSlaveStateText(SlaveStates slaveState)
       break;
     case SLAVE_STATE_ONLINE:
       stateText = "ONLINE";
+      break;
+    case SLAVE_STATE_WRONG_MODE:
+      stateText = "WRONG_MODE";
+      break;
+    case SLAVE_STATE_WRONG_PROTOCOL_VERSION:
+      stateText = "WRONG_PROTOCOL_VERSION";
       break;
     case SLAVE_STATE_PAIRED:
       stateText = "PAIRED";
@@ -1298,8 +1304,8 @@ LOCAL void pairingThreadCode(void)
   * Notes  : -
   \***********************************************************************/
 
-  auto void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState);
-  void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState)
+  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState);
+  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState)
   {
     JobNode *jobNode;
 
@@ -1318,15 +1324,17 @@ LOCAL void pairingThreadCode(void)
     }
   }
 
-  JobNode    *jobNode;
-  SlaveNode  *slaveNode;
-  Errors     error;
-  bool       anyOfflineFlag,anyUnpairedFlag;
-  FileHandle fileHandle;
-  FileInfo   fileInfo;
-  String     line;
-  uint64     pairingStopDateTime;
-  bool       clearPairing;
+  JobNode     *jobNode;
+  SlaveNode   *slaveNode;
+  Errors      error;
+  bool        anyOfflineFlag,anyUnpairedFlag;
+  uint        slaveProtocolVersionMajor;
+  ServerModes slaveServerMode;
+  FileHandle  fileHandle;
+  FileInfo    fileInfo;
+  String      line;
+  uint64      pairingStopDateTime;
+  bool        clearPairing;
 
   line = String_new();
   while (!isQuit())
@@ -1474,7 +1482,29 @@ LOCAL void pairingThreadCode(void)
               // update slave state in job
               if      (Connector_isAuthorized(&slaveNode->connectorInfo))
               {
-                updateSlaveState(slaveNode,SLAVE_STATE_PAIRED);
+                error = Connector_getVersion(&slaveNode->connectorInfo,
+                                             &slaveProtocolVersionMajor,
+                                             NULL,  // slaveProtocolVersionMinor
+                                             &slaveServerMode
+                                            );
+                if (error == ERROR_NONE)
+                {
+                  if (slaveServerMode == SERVER_MODE_SLAVE)
+                  {
+                    if (slaveProtocolVersionMajor == SERVER_PROTOCOL_VERSION_MAJOR)
+                    {
+                      updateSlaveState(slaveNode,SLAVE_STATE_PAIRED);
+                    }
+                    else
+                    {
+                      updateSlaveState(slaveNode,SLAVE_STATE_WRONG_PROTOCOL_VERSION);
+                    }
+                  }
+                  else
+                  {
+                    updateSlaveState(slaveNode,SLAVE_STATE_WRONG_MODE);
+                  }
+                }
               }
               else if (Connector_isConnected(&slaveNode->connectorInfo))
               {
@@ -6030,7 +6060,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password/UUID
-  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
@@ -6144,6 +6174,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
               // calculate hash from UUID
               (void)Crypt_resetHash(&newMaster.uuidHash);
+              Crypt_updateHash(&newMaster.uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
               Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
             }
 
@@ -7407,7 +7438,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
+  if (!StringMap_getEnum(argumentMap,"serverType",&serverType,CALLBACK_((StringMapParseEnumFunction)parseServerType,NULL),SERVER_TYPE_FILE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
@@ -7563,7 +7594,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
+  if (!StringMap_getEnum(argumentMap,"serverType",&serverType,CALLBACK_((StringMapParseEnumFunction)parseServerType,NULL),SERVER_TYPE_FILE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
@@ -10350,7 +10381,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(customText);
@@ -11196,7 +11227,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryType,NULL),ENTRY_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
     return;
@@ -11208,7 +11239,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -11278,7 +11309,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryType,NULL),ENTRY_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
     return;
@@ -11290,7 +11321,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -11536,7 +11567,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -11616,7 +11647,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -12244,7 +12275,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -12319,7 +12350,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -12566,7 +12597,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -12646,7 +12677,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     String_delete(patternString);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -12946,7 +12977,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
   // get job UUID, archive type
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_NONE);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -13068,7 +13099,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   {
     archiveType = ARCHIVE_TYPE_NORMAL;
   }
-  else if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  else if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(time);
@@ -13548,7 +13579,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
@@ -13677,7 +13708,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
@@ -14348,7 +14379,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   UNUSED_VARIABLE(argumentMap);
 
   // get encrypt type, encrypted password
-  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
@@ -14413,7 +14444,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
-  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
@@ -14476,7 +14507,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
-  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
@@ -14539,7 +14570,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
-  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
@@ -14610,7 +14641,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
@@ -15632,7 +15663,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   {
     indexStateAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     indexStateAny = FALSE;
   }
@@ -15644,7 +15675,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   {
     indexModeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseMode,NULL),INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     indexModeAny = FALSE;
   }
@@ -15841,7 +15872,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     indexStateAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     indexStateAny = FALSE;
   }
@@ -15853,7 +15884,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     indexModeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseMode,NULL),INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     indexModeAny = FALSE;
   }
@@ -15863,8 +15894,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
-  StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseEntitySortMode,INDEX_ENTITY_SORT_MODE_JOB_UUID);
-  StringMap_getEnum(argumentMap,"ordering",&ordering,(StringMapParseEnumFunction)Index_parseOrdering,DATABASE_ORDERING_NONE);
+  StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseEntitySortMode,NULL),INDEX_ENTITY_SORT_MODE_JOB_UUID);
+  StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -16101,7 +16132,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_SET_ALL,"|",INDEX_TYPE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_SET_ALL,"|",INDEX_TYPE_NONE))
   {
     indexTypeAny = FALSE;
   }
@@ -16113,7 +16144,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexStateAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     indexStateAny = FALSE;
   }
@@ -16125,7 +16156,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexModeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseMode,NULL),INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     indexModeAny = FALSE;
   }
@@ -16137,8 +16168,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   StringMap_getString(argumentMap,"name",name,NULL);
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
-  StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseStorageSortMode,INDEX_STORAGE_SORT_MODE_NAME);
-  StringMap_getEnum(argumentMap,"ordering",&ordering,(StringMapParseEnumFunction)Index_parseOrdering,DATABASE_ORDERING_NONE);
+  StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseStorageSortMode,NULL),INDEX_STORAGE_SORT_MODE_NAME);
+  StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -16536,7 +16567,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_SET_ALL,"|",INDEX_TYPE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_SET_ALL,"|",INDEX_TYPE_NONE))
   {
     indexTypeAny = FALSE;
   }
@@ -16548,7 +16579,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexStateAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     indexStateAny = FALSE;
   }
@@ -16560,7 +16591,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexModeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseMode,NULL),INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     indexModeAny = FALSE;
   }
@@ -16825,7 +16856,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   {
     entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_ANY))
   {
     // ok
   }
@@ -16838,8 +16869,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   StringMap_getBool(argumentMap,"fragmentsCount",&fragmentsCount,FALSE);
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
-  StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseEntrySortMode,INDEX_ENTRY_SORT_MODE_NAME);
-  StringMap_getEnum(argumentMap,"ordering",&ordering,(StringMapParseEnumFunction)Index_parseOrdering,DATABASE_ORDERING_NONE);
+  StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseEntrySortMode,NULL),INDEX_ENTRY_SORT_MODE_NAME);
+  StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
@@ -17184,7 +17215,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   {
     entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_ANY))
   {
     // ok
   }
@@ -17863,7 +17894,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
         StringMap_delete(resultMap);
         return error;
       }
-      if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseAction,SERVER_IO_ACTION_NONE))
+      if (!StringMap_getEnum(resultMap,"action",&action,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseAction,NULL),SERVER_IO_ACTION_NONE))
       {
         StringMap_delete(resultMap);
         return error;
@@ -17977,7 +18008,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
         return ERROR_EXPECTED_PARAMETER;
       }
     }
-    if (!StringMap_getEnum(resultMap,"encryptType",&encryptType,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
+    if (!StringMap_getEnum(resultMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
     {
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
@@ -18029,7 +18060,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   assert(argumentMap != NULL);
 
   // get type, destination, directory content flag, overwrite flag
-  if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseRestoreType,UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"type",&type,CALLBACK_((StringMapParseEnumFunction)parseRestoreType,NULL),UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"type=ARCHIVES|ENTRIES");
     return;
@@ -18043,7 +18074,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
   StringMap_getBool(argumentMap,"sparse",&sparseFilesFlag,FALSE);
   StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
-  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,(StringMapParseEnumFunction)parseRestoreEntryMode,RESTORE_ENTRY_MODE_STOP))
+  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,CALLBACK_((StringMapParseEnumFunction)parseRestoreEntryMode,NULL),RESTORE_ENTRY_MODE_STOP))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING");
     return;
@@ -18346,7 +18377,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   StringMap_getString(argumentMap,"hostName",hostName,NULL);
   userName = String_new();
   StringMap_getString(argumentMap,"userName",userName,NULL);
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     String_delete(userName);
     String_delete(hostName);
@@ -18433,7 +18464,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(pattern);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+  StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
   StringMap_getBool(argumentMap,"forceRefresh",&forceRefresh,FALSE);
   StringMap_getInt(argumentMap,"progressSteps",&progressSteps,1000);
 
@@ -18759,7 +18790,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   StringMap_getString(argumentMap,"toScheduleUUID",toScheduleUUID,NULL);
   toHostName = String_new();
   StringMap_getString(argumentMap,"toHostName",toHostName,NULL);
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_NONE);
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;
@@ -19018,7 +19049,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   {
     stateAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
+  else if (StringMap_getEnum(argumentMap,"state",&state,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_NONE))
   {
     stateAny = FALSE;
   }
@@ -19441,7 +19472,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   {
     stateAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
+  else if (StringMap_getEnum(argumentMap,"state",&state,CALLBACK_((StringMapParseEnumFunction)Index_parseState,NULL),INDEX_STATE_NONE))
   {
     stateAny = FALSE;
   }
