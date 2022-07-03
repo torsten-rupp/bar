@@ -6618,7 +6618,8 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                     statement.parameterLengths[i] = sizeof(statement.bind[i].u);
                     statement.parameterFormats[i] = 1;
                   #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%u",parameters[i].u);
+                    // Note: convert to a signed 32bit value, because PostgreSQL limit the range of an int to -2147483648 to +2147483647
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%d",(int)parameters[i].u);
                     statement.parameterValues[i]  = statement.bind[i].data;
                     statement.parameterLengths[i] = stringLength(statement.bind[i].data);
                     statement.parameterFormats[i] = 0;
@@ -7294,7 +7295,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].u);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  stringFormat(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),"%u",values[i].u);
+                  // Note: convert to a signed 32bit value, because PostgreSQL limit the range of an int to -2147483648 to +2147483647
+                  stringFormat(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),"%d",(int)values[i].u);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -7966,7 +7968,8 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].u);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  stringFormat(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),"%u",filters[i].u);
+                  // Note: convert to a signed 32bit value, because PostgreSQL limit the range of an int to -2147483648 to +2147483647
+                  stringFormat(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),"%d",(int)filters[i].u);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -14242,13 +14245,13 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       String_format(string,"%s",databaseValue->b ? "TRUE" : "FALSE");
       break;
     case DATABASE_DATATYPE_INT:
-      String_format(string,"%lld",databaseValue->i);
+      String_format(string,"%d",databaseValue->i);
       break;
     case DATABASE_DATATYPE_INT64:
       String_format(string,"%"PRIi64,databaseValue->i64);
       break;
     case DATABASE_DATATYPE_UINT:
-      String_format(string,"%lld",databaseValue->i);
+      String_format(string,"%u",databaseValue->u);
       break;
     case DATABASE_DATATYPE_UINT64:
       String_format(string,"%"PRIu64,databaseValue->u64);
@@ -14304,7 +14307,7 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%"PRIi64,databaseValue->i64);
       break;
     case DATABASE_DATATYPE_UINT:
-      stringFormat(buffer,bufferSize,"%u",databaseValue->i);
+      stringFormat(buffer,bufferSize,"%u",databaseValue->u);
       break;
     case DATABASE_DATATYPE_UINT64:
       stringFormat(buffer,bufferSize,"%"PRIu64,databaseValue->i64);

@@ -88,6 +88,7 @@ BZIP2          = bzip2
 CAT            = cat
 CD             = cd
 CHATTR         = chattr
+CHGRP          = chgrp
 CHMOD          = chmod
 CP             = cp
 CUT            = cut
@@ -921,6 +922,7 @@ TEST_FILE_NAMES_SIMPLE = \
   file644.dat \
   file664.dat \
   file666.dat \
+  file_big_group_id.dat \
   delta1/random512k.dat \
   delta2/random512k.dat \
   delta1/hardlink.dat delta1/hardlink1.dat delta1/hardlink2.dat \
@@ -3472,6 +3474,9 @@ data/file664.dat:
 data/file666.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 666 $@
+data/file_big_group_id.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHGRP) 4294967295 $@
 ifneq ($(ATTR),)
 data/extended_attribute.dat:
 	$(INSTALL) -d $(@D)

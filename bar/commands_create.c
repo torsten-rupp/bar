@@ -1529,11 +1529,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     StringList_done(&hardLinkInfo->nameList);
   }
 
-  Dictionary     duplicateNamesDictionary;
-  String         name;
-  Dictionary     hardLinksDictionary;
-  Errors         error;
-  DatabaseHandle continuousDatabaseHandle;
+  Dictionary duplicateNamesDictionary;
+  String     name;
+  Dictionary hardLinksDictionary;
+  Errors     error;
 
   assert(createInfo != NULL);
   assert(createInfo->includeEntryList != NULL);
@@ -1551,207 +1550,203 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  if (Continuous_isAvailable())
-  {
-    // open continuous database
-    error = Continuous_open(&continuousDatabaseHandle);
-    if (error != ERROR_NONE)
-    {
-      Dictionary_done(&hardLinksDictionary);
-      String_delete(name);
-      Dictionary_done(&duplicateNamesDictionary);
-      return;
-    }
-  }
-
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
+    DatabaseHandle          continuousDatabaseHandle;
     DatabaseStatementHandle databaseStatementHandle;
-    DatabaseId          databaseId;
+    DatabaseId              databaseId;
 
     // process entries from continuous database
     if (Continuous_isAvailable())
     {
-      error = Continuous_initList(&databaseStatementHandle,
-                                  &continuousDatabaseHandle,
-                                  createInfo->jobUUID,
-                                  createInfo->scheduleUUID
-                                 );
+      // open continuous database
+      error = Continuous_open(&continuousDatabaseHandle);
       if (error == ERROR_NONE)
       {
-        while (Continuous_getNext(&databaseStatementHandle,&databaseId,name))
+        error = Continuous_initList(&databaseStatementHandle,
+                                    &continuousDatabaseHandle,
+                                    createInfo->jobUUID,
+                                    createInfo->scheduleUUID
+                                   );
+        if (error == ERROR_NONE)
         {
-          FileInfo fileInfo;
-
-          // pause
-          pauseCreate(createInfo);
-
-          // check if file still exists
-          if (!File_exists(name))
+          while (Continuous_getNext(&databaseStatementHandle,&databaseId,name))
           {
-            continue;
-          }
+            FileInfo fileInfo;
 
-          // read file info
-          error = File_getInfo(&fileInfo,name);
-          if (error != ERROR_NONE)
-          {
-            continue;
-          }
+            // pause
+            pauseCreate(createInfo);
 
-          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
-          {
-            switch (fileInfo.type)
+            // check if file still exists
+            if (!File_exists(name))
             {
-              case FILE_TYPE_FILE:
-                if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
-                    && isInIncludedList(createInfo->includeEntryList,name)
-                    && !isInExcludedList(createInfo->excludePatternList,name)
-                    && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
-                   )
-                {
-                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
-                  {
-                    // add to known names history
-                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+              continue;
+            }
 
-                    STATUS_INFO_UPDATE(createInfo,name,NULL)
+            // read file info
+            error = File_getInfo(&fileInfo,name);
+            if (error != ERROR_NONE)
+            {
+              continue;
+            }
+
+            if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
+            {
+              switch (fileInfo.type)
+              {
+                case FILE_TYPE_FILE:
+                  if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
+                      && isInIncludedList(createInfo->includeEntryList,name)
+                      && !isInExcludedList(createInfo->excludePatternList,name)
+                      && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
+                     )
+                  {
+                    if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                     {
-                      createInfo->statusInfo.total.count++;
-                      createInfo->statusInfo.total.size += fileInfo.size;
+                      // add to known names history
+                      Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
+                      {
+                        createInfo->statusInfo.total.count++;
+                        createInfo->statusInfo.total.size += fileInfo.size;
+                      }
                     }
                   }
-                }
-                break;
-              case FILE_TYPE_DIRECTORY:
-                // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+                  break;
+                case FILE_TYPE_DIRECTORY:
+                  // add to known names history
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                STATUS_INFO_UPDATE(createInfo,name,NULL)
-                {
-                  createInfo->statusInfo.total.count++;
-                }
-                break;
-              case FILE_TYPE_LINK:
-                if (   isInIncludedList(createInfo->includeEntryList,name)
-                    && !isInExcludedList(createInfo->excludePatternList,name)
-                    && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
-                   )
-                {
-                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    // add to known names history
-                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-                    STATUS_INFO_UPDATE(createInfo,name,NULL)
+                    createInfo->statusInfo.total.count++;
+                  }
+                  break;
+                case FILE_TYPE_LINK:
+                  if (   isInIncludedList(createInfo->includeEntryList,name)
+                      && !isInExcludedList(createInfo->excludePatternList,name)
+                      && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
+                     )
+                  {
+                    if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                     {
-                      createInfo->statusInfo.total.count++;
+                      // add to known names history
+                      Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
+                      {
+                        createInfo->statusInfo.total.count++;
+                      }
                     }
                   }
-                }
-                break;
-              case FILE_TYPE_HARDLINK:
-                if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
-                    && isInIncludedList(createInfo->includeEntryList,name)
-                    && !isInExcludedList(createInfo->excludePatternList,name)
-                   )
-                {
-                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+                  break;
+                case FILE_TYPE_HARDLINK:
+                  if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
+                      && isInIncludedList(createInfo->includeEntryList,name)
+                      && !isInExcludedList(createInfo->excludePatternList,name)
+                     )
                   {
-                    union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                    HardLinkInfo                                       hardLinkInfo;
-
-                    // add to known names history
-                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-                    if (  !createInfo->partialFlag
-                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                        )
+                    if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                     {
-                      if (Dictionary_find(&hardLinksDictionary,
-                                          &fileInfo.id,
-                                          sizeof(fileInfo.id),
-                                          &data.value,
-                                          NULL
-                                         )
+                      union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                      HardLinkInfo                                       hardLinkInfo;
+
+                      // add to known names history
+                      Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                      if (  !createInfo->partialFlag
+                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                           )
                       {
-                        // append name to hard link name list
-                        StringList_append(&data.hardLinkInfo->nameList,name);
-
-                        if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                        {
-                          // found last hardlink -> clear entry
-                          Dictionary_remove(&hardLinksDictionary,
-                                            &fileInfo.id,
-                                            sizeof(fileInfo.id)
-                                           );
-                        }
-                      }
-                      else
-                      {
-                        // create hard link name list
-                        if (createInfo->partialFlag && isPrintInfo(2))
-                        {
-                          printIncrementalInfo(&createInfo->namesDictionary,
-                                                name,
-                                                &fileInfo.cast
-                                              );
-                        }
-
-                        hardLinkInfo.count = fileInfo.linkCount;
-                        StringList_init(&hardLinkInfo.nameList);
-                        StringList_append(&hardLinkInfo.nameList,name);
-                        memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
-
-                        if (!Dictionary_add(&hardLinksDictionary,
+                        if (Dictionary_find(&hardLinksDictionary,
                                             &fileInfo.id,
                                             sizeof(fileInfo.id),
-                                            &hardLinkInfo,
-                                            sizeof(hardLinkInfo)
+                                            &data.value,
+                                            NULL
                                            )
                             )
                         {
-                          HALT_INSUFFICIENT_MEMORY();
-                        }
+                          // append name to hard link name list
+                          StringList_append(&data.hardLinkInfo->nameList,name);
 
-                        // update status
-                        STATUS_INFO_UPDATE(createInfo,name,NULL)
+                          if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                          {
+                            // found last hardlink -> clear entry
+                            Dictionary_remove(&hardLinksDictionary,
+                                              &fileInfo.id,
+                                              sizeof(fileInfo.id)
+                                             );
+                          }
+                        }
+                        else
                         {
-                          createInfo->statusInfo.total.count++;
-                          createInfo->statusInfo.total.size += fileInfo.size;
+                          // create hard link name list
+                          if (createInfo->partialFlag && isPrintInfo(2))
+                          {
+                            printIncrementalInfo(&createInfo->namesDictionary,
+                                                  name,
+                                                  &fileInfo.cast
+                                                );
+                          }
+
+                          hardLinkInfo.count = fileInfo.linkCount;
+                          StringList_init(&hardLinkInfo.nameList);
+                          StringList_append(&hardLinkInfo.nameList,name);
+                          memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
+
+                          if (!Dictionary_add(&hardLinksDictionary,
+                                              &fileInfo.id,
+                                              sizeof(fileInfo.id),
+                                              &hardLinkInfo,
+                                              sizeof(hardLinkInfo)
+                                             )
+                              )
+                          {
+                            HALT_INSUFFICIENT_MEMORY();
+                          }
+
+                          // update status
+                          STATUS_INFO_UPDATE(createInfo,name,NULL)
+                          {
+                            createInfo->statusInfo.total.count++;
+                            createInfo->statusInfo.total.size += fileInfo.size;
+                          }
                         }
                       }
                     }
                   }
-                }
-                break;
-              case FILE_TYPE_SPECIAL:
-                if (   isInIncludedList(createInfo->includeEntryList,name)
-                    && !isInExcludedList(createInfo->excludePatternList,name)
-                    && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
-                   )
-                {
-                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+                  break;
+                case FILE_TYPE_SPECIAL:
+                  if (   isInIncludedList(createInfo->includeEntryList,name)
+                      && !isInExcludedList(createInfo->excludePatternList,name)
+                      && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
+                     )
                   {
-                    // add to known names history
-                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-                    STATUS_INFO_UPDATE(createInfo,name,NULL)
+                    if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                     {
-                      createInfo->statusInfo.total.count++;
+                      // add to known names history
+                      Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
+                      {
+                        createInfo->statusInfo.total.count++;
+                      }
                     }
                   }
-                }
-                break;
-              default:
-                break;
+                  break;
+                default:
+                  break;
+              }
             }
-          }
 
-          // free resources
+            // free resources
+          }
+          Continuous_doneList(&databaseStatementHandle);
         }
-        Continuous_doneList(&databaseStatementHandle);
+
+        // close continuous database
+        Continuous_close(&continuousDatabaseHandle);
       }
     }
   }
@@ -2385,12 +2380,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     createInfo->statusInfo.collectTotalSumDone = TRUE;
   }
 
-  if (Continuous_isAvailable())
-  {
-    // close continuous database
-    Continuous_close(&continuousDatabaseHandle);
-  }
-
   // free resoures
   Dictionary_done(&hardLinksDictionary);
   String_delete(name);
@@ -2439,7 +2428,6 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   String             name;
   Dictionary         hardLinksDictionary;
   Errors             error;
-  DatabaseHandle     continuousDatabaseHandle;
   DictionaryIterator dictionaryIterator;
 //???
 union { const void *value; const uint64 *id; } keyData;
@@ -2465,25 +2453,24 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   AUTOFREE_ADD(&autoFreeList,name,{ String_delete(name); });
   AUTOFREE_ADD(&autoFreeList,&hardLinksDictionary,{ Dictionary_done(&hardLinksDictionary); });
 
-  if (Continuous_isAvailable())
-  {
-    // open continuous database
-    error = Continuous_open(&continuousDatabaseHandle);
-    if (error != ERROR_NONE)
-    {
-      printError("cannot initialise continuous database (error: %s)!",
-                 Error_getText(error)
-                );
-      AutoFree_freeAll(&autoFreeList);
-      return;
-    }
-    AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
-  }
-
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
+    DatabaseHandle continuousDatabaseHandle;
+
     if (Continuous_isAvailable())
     {
+      // open continuous database
+      error = Continuous_open(&continuousDatabaseHandle);
+      if (error != ERROR_NONE)
+      {
+        printError("cannot initialise continuous database (error: %s)!",
+                   Error_getText(error)
+                  );
+        AutoFree_freeAll(&autoFreeList);
+        return;
+      }
+      AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
+
       // process entries from continuous database
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
@@ -2778,6 +2765,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
         // free resources
       }
+
+      // close continuous database
+      Continuous_close(&continuousDatabaseHandle);
     }
   }
   else
@@ -3719,12 +3709,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                              );
   }
   Dictionary_doneIterator(&dictionaryIterator);
-
-  if (Continuous_isAvailable())
-  {
-    // close continuous database
-    Continuous_close(&continuousDatabaseHandle);
-  }
 
   // free resoures
   Dictionary_done(&hardLinksDictionary);
