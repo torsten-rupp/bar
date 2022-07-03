@@ -1952,7 +1952,7 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
       // if not found -> wait a short time
       if (resultNode == NULL)
       {
-        Semaphore_waitModified(&serverIO->resultList.lock,250);
+        Semaphore_waitModified(&serverIO->resultList.lock,Misc_getRestTimeout(&timeoutInfo,250));
       }
     }
     while (   ServerIO_isConnected(serverIO)

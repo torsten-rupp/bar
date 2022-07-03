@@ -887,8 +887,8 @@ void List_exchange(void *list1,
                    void *list2
                   )
 {
-  Node          *node;
-  unsigned long count;
+  Node  *node;
+  ulong count;
 
   assert(list1 != NULL);
   assert(list2 != NULL);
