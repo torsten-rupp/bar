@@ -392,6 +392,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
   {
     // wait for message
     while (   !msgQueue->endOfMsgFlag
+           && !msgQueue->terminatedFlag
            && List_isEmpty(&msgQueue->list)
            && !Misc_isTimeout(&timeoutInfo)
           )
@@ -399,7 +400,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
       // work-around: wait with timeout to handle lost wake-ups
       (void)waitModified(msgQueue,(ulong)Misc_getRestTimeout(&timeoutInfo,5000));
     }
-    if (   msgQueue->endOfMsgFlag
+    if (   msgQueue->terminatedFlag
         || List_isEmpty(&msgQueue->list)
        )
     {
