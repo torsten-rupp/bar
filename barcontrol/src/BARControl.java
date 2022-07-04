@@ -5050,20 +5050,20 @@ if (false) {
                                          throws BARException
                                        {
                                          // get data
-                                         String              jobUUID                = valueMap.getString("jobUUID"                 );
-                                         String              name                   = valueMap.getString("name"                    );
+                                         String              jobUUID                = valueMap.getString("jobUUID"                             );
+                                         String              name                   = valueMap.getString("name"                                );
                                          JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
-                                         String              slaveHostName          = valueMap.getString("slaveHostName",        "");
+                                         String              slaveHostName          = valueMap.getString("slaveHostName",""                    );
                                          JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
-                                         String              archiveType            = valueMap.getString("archiveType"             );
-                                         long                archivePartSize        = valueMap.getLong  ("archivePartSize"         );
-                                         String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"  );
-                                         String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"   );
-                                         String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"          );
-                                         String              cryptType              = valueMap.getString("cryptType"               );
-                                         String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"       );
-                                         long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"    );
-                                         long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"       );
+                                         String              archiveType            = valueMap.getString("archiveType"                         );
+                                         long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
+                                         String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
+                                         String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
+                                         String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
+                                         String              cryptType              = valueMap.getString("cryptType"                           );
+                                         String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
+                                         long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
+                                         long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
 
                                          String compressAlgorithms;
                                          if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;

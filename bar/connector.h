@@ -234,6 +234,27 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo,
                           );
 
 /***********************************************************************\
+* Name   : Connector_getVersion
+* Purpose: get versionof slave
+* Input  : connectorInfo        - connector info
+*          protocolVersionMajor - major protocol version variable
+*          protocolVersionMinor - minor protocol version variable (can
+*                                 be NULL)
+*          serverMode           - server mode variable (can be NULL)
+* Output : protocolVersionMajor - major protocol version
+*          protocolVersionMinor - minor protocol version
+*          serverMode           - server mode
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Connector_getVersion(ConnectorInfo *connectorInfo,
+                            uint          *protocolVersionMajor,
+                            uint          *protocolVersionMinor,
+                            ServerModes   *serverMode
+                           );
+
+/***********************************************************************\
 * Name   : Connector_initStorage
 * Purpose: init storage
 * Input  : connectorInfo - connector info
