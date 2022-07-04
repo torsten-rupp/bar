@@ -228,9 +228,9 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 \***********************************************************************/
 
 #define STRING_CHAR_ITERATE_UTF8(string,stringIterator,variable) \
-  for (stringIterator = 0, variable = stringAtUTF8(string->data,0,NULL); \
+  for (stringIterator = 0, variable = String_atUTF8(string,0,NULL); \
        (stringIterator) < String_length(string); \
-       (stringIterator) = stringNextUTF8(string->data,stringIterator), variable = stringAtUTF8(string->data,stringIterator,NULL) \
+       (stringIterator) = stringNextUTF8(string->data,stringIterator), variable = String_atUTF8(string,stringIterator,NULL) \
       )
 
 // debugging
@@ -937,7 +937,40 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
 
   if (string != NULL)
   {
-    codepoint = stringAtUTF8(string->data,index,nextIndex);
+    if      (((string->data[index] & 0xF8) == 0xF0) && ((index+4) <= string->length))
+    {
+      // 4 byte UTF8 codepoint
+      codepoint =   (Codepoint)((string->data[index+0] & 0x07) << 18)
+                  | (Codepoint)((string->data[index+1] & 0x3F) << 12)
+                  | (Codepoint)((string->data[index+2] & 0x3F) <<  6)
+                  | (Codepoint)((string->data[index+3] & 0x3F) <<  0);
+      if (nextIndex != NULL) (*nextIndex) = index+4;
+    }
+    else if (((string->data[index] & 0xF0) == 0xE0) && ((index+3) <= string->length))
+    {
+      // 3 byte UTF8 codepoint
+      codepoint =   (Codepoint)((string->data[index+0] & 0x0F) << 12)
+                  | (Codepoint)((string->data[index+1] & 0x3F) <<  6)
+                  | (Codepoint)((string->data[index+2] & 0x3F) <<  0);
+      if (nextIndex != NULL) (*nextIndex) = index+3;
+    }
+    else if (((string->data[index] & 0xE0) == 0xC0) && ((index+2) <= string->length))
+    {
+      // 2 byte UTF8 codepoint
+      codepoint =   (Codepoint)((string->data[index+0] & 0x1F) << 6)
+                  | (Codepoint)((string->data[index+1] & 0x3F) << 0);
+      if (nextIndex != NULL) (*nextIndex) = index+2;
+    }
+    else if (                                          ((index+1) <= string->length))
+    {
+      // 1 byte UTF8 codepoint
+      codepoint = (Codepoint)string->data[index];
+      if (nextIndex != NULL) (*nextIndex) = index+1;
+    }
+    else
+    {
+      codepoint = 0x00000000;
+    }
   }
   else
   {
