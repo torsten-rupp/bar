@@ -3519,7 +3519,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   // init index
   do
   {
-    indexHandle = Index_open(NULL,1000);
+    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
   }
   while (   (indexHandle == NULL)
          && !Thread_isQuit(&connectorInfo->thread)

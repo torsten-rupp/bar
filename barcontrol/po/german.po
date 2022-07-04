@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-04 13:02+0200\n"
+"POT-Creation-Date: 2022-07-04 14:59+0200\n"
 "PO-Revision-Date: 2022-06-14 10:28+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1637,19 +1637,19 @@ msgstr "Datenbankoperation unterbrochen"
 msgid "timeout accessing index"
 msgstr "Zeitüberschreitung bei Zugriff auf Index"
 
-#: src/BARException.java:1452
+#: src/BARException.java:1456
 msgid "master disconnected"
 msgstr "Verbindung zu Hauptinstanz verloren"
 
-#: src/BARException.java:1455
+#: src/BARException.java:1459
 msgid "slave disconnected"
 msgstr "Verbindung zu Nebeninstanz verloren"
 
-#: src/BARException.java:1458
+#: src/BARException.java:1462
 msgid "slave is not paired"
 msgstr "Nebeninstanz nicht gekoppelt"
 
-#: src/BARException.java:1461
+#: src/BARException.java:1465
 msgid "instance is not a slave"
 msgstr "Instanz ist keine Nebeninstanz"
 

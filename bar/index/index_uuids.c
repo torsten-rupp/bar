@@ -1461,9 +1461,9 @@ Errors Index_newUUID(IndexHandle *indexHandle,
       DatabaseId databaseId;
 
       error = Database_insert(&indexHandle->databaseHandle,
-                              &databaseId,
+                              NULL,  // databaseId,
                               "uuids",
-                              DATABASE_FLAG_NONE,
+                              DATABASE_FLAG_IGNORE,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_CSTRING("jobUUID", jobUUID),
@@ -1471,6 +1471,21 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE
                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &databaseId,
+                             "uuids",
+                             "id",
+                             "jobUUID=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_CSTRING(jobUUID)
+                             )
+                            );
       if (error != ERROR_NONE)
       {
         return error;

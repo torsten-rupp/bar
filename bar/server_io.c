@@ -16,8 +16,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <locale.h>
-//#include <time.h>
-//#include <signal.h>
 #include <assert.h>
 
 #include "common/files.h"
