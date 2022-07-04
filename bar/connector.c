@@ -4079,7 +4079,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
     else if (stringEqualsIgnoreCase(jobStateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
     else if (stringEqualsIgnoreCase(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
     else if (stringEqualsIgnoreCase(jobStateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
-    else                                                                     (*jobState) = JOB_STATE_NONE;
+    else                                                                     (*jobState) = JOB_STATE_ERROR;
 
     return TRUE;
   }
@@ -4208,7 +4208,9 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
 //                                       StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
 //                                       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
 
-                                       return ERROR_NONE;
+                                       return (errorCode != ERROR_CODE_NONE)
+                                                ? ERRORF_(errorCode,"%s",String_cString(errorData))
+                                                : ERROR_NONE;
                                      },NULL),
                                      "JOB_STATUS jobUUID=%S",
                                      jobUUID

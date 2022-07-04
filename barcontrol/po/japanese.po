@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-03 15:42+0200\n"
+"POT-Creation-Date: 2022-07-04 13:02+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -478,16 +478,68 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:5084 src/BARServer.java:1420 src/TabStatus.java:2192
-#: src/TabStatus.java:2214
-msgid "suspended"
-msgstr "中断された"
+#: src/BARControl.java:4795
+#, fuzzy
+msgid "cannot connect to server (error: %s)"
+msgstr "ボリュームを交換できません（エラー: {0}）"
 
-#: src/BARControl.java:5745
-#, fuzzy, java-format
-msgid "Please enter {0} login for: {1}"
-msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
+#: src/BARControl.java:4802
+msgid "Wait for pairing new master...    "
+msgstr ""
 
+#: src/BARControl.java:4848
+msgid "'%s' - OK"
+msgstr ""
+
+#: src/BARControl.java:4863
+#, fuzzy
+msgid "cannot set new master (%s)"
+msgstr ""
+"サーバ上のパスワードを消去できません:\n"
+"\n"
+
+#: src/BARControl.java:4875 src/BARControl.java:4982
+#, fuzzy
+msgid "job '%s' not found"
+msgstr "保存作業"
+
+#: src/BARControl.java:4892
+#, fuzzy
+msgid "cannot start job '%s' (error: %s)"
+msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
+
+#: src/BARControl.java:4912
+#, fuzzy
+msgid "cannot pause (error: %s)"
+msgstr "タスクを一時停止できません（エラー: {0}）"
+
+#: src/BARControl.java:4931
+#, fuzzy
+msgid "cannot set maintenance (error: %s)"
+msgstr ""
+"デバイスリストが得られません:\n"
+"\n"
+"{0}"
+
+#: src/BARControl.java:4953
+#, fuzzy
+msgid "cannot suspend (error: %s)"
+msgstr "タスクを中断できません（エラー: {0}）"
+
+#: src/BARControl.java:4998
+#, fuzzy
+msgid "cannot abort job '%s' (error: %s)"
+msgstr "タスクを中止できません（エラー: {0}）"
+
+#: src/BARControl.java:5020
+#, fuzzy
+msgid "cannot get state (error: %s)"
+msgstr ""
+"ファイルリストが得られません:\n"
+"\n"
+"{0}"
+
+#: src/BARControl.java:5030 src/BARControl.java:5361 src/BARControl.java:5418
 #: src/BARControl.java:5746 src/ServerSettings.java:1773
 #: src/ServerSettings.java:3940 src/TabJobs.java:2598 src/TabJobs.java:4394
 #: src/TabJobs.java:8974 src/TabJobs.java:9114 src/TabJobs.java:11251
@@ -496,6 +548,181 @@ msgstr "次の項目のFTPログインパスワードを入力してください
 #: src/TabRestore.java:9489 src/TabStatus.java:686 src/TabStatus.java:745
 msgid "Name"
 msgstr "名前"
+
+#: src/BARControl.java:5031 src/BARControl.java:5359 src/TabRestore.java:4700
+#: src/TabRestore.java:5209 src/TabRestore.java:5687 src/TabRestore.java:6366
+#: src/TabStatus.java:692 src/TabStatus.java:761
+msgid "State"
+msgstr "状態"
+
+#: src/BARControl.java:5032
+#, fuzzy
+msgid "Host name"
+msgstr "ホスト"
+
+#: src/BARControl.java:5033 src/BARControl.java:5292 src/BARControl.java:5415
+#: src/BARControl.java:5583 src/ServerSettings.java:1770 src/TabJobs.java:10399
+#: src/TabJobs.java:13639 src/TabJobs.java:14372 src/TabRestore.java:4884
+#: src/TabRestore.java:4928 src/TabRestore.java:6529 src/TabRestore.java:9490
+#: src/TabStatus.java:704 src/TabStatus.java:793 src/TabStatus.java:3234
+msgid "Type"
+msgstr "タイプ"
+
+#: src/BARControl.java:5034 src/TabJobs.java:4703 src/TabStatus.java:710
+#: src/TabStatus.java:809
+msgid "Part size"
+msgstr "パートサイズ"
+
+#: src/BARControl.java:5035 src/TabJobs.java:4939 src/TabStatus.java:716
+#: src/TabStatus.java:825
+msgid "Compress"
+msgstr "圧縮する"
+
+#: src/BARControl.java:5036 src/TabJobs.java:5561 src/TabStatus.java:722
+#: src/TabStatus.java:841
+msgid "Crypt"
+msgstr "暗号化する"
+
+#: src/BARControl.java:5037
+#, fuzzy
+msgid "Crypt type"
+msgstr "暗号化する"
+
+#: src/BARControl.java:5038 src/BARControl.java:5360 src/TabJobs.java:6229
+msgid "Mode"
+msgstr "モード"
+
+#: src/BARControl.java:5039 src/TabRestore.java:4380 src/TabStatus.java:728
+#: src/TabStatus.java:857 src/TabStatus.java:3215
+msgid "Last executed"
+msgstr "最終実行された"
+
+#: src/BARControl.java:5040
+#, fuzzy
+msgid "Estimated [s]"
+msgstr "予想時間"
+
+#: src/BARControl.java:5084 src/BARServer.java:1420 src/TabStatus.java:2192
+#: src/TabStatus.java:2214
+msgid "suspended"
+msgstr "中断された"
+
+#: src/BARControl.java:5105
+#, fuzzy
+msgid "cannot get job list (error: %s)"
+msgstr ""
+"ファイルリストが得られません:\n"
+"\n"
+"{0}"
+
+#: src/BARControl.java:5274
+#, fuzzy
+msgid "cannot remove index for storage '%s' from index (error: %s)"
+msgstr ""
+"次のインデックスを削除できません\n"
+"\n"
+"''{0}''\n"
+"\n"
+"(エラー: {1})"
+
+#: src/BARControl.java:5291 src/BARControl.java:5356 src/BARControl.java:5414
+msgid "Id"
+msgstr ""
+
+#: src/BARControl.java:5293 src/BARControl.java:5357 src/BARControl.java:5416
+#: src/BARWidgets.java:4123 src/BARWidgets.java:4657
+#: src/ServerSettings.java:1779 src/TabRestore.java:4690
+#: src/TabRestore.java:4938 src/TabRestore.java:5206 src/TabRestore.java:5681
+#: src/TabRestore.java:6532 src/TabRestore.java:9486 src/TabRestore.java:9491
+msgid "Size"
+msgstr "サイズ"
+
+#: src/BARControl.java:5294
+#, fuzzy
+msgid "Entry count"
+msgstr "エンティティ合計"
+
+#: src/BARControl.java:5295
+#, fuzzy
+msgid "Entry size"
+msgstr "エンティティ合計"
+
+#: src/BARControl.java:5296 src/BARControl.java:5358 src/BARControl.java:5417
+#: src/BARControl.java:5584 src/TabRestore.java:4948 src/TabRestore.java:6535
+#: src/TabRestore.java:9492
+#, fuzzy
+msgid "Date/Time"
+msgstr "日付"
+
+#: src/BARControl.java:5297 src/BARControl.java:5581 src/TabRestore.java:4604
+#: src/TabRestore.java:4874 src/TabStatus.java:3163
+msgid "Job"
+msgstr "タスク"
+
+#: src/BARControl.java:5335
+#, fuzzy
+msgid "%d entities"
+msgstr "エンティティ合計"
+
+#: src/BARControl.java:5339
+#, fuzzy
+msgid "cannot list entities index (error: %s)"
+msgstr ""
+"デバイスリストが得られません:\n"
+"\n"
+"{0}"
+
+#: src/BARControl.java:5400
+#, fuzzy
+msgid "cannot list storages index (error: %s)"
+msgstr ""
+"次のインデックスを割り当てできません\n"
+"\n"
+"''{0}''\n"
+"\n"
+"(エラー: {1})"
+
+#: src/BARControl.java:5563
+msgid "%d entries (max. 1024 shown)"
+msgstr ""
+
+#: src/BARControl.java:5582 src/TabRestore.java:4645 src/TabRestore.java:4894
+#: src/TabRestore.java:5200 src/TabRestore.java:5678
+#, fuzzy
+msgid "Hostname"
+msgstr "ホスト"
+
+#: src/BARControl.java:5585
+#, fuzzy
+msgid "Duration"
+msgstr "保存先"
+
+#: src/BARControl.java:5586
+#, fuzzy
+msgid "Total           [bytes]"
+msgstr "合計バイト数"
+
+#: src/BARControl.java:5587
+msgid "Skipped         [bytes]"
+msgstr ""
+
+#: src/BARControl.java:5588
+msgid "With errors     [bytes]"
+msgstr ""
+
+#: src/BARControl.java:5589 src/TabStatus.java:1766
+msgid "Message"
+msgstr "メッセージ"
+
+#: src/BARControl.java:5640
+#, fuzzy
+msgid "%d entries"
+msgstr "エントリ"
+
+#: src/BARControl.java:5745
+#, fuzzy, java-format
+msgid "Please enter {0} login for: {1}"
+msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
 #: src/BARControl.java:5770 src/BARServer.java:1251 src/BARServer.java:1274
 #, fuzzy, java-format
@@ -511,6 +738,16 @@ msgstr ""
 "''{0}''\n"
 "\n"
 "(エラー: {1})"
+
+#: src/BARControl.java:5823
+#, fuzzy
+msgid "Restored %d entries, %d bytes"
+msgstr "復元作業"
+
+#: src/BARControl.java:5826
+#, fuzzy
+msgid "cannot restore storage '%s'"
+msgstr "保存しない"
 
 #: src/BARException.java:287
 msgid "insufficient memory"
@@ -2190,13 +2427,6 @@ msgstr ""
 msgid "Select device name"
 msgstr "デバイス名選択"
 
-#: src/BARWidgets.java:4123 src/BARWidgets.java:4657
-#: src/ServerSettings.java:1779 src/TabRestore.java:4690
-#: src/TabRestore.java:4938 src/TabRestore.java:5206 src/TabRestore.java:5681
-#: src/TabRestore.java:6532 src/TabRestore.java:9486 src/TabRestore.java:9491
-msgid "Size"
-msgstr "サイズ"
-
 #: src/BARWidgets.java:4129 src/BARWidgets.java:4663
 msgid ""
 "Size of medium. You may specify a smaller value than the real physical size "
@@ -2649,13 +2879,6 @@ msgstr "復号化パスワード"
 #, fuzzy
 msgid "Storage servers"
 msgstr "サーバ"
-
-#: src/ServerSettings.java:1770 src/TabJobs.java:10399 src/TabJobs.java:13639
-#: src/TabJobs.java:14372 src/TabRestore.java:4884 src/TabRestore.java:4928
-#: src/TabRestore.java:6529 src/TabRestore.java:9490 src/TabStatus.java:704
-#: src/TabStatus.java:793 src/TabStatus.java:3234
-msgid "Type"
-msgstr "タイプ"
 
 #: src/ServerSettings.java:1771 src/TabJobs.java:2989
 msgid "Click to sort by type."
@@ -3693,10 +3916,6 @@ msgstr ""
 msgid "Storage"
 msgstr "保存"
 
-#: src/TabJobs.java:4703 src/TabStatus.java:710 src/TabStatus.java:809
-msgid "Part size"
-msgstr "パートサイズ"
-
 #: src/TabJobs.java:4709
 msgid ""
 "Create storage files with an unlimited size. Do not split storage files."
@@ -3723,10 +3942,6 @@ msgstr "保存ファイルの制限サイズ段階。"
 #: src/TabJobs.java:4778
 msgid "Size limit for one storage file part."
 msgstr "保存ファイル１パートあたりの制限サイズ。"
-
-#: src/TabJobs.java:4939 src/TabStatus.java:716 src/TabStatus.java:825
-msgid "Compress"
-msgstr "圧縮する"
 
 #: src/TabJobs.java:4950
 msgid "Delta"
@@ -3799,10 +4014,6 @@ msgstr "圧縮除外リスト内のエントリを編集。"
 msgid "Remove entry from compress exclude list."
 msgstr "圧縮除外リストからエントリを削除。"
 
-#: src/TabJobs.java:5561 src/TabStatus.java:722 src/TabStatus.java:841
-msgid "Crypt"
-msgstr "暗号化する"
-
 #: src/TabJobs.java:5571
 #, fuzzy
 msgid "Encryption methods to use."
@@ -3870,10 +4081,6 @@ msgstr "繰り返し"
 #: src/TabJobs.java:6209
 msgid "Crypt passwords are not equal!"
 msgstr "暗号化パスワード入力に誤りがあります！"
-
-#: src/TabJobs.java:6229
-msgid "Mode"
-msgstr "モード"
 
 #: src/TabJobs.java:6236
 msgid "Normal mode: do not create incremental data files."
@@ -5297,11 +5504,6 @@ msgstr ""
 msgid "Job UUID"
 msgstr ""
 
-#: src/TabRestore.java:4380 src/TabStatus.java:728 src/TabStatus.java:857
-#: src/TabStatus.java:3215
-msgid "Last executed"
-msgstr "最終実行された"
-
 #: src/TabRestore.java:4390 src/TabRestore.java:4503
 msgid "Last error"
 msgstr "最新エラー"
@@ -5320,30 +5522,15 @@ msgstr "警告"
 msgid "no job info"
 msgstr "警告"
 
-#: src/TabRestore.java:4604 src/TabRestore.java:4874 src/TabStatus.java:3163
-msgid "Job"
-msgstr "タスク"
-
 #: src/TabRestore.java:4614
 #, fuzzy
 msgid "Entity"
 msgstr "エンティティ合計"
 
-#: src/TabRestore.java:4645 src/TabRestore.java:4894 src/TabRestore.java:5200
-#: src/TabRestore.java:5678
-#, fuzzy
-msgid "Hostname"
-msgstr "ホスト"
-
 #: src/TabRestore.java:4669
 #, fuzzy
 msgid "Storage id"
 msgstr "保存"
-
-#: src/TabRestore.java:4700 src/TabRestore.java:5209 src/TabRestore.java:5687
-#: src/TabRestore.java:6366 src/TabStatus.java:692 src/TabStatus.java:761
-msgid "State"
-msgstr "状態"
 
 #: src/TabRestore.java:4710
 msgid "Last checked"
@@ -5357,11 +5544,6 @@ msgstr "エラー"
 #, fuzzy
 msgid "Entry id"
 msgstr "エンティティ合計"
-
-#: src/TabRestore.java:4948 src/TabRestore.java:6535 src/TabRestore.java:9492
-#, fuzzy
-msgid "Date/Time"
-msgstr "日付"
 
 #: src/TabRestore.java:4958 src/TabRestore.java:9493
 #, fuzzy
@@ -6324,10 +6506,6 @@ msgstr "ファイル合計"
 msgid "Total bytes"
 msgstr "合計バイト数"
 
-#: src/TabStatus.java:1766
-msgid "Message"
-msgstr "メッセージ"
-
 #: src/TabStatus.java:1828
 msgid "Start selected job."
 msgstr "選択したタスクをスタート。"
@@ -6801,13 +6979,6 @@ msgstr "現存エントリの上書き"
 #~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
 #, fuzzy
-#~ msgid "Cannot get persistence list (error: {0})"
-#~ msgstr ""
-#~ "デバイスリストが得られません:\n"
-#~ "\n"
-#~ "{0}"
-
-#, fuzzy
 #~ msgid ""
 #~ "Cannot entity index data:\n"
 #~ "\n"
@@ -6831,12 +7002,6 @@ msgstr "現存エントリの上書き"
 
 #~ msgid "Custom text."
 #~ msgstr "カスタムテキスト。"
-
-#, fuzzy
-#~ msgid "Cannot set new master"
-#~ msgstr ""
-#~ "サーバ上のパスワードを消去できません:\n"
-#~ "\n"
 
 #~ msgid "Edit…"
 #~ msgstr "編集"

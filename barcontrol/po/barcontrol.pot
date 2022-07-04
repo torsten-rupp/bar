@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-03 15:47+0200\n"
+"POT-Creation-Date: 2022-07-04 13:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -449,16 +449,51 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/BARControl.java:5084 src/BARServer.java:1420 src/TabStatus.java:2192
-#: src/TabStatus.java:2214
-msgid "suspended"
+#: src/BARControl.java:4795
+msgid "cannot connect to server (error: %s)"
 msgstr ""
 
-#: src/BARControl.java:5745
-#, java-format
-msgid "Please enter {0} login for: {1}"
+#: src/BARControl.java:4802
+msgid "Wait for pairing new master...    "
 msgstr ""
 
+#: src/BARControl.java:4848
+msgid "'%s' - OK"
+msgstr ""
+
+#: src/BARControl.java:4863
+msgid "cannot set new master (%s)"
+msgstr ""
+
+#: src/BARControl.java:4875 src/BARControl.java:4982
+msgid "job '%s' not found"
+msgstr ""
+
+#: src/BARControl.java:4892
+msgid "cannot start job '%s' (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:4912
+msgid "cannot pause (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:4931
+msgid "cannot set maintenance (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:4953
+msgid "cannot suspend (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:4998
+msgid "cannot abort job '%s' (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:5020
+msgid "cannot get state (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:5030 src/BARControl.java:5361 src/BARControl.java:5418
 #: src/BARControl.java:5746 src/ServerSettings.java:1773
 #: src/ServerSettings.java:3940 src/TabJobs.java:2598 src/TabJobs.java:4394
 #: src/TabJobs.java:8974 src/TabJobs.java:9114 src/TabJobs.java:11251
@@ -466,6 +501,150 @@ msgstr ""
 #: src/TabRestore.java:5675 src/TabRestore.java:6526 src/TabRestore.java:9484
 #: src/TabRestore.java:9489 src/TabStatus.java:686 src/TabStatus.java:745
 msgid "Name"
+msgstr ""
+
+#: src/BARControl.java:5031 src/BARControl.java:5359 src/TabRestore.java:4700
+#: src/TabRestore.java:5209 src/TabRestore.java:5687 src/TabRestore.java:6366
+#: src/TabStatus.java:692 src/TabStatus.java:761
+msgid "State"
+msgstr ""
+
+#: src/BARControl.java:5032
+msgid "Host name"
+msgstr ""
+
+#: src/BARControl.java:5033 src/BARControl.java:5292 src/BARControl.java:5415
+#: src/BARControl.java:5583 src/ServerSettings.java:1770 src/TabJobs.java:10399
+#: src/TabJobs.java:13639 src/TabJobs.java:14372 src/TabRestore.java:4884
+#: src/TabRestore.java:4928 src/TabRestore.java:6529 src/TabRestore.java:9490
+#: src/TabStatus.java:704 src/TabStatus.java:793 src/TabStatus.java:3234
+msgid "Type"
+msgstr ""
+
+#: src/BARControl.java:5034 src/TabJobs.java:4703 src/TabStatus.java:710
+#: src/TabStatus.java:809
+msgid "Part size"
+msgstr ""
+
+#: src/BARControl.java:5035 src/TabJobs.java:4939 src/TabStatus.java:716
+#: src/TabStatus.java:825
+msgid "Compress"
+msgstr ""
+
+#: src/BARControl.java:5036 src/TabJobs.java:5561 src/TabStatus.java:722
+#: src/TabStatus.java:841
+msgid "Crypt"
+msgstr ""
+
+#: src/BARControl.java:5037
+msgid "Crypt type"
+msgstr ""
+
+#: src/BARControl.java:5038 src/BARControl.java:5360 src/TabJobs.java:6229
+msgid "Mode"
+msgstr ""
+
+#: src/BARControl.java:5039 src/TabRestore.java:4380 src/TabStatus.java:728
+#: src/TabStatus.java:857 src/TabStatus.java:3215
+msgid "Last executed"
+msgstr ""
+
+#: src/BARControl.java:5040
+msgid "Estimated [s]"
+msgstr ""
+
+#: src/BARControl.java:5084 src/BARServer.java:1420 src/TabStatus.java:2192
+#: src/TabStatus.java:2214
+msgid "suspended"
+msgstr ""
+
+#: src/BARControl.java:5105
+msgid "cannot get job list (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:5274
+msgid "cannot remove index for storage '%s' from index (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:5291 src/BARControl.java:5356 src/BARControl.java:5414
+msgid "Id"
+msgstr ""
+
+#: src/BARControl.java:5293 src/BARControl.java:5357 src/BARControl.java:5416
+#: src/BARWidgets.java:4123 src/BARWidgets.java:4657
+#: src/ServerSettings.java:1779 src/TabRestore.java:4690
+#: src/TabRestore.java:4938 src/TabRestore.java:5206 src/TabRestore.java:5681
+#: src/TabRestore.java:6532 src/TabRestore.java:9486 src/TabRestore.java:9491
+msgid "Size"
+msgstr ""
+
+#: src/BARControl.java:5294
+msgid "Entry count"
+msgstr ""
+
+#: src/BARControl.java:5295
+msgid "Entry size"
+msgstr ""
+
+#: src/BARControl.java:5296 src/BARControl.java:5358 src/BARControl.java:5417
+#: src/BARControl.java:5584 src/TabRestore.java:4948 src/TabRestore.java:6535
+#: src/TabRestore.java:9492
+msgid "Date/Time"
+msgstr ""
+
+#: src/BARControl.java:5297 src/BARControl.java:5581 src/TabRestore.java:4604
+#: src/TabRestore.java:4874 src/TabStatus.java:3163
+msgid "Job"
+msgstr ""
+
+#: src/BARControl.java:5335
+msgid "%d entities"
+msgstr ""
+
+#: src/BARControl.java:5339
+msgid "cannot list entities index (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:5400
+msgid "cannot list storages index (error: %s)"
+msgstr ""
+
+#: src/BARControl.java:5563
+msgid "%d entries (max. 1024 shown)"
+msgstr ""
+
+#: src/BARControl.java:5582 src/TabRestore.java:4645 src/TabRestore.java:4894
+#: src/TabRestore.java:5200 src/TabRestore.java:5678
+msgid "Hostname"
+msgstr ""
+
+#: src/BARControl.java:5585
+msgid "Duration"
+msgstr ""
+
+#: src/BARControl.java:5586
+msgid "Total           [bytes]"
+msgstr ""
+
+#: src/BARControl.java:5587
+msgid "Skipped         [bytes]"
+msgstr ""
+
+#: src/BARControl.java:5588
+msgid "With errors     [bytes]"
+msgstr ""
+
+#: src/BARControl.java:5589 src/TabStatus.java:1766
+msgid "Message"
+msgstr ""
+
+#: src/BARControl.java:5640
+msgid "%d entries"
+msgstr ""
+
+#: src/BARControl.java:5745
+#, java-format
+msgid "Please enter {0} login for: {1}"
 msgstr ""
 
 #: src/BARControl.java:5770 src/BARServer.java:1251 src/BARServer.java:1274
@@ -476,6 +655,14 @@ msgstr ""
 #: src/BARControl.java:5797
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
+msgstr ""
+
+#: src/BARControl.java:5823
+msgid "Restored %d entries, %d bytes"
+msgstr ""
+
+#: src/BARControl.java:5826
+msgid "cannot restore storage '%s'"
 msgstr ""
 
 #: src/BARException.java:287
@@ -1870,13 +2057,6 @@ msgstr ""
 msgid "Select device name"
 msgstr ""
 
-#: src/BARWidgets.java:4123 src/BARWidgets.java:4657
-#: src/ServerSettings.java:1779 src/TabRestore.java:4690
-#: src/TabRestore.java:4938 src/TabRestore.java:5206 src/TabRestore.java:5681
-#: src/TabRestore.java:6532 src/TabRestore.java:9486 src/TabRestore.java:9491
-msgid "Size"
-msgstr ""
-
 #: src/BARWidgets.java:4129 src/BARWidgets.java:4663
 msgid ""
 "Size of medium. You may specify a smaller value than the real physical size "
@@ -2283,13 +2463,6 @@ msgstr ""
 
 #: src/ServerSettings.java:1764
 msgid "Storage servers"
-msgstr ""
-
-#: src/ServerSettings.java:1770 src/TabJobs.java:10399 src/TabJobs.java:13639
-#: src/TabJobs.java:14372 src/TabRestore.java:4884 src/TabRestore.java:4928
-#: src/TabRestore.java:6529 src/TabRestore.java:9490 src/TabStatus.java:704
-#: src/TabStatus.java:793 src/TabStatus.java:3234
-msgid "Type"
 msgstr ""
 
 #: src/ServerSettings.java:1771 src/TabJobs.java:2989
@@ -3230,10 +3403,6 @@ msgstr ""
 msgid "Storage"
 msgstr ""
 
-#: src/TabJobs.java:4703 src/TabStatus.java:710 src/TabStatus.java:809
-msgid "Part size"
-msgstr ""
-
 #: src/TabJobs.java:4709
 msgid ""
 "Create storage files with an unlimited size. Do not split storage files."
@@ -3255,10 +3424,6 @@ msgstr ""
 
 #: src/TabJobs.java:4778
 msgid "Size limit for one storage file part."
-msgstr ""
-
-#: src/TabJobs.java:4939 src/TabStatus.java:716 src/TabStatus.java:825
-msgid "Compress"
 msgstr ""
 
 #: src/TabJobs.java:4950
@@ -3328,10 +3493,6 @@ msgstr ""
 msgid "Remove entry from compress exclude list."
 msgstr ""
 
-#: src/TabJobs.java:5561 src/TabStatus.java:722 src/TabStatus.java:841
-msgid "Crypt"
-msgstr ""
-
 #: src/TabJobs.java:5571
 msgid "Encryption methods to use."
 msgstr ""
@@ -3395,10 +3556,6 @@ msgstr ""
 
 #: src/TabJobs.java:6209
 msgid "Crypt passwords are not equal!"
-msgstr ""
-
-#: src/TabJobs.java:6229
-msgid "Mode"
 msgstr ""
 
 #: src/TabJobs.java:6236
@@ -4620,11 +4777,6 @@ msgstr ""
 msgid "Job UUID"
 msgstr ""
 
-#: src/TabRestore.java:4380 src/TabStatus.java:728 src/TabStatus.java:857
-#: src/TabStatus.java:3215
-msgid "Last executed"
-msgstr ""
-
 #: src/TabRestore.java:4390 src/TabRestore.java:4503
 msgid "Last error"
 msgstr ""
@@ -4641,26 +4793,12 @@ msgstr ""
 msgid "no job info"
 msgstr ""
 
-#: src/TabRestore.java:4604 src/TabRestore.java:4874 src/TabStatus.java:3163
-msgid "Job"
-msgstr ""
-
 #: src/TabRestore.java:4614
 msgid "Entity"
 msgstr ""
 
-#: src/TabRestore.java:4645 src/TabRestore.java:4894 src/TabRestore.java:5200
-#: src/TabRestore.java:5678
-msgid "Hostname"
-msgstr ""
-
 #: src/TabRestore.java:4669
 msgid "Storage id"
-msgstr ""
-
-#: src/TabRestore.java:4700 src/TabRestore.java:5209 src/TabRestore.java:5687
-#: src/TabRestore.java:6366 src/TabStatus.java:692 src/TabStatus.java:761
-msgid "State"
 msgstr ""
 
 #: src/TabRestore.java:4710
@@ -4673,10 +4811,6 @@ msgstr ""
 
 #: src/TabRestore.java:4863
 msgid "Entry id"
-msgstr ""
-
-#: src/TabRestore.java:4948 src/TabRestore.java:6535 src/TabRestore.java:9492
-msgid "Date/Time"
 msgstr ""
 
 #: src/TabRestore.java:4958 src/TabRestore.java:9493
@@ -5479,10 +5613,6 @@ msgstr ""
 
 #: src/TabStatus.java:1759
 msgid "Total bytes"
-msgstr ""
-
-#: src/TabStatus.java:1766
-msgid "Message"
 msgstr ""
 
 #: src/TabStatus.java:1828
