@@ -1610,8 +1610,8 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
 }
 
 /***********************************************************************\
-* Name   : sqlite3Query
-* Purpose: do SQLite3 query
+* Name   : sqlite3Execute
+* Purpose: execute SQLite3 SQL string
 * Input  : handle    - SQLite3 handle
 *          sqlString - SQL command string
 * Output : -
@@ -1619,9 +1619,9 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors sqlite3Exec(sqlite3    *handle,
-                         const char *sqlString
-                        )
+LOCAL Errors sqlite3Execute(sqlite3    *handle,
+                            const char *sqlString
+                           )
 {
   const uint MAX_RETRIES = 3;
 
@@ -1802,7 +1802,7 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 
 #ifdef HAVE_MARIADB
 /***********************************************************************\
-* Name   : mysqlCreateDatabase
+* Name   : mariaDBCreateDatabase
 * Purpose: create MariaDB database
 * Input  : serverName   - server name
 *          userName     - user name
@@ -1814,12 +1814,12 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlCreateDatabase(const char     *serverName,
-                                 const char     *userName,
-                                 const Password *password,
-                                 const char     *databaseName,
-                                 const char     *characterSet
-                                )
+LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
+                                   const char     *userName,
+                                   const Password *password,
+                                   const char     *databaseName,
+                                   const char     *characterSet
+                                  )
 {
   MYSQL  *handle;
   union
@@ -1926,7 +1926,7 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
 }
 
 /***********************************************************************\
-* Name   : mysqlDropDatabase
+* Name   : mariaDBDropDatabase
 * Purpose: drop MariaDB database
 * Input  : serverName   - server name
 *          userName     - user name
@@ -1937,11 +1937,11 @@ LOCAL Errors mysqlCreateDatabase(const char     *serverName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlDropDatabase(const char     *serverName,
-                               const char     *userName,
-                               const Password *password,
-                               const char     *databaseName
-                              )
+LOCAL Errors mariaDBDropDatabase(const char     *serverName,
+                                 const char     *userName,
+                                 const Password *password,
+                                 const char     *databaseName
+                                )
 {
   MYSQL  *handle;
   union
@@ -2043,8 +2043,8 @@ LOCAL Errors mysqlDropDatabase(const char     *serverName,
 }
 
 /***********************************************************************\
-* Name   : mysqlExecute
-* Purpose: do MariaDB query
+* Name   : mariaDBExecute
+* Purpose: execute MariaDB SQL string
 * Input  : handle    - MySQL handle
 *          sqlString - SQL command string
 * Output : -
@@ -2052,9 +2052,9 @@ LOCAL Errors mysqlDropDatabase(const char     *serverName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlExecute(MYSQL      *handle,
-                          const char *sqlString
-                         )
+LOCAL Errors mariaDBExecute(MYSQL      *handle,
+                            const char *sqlString
+                           )
 {
   int    mysqlResult;
   Errors error;
@@ -2097,7 +2097,7 @@ LOCAL Errors mysqlExecute(MYSQL      *handle,
 }
 
 /***********************************************************************\
-* Name   : mysqlPrepareStatement
+* Name   : mariaDBPrepareStatement
 * Purpose: prepare MariaDB statement
 * Input  : statementHandle - statement handle
 *          sqlString       - SQL string
@@ -2106,9 +2106,9 @@ LOCAL Errors mysqlExecute(MYSQL      *handle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlPrepareStatement(MYSQL_STMT *statementHandle,
-                                   const char *sqlString
-                                  )
+LOCAL Errors mariaDBPrepareStatement(MYSQL_STMT *statementHandle,
+                                     const char *sqlString
+                                    )
 {
   int    mysqlResult;
   Errors error;
@@ -2155,7 +2155,7 @@ LOCAL Errors mysqlPrepareStatement(MYSQL_STMT *statementHandle,
 }
 
 /***********************************************************************\
-* Name   : mysqlExecutePreparedStatement
+* Name   : mariaDBExecutePreparedStatement
 * Purpose: execute MariaDB statement
 * Input  : statementHandle - statement handle
 * Output : -
@@ -2163,7 +2163,7 @@ LOCAL Errors mysqlPrepareStatement(MYSQL_STMT *statementHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlExecutePreparedStatement(MYSQL_STMT *statementHandle)
+LOCAL Errors mariaDBExecutePreparedStatement(MYSQL_STMT *statementHandle)
 {
   int    mysqlResult;
   Errors error;
@@ -2207,7 +2207,7 @@ LOCAL Errors mysqlExecutePreparedStatement(MYSQL_STMT *statementHandle)
 }
 
 /***********************************************************************\
-* Name   : mysqlGetLastInsertId
+* Name   : mariaDBGetLastInsertId
 * Purpose: get last insert statement id
 * Input  : statementHandle - statement handle
 * Output : -
@@ -2215,7 +2215,7 @@ LOCAL Errors mysqlExecutePreparedStatement(MYSQL_STMT *statementHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DatabaseId mysqlGetLastInsertId(MYSQL_STMT *statementHandle)
+LOCAL DatabaseId mariaDBGetLastInsertId(MYSQL_STMT *statementHandle)
 {
   assert(statementHandle != NULL);
 
@@ -2223,7 +2223,7 @@ LOCAL DatabaseId mysqlGetLastInsertId(MYSQL_STMT *statementHandle)
 }
 
 /***********************************************************************\
-* Name   : mysqlSelectDatabase_
+* Name   : mariaDBSelectDatabase_
 * Purpose: select MariaDB database
 * Input  : handle       - MySQL handle
 *          databaseName - database name
@@ -2232,9 +2232,9 @@ LOCAL DatabaseId mysqlGetLastInsertId(MYSQL_STMT *statementHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
-                                 const char *databaseName
-                                )
+LOCAL Errors mariaDBSelectDatabase(MYSQL      *handle,
+                                   const char *databaseName
+                                  )
 {
   int    mysqlResult;
   Errors error;
@@ -2275,7 +2275,7 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
 }
 
 /***********************************************************************\
-* Name   : mysqlSetCharacterSet
+* Name   : mariaDBSetCharacterSet
 * Purpose: set MariaDB character set
 * Input  : handle       - MySQL handle
 *          characterSet - character set name
@@ -2284,9 +2284,9 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlSetCharacterSet(MYSQL      *handle,
-                                  const char *characterSet
-                                 )
+LOCAL Errors mariaDBSetCharacterSet(MYSQL      *handle,
+                                    const char *characterSet
+                                   )
 {
   int    mysqlResult;
   Errors error;
@@ -3290,9 +3290,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
         // attach aux database
         if ((openDatabaseMode & DATABASE_OPEN_MODE_AUX) == DATABASE_OPEN_MODE_AUX)
         {
-          error = sqlite3Exec(databaseHandle->sqlite.handle,
-                              "ATTACH DATABASE ':memory:' AS " DATABASE_AUX
-                             );
+          error = sqlite3Execute(databaseHandle->sqlite.handle,
+                                 "ATTACH DATABASE ':memory:' AS " DATABASE_AUX
+                                );
           if (error != ERROR_NONE)
           {
             sqlite3_close(databaseHandle->sqlite.handle);
@@ -3381,9 +3381,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           }
 
           // enable UTF8
-          error = mysqlSetCharacterSet(databaseHandle->mariadb.handle,
-                                       "utf8mb4"
-                                      );
+          error = mariaDBSetCharacterSet(databaseHandle->mariadb.handle,
+                                         "utf8mb4"
+                                        );
           if (error != ERROR_NONE)
           {
             mysql_close(databaseHandle->mariadb.handle);
@@ -3392,12 +3392,12 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           }
 
           // other options
-          error = mysqlExecute(databaseHandle->mariadb.handle,
-                               stringFormat(sqlString,sizeof(sqlString),
-                                            "SET innodb_lock_wait_timeout=%u",
-                                            MARIADB_TIMEOUT
-                                           )
-                              );
+          error = mariaDBExecute(databaseHandle->mariadb.handle,
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "SET innodb_lock_wait_timeout=%u",
+                                              MARIADB_TIMEOUT
+                                             )
+                                );
           if (error != ERROR_NONE)
           {
             mysql_close(databaseHandle->mariadb.handle);
@@ -3424,9 +3424,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                            MARIADB_CHARACTER_SETS[i],
                            MARIADB_CHARACTER_SETS[i]
                           );
-              error = mysqlExecute(databaseHandle->mariadb.handle,
-                                   sqlString
-                                  );
+              error = mariaDBExecute(databaseHandle->mariadb.handle,
+                                     sqlString
+                                    );
               i++;
             }
             while (   (error != ERROR_NONE)
@@ -3443,9 +3443,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           // select database
           if (!stringIsEmpty(databaseName))
           {
-            error = mysqlSelectDatabase(databaseHandle->mariadb.handle,
-                                        databaseName
-                                       );
+            error = mariaDBSelectDatabase(databaseHandle->mariadb.handle,
+                                          databaseName
+                                         );
             if (error != ERROR_NONE)
             {
               mysql_close(databaseHandle->mariadb.handle);
@@ -3669,9 +3669,9 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
         int sqliteResult;
 
         // enable recursive triggers
-        error = sqlite3Exec(databaseHandle->sqlite.handle,
-                            "PRAGMA recursive_triggers=ON"
-                           );
+        error = sqlite3Execute(databaseHandle->sqlite.handle,
+                               "PRAGMA recursive_triggers=ON"
+                              );
         assert(error == ERROR_NONE);
 
         UNUSED_VARIABLE(sqliteResult);
@@ -5409,9 +5409,9 @@ LOCAL void formatParameters(String               sqlString,
               }
             #endif /* not NDEBUG */
 
-            error = mysqlPrepareStatement(databaseStatementHandle->mariadb.statementHandle,
-                                          sqlString
-                                         );
+            error = mariaDBPrepareStatement(databaseStatementHandle->mariadb.statementHandle,
+                                            sqlString
+                                           );
           }
           DATABASE_DEBUG_TIME_END(databaseStatementHandle);
           if (error != ERROR_NONE)
@@ -6384,7 +6384,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        id = mysqlGetLastInsertId(databaseStatementHandle->mariadb.statementHandle);
+        id = mariaDBGetLastInsertId(databaseStatementHandle->mariadb.statementHandle);
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
@@ -6453,9 +6453,9 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
     {
       case DATABASE_TYPE_SQLITE3:
         {
-          error = sqlite3Exec(databaseHandle->sqlite.handle,
-                              sqlString
-                             );
+          error = sqlite3Execute(databaseHandle->sqlite.handle,
+                                 sqlString
+                                );
           if (error != ERROR_NONE)
           {
             break;
@@ -6470,9 +6470,9 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             // prepare SQL statement
             statementHandle = mysql_stmt_init(databaseHandle->mariadb.handle);
             assert(statementHandle != NULL);
-            error = mysqlPrepareStatement(statementHandle,
-                                          sqlString
-                                         );
+            error = mariaDBPrepareStatement(statementHandle,
+                                            sqlString
+                                           );
             if (error != ERROR_NONE)
             {
               mysql_stmt_close(statementHandle);
@@ -6480,7 +6480,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             }
 
             // step and process rows
-            error = mysqlExecutePreparedStatement(statementHandle);
+            error = mariaDBExecutePreparedStatement(statementHandle);
             if (error != ERROR_NONE)
             {
               mysql_stmt_close(statementHandle);
@@ -8181,9 +8181,9 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        error = sqlite3Exec(databaseHandle->sqlite.handle,
-                            sqlString
-                           );
+        error = sqlite3Execute(databaseHandle->sqlite.handle,
+                               sqlString
+                              );
         if (error != ERROR_NONE)
         {
           break;
@@ -8200,7 +8200,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           {
             MYSQL_RES *result;
 
-            error = mysqlExecute(databaseHandle->mariadb.handle,sqlString);
+            error = mariaDBExecute(databaseHandle->mariadb.handle,sqlString);
             if (error != ERROR_NONE)
             {
               break;
@@ -8272,16 +8272,6 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
 
       error = ERROR_NONE;
     }
-    else if (Error_getCode(error) == ERROR_CODE_DATABASE_INTERRUPTED)
-    {
-      // report interrupt
-      error = ERRORX_(DATABASE,
-                      sqlite3_errcode(databaseHandle->sqlite.handle),
-                      "%s: %s",
-                      sqlite3_errmsg(databaseHandle->sqlite.handle),
-                      sqlString
-                     );
-    }
   }
   while (   !done
          && (error == ERROR_NONE)
@@ -8292,7 +8282,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-  else if (retryCount > maxRetryCount)
+  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
     return ERRORX_(DATABASE_TIMEOUT,0,"");
   }
@@ -8435,7 +8425,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             }
 
             // do query
-            error = mysqlExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
+            error = mariaDBExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
@@ -8512,7 +8502,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   }
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERROR_DATABASE_TIMEOUT;
+    return ERRORX_(DATABASE_TIMEOUT,0,"");
   }
   else
   {
@@ -8662,7 +8652,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            error = mysqlExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
+            error = mariaDBExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
@@ -8770,7 +8760,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   {
     return error;
   }
-  else if (retryCount > maxRetryCount)
+  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
     return ERRORX_(DATABASE_TIMEOUT,0,"");
   }
@@ -9781,14 +9771,14 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           {
             char sqlString[256];
 
-            error = mysqlExecute(databaseHandle.mariadb.handle,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "CREATE DATABASE %s CHARACTER SET '%s' COLLATE '%s_bin'",
-                                              newDatabaseName,
-                                              MARIADB_CHARACTER_SETS[i],
-                                              MARIADB_CHARACTER_SETS[i]
-                                             )
-                                );
+            error = mariaDBExecute(databaseHandle.mariadb.handle,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "CREATE DATABASE %s CHARACTER SET '%s' COLLATE '%s_bin'",
+                                                newDatabaseName,
+                                                MARIADB_CHARACTER_SETS[i],
+                                                MARIADB_CHARACTER_SETS[i]
+                                               )
+                                  );
             i++;
           }
           while (   (error != ERROR_NONE)
@@ -9954,14 +9944,14 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        error = mysqlCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
-                                    String_cString(databaseSpecifier->mariadb.userName),
-                                    &databaseSpecifier->mariadb.password,
-                                    (databaseName != NULL)
-                                      ? databaseName
-                                      : String_cString(databaseSpecifier->mariadb.databaseName),
-                                    "utf8mb4"
-                                   );
+        error = mariaDBCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
+                                      String_cString(databaseSpecifier->mariadb.userName),
+                                      &databaseSpecifier->mariadb.password,
+                                      (databaseName != NULL)
+                                        ? databaseName
+                                        : String_cString(databaseSpecifier->mariadb.databaseName),
+                                      "utf8mb4"
+                                     );
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
@@ -10007,13 +9997,13 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        error = mysqlDropDatabase(String_cString(databaseSpecifier->mariadb.serverName),
-                                  String_cString(databaseSpecifier->mariadb.userName),
-                                  &databaseSpecifier->mariadb.password,
-                                  (databaseName != NULL)
-                                    ? databaseName
-                                    : String_cString(databaseSpecifier->mariadb.databaseName)
-                                 );
+        error = mariaDBDropDatabase(String_cString(databaseSpecifier->mariadb.serverName),
+                                    String_cString(databaseSpecifier->mariadb.userName),
+                                    &databaseSpecifier->mariadb.password,
+                                    (databaseName != NULL)
+                                      ? databaseName
+                                      : String_cString(databaseSpecifier->mariadb.databaseName)
+                                   );
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
@@ -16860,9 +16850,9 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
       case DATABASE_TYPE_SQLITE3:
 /*
 //TODO
-        sqlite3Exec(databaseHandle->sqlite.handle,
-                    "PRAGMA vdbe_trace=ON"
-                   );
+        sqlite3Execute(databaseHandle->sqlite.handle,
+                       "PRAGMA vdbe_trace=ON"
+                      );
 */
         break;
       case DATABASE_TYPE_MARIADB:
@@ -16888,9 +16878,9 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
       switch (Database_getType(databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
-          sqlite3Exec(databaseHandle->sqlite.handle,
-                      "PRAGMA vdbe_trace=OFF"
-                     );
+          sqlite3Execute(databaseHandle->sqlite.handle,
+                         "PRAGMA vdbe_trace=OFF"
+                        );
           break;
         case DATABASE_TYPE_MARIADB:
           #if defined(HAVE_MARIADB)
