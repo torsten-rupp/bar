@@ -8284,7 +8284,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   }
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"");
+    return ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString);
   }
   else
   {
@@ -8502,7 +8502,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   }
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"");
+    return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
   }
   else
   {
@@ -8762,7 +8762,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   }
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"");
+    return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
   }
 
   #undef SLEEP_TIME
@@ -8802,7 +8802,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
 
   i = 0;
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -10354,7 +10354,7 @@ Errors Database_getTableList(StringList     *tableList,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -10481,7 +10481,7 @@ Errors Database_getViewList(StringList     *viewList,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -10606,7 +10606,7 @@ Errors Database_getIndexList(StringList     *indexList,
   StringList_init(indexList);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -10820,7 +10820,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
   StringList_init(triggerList);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -13623,7 +13623,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     DATABASE_DOX(error,
-                 ERRORX_(DATABASE_TIMEOUT,0,""),
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                  databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
                  WAIT_FOREVER,
@@ -13872,7 +13872,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     #endif /* not NDEBUG */
     {
       String_delete(sqlString);
-      return ERRORX_(DATABASE_TIMEOUT,0,"");
+      return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
     }
 
     // begin transaction
@@ -14378,7 +14378,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   assert(sqlString != NULL);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
@@ -14469,7 +14469,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   // execute statement (return rows via Database_getNextRow()(
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -14868,7 +14868,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15062,7 +15062,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15203,7 +15203,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15315,7 +15315,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15416,7 +15416,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   filters[0].type = filterDataType;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
@@ -15665,7 +15665,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   // execute statement (Note: rows are returned via Database_getNextRow())
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15928,7 +15928,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -16658,7 +16658,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
 
   error = ERROR_UNKNOWN;
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
+               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-04 13:02+0200\n"
+"POT-Creation-Date: 2022-07-04 14:59+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1579,19 +1579,19 @@ msgstr ""
 msgid "timeout accessing index"
 msgstr ""
 
-#: src/BARException.java:1452
+#: src/BARException.java:1456
 msgid "master disconnected"
 msgstr ""
 
-#: src/BARException.java:1455
+#: src/BARException.java:1459
 msgid "slave disconnected"
 msgstr ""
 
-#: src/BARException.java:1458
+#: src/BARException.java:1462
 msgid "slave is not paired"
 msgstr ""
 
-#: src/BARException.java:1461
+#: src/BARException.java:1465
 msgid "instance is not a slave"
 msgstr ""
 
