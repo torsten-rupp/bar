@@ -1266,7 +1266,7 @@ public class ServerSettings
                                            }
                                          }
                                        },
-                                       BARControl.tr("SQLite")
+                                       "SQLite"
                                       );
           Widgets.layout(button,0,0,TableLayoutData.W);
           button = BARWidgets.newRadio(subSubComposite,
@@ -1289,7 +1289,7 @@ public class ServerSettings
                                            }
                                          }
                                        },
-                                       BARControl.tr("MariaDB")
+                                       "MariaDB"
                                       );
           Widgets.layout(button,0,1,TableLayoutData.W);
           button = BARWidgets.newRadio(subSubComposite,
@@ -1312,7 +1312,7 @@ public class ServerSettings
                                            }
                                          }
                                        },
-                                       BARControl.tr("PostgreSQL")
+                                       "PostgreSQL"
                                       );
           Widgets.layout(button,0,2,TableLayoutData.W);
         }

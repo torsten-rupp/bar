@@ -134,10 +134,10 @@ class JobData implements Comparable<JobData>
         buffer.append(" ");
         switch (slaveState)
         {
-          case OFFLINE:                buffer.append(BARControl.tr("(offline)"));                break;
-          case ONLINE:                 buffer.append(BARControl.tr("(wait pairing)"));           break;
-          case WRONG_MODE:             buffer.append(BARControl.tr("(wrong mode)"));             break;
-          case WRONG_PROTOCOL_VERSION: buffer.append(BARControl.tr("(wrong protocol version)")); break;
+          case OFFLINE:                buffer.append("("+BARControl.tr("offline")               +")"); break;
+          case ONLINE:                 buffer.append("("+BARControl.tr("wait pairing")          +")"); break;
+          case WRONG_MODE:             buffer.append("("+BARControl.tr("wrong mode")            +")"); break;
+          case WRONG_PROTOCOL_VERSION: buffer.append("("+BARControl.tr("wrong protocol version")+")"); break;
         }
       }
       else

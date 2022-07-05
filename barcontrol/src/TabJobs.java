@@ -8027,7 +8027,7 @@ public class TabJobs
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleData.totalEntrySize,Units.formatByteSize(scheduleData.totalEntrySize)));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("{0} {0,choice,0#bytes|1#byte|1<bytes} ({1})",scheduleData.totalEntrySize,Units.formatByteSize(scheduleData.totalEntrySize))));
               label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
