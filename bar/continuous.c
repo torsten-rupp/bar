@@ -788,12 +788,12 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          stringSet(uuidNode->jobUUID,sizeof(uuidNode->jobUUID),jobUUID);
-          stringSet(uuidNode->scheduleUUID,sizeof(uuidNode->scheduleUUID),scheduleUUID);
-          uuidNode->beginTime = beginTime;
-          uuidNode->endTime   = endTime;
           List_append(&notifyInfo->uuidList,uuidNode);
         }
+        stringSet(uuidNode->jobUUID,sizeof(uuidNode->jobUUID),jobUUID);
+        stringSet(uuidNode->scheduleUUID,sizeof(uuidNode->scheduleUUID),scheduleUUID);
+        uuidNode->beginTime = beginTime;
+        uuidNode->endTime   = endTime;
         uuidNode->cleanFlag = FALSE;
       }
       if (notifyInfo == NULL)
@@ -805,6 +805,7 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
       if (fileInfo.type == FILE_TYPE_DIRECTORY)
       {
         // open directory content
+
         error = File_openDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
         {
@@ -844,7 +845,7 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
         }
         else
         {
-  //TODO: log?
+//TODO: log?
         }
       }
     }
@@ -1146,7 +1147,7 @@ LOCAL void continuousInitDoneThreadCode(void)
     switch (initNotifyMsg.type)
     {
       case INIT:
-//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s time=%02d:%02d..%02d:%02d\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,initNotifyMsg.beginTime.hour,initNotifyMsg.beginTime.minute,initNotifyMsg.endTime.hour,initNotifyMsg.endTime.minute);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
                     LOG_PREFIX,"Start initialize watches for '%s'",
@@ -1507,11 +1508,6 @@ fprintf(stderr,"\n");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-fprintf(stderr,"%s:%d: %d:%d - %d:%d..%d:%d\n",__FILE__,__LINE__,
-currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-);
                 if (inTimeRange(currentHour,currentMinute,
                                 uuidNode->beginTime.hour,uuidNode->beginTime.hour,
                                 uuidNode->endTime.hour,uuidNode->endTime.hour
@@ -1561,11 +1557,6 @@ currentHour,currentMinute,
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-fprintf(stderr,"%s:%d: %d:%d - %d:%d..%d:%d\n",__FILE__,__LINE__,
-currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-);
                 if (inTimeRange(currentHour,currentMinute,
                                 uuidNode->beginTime.hour,uuidNode->beginTime.hour,
                                 uuidNode->endTime.hour,uuidNode->endTime.hour
@@ -1605,11 +1596,6 @@ currentHour,currentMinute,
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-fprintf(stderr,"%s:%d: %d:%d - %d:%d..%d:%d\n",__FILE__,__LINE__,
-currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-);
                 if (inTimeRange(currentHour,currentMinute,
                                 uuidNode->beginTime.hour,uuidNode->beginTime.hour,
                                 uuidNode->endTime.hour,uuidNode->endTime.hour
@@ -1657,11 +1643,6 @@ currentHour,currentMinute,
             {
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
-fprintf(stderr,"%s:%d: %d:%d - %d:%d..%d:%d\n",__FILE__,__LINE__,
-currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-);
                 if (inTimeRange(currentHour,currentMinute,
                                 uuidNode->beginTime.hour,uuidNode->beginTime.hour,
                                 uuidNode->endTime.hour,uuidNode->endTime.hour
