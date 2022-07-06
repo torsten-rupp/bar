@@ -876,27 +876,6 @@ void outputConsole(FILE *file, ConstString string)
   UNUSED_VARIABLE(bytesWritten);
 }
 
-const char *getPasswordTypeText(PasswordTypes passwordType)
-{
-  const char *text;
-
-  text = NULL;
-  switch (passwordType)
-  {
-    case PASSWORD_TYPE_CRYPT:  text = "crypt";  break;
-    case PASSWORD_TYPE_FTP:    text = "FTP";    break;
-    case PASSWORD_TYPE_SSH:    text = "SSH";    break;
-    case PASSWORD_TYPE_WEBDAV: text = "webDAV"; break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
-  }
-
-  return text;
-}
-
 bool lockConsole(void)
 {
   return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
@@ -1741,14 +1720,35 @@ void purgeMounts(bool forceFlag)
   }
 }
 
-Errors getCryptPasswordFromConsole(String        name,
-                                   Password      *password,
-                                   PasswordTypes passwordType,
-                                   const char    *text,
-                                   bool          validateFlag,
-                                   bool          weakCheckFlag,
-                                   void          *userData
-                                  )
+const char *getPasswordTypeText(PasswordTypes passwordType)
+{
+  const char *text;
+
+  text = NULL;
+  switch (passwordType)
+  {
+    case PASSWORD_TYPE_CRYPT:  text = "crypt";  break;
+    case PASSWORD_TYPE_FTP:    text = "FTP";    break;
+    case PASSWORD_TYPE_SSH:    text = "SSH";    break;
+    case PASSWORD_TYPE_WEBDAV: text = "webDAV"; break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return text;
+}
+
+Errors getPasswordFromConsole(String        name,
+                              Password      *password,
+                              PasswordTypes passwordType,
+                              const char    *text,
+                              bool          validateFlag,
+                              bool          weakCheckFlag,
+                              void          *userData
+                             )
 {
   Errors error;
 
@@ -1775,10 +1775,11 @@ Errors getCryptPasswordFromConsole(String        name,
           title = String_new();
           switch (passwordType)
           {
-            case PASSWORD_TYPE_CRYPT : String_format(title,"Crypt password"); break;
-            case PASSWORD_TYPE_FTP   : String_format(title,"FTP password"); break;
-            case PASSWORD_TYPE_SSH   : String_format(title,"SSH password"); break;
-            case PASSWORD_TYPE_WEBDAV: String_format(title,"WebDAV password"); break;
+            case PASSWORD_TYPE_CRYPT   : String_format(title,"Crypt password"); break;
+            case PASSWORD_TYPE_FTP     : String_format(title,"FTP password"); break;
+            case PASSWORD_TYPE_SSH     : String_format(title,"SSH password"); break;
+            case PASSWORD_TYPE_WEBDAV  : String_format(title,"WebDAV password"); break;
+            case PASSWORD_TYPE_DATABASE: String_format(title,"Database password"); break;
           }
           if (!stringIsEmpty(text))
           {
@@ -2602,7 +2603,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   // get crypt password for private key encryption
   if (Password_isEmpty(cryptPassword))
   {
-    error = getCryptPasswordFromConsole(NULL,  // name
+    error = getPasswordFromConsole(NULL,  // name
                                         cryptPassword,
                                         PASSWORD_TYPE_CRYPT,
                                         String_cString(privateKeyFileName),
@@ -3139,7 +3140,7 @@ LOCAL Errors runJob(ConstString jobUUIDName)
                          NULL,  // scheduleCustomText
                          &jobOptions,
                          Misc_getCurrentDateTime(),
-                         CALLBACK_(getCryptPasswordFromConsole,NULL),
+                         CALLBACK_(getPasswordFromConsole,NULL),
                          CALLBACK_(NULL,NULL),  // createStatusInfoFunction
                          CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
                          CALLBACK_(NULL,NULL),  // isPauseCreate
@@ -3367,7 +3368,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  NULL, // customText
                                  &jobOptions,
                                  Misc_getCurrentDateTime(),
-                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getPasswordFromConsole,NULL),
                                  CALLBACK_(NULL,NULL),  // createStatusInfo
                                  CALLBACK_(NULL,NULL),  // storageRequestVolume
                                  CALLBACK_(NULL,NULL),  // isPauseCreate
@@ -3478,7 +3479,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &globalOptions.excludePatternList,
                                  !globalOptions.metaInfoFlag,  // showEntriesFlag
                                  &jobOptions,
-                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -3488,7 +3489,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &globalOptions.excludePatternList,
                                  TRUE,  // showEntriesFlag
                                  &jobOptions,
-                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -3497,7 +3498,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &globalOptions.includeEntryList,
                                  &globalOptions.excludePatternList,
                                  &jobOptions,
-                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -3506,7 +3507,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &globalOptions.includeEntryList,
                                     &globalOptions.excludePatternList,
                                     &jobOptions,
-                                    CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                    CALLBACK_(getPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;
@@ -3517,7 +3518,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &jobOptions,
                                     CALLBACK_(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK_(NULL,NULL),  // restoreError callback
-                                    CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                    CALLBACK_(getPasswordFromConsole,NULL),
                                     CALLBACK_(NULL,NULL),  // isPause callback
                                     CALLBACK_(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
@@ -3530,7 +3531,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                       String_cString(scheduleUUID),
                                       0LL,  // newCreatedDateTime
                                       &jobOptions,
-                                      CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                      CALLBACK_(getPasswordFromConsole,NULL),
                                       NULL  // logHandle
                                      );
             #else
@@ -3539,7 +3540,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                       String_cString(scheduleUUID),
                                       0LL,  // newCreatedDateTime
                                       &jobOptions,
-                                      CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                      CALLBACK_(getPasswordFromConsole,NULL),
                                       NULL  // logHandle
                                      );
             #endif

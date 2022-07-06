@@ -834,7 +834,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                       jobOptions,
                                       tmpFileName,
                                       &fragmentNode,
-                                      CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                      CALLBACK_(getPasswordFromConsole,NULL),
                                       NULL,  // pauseFlag
                                       NULL,  // requestedAbortFlag,
                                       NULL   // logHandle
@@ -929,7 +929,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                         jobOptions,
                                         tmpFileName,
                                         &fragmentNode,
-                                        CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                        CALLBACK_(getPasswordFromConsole,NULL),
                                         NULL,  // pauseFlag
                                         NULL,  // requestedAbortFlag
                                         NULL   // logHandle
@@ -1008,7 +1008,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
-                              CALLBACK_(getCryptPasswordFromConsole,NULL),
+                              CALLBACK_(getPasswordFromConsole,NULL),
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle
@@ -1076,7 +1076,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
-                              CALLBACK_(getCryptPasswordFromConsole,NULL),
+                              CALLBACK_(getPasswordFromConsole,NULL),
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle

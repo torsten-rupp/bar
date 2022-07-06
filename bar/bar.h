@@ -156,17 +156,6 @@ INLINE bool isPrintInfo(uint verboseLevel)
 
 void outputConsole(FILE *file, ConstString string);
 
-/***********************************************************************\
-* Name   : getPasswordTypeName
-* Purpose: get password type text
-* Input  : passwordType - password type
-* Output : -
-* Return : name
-* Notes  : -
-\***********************************************************************/
-
-const char *getPasswordTypeText(PasswordTypes passwordType);
-
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
@@ -772,8 +761,19 @@ void purgeMounts(bool forceFlag);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : getCryptPasswordFromConsole
-* Purpose: input crypt password via console or external program
+* Name   : getPasswordTypeName
+* Purpose: get password type text
+* Input  : passwordType - password type
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+const char *getPasswordTypeText(PasswordTypes passwordType);
+
+/***********************************************************************\
+* Name   : getPasswordFromConsole
+* Purpose: input password via console or external program
 * Input  : name          - name variable (not used)
 *          password      - password variable
 *          passwordType  - password type; see PASSWORD_TYPE_...
@@ -783,19 +783,19 @@ void purgeMounts(bool forceFlag);
 *                          otherwise (print warning if password seems to
 *                          be a weak password)
 *          userData      - (not used)
-* Output : password - crypt password
+* Output : password - password
 * Return : ERROR_NONE or error code
 * Notes  :
 \***********************************************************************/
 
-Errors getCryptPasswordFromConsole(String        name,
-                                   Password      *password,
-                                   PasswordTypes passwordType,
-                                   const char    *text,
-                                   bool          validateFlag,
-                                   bool          weakCheckFlag,
-                                   void          *userData
-                                  );
+Errors getPasswordFromConsole(String        name,
+                              Password      *password,
+                              PasswordTypes passwordType,
+                              const char    *text,
+                              bool          validateFlag,
+                              bool          weakCheckFlag,
+                              void          *userData
+                             );
 
 // ----------------------------------------------------------------------
 
