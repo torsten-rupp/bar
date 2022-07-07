@@ -1261,9 +1261,9 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                           DATABASE_FLAG_IGNORE,
                           DATABASE_VALUES
                           (
-                            DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
-                            DATABASE_VALUE_CSTRING ("scheduleUUID", scheduleUUID),
-                            DATABASE_VALUE_STRING  ("name",         name)
+                            DATABASE_VALUE_CSTRING ("jobUUID",     jobUUID),
+                            DATABASE_VALUE_CSTRING ("scheduleUUID",scheduleUUID),
+                            DATABASE_VALUE_STRING  ("name",        name)
                           ),
                           DATABASE_COLUMNS_NONE,
                           DATABASE_FILTERS_NONE
@@ -1400,7 +1400,7 @@ LOCAL bool existsEntry(DatabaseHandle *databaseHandle,
 LOCAL void continuousThreadCode(void)
 {
 #if   defined(PLATFORM_LINUX)
-  #define TIMEOUT     250L
+  #define TIMEOUT     (5*MS_PER_SECOND)
   #define MAX_ENTRIES 128
   #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
 
@@ -1497,6 +1497,7 @@ fprintf(stderr,"\n");
         {
           // get absolute name
           String_set(absoluteName,notifyInfo->name);
+
           if (inotifyEvent->len > 0) File_appendFileNameCString(absoluteName,inotifyEvent->name);
 
           if (IS_INOTIFY(inotifyEvent->mask,IN_ISDIR))
@@ -1808,14 +1809,9 @@ Errors Continuous_init(const char *databaseURI)
     error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
     if (error == ERROR_NONE)
     {
-      if (continuousVersion < CONTINUOUS_VERSION)
+      if (continuousVersion != CONTINUOUS_VERSION)
       {
         // insufficient version -> create new
-        createFlag = TRUE;
-      }
-      else
-      {
-        // unknown version -> create new
         createFlag = TRUE;
       }
     }
@@ -2007,55 +2003,18 @@ Errors Continuous_doneNotify(ConstString name,
 
 Errors Continuous_open(DatabaseHandle *databaseHandle)
 {
-  bool   createFlag;
   Errors error;
   uint   continuousVersion;
 
   assert(initFlag);
   assert(databaseHandle != NULL);
   assert(continuousDatabaseSpecifier != NULL);
+  assert(Database_exists(continuousDatabaseSpecifier,NULL));
+  assert(   (getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier) != ERROR_NONE)
+         || (continuousVersion == CONTINUOUS_VERSION)
+        );
 
-  createFlag = FALSE;
-  if (Database_exists(continuousDatabaseSpecifier,NULL))
-  {
-    // check if continuous database exists in expected version, create database
-    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
-    if (error == ERROR_NONE)
-    {
-      if (continuousVersion < CONTINUOUS_VERSION)
-      {
-        // insufficient version -> create new
-        createFlag = TRUE;
-      }
-      else
-      {
-        // unknown version -> create new
-        createFlag = TRUE;
-      }
-    }
-    else
-    {
-      // unknown version -> create new
-      createFlag = TRUE;
-    }
-  }
-  else
-  {
-    // does not exists -> create new
-    createFlag = TRUE;
-  }
-  if (createFlag)
-  {
-    // create new database
-    error = createContinuous(databaseHandle,continuousDatabaseSpecifier);
-  }
-  else
-  {
-    // open continuous database
-    error = openContinuous(databaseHandle,continuousDatabaseSpecifier);
-  }
-
-  return error;
+  return openContinuous(databaseHandle,continuousDatabaseSpecifier);
 }
 
 void Continuous_close(DatabaseHandle *databaseHandle)
@@ -2243,27 +2202,27 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                                  ConstString    scheduleUUID
                                 )
 {
-  assert(initFlag);
   assert(databaseHandle != NULL);
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-  return Database_existsValue(databaseHandle,
-                              "names",
-                              DATABASE_FLAG_NONE,
-                              "id",
-                              "    storedFlag=FALSE \
-                               AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
-                               AND jobUUID=? \
-                               AND scheduleUUID=? \
-                              ",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
-                                DATABASE_FILTER_STRING(jobUUID),
-                                DATABASE_FILTER_STRING(scheduleUUID),
-                              )
-                             );
+  return    initFlag
+         && Database_existsValue(databaseHandle,
+                                 "names",
+                                 DATABASE_FLAG_NONE,
+                                 "id",
+                                 "    storedFlag=FALSE \
+                                  AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                                  AND jobUUID=? \
+                                  AND scheduleUUID=? \
+                                 ",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
+                                   DATABASE_FILTER_STRING(jobUUID),
+                                   DATABASE_FILTER_STRING(scheduleUUID),
+                                 )
+                                );
 }
 
 Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,

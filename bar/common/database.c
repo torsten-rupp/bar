@@ -6945,7 +6945,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                  1+databaseStatementHandle->parameterIndex,
                                                  String_cString(values[i].string),
-                                                 String_length(values[i].string),NULL
+                                                 String_length(values[i].string),
+                                                 SQLITE_STATIC
                                                 );
                 databaseStatementHandle->parameterIndex++;
                 break;
@@ -6959,7 +6960,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                                                  1+databaseStatementHandle->parameterIndex,
                                                  values[i].s,
                                                  stringLength(values[i].s),
-                                                 NULL
+                                                 SQLITE_STATIC
                                                 );
                 databaseStatementHandle->parameterIndex++;
                 break;
@@ -7613,7 +7614,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                                1+databaseStatementHandle->parameterIndex,
                                                String_cString(filters[i].string),
                                                String_length(filters[i].string),
-                                               NULL
+                                               SQLITE_STATIC
                                               );
               break;
             case DATABASE_DATATYPE_CSTRING:
@@ -7626,7 +7627,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                                1+databaseStatementHandle->parameterIndex,
                                                filters[i].s,
                                                stringLength(filters[i].s),
-                                               NULL
+                                               SQLITE_STATIC
                                               );
               break;
             case DATABASE_DATATYPE_BLOB:
@@ -7654,7 +7655,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                                  1+databaseStatementHandle->parameterIndex,
                                                  String_cString(string),
                                                  String_length(string),
-                                                 NULL
+                                                 SQLITE_STATIC
                                                 );
 
                 String_delete(string);
