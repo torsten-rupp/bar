@@ -435,7 +435,9 @@ LOCAL void printNotifies(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getContinuousVersion(uint *continuousVersion, const DatabaseSpecifier *databaseSpecifier)
+LOCAL Errors getContinuousVersion(uint                    *continuousVersion,
+                                  const DatabaseSpecifier *databaseSpecifier
+                                 )
 {
   Errors         error;
   DatabaseHandle databaseHandle;
@@ -2009,12 +2011,24 @@ Errors Continuous_open(DatabaseHandle *databaseHandle)
   assert(initFlag);
   assert(databaseHandle != NULL);
   assert(continuousDatabaseSpecifier != NULL);
-  assert(Database_exists(continuousDatabaseSpecifier,NULL));
-  assert(   (getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier) != ERROR_NONE)
-         || (continuousVersion == CONTINUOUS_VERSION)
-        );
 
-  return openContinuous(databaseHandle,continuousDatabaseSpecifier);
+  if (Database_exists(continuousDatabaseSpecifier,NULL))
+  {
+    assert(   (getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier) != ERROR_NONE)
+           || (continuousVersion == CONTINUOUS_VERSION)
+          );
+    error = openContinuous(databaseHandle,continuousDatabaseSpecifier);
+  }
+  else
+  {
+    error = createContinuous(databaseHandle,continuousDatabaseSpecifier);
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 void Continuous_close(DatabaseHandle *databaseHandle)
