@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-04 14:59+0200\n"
+"POT-Creation-Date: 2022-07-05 10:57+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -224,8 +224,8 @@ msgstr ""
 
 #: src/BARControl.java:3016 src/BARControl.java:3665 src/BARControl.java:3679
 #: src/BARControl.java:3722 src/BARControl.java:3736 src/BARControl.java:4196
-#: src/BARControl.java:4288 src/BARControl.java:4292 src/BARControl.java:5967
-#: src/BARControl.java:5985 src/BARControl.java:6013 src/BARControl.java:6038
+#: src/BARControl.java:4288 src/BARControl.java:4292 src/BARControl.java:5965
+#: src/BARControl.java:5983 src/BARControl.java:6011 src/BARControl.java:6036
 msgid "Connection fail"
 msgstr ""
 
@@ -337,15 +337,15 @@ msgid "Connection lost"
 msgstr ""
 
 #: src/BARControl.java:3634 src/BARControl.java:3667 src/BARControl.java:3681
-#: src/BARControl.java:3724 src/BARControl.java:3738 src/BARControl.java:5969
-#: src/BARControl.java:6015 src/BARControl.java:6040
+#: src/BARControl.java:3724 src/BARControl.java:3738 src/BARControl.java:5967
+#: src/BARControl.java:6013 src/BARControl.java:6038
 msgid "Try again"
 msgstr ""
 
 #: src/BARControl.java:3635 src/BARControl.java:3668 src/BARControl.java:3682
 #: src/BARControl.java:3725 src/BARControl.java:3739 src/BARControl.java:4030
-#: src/BARControl.java:4199 src/BARControl.java:4505 src/BARControl.java:5970
-#: src/BARControl.java:5988 src/BARControl.java:6016 src/BARControl.java:6041
+#: src/BARControl.java:4199 src/BARControl.java:4505 src/BARControl.java:5968
+#: src/BARControl.java:5986 src/BARControl.java:6014 src/BARControl.java:6039
 #: src/ServerSettings.java:3230 src/ServerSettings.java:3845
 #: src/ServerSettings.java:4227 src/TabJobs.java:8990 src/TabJobs.java:9131
 #: src/TabJobs.java:9286 src/TabJobs.java:10461 src/TabJobs.java:10878
@@ -368,7 +368,7 @@ msgstr ""
 msgid "TLS"
 msgstr ""
 
-#: src/BARControl.java:3959 src/BARControl.java:5747 src/BARControl.java:5771
+#: src/BARControl.java:3959 src/BARControl.java:5745 src/BARControl.java:5769
 #: src/BARServer.java:1253 src/BARServer.java:1275 src/BARWidgets.java:2262
 #: src/BARWidgets.java:2755 src/BARWidgets.java:3494
 #: src/ServerSettings.java:1410 src/ServerSettings.java:1755
@@ -381,11 +381,11 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/BARControl.java:4197 src/BARControl.java:5986
+#: src/BARControl.java:4197 src/BARControl.java:5984
 msgid "Connection fail. Try to connect without TLS (SSL)?"
 msgstr ""
 
-#: src/BARControl.java:4198 src/BARControl.java:5987
+#: src/BARControl.java:4198 src/BARControl.java:5985
 msgid "Try without TLS (SSL)"
 msgstr ""
 
@@ -450,51 +450,61 @@ msgid ""
 msgstr ""
 
 #: src/BARControl.java:4795
-msgid "cannot connect to server (error: %s)"
+#, java-format
+msgid "cannot connect to server (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:4802
-msgid "Wait for pairing new master...    "
+msgid "Wait for pairing new master"
 msgstr ""
 
 #: src/BARControl.java:4848
-msgid "'%s' - OK"
+#, java-format
+msgid "''{0}'' - OK"
 msgstr ""
 
-#: src/BARControl.java:4863
-msgid "cannot set new master (%s)"
+#: src/BARControl.java:4857 src/BARControl.java:4863
+#, java-format
+msgid "cannot set new master ({0})"
 msgstr ""
 
 #: src/BARControl.java:4875 src/BARControl.java:4982
-msgid "job '%s' not found"
+#, java-format
+msgid "job ''{0}'' not found"
 msgstr ""
 
 #: src/BARControl.java:4892
-msgid "cannot start job '%s' (error: %s)"
+#, java-format
+msgid "cannot start job ''{0}'' (error: {1})"
 msgstr ""
 
 #: src/BARControl.java:4912
-msgid "cannot pause (error: %s)"
+#, java-format
+msgid "cannot pause (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:4931
-msgid "cannot set maintenance (error: %s)"
+#, java-format
+msgid "cannot set maintenance (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:4953
-msgid "cannot suspend (error: %s)"
+#, java-format
+msgid "cannot suspend (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:4998
-msgid "cannot abort job '%s' (error: %s)"
+#, java-format
+msgid "cannot abort job ''{0}'' (error: {1})"
 msgstr ""
 
 #: src/BARControl.java:5020
-msgid "cannot get state (error: %s)"
+#, java-format
+msgid "cannot get state (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:5030 src/BARControl.java:5361 src/BARControl.java:5418
-#: src/BARControl.java:5746 src/ServerSettings.java:1773
+#: src/BARControl.java:5744 src/ServerSettings.java:1773
 #: src/ServerSettings.java:3940 src/TabJobs.java:2598 src/TabJobs.java:4394
 #: src/TabJobs.java:8974 src/TabJobs.java:9114 src/TabJobs.java:11251
 #: src/TabRestore.java:4345 src/TabRestore.java:4918 src/TabRestore.java:5197
@@ -558,12 +568,29 @@ msgstr ""
 msgid "suspended"
 msgstr ""
 
+#: src/BARControl.java:5101
+#, java-format
+msgid "{0} {0,choice,0#jobs|1#job|1<jobs}"
+msgstr ""
+
 #: src/BARControl.java:5105
-msgid "cannot get job list (error: %s)"
+#, java-format
+msgid "cannot get job list (error: {0})"
+msgstr ""
+
+#: src/BARControl.java:5200
+#, java-format
+msgid "cannot get index info (error: {0})"
+msgstr ""
+
+#: src/BARControl.java:5236
+#, java-format
+msgid "cannot add ''{0}'' to index (error: {1})"
 msgstr ""
 
 #: src/BARControl.java:5274
-msgid "cannot remove index for storage '%s' from index (error: %s)"
+#, java-format
+msgid "cannot remove index for storage ''{0}'' from index (error: {1})"
 msgstr ""
 
 #: src/BARControl.java:5291 src/BARControl.java:5356 src/BARControl.java:5414
@@ -598,19 +625,33 @@ msgid "Job"
 msgstr ""
 
 #: src/BARControl.java:5335
-msgid "%d entities"
+#, java-format
+msgid "{0} entities"
 msgstr ""
 
 #: src/BARControl.java:5339
-msgid "cannot list entities index (error: %s)"
+#, java-format
+msgid "cannot list entities index (error: {0})"
+msgstr ""
+
+#: src/BARControl.java:5396
+#, java-format
+msgid "{0} {0,choice,0#storages|1#storage|1<storages}"
 msgstr ""
 
 #: src/BARControl.java:5400
-msgid "cannot list storages index (error: %s)"
+#, java-format
+msgid "cannot list storages index (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:5563
-msgid "%d entries (max. 1024 shown)"
+#, java-format
+msgid "{0} entries (max. 1024 shown)"
+msgstr ""
+
+#: src/BARControl.java:5567
+#, java-format
+msgid "cannot list entries index (error: {0})"
 msgstr ""
 
 #: src/BARControl.java:5582 src/TabRestore.java:4645 src/TabRestore.java:4894
@@ -622,47 +663,78 @@ msgstr ""
 msgid "Duration"
 msgstr ""
 
-#: src/BARControl.java:5586
+#: src/BARControl.java:5587
 msgid "Total           [bytes]"
 msgstr ""
 
-#: src/BARControl.java:5587
+#: src/BARControl.java:5588
 msgid "Skipped         [bytes]"
 msgstr ""
 
-#: src/BARControl.java:5588
+#: src/BARControl.java:5589
 msgid "With errors     [bytes]"
 msgstr ""
 
-#: src/BARControl.java:5589 src/TabStatus.java:1766
+#: src/BARControl.java:5590 src/TabStatus.java:1766
 msgid "Message"
 msgstr ""
 
-#: src/BARControl.java:5640
-msgid "%d entries"
+#: src/BARControl.java:5641
+#, java-format
+msgid "{0} {0,choice,0#entries|1#entry|1<entries}"
 msgstr ""
 
-#: src/BARControl.java:5745
+#: src/BARControl.java:5645
+#, java-format
+msgid "cannot list history (error: {0})"
+msgstr ""
+
+#: src/BARControl.java:5700
+#, java-format
+msgid "cannot set restore list (error: {0})"
+msgstr ""
+
+#: src/BARControl.java:5743
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr ""
 
-#: src/BARControl.java:5770 src/BARServer.java:1251 src/BARServer.java:1274
+#: src/BARControl.java:5768 src/BARServer.java:1251 src/BARServer.java:1274
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr ""
 
-#: src/BARControl.java:5797
+#: src/BARControl.java:5795
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
 
-#: src/BARControl.java:5823
-msgid "Restored %d entries, %d bytes"
+#: src/BARControl.java:5821
+#, java-format
+msgid "Restored {0} entries, {1} bytes"
 msgstr ""
 
-#: src/BARControl.java:5826
-msgid "cannot restore storage '%s'"
+#: src/BARControl.java:5824
+#, java-format
+msgid "cannot restore storage ''{0}''"
+msgstr ""
+
+#: src/BARControl.java:5843
+#, java-format
+msgid "cannot restore storages (error: {0})"
+msgstr ""
+
+#: src/BARControl.java:5854
+msgid "cannot quit server"
+msgstr ""
+
+#: src/BARControl.java:5935
+msgid "Cannot connect to server. No server ports specified!"
+msgstr ""
+
+#: src/BARControl.java:6090
+#, java-format
+msgid "communication: {0}"
 msgstr ""
 
 #: src/BARException.java:287
@@ -844,7 +916,8 @@ msgstr ""
 #: src/BARException.java:457 src/BARException.java:464
 #: src/BARException.java:471 src/BARException.java:481
 #: src/BARException.java:563 src/BARException.java:1029
-msgid " for ''%s''"
+#, java-format
+msgid " for ''{0}''"
 msgstr ""
 
 #: src/BARException.java:461
@@ -868,11 +941,13 @@ msgid "ssh protocol error"
 msgstr ""
 
 #: src/BARException.java:492
-msgid "job ''%s'' already exists"
+#, java-format
+msgid "job ''{0}'' already exists"
 msgstr ""
 
 #: src/BARException.java:495
-msgid "job ''%s'' running"
+#, java-format
+msgid "job ''{0}'' running"
 msgstr ""
 
 #: src/BARException.java:498
@@ -2203,24 +2278,12 @@ msgstr ""
 msgid "SQLite index database"
 msgstr ""
 
-#: src/ServerSettings.java:1269
-msgid "SQLite"
-msgstr ""
-
 #: src/ServerSettings.java:1273
 msgid "MariaDB index database"
 msgstr ""
 
-#: src/ServerSettings.java:1292
-msgid "MariaDB"
-msgstr ""
-
 #: src/ServerSettings.java:1296
 msgid "PostgreSQL index database"
-msgstr ""
-
-#: src/ServerSettings.java:1315
-msgid "PostgreSQL"
 msgstr ""
 
 #: src/ServerSettings.java:1324 src/TabJobs.java:6365 src/TabJobs.java:12441
@@ -3805,7 +3868,8 @@ msgid "Total size"
 msgstr ""
 
 #: src/TabJobs.java:8030
-msgid "%d bytes (%s)"
+#, java-format
+msgid "{0} {0,choice,0#bytes|1#byte|1<bytes} ({1})"
 msgstr ""
 
 #: src/TabJobs.java:8126
@@ -5455,35 +5519,19 @@ msgstr ""
 msgid "ERROR"
 msgstr ""
 
-#: src/TabStatus.java:137
-msgid "(offline)"
-msgstr ""
-
-#: src/TabStatus.java:138
-msgid "(wait pairing)"
-msgstr ""
-
-#: src/TabStatus.java:139
-msgid "(wrong mode)"
-msgstr ""
-
-#: src/TabStatus.java:140
-msgid "(wrong protocol version)"
-msgstr ""
-
-#: src/TabStatus.java:147
+#: src/TabStatus.java:137 src/TabStatus.java:147
 msgid "offline"
 msgstr ""
 
-#: src/TabStatus.java:148
+#: src/TabStatus.java:138 src/TabStatus.java:148
 msgid "wait pairing"
 msgstr ""
 
-#: src/TabStatus.java:149
+#: src/TabStatus.java:139 src/TabStatus.java:149
 msgid "wrong mode"
 msgstr ""
 
-#: src/TabStatus.java:150
+#: src/TabStatus.java:140 src/TabStatus.java:150
 msgid "wrong protocol version"
 msgstr ""
 

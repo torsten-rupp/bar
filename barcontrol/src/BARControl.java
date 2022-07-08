@@ -4792,14 +4792,14 @@ if (false) {
         }
         catch (ConnectionError error)
         {
-          printError(BARControl.tr("cannot connect to server (error: %s)"),error.getMessage());
+          printError(BARControl.tr("cannot connect to server (error: {0})"),error.getMessage());
           System.exit(ExitCodes.FAIL);
         }
 
         // execute commands
         if (Settings.pairMasterFlag)
         {
-          System.out.print(BARControl.tr("Wait for pairing new master...    "));
+          System.out.print(BARControl.tr("Wait for pairing new master")+"\u2026    ");
 
           // set new master
           try
@@ -4845,7 +4845,7 @@ if (false) {
             System.out.print("\b\b\b\b");
             if (!masterName[0].isEmpty())
             {
-              System.out.println(String.format(BARControl.tr("'%s' - OK"),masterName[0]));
+              System.out.println(String.format(BARControl.tr("''{0}'' - OK",masterName[0])));
             }
             else
             {
@@ -4854,13 +4854,13 @@ if (false) {
           }
           catch (final BARException exception)
           {
-            printError("cannot set new master (%s)",exception.getMessage());
+            printError(BARControl.tr("cannot set new master ({0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot set new master (%s)"),exception.getMessage());
+            printError(BARControl.tr("cannot set new master ({0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4872,7 +4872,7 @@ if (false) {
           String jobUUID = getJobUUID(Settings.runJobName);
           if (jobUUID == null)
           {
-            printError(BARControl.tr("job '%s' not found"),Settings.runJobName);
+            printError(BARControl.tr("job ''{0}'' not found"),Settings.runJobName);
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4889,7 +4889,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot start job '%s' (error: %s)"),Settings.runJobName,exception.getMessage());
+            printError(BARControl.tr("cannot start job ''{0}'' (error: {1})",Settings.runJobName,exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4909,7 +4909,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot pause (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot pause (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4928,7 +4928,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot set maintenance (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot set maintenance (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4950,7 +4950,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot suspend (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot suspend (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4979,7 +4979,7 @@ if (false) {
           String jobUUID = getJobUUID(Settings.abortJobName);
           if (jobUUID == null)
           {
-            printError(BARControl.tr("job '%s' not found"),Settings.abortJobName);
+            printError(BARControl.tr("job ''{0}'' not found",Settings.abortJobName));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4995,7 +4995,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot abort job '%s' (error: %s)"),Settings.abortJobName,exception.getMessage());
+            printError(BARControl.tr("cannot abort job ''{0}'' (error: {1})",Settings.abortJobName,exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5017,7 +5017,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot get state (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot get state (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5098,11 +5098,11 @@ if (false) {
                                      }
                                     );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(String.format("%d jobs",n[0]));
+            System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#job|1<jobs}",n[0]));
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot get job list (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot get job list (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5197,7 +5197,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError("cannot get index info (error: %s)",exception.getMessage());
+            printError(BARControl.tr("cannot get index info (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5233,7 +5233,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError("cannot add '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getMessage());
+            printError(BARControl.tr("cannot add ''{0}'' to index (error: {1})",Settings.indexDatabaseAddStorageName,exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5271,7 +5271,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot remove index for storage '%s' from index (error: %s)"),Settings.indexDatabaseRemoveStorageName,exception.getMessage());
+            printError(BARControl.tr("cannot remove index for storage ''{0}'' from index (error: {1})",Settings.indexDatabaseRemoveStorageName,exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5332,11 +5332,11 @@ if (false) {
                                      }
                                     );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(String.format(BARControl.tr("%d entities"),n[0]));
+            System.out.println(BARControl.tr("{0} entities",n[0]));
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot list entities index (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot list entities index (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5393,11 +5393,11 @@ if (false) {
                                      }
                                     );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(String.format("%d storages",n[0]));
+            System.out.println(BARControl.tr("{0} {0,choice,0#storages|1#storage|1<storages}",n[0]));
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot list storages index (error: %s)"),exception.getMessage());
+            printError(BARControl.tr("cannot list storages index (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5560,11 +5560,11 @@ if (false) {
                                      }
                                     );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(String.format(BARControl.tr("%d entries (max. 1024 shown)"),n[0]));
+            System.out.println(BARControl.tr("{0} entries (max. 1024 shown)",n[0]));
           }
           catch (Exception exception)
           {
-            printError("cannot list entries index (error: %s)",exception.getMessage());
+            printError(BARControl.tr("cannot list entries index (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5583,6 +5583,7 @@ if (false) {
                                              BARControl.tr("Type"),
                                              BARControl.tr("Date/Time"),
                                              BARControl.tr("Duration"),
+// TODO: [bytes]
                                              BARControl.tr("Total           [bytes]"),
                                              BARControl.tr("Skipped         [bytes]"),
                                              BARControl.tr("With errors     [bytes]"),
@@ -5637,11 +5638,11 @@ if (false) {
                                      }
                                     );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(String.format(BARControl.tr("%d entries"),n[0]));
+            System.out.println(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}",n[0]));
           }
           catch (Exception exception)
           {
-            printError("cannot list history (error: %s)",exception.getMessage());
+            printError(BARControl.tr("cannot list history (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5696,7 +5697,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError("cannot set restore list (error: %s)",exception.getMessage());
+            printError(BARControl.tr("cannot set restore list (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5730,9 +5731,6 @@ if (false) {
                                              String        errorMessage = valueMap.getString("errorMessage","");
                                              String        storage      = valueMap.getString("storage","");
                                              String        entry        = valueMap.getString("entry","");
-//TODO
-Dprintf.dprintf("action=%s",action);
-System.exit(33);
 
                                              switch (action)
                                              {
@@ -5820,10 +5818,10 @@ Dprintf.dprintf("still not supported");
                                              switch (state)
                                              {
                                                case RESTORED:
-                                                 System.out.println(String.format(BARControl.tr("Restored %d entries, %d bytes"),doneCount,doneSize));
+                                                 System.out.println(String.format(BARControl.tr("Restored {0} entries, {1} bytes",doneCount,doneSize)));
                                                  break;
                                                case FAILED:
-                                                 printError(BARControl.tr("cannot restore storage '%s'"),storageName);
+                                                 printError(BARControl.tr("cannot restore storage ''{0}''",storageName));
                                                  break;
                                              }
                                            }
@@ -5842,7 +5840,7 @@ Dprintf.dprintf("still not supported");
           }
           catch (Exception exception)
           {
-            printError("cannot restore storages (error: %s)",exception.getMessage());
+            printError(BARControl.tr("cannot restore storages (error: {0})",exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5853,7 +5851,7 @@ Dprintf.dprintf("still not supported");
           // quit server
           if (!BARServer.quit())
           {
-            printError("cannot quit server");
+            printError(BARControl.tr("cannot quit server"));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -5934,7 +5932,7 @@ Dprintf.dprintf("still not supported");
           }
           if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
           {
-            throw new Error("Cannot connect to server. No server ports specified!");
+            throw new Error(BARControl.tr("Cannot connect to server. No server ports specified!"));
           }
 /// ??? host name scheck
 
@@ -6089,7 +6087,7 @@ Dprintf.dprintf("still not supported");
       {
         // ignored
       }
-      printError("communication: %s",error.getMessage());
+      printError(BARControl.tr("communication: {0}",error.getMessage()));
       if (Settings.debugLevel > 0)
       {
         printStackTrace(error);

@@ -105,8 +105,10 @@ void Continuous_done(void);
 /***********************************************************************\
 * Name   : Continuous_initNotify
 * Purpose: init notift for job
-* Input  : jobUUID      - job UUID
-*          scheduleUUID - schedule UUID (can be NULL)
+* Input  : name              - job name
+*          jobUUID           - job UUID
+*          scheduleUUID      - schedule UUID (can be NULL)
+*          beginTime,endTime - begin/end time
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -115,6 +117,8 @@ void Continuous_done(void);
 Errors Continuous_initNotify(ConstString     name,
                              ConstString     jobUUID,
                              ConstString     scheduleUUID,
+                             ScheduleTime    beginTime,
+                             ScheduleTime    endTime,
                              const EntryList *entryList
                             );
 
@@ -158,11 +162,12 @@ void Continuous_close(DatabaseHandle *databaseHandle);
 /***********************************************************************\
 * Name   : Continuous_addEntry
 * Purpose: add continuous entry
-* Input  : databaseHandle - database handle
-*          indexHandle    - index handle
-*          jobUUID        - job UUID
-*          scheduleUUID   - schedule UUID
-*          name           - name
+* Input  : databaseHandle    - database handle
+*          indexHandle       - index handle
+*          jobUUID           - job UUID
+*          scheduleUUID      - schedule UUID
+*          beginTime,endTime - begin/end time
+*          name              - name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -171,6 +176,8 @@ void Continuous_close(DatabaseHandle *databaseHandle);
 Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                            ConstString    jobUUID,
                            ConstString    scheduleUUID,
+                           ScheduleTime   beginTime,
+                           ScheduleTime   endTime,
                            ConstString    name
                           );
 

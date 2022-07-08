@@ -1521,6 +1521,8 @@ void Job_setIncludeExcludeModified(JobNode *jobNode)
         Continuous_initNotify(jobNode->name,
                               jobNode->job.uuid,
                               scheduleNode->uuid,
+                              scheduleNode->beginTime,
+                              scheduleNode->endTime,
                               &jobNode->job.includeEntryList
                              );
       }
@@ -1566,6 +1568,8 @@ void Job_setScheduleModified(JobNode *jobNode)
         Continuous_initNotify(jobNode->name,
                               jobNode->job.uuid,
                               scheduleNode->uuid,
+                              scheduleNode->beginTime,
+                              scheduleNode->endTime,
                               &jobNode->job.includeEntryList
                              );
       }
@@ -2992,6 +2996,8 @@ void Job_updateNotifies(const JobNode *jobNode)
         Continuous_initNotify(jobNode->name,
                               jobNode->job.uuid,
                               scheduleNode->uuid,
+                              scheduleNode->beginTime,
+                              scheduleNode->endTime,
                               &jobNode->job.includeEntryList
                              );
       }

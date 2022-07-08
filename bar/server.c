@@ -1906,22 +1906,8 @@ LOCAL void schedulerThreadCode(void)
                                     )
                             {
                               // schedule continuous job
-                              if (inTimeRange(dateTime.hour,dateTime.minute,
-                                              jobScheduleNode->beginTime.hour,jobScheduleNode->beginTime.minute,
-                                              jobScheduleNode->endTime.hour,jobScheduleNode->endTime.minute
-                                             )
-                                 )
-                              {
-                                executeScheduleNode     = jobScheduleNode;
-                                executeScheduleDateTime = scheduleDateTime;
-                              }
-                              else
-                              {
-                                (void)Continuous_discardEntries(&continuousDatabaseHandle,
-                                                                String_cString(jobScheduleNode->jobUUID),
-                                                                String_cString(jobScheduleNode->scheduleUUID)
-                                                               );
-                              }
+                              executeScheduleNode     = jobScheduleNode;
+                              executeScheduleDateTime = scheduleDateTime;
                             }
                           }
                         }
