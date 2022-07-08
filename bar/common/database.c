@@ -50,6 +50,7 @@
 #if defined(HAVE_MARIADB_MYSQL_H) && defined(HAVE_MARIADB_ERRMSG_H)
   #include "mariadb/mysql.h"
   #include "mariadb/errmsg.h"
+  #include "mariadb/mysqld_error.h"
 #endif /* HAVE_MARIADB_MYSQL_H && HAVE_MARIADB_ERRMSG_H */
 #if defined(HAVE_LIBPQ_FE_H)
   #include "libpq-fe.h"
@@ -1802,247 +1803,6 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 
 #ifdef HAVE_MARIADB
 /***********************************************************************\
-* Name   : mariaDBCreateDatabase
-* Purpose: create MariaDB database
-* Input  : serverName   - server name
-*          userName     - user name
-*          password     - password
-*          databaseName - database name
-*          characterSet - character set name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
-                                   const char     *userName,
-                                   const Password *password,
-                                   const char     *databaseName,
-                                   const char     *characterSet
-                                  )
-{
-  MYSQL  *handle;
-  union
-  {
-    bool b;
-    uint u;
-  }      optionValue;
-  char   sqlString[256];
-  int    mysqlResult;
-  Errors error;
-
-  assert(serverName != NULL);
-  assert(userName != NULL);
-  assert(password != NULL);
-  assert(databaseName != NULL);
-  assert(characterSet != NULL);
-
-  // open database
-  handle = mysql_init(NULL);
-  if (handle == NULL)
-  {
-    return ERROR_DATABASE;
-  }
-  optionValue.b = TRUE;
-  mysql_options(handle,MYSQL_OPT_RECONNECT,&optionValue);
-  optionValue.u = MARIADB_TIMEOUT;
-  mysql_options(handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-  mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
-
-  // connect
-  error = ERROR_UNKNOWN;
-  PASSWORD_DEPLOY_DO(plainPassword,password)
-  {
-    if (mysql_real_connect(handle,
-                           serverName,
-                           userName,
-                           plainPassword,
-                           NULL,  // databaseName
-                           0,  // port
-                           NULL, // unix socket
-                           0  // client flag
-                          ) != NULL
-       )
-    {
-      error = ERROR_NONE;
-    }
-    else
-    {
-      error = ERRORX_(DATABASE,
-                      mysql_errno(handle),
-                      "%s",
-                      mysql_error(handle)
-                     );
-    }
-  }
-  assert(error != ERROR_UNKNOWN);
-  if (error != ERROR_NONE)
-  {
-    mysql_close(handle);
-    return error;
-  }
-
-  stringFormat(sqlString,sizeof(sqlString),
-               "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
-               databaseName,
-               characterSet,
-               characterSet
-              );
-
-  mysqlResult = mysql_query(handle,sqlString);
-  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-  {
-    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
-                        mysqlResult,
-                        mysql_error(handle)
-                       );
-  }
-  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-  {
-    error = ERRORX_(DATABASE_CONNECTION_LOST,
-                    mysql_errno(handle),
-                    "%s: %s",
-                    mysql_error(handle),
-                    sqlString
-                   );
-  }
-  else if (mysqlResult != 0)
-  {
-    error = ERRORX_(DATABASE,
-                    mysql_errno(handle),
-                    "%s: %s",
-                    mysql_error(handle),
-                    sqlString
-                   );
-  }
-  else
-  {
-    error = ERROR_NONE;
-  }
-
-  mysql_close(handle);
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : mariaDBDropDatabase
-* Purpose: drop MariaDB database
-* Input  : serverName   - server name
-*          userName     - user name
-*          password     - password
-*          databaseName - database name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors mariaDBDropDatabase(const char     *serverName,
-                                 const char     *userName,
-                                 const Password *password,
-                                 const char     *databaseName
-                                )
-{
-  MYSQL  *handle;
-  union
-  {
-    bool b;
-    uint u;
-  }      optionValue;
-  char   sqlString[256];
-  int    mysqlResult;
-  Errors error;
-
-  assert(serverName != NULL);
-  assert(userName != NULL);
-  assert(password != NULL);
-  assert(databaseName != NULL);
-
-  // open database
-  handle = mysql_init(NULL);
-  if (handle == NULL)
-  {
-    return ERROR_DATABASE;
-  }
-  optionValue.b = TRUE;
-  mysql_options(handle,MYSQL_OPT_RECONNECT,&optionValue);
-  optionValue.u = MARIADB_TIMEOUT;
-  mysql_options(handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-  mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
-
-  // connect
-  error = ERROR_UNKNOWN;
-  PASSWORD_DEPLOY_DO(plainPassword,password)
-  {
-    if (mysql_real_connect(handle,
-                           serverName,
-                           userName,
-                           plainPassword,
-                           NULL,  // databaseName
-                           0,  // port
-                           NULL, // unix socket
-                           0  // client flag
-                          ) != NULL
-       )
-    {
-      error = ERROR_NONE;
-    }
-    else
-    {
-      error = ERRORX_(DATABASE,
-                      mysql_errno(handle),
-                      "%s",
-                      mysql_error(handle)
-                     );
-    }
-  }
-  assert(error != ERROR_UNKNOWN);
-  if (error != ERROR_NONE)
-  {
-    mysql_close(handle);
-    return error;
-  }
-
-  stringFormat(sqlString,sizeof(sqlString),
-               "DROP DATABASE %s",
-               databaseName
-              );
-
-  mysqlResult = mysql_query(handle,sqlString);
-  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-  {
-    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
-                        mysqlResult,
-                        mysql_error(handle)
-                       );
-  }
-  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-  {
-    error = ERRORX_(DATABASE_CONNECTION_LOST,
-                    mysql_errno(handle),
-                    "%s: %s",
-                    mysql_error(handle),
-                    sqlString
-                   );
-  }
-  else if (mysqlResult != 0)
-  {
-    error = ERRORX_(DATABASE,
-                    mysql_errno(handle),
-                    "%s: %s",
-                    mysql_error(handle),
-                    sqlString
-                   );
-  }
-  else
-  {
-    error = ERROR_NONE;
-  }
-
-  return error;
-}
-
-/***********************************************************************\
 * Name   : mariaDBExecute
 * Purpose: execute MariaDB SQL string
 * Input  : handle    - MySQL handle
@@ -2223,6 +1983,58 @@ LOCAL DatabaseId mariaDBGetLastInsertId(MYSQL_STMT *statementHandle)
 }
 
 /***********************************************************************\
+* Name   : mariaDBSetCharacterSet
+* Purpose: set MariaDB character set
+* Input  : handle       - MySQL handle
+*          characterSet - character set name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mariaDBSetCharacterSet(MYSQL      *handle,
+                                    const char *characterSet
+                                   )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(characterSet != NULL);
+
+  mysqlResult = mysql_set_character_set(handle,characterSet);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : mariaDBSelectDatabase_
 * Purpose: select MariaDB database
 * Input  : handle       - MySQL handle
@@ -2275,29 +2087,136 @@ LOCAL Errors mariaDBSelectDatabase(MYSQL      *handle,
 }
 
 /***********************************************************************\
-* Name   : mariaDBSetCharacterSet
-* Purpose: set MariaDB character set
-* Input  : handle       - MySQL handle
+* Name   : mariaDBCreateDatabase
+* Purpose: create MariaDB database
+* Input  : serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
 *          characterSet - character set name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mariaDBSetCharacterSet(MYSQL      *handle,
-                                    const char *characterSet
-                                   )
+LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
+                                   const char     *userName,
+                                   const Password *password,
+                                   const char     *databaseName,
+                                   const char     *characterSet,
+                                   const char     *collate
+                                  )
 {
+  MYSQL  *handle;
+  ulong  serverVersion;
+  union
+  {
+    bool b;
+    uint u;
+  }      optionValue;
+  char   sqlString[256];
   int    mysqlResult;
   Errors error;
 
-  assert(handle != NULL);
+  assert(serverName != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
+  assert(databaseName != NULL);
   assert(characterSet != NULL);
+  assert(collate != NULL);
 
-  mysqlResult = mysql_set_character_set(handle,characterSet);
+  // open database
+  handle = mysql_init(NULL);
+  if (handle == NULL)
+  {
+    return ERROR_DATABASE;
+  }
+  optionValue.b = TRUE;
+  mysql_options(handle,MYSQL_OPT_RECONNECT,&optionValue);
+  optionValue.u = MARIADB_TIMEOUT;
+  mysql_options(handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+  mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+
+  // connect
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
+  {
+    if (mysql_real_connect(handle,
+                           serverName,
+                           userName,
+                           plainPassword,
+                           NULL,  // databaseName
+                           0,  // port
+                           NULL, // unix socket
+                           0  // client flag
+                          ) != NULL
+       )
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      mysql_errno(handle),
+                      "%s",
+                      mysql_error(handle)
+                     );
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
+    mysql_close(handle);
+    return error;
+  }
+
+  // check min. version
+  serverVersion = mysql_get_server_version(handle);
+  if (serverVersion < MARIADB_MIN_SERVER_VERSION)
+  {
+    error = ERRORX_(DATABASE_VERSION,0,"available %lu, required %lu",
+                    serverVersion,
+                    MARIADB_MIN_SERVER_VERSION
+                   );
+    mysql_close(handle);
+    return error;
+  }
+
+  // enable UTF8
+  error = mariaDBSetCharacterSet(handle,
+                                 characterSet
+                                );
+  if (error != ERROR_NONE)
+  {
+    mysql_close(handle);
+    return error;
+  }
+
+  // other options
+  error = mariaDBExecute(handle,
+                         stringFormat(sqlString,sizeof(sqlString),
+                                      "SET innodb_lock_wait_timeout=%u",
+                                      MARIADB_TIMEOUT
+                                     )
+                        );
+  if (error != ERROR_NONE)
+  {
+    mysql_close(handle);
+    return error;
+  }
+
+  // create database
+  stringFormat(sqlString,sizeof(sqlString),
+               "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
+               databaseName,
+               characterSet,
+               collate
+              );
+
+  mysqlResult = mysql_query(handle,sqlString);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
-    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
                         mysqlResult,
                         mysql_error(handle)
                        );
@@ -2306,16 +2225,138 @@ LOCAL Errors mariaDBSetCharacterSet(MYSQL      *handle,
   {
     error = ERRORX_(DATABASE_CONNECTION_LOST,
                     mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
                    );
   }
   else if (mysqlResult != 0)
   {
     error = ERRORX_(DATABASE,
                     mysql_errno(handle),
-                    "%s",
-                    mysql_error(handle)
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  // close database
+  mysql_close(handle);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mariaDBDropDatabase
+* Purpose: drop MariaDB database
+* Input  : serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mariaDBDropDatabase(const char     *serverName,
+                                 const char     *userName,
+                                 const Password *password,
+                                 const char     *databaseName
+                                )
+{
+  MYSQL  *handle;
+  union
+  {
+    bool b;
+    uint u;
+  }      optionValue;
+  char   sqlString[256];
+  int    mysqlResult;
+  Errors error;
+
+  assert(serverName != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
+  assert(databaseName != NULL);
+
+  // open database
+  handle = mysql_init(NULL);
+  if (handle == NULL)
+  {
+    return ERROR_DATABASE;
+  }
+  optionValue.b = TRUE;
+  mysql_options(handle,MYSQL_OPT_RECONNECT,&optionValue);
+  optionValue.u = MARIADB_TIMEOUT;
+  mysql_options(handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+  mysql_options(handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+
+  // connect
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
+  {
+    if (mysql_real_connect(handle,
+                           serverName,
+                           userName,
+                           plainPassword,
+                           NULL,  // databaseName
+                           0,  // port
+                           NULL, // unix socket
+                           0  // client flag
+                          ) != NULL
+       )
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      mysql_errno(handle),
+                      "%s",
+                      mysql_error(handle)
+                     );
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
+    mysql_close(handle);
+    return error;
+  }
+
+  stringFormat(sqlString,sizeof(sqlString),
+               "DROP DATABASE %s",
+               databaseName
+              );
+
+  mysqlResult = mysql_query(handle,sqlString);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlString
                    );
   }
   else
@@ -2324,6 +2365,146 @@ LOCAL Errors mariaDBSetCharacterSet(MYSQL      *handle,
   }
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : mariaDBConnect
+* Purpose: connect to MariaDB database
+* Input  : handle       - connection handle variable
+*          serverName   - server name
+*          userName     - user name
+*          password     - password
+*          databaseName - database name
+* Output : handle - connection handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mariaDBConnect(MYSQL          **handle,
+                            const char     *serverName,
+                            const char     *userName,
+                            const Password *password,
+                            const char     *databaseName
+                           )
+{
+  union
+  {
+    bool b;
+    uint u;
+  }      optionValue;
+  Errors error;
+  uint   errorCode;
+  char   sqlString[256];
+
+  assert(handle != NULL);
+
+  // open database
+  (*handle) = mysql_init(NULL);
+  if ((*handle) == NULL)
+  {
+    return ERROR_DATABASE;
+  }
+  optionValue.b = TRUE;
+  mysql_options(*handle,MYSQL_OPT_RECONNECT,&optionValue);
+  optionValue.u = MARIADB_TIMEOUT;
+  mysql_options(*handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+  mysql_options(*handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+
+  // connect
+  error = ERROR_UNKNOWN;
+  PASSWORD_DEPLOY_DO(plainPassword,password)
+  {
+    if (mysql_real_connect(*handle,
+                           serverName,
+                           userName,
+                           plainPassword,
+                           NULL,  // databaseName
+                           0,  // port
+                           NULL, // unix socket
+                           0  // client flag
+                          ) != NULL
+       )
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      errorCode = mysql_errno(*handle);
+      switch (errorCode)
+      {
+        case ER_DBACCESS_DENIED_ERROR:
+        case ER_ACCESS_DENIED_ERROR:
+        case CR_SECURE_AUTH:
+          error = ERRORX_(INVALID_PASSWORD_,
+                          errorCode,
+                          "%s",
+                          mysql_error(*handle)
+                         );
+          break;
+        case CR_SOCKET_CREATE_ERROR:
+        case CR_CONNECTION_ERROR:
+        case CR_CONN_HOST_ERROR:
+        case CR_UNKNOWN_HOST:
+          error = ERRORX_(CONNECT_FAIL,
+                          errorCode,
+                          "%s",
+                          mysql_error(*handle)
+                         );
+          break;
+        default:
+          error = ERRORX_(DATABASE,
+                          errorCode,
+                          "%s",
+                          mysql_error(*handle)
+                         );
+          break;
+      }
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
+    mysql_close(*handle);
+    return error;
+  }
+
+  // enable UTF8
+  error = mariaDBSetCharacterSet(*handle,
+                                 "utf8mb4"
+                                );
+  if (error != ERROR_NONE)
+  {
+    mysql_close(*handle);
+    return error;
+  }
+
+  // other options
+  error = mariaDBExecute(*handle,
+                         stringFormat(sqlString,sizeof(sqlString),
+                                      "SET innodb_lock_wait_timeout=%u",
+                                      MARIADB_TIMEOUT
+                                     )
+                        );
+  if (error != ERROR_NONE)
+  {
+    mysql_close(*handle);
+    return error;
+  }
+
+  // select database
+  if (!stringIsEmpty(databaseName))
+  {
+    error = mariaDBSelectDatabase(*handle,
+                                  databaseName
+                                 );
+    if (error != ERROR_NONE)
+    {
+      mysql_close(*handle);
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
 }
 #endif /* HAVE_MARIADB */
 
@@ -2416,7 +2597,6 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
   Errors         error;
 
   // connect (with database 'template1')
-  error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
@@ -2440,7 +2620,6 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                      );
     }
   }
-  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2632,6 +2811,8 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
   String         string;
   uint           connectParameterCount;
   const char     *keywords[6+1],*values[6+1];
+  bool                      connectedFlag,authorizationFlag;
+  PostgresPollingStatusType postgresPollingStatusType;
   ConnStatusType postgreConnectionSQLStatus;
   Errors         error;
 
@@ -2653,10 +2834,58 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
     POSTGRESQL_CONNECT_PARAMETER("client_encoding","UTF-8");
     POSTGRESQL_DONE_CONNECT_PARAMETER();
 
-    (*handle) = PQconnectdbParams(keywords,values,0);
+    (*handle) = PQconnectStartParams(keywords,values,0);
     if ((*handle) != NULL)
     {
-      error = ERROR_NONE;
+      connectedFlag     = FALSE;
+      authorizationFlag = FALSE;
+      do
+      {
+        switch (PQstatus(*handle))
+        {
+          case CONNECTION_MADE:    connectedFlag     = TRUE; break;
+          case CONNECTION_AUTH_OK: authorizationFlag = TRUE; break;
+          default:                                           break;
+        }
+        postgresPollingStatusType = PQconnectPoll(*handle);
+        if (   (postgresPollingStatusType == PGRES_POLLING_READING)
+            || (postgresPollingStatusType == PGRES_POLLING_READING)
+           )
+        {
+          (void)Misc_waitHandle(PQsocket(*handle),NULL,HANDLE_EVENT_INPUT|HANDLE_EVENT_OUTPUT,60*MS_PER_SECOND);
+        }
+      }
+      while (   (postgresPollingStatusType != PGRES_POLLING_OK)
+             && (postgresPollingStatusType != PGRES_POLLING_FAILED)
+            );
+      if (postgresPollingStatusType == PGRES_POLLING_OK)
+      {
+        error = ERROR_NONE;
+      }
+      else if (!authorizationFlag)
+      {
+        error = ERRORX_(INVALID_PASSWORD_,
+                        0,
+                        "connect"
+                       );
+        PQfinish(*handle);
+      }
+      else if (!connectedFlag)
+      {
+        error = ERRORX_(CONNECT_FAIL,
+                        0,
+                        "connect"
+                       );
+        PQfinish(*handle);
+      }
+      else
+      {
+        error = ERRORX_(DATABASE,
+                        0,
+                        "connect"
+                       );
+        PQfinish(*handle);
+      }
     }
     else
     {
@@ -3309,60 +3538,58 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          union
-          {
-            bool b;
-            uint u;
-          }     optionValue;
           ulong serverVersion;
-          char  sqlString[256];
 
           if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mariadb.databaseName);
 
-          // open database
-          databaseHandle->mariadb.handle = mysql_init(NULL);
-          if (databaseHandle->mariadb.handle == NULL)
+          // create database if requested
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
           {
-            error = ERROR_DATABASE;
-            sem_destroy(&databaseHandle->wakeUp);
-            return error;
+            uint i;
+
+            /* try to create with character set uft8mb4 (4-byte UTF8),
+               then utf8 as a fallback for older MariaDB versions.
+            */
+            i = 0;
+            do
+            {
+              error = mariaDBCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
+                                            String_cString(databaseSpecifier->mariadb.userName),
+                                            &databaseSpecifier->mariadb.password,
+                                            (databaseName != NULL)
+                                              ? databaseName
+                                              : String_cString(databaseSpecifier->mariadb.databaseName),
+                                            MARIADB_CHARACTER_SETS[i],
+                                            MARIADB_CHARACTER_SETS[i]
+                                           );
+              if (error != ERROR_NONE)
+              {
+                sem_destroy(&databaseHandle->wakeUp);
+                return error;
+              }
+              i++;
+            }
+            while (   (error != ERROR_NONE)
+                   && (i < SIZE_OF_ARRAY(MARIADB_CHARACTER_SETS))
+                  );
+            if (error != ERROR_NONE)
+            {
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
           }
-          optionValue.b = TRUE;
-          mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_RECONNECT,&optionValue);
-          optionValue.u = MARIADB_TIMEOUT;
-          mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-          mysql_options(databaseHandle->mariadb.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
           // connect
-          error = ERROR_UNKNOWN;
-          PASSWORD_DEPLOY_DO(plainPassword,&databaseSpecifier->mariadb.password)
-          {
-            if (mysql_real_connect(databaseHandle->mariadb.handle,
-                                   String_cString(databaseSpecifier->mariadb.serverName),
-                                   String_cString(databaseSpecifier->mariadb.userName),
-                                   plainPassword,
-                                   NULL,  // databaseName
-                                   0,  // port
-                                   NULL, // unix socket
-                                   0  // client flag
-                                  ) != NULL
-               )
-            {
-              error = ERROR_NONE;
-            }
-            else
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_errno(databaseHandle->mariadb.handle),
-                              "%s",
-                              mysql_error(databaseHandle->mariadb.handle)
-                             );
-            }
-          }
-          assert(error != ERROR_UNKNOWN);
+          error = mariaDBConnect(&databaseHandle->mariadb.handle,
+                                 String_cString(databaseSpecifier->mariadb.serverName),
+                                 String_cString(databaseSpecifier->mariadb.userName),
+                                 &databaseSpecifier->mariadb.password,
+                                 (databaseName != NULL)
+                                   ? databaseName
+                                   : String_cString(databaseSpecifier->mariadb.databaseName)
+                                );
           if (error != ERROR_NONE)
           {
-            mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
@@ -3378,80 +3605,6 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
             mysql_close(databaseHandle->mariadb.handle);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
-          }
-
-          // enable UTF8
-          error = mariaDBSetCharacterSet(databaseHandle->mariadb.handle,
-                                         "utf8mb4"
-                                        );
-          if (error != ERROR_NONE)
-          {
-            mysql_close(databaseHandle->mariadb.handle);
-            sem_destroy(&databaseHandle->wakeUp);
-            return error;
-          }
-
-          // other options
-          error = mariaDBExecute(databaseHandle->mariadb.handle,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "SET innodb_lock_wait_timeout=%u",
-                                              MARIADB_TIMEOUT
-                                             )
-                                );
-          if (error != ERROR_NONE)
-          {
-            mysql_close(databaseHandle->mariadb.handle);
-            sem_destroy(&databaseHandle->wakeUp);
-            return error;
-          }
-
-          // create database if requested
-          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
-          {
-            uint i;
-
-            /* try to create with character set uft8mb4 (4-byte UTF8),
-               then utf8 as a fallback for older MariaDB versions.
-            */
-            i = 0;
-            do
-            {
-              stringFormat(sqlString,sizeof(sqlString),
-                           "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
-                           (databaseName != NULL)
-                             ? databaseName
-                             : String_cString(databaseSpecifier->mariadb.databaseName),
-                           MARIADB_CHARACTER_SETS[i],
-                           MARIADB_CHARACTER_SETS[i]
-                          );
-              error = mariaDBExecute(databaseHandle->mariadb.handle,
-                                     sqlString
-                                    );
-              i++;
-            }
-            while (   (error != ERROR_NONE)
-                   && (i < SIZE_OF_ARRAY(MARIADB_CHARACTER_SETS))
-                  );
-            if (error != ERROR_NONE)
-            {
-              mysql_close(databaseHandle->mariadb.handle);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-          }
-
-          // select database
-          if (!stringIsEmpty(databaseName))
-          {
-            error = mariaDBSelectDatabase(databaseHandle->mariadb.handle,
-                                          databaseName
-                                         );
-            if (error != ERROR_NONE)
-            {
-              mysql_close(databaseHandle->mariadb.handle);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
           }
         }
       #else /* HAVE_MARIADB */
@@ -3486,6 +3639,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                                             );
             if (error != ERROR_NONE)
             {
+              HashTable_done(&databaseHandle->postgresql.sqlStringHashTable);
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
@@ -3502,6 +3656,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                                    );
           if (error != ERROR_NONE)
           {
+            HashTable_done(&databaseHandle->postgresql.sqlStringHashTable);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
@@ -3522,6 +3677,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
                             MIN_POSTGRESQL_PROTOCOL_VERSION
                            );
             PQfinish(databaseHandle->postgresql.handle);
+            HashTable_done(&databaseHandle->postgresql.sqlStringHashTable);
             sem_destroy(&databaseHandle->wakeUp);
             return error;
           }
@@ -9391,7 +9547,7 @@ Errors Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
       {
         // mariadb:<server>:<user>:<password>:<database>
         #if defined(HAVE_MARIADB)
-          databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
+          databaseSpecifier->type                = DATABASE_TYPE_MARIADB;
           databaseSpecifier->mariadb.serverName  = String_setBuffer(String_new(),s1,n1);
           databaseSpecifier->mariadb.userName    = String_setBuffer(String_new(),s2,n2);
           Password_init(&databaseSpecifier->mariadb.password);
@@ -9414,11 +9570,34 @@ Errors Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
       {
         // mariadb:<server>:<user>:<password>
         #if defined(HAVE_MARIADB)
-          databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
+          databaseSpecifier->type                 = DATABASE_TYPE_MARIADB;
           databaseSpecifier->mariadb.serverName   = String_setBuffer(String_new(),s1,n1);
           databaseSpecifier->mariadb.userName     = String_setBuffer(String_new(),s2,n2);
           Password_init(&databaseSpecifier->mariadb.password);
           Password_setBuffer(&databaseSpecifier->mariadb.password,s3,n3);
+          databaseSpecifier->mariadb.databaseName = String_newCString(defaultDatabaseName);
+        #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(defaultDatabaseName);
+
+          return ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MARIADB */
+      }
+      else if (stringMatch(&databaseURI[8],
+                           "^([^:]+):([^:]+)",
+                           STRING_NO_ASSIGN,
+                           STRING_NO_ASSIGN,
+                           &s1,&n1,
+                           &s2,&n2,
+                           NULL
+                          )
+              )
+      {
+        // mariadb:<server>:<user>
+        #if defined(HAVE_MARIADB)
+          databaseSpecifier->type                 = DATABASE_TYPE_MARIADB;
+          databaseSpecifier->mariadb.serverName   = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->mariadb.userName     = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->mariadb.password);
           databaseSpecifier->mariadb.databaseName = String_newCString(defaultDatabaseName);
         #else /* HAVE_MARIADB */
           UNUSED_VARIABLE(defaultDatabaseName);
@@ -9446,8 +9625,8 @@ Errors Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
               )
       {
         // postgresql:<server>:<user>:<password>:<database>
-        databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
         #if defined(HAVE_POSTGRESQL)
+          databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
           databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
           databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
           Password_init(&databaseSpecifier->postgresql.password);
@@ -9471,12 +9650,35 @@ Errors Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
               )
       {
         // postgresql:<server>:<user>:<password>
-        databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
         #if defined(HAVE_POSTGRESQL)
+          databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
           databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
           databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
           Password_init(&databaseSpecifier->postgresql.password);
           Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
+          databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
+        #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(defaultDatabaseName);
+
+          return ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_POSTGRESQL */
+      }
+      else if (stringMatch(&databaseURI[11],
+                           "^([^:]+):([^:]+)",
+                           STRING_NO_ASSIGN,
+                           STRING_NO_ASSIGN,
+                           &s1,&n1,
+                           &s2,&n2,
+                           NULL
+                          )
+              )
+      {
+        // postgresql:<server>:<user>:<password>
+        #if defined(HAVE_POSTGRESQL)
+          databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+          databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
+          databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
+          Password_init(&databaseSpecifier->postgresql.password);
           databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
         #else /* HAVE_POSTGRESQL */
           UNUSED_VARIABLE(defaultDatabaseName);
@@ -9948,14 +10150,30 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        error = mariaDBCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
-                                      String_cString(databaseSpecifier->mariadb.userName),
-                                      &databaseSpecifier->mariadb.password,
-                                      (databaseName != NULL)
-                                        ? databaseName
-                                        : String_cString(databaseSpecifier->mariadb.databaseName),
-                                      "utf8mb4"
-                                     );
+        {
+          uint i;
+
+          /* try to create with character set uft8mb4 (4-byte UTF8),
+             then utf8 as a fallback for older MariaDB versions.
+          */
+          i = 0;
+          do
+          {
+            error = mariaDBCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
+                                          String_cString(databaseSpecifier->mariadb.userName),
+                                          &databaseSpecifier->mariadb.password,
+                                          (databaseName != NULL)
+                                            ? databaseName
+                                            : String_cString(databaseSpecifier->mariadb.databaseName),
+                                          MARIADB_CHARACTER_SETS[i],
+                                          MARIADB_CHARACTER_SETS[i]
+                                         );
+            i++;
+          }
+          while (   (error != ERROR_NONE)
+                 && (i < SIZE_OF_ARRAY(MARIADB_CHARACTER_SETS))
+                );
+        }
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */

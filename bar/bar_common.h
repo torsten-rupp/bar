@@ -217,7 +217,8 @@ typedef enum
   PASSWORD_TYPE_CRYPT,
   PASSWORD_TYPE_FTP,
   PASSWORD_TYPE_SSH,
-  PASSWORD_TYPE_WEBDAV
+  PASSWORD_TYPE_WEBDAV,
+  PASSWORD_TYPE_DATABASE
 } PasswordTypes;
 
 // server connection priority
