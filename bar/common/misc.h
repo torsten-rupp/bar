@@ -1041,7 +1041,7 @@ String Misc_expandMacros(String           string,
 * Purpose: wait for single handle
 * Input  : handle     - handle
 *          signalMask - signal mask (can be NULL)
-*          events     - events to wait for
+*          events     - events to wait for; see HANDLE_EVENT_...
 *          timeout    - timeout [ms[
 * Output : -
 * Return : events; see HANDLE_EVENT_...

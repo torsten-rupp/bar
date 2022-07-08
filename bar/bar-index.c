@@ -556,7 +556,6 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
   // open database
-  printInfo("Open database '%s'...",String_cString(printableDataseURI));
   openMode = (createFlag)
                ? DATABASE_OPEN_MODE_FORCE_CREATE
                : DATABASE_OPEN_MODE_READWRITE;
@@ -567,15 +566,45 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
                         openMode,
                         WAIT_FOREVER
                        );
+  if (Error_getCode(error) == ERROR_CODE_INVALID_PASSWORD_)
+  {
+    switch (databaseSpecifier.type)
+    {
+      case DATABASE_TYPE_SQLITE3:
+        break;
+      case DATABASE_TYPE_MARIADB:
+        if (Password_input(&databaseSpecifier.mariadb.password,"MariaDB database password",PASSWORD_INPUT_MODE_ANY))
+        {
+          error = Database_open(databaseHandle,
+                                &databaseSpecifier,
+                                NULL,  // databaseName
+                                openMode,
+                                WAIT_FOREVER
+                               );
+        }
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        if (Password_input(&databaseSpecifier.postgresql.password,"PostgreSQL database password",PASSWORD_INPUT_MODE_ANY))
+        {
+          error = Database_open(databaseHandle,
+                                &databaseSpecifier,
+                                NULL,  // databaseName
+                                openMode,
+                                WAIT_FOREVER
+                               );
+        }
+        break;
+    }
+  }
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL!\n");
     printError("cannot open database '%s' (error: %s)!",String_cString(printableDataseURI),Error_getText(error));
     String_delete(printableDataseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
-  printInfo("OK  \n");
+
+  printInfo("Opened database '%s'\n",String_cString(printableDataseURI));
 
   // free resources
   String_delete(printableDataseURI);
