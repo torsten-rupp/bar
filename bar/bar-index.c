@@ -573,26 +573,34 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
       case DATABASE_TYPE_SQLITE3:
         break;
       case DATABASE_TYPE_MARIADB:
-        if (Password_input(&databaseSpecifier.mariadb.password,"MariaDB database password",PASSWORD_INPUT_MODE_ANY))
-        {
-          error = Database_open(databaseHandle,
-                                &databaseSpecifier,
-                                NULL,  // databaseName
-                                openMode,
-                                WAIT_FOREVER
-                               );
-        }
+        #if defined(HAVE_MARIADB)
+          if (Password_input(&databaseSpecifier.mariadb.password,"MariaDB database password",PASSWORD_INPUT_MODE_ANY))
+          {
+            error = Database_open(databaseHandle,
+                                  &databaseSpecifier,
+                                  NULL,  // databaseName
+                                  openMode,
+                                  WAIT_FOREVER
+                                 );
+          }
+        #else /* HAVE_MARIADB */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-        if (Password_input(&databaseSpecifier.postgresql.password,"PostgreSQL database password",PASSWORD_INPUT_MODE_ANY))
-        {
-          error = Database_open(databaseHandle,
-                                &databaseSpecifier,
-                                NULL,  // databaseName
-                                openMode,
-                                WAIT_FOREVER
-                               );
-        }
+        #if defined(HAVE_POSTGRESQL)
+          if (Password_input(&databaseSpecifier.postgresql.password,"PostgreSQL database password",PASSWORD_INPUT_MODE_ANY))
+          {
+            error = Database_open(databaseHandle,
+                                  &databaseSpecifier,
+                                  NULL,  // databaseName
+                                  openMode,
+                                  WAIT_FOREVER
+                                 );
+          }
+        #else /* HAVE_POSTGRESQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
   }

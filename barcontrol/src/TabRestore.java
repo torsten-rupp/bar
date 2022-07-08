@@ -2203,6 +2203,7 @@ Dprintf.dprintf("");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
+Dprintf.dprintf("valueMap=%s",valueMap);
                                      long   uuidId               = valueMap.getLong  ("uuidId"              );
                                      String jobUUID              = valueMap.getString("jobUUID"             );
                                      String name                 = valueMap.getString("name"                );

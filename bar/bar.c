@@ -1320,7 +1320,6 @@ void logPostProcess(LogHandle        *logHandle,
 
   UNUSED_VARIABLE(jobOptions);
 
-  assert(logHandle != NULL);
   assert(jobName != NULL);
   assert(jobOptions != NULL);
 
