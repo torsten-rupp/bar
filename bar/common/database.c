@@ -2597,6 +2597,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
   Errors         error;
 
   // connect (with database 'template1')
+  error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
@@ -2620,6 +2621,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                      );
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;

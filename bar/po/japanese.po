@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-06-30 17:40+0200\n"
+"POT-Creation-Date: 2022-07-08 12:09+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -219,8 +219,7 @@ msgstr ""
 
 #: errors.def:132 errors.def:139 errors.def:146 errors.def:154 errors.def:228
 #: errors.def:633
-#, c-format
-msgid " for '%s'"
+msgid " for '{0}'"
 msgstr ""
 
 #: errors.def:136
@@ -244,13 +243,11 @@ msgid "ssh protocol error"
 msgstr ""
 
 #: errors.def:166
-#, c-format
-msgid "job '%s' already exists"
+msgid "job '{0}' already exists"
 msgstr ""
 
 #: errors.def:169
-#, c-format
-msgid "job '%s' running"
+msgid "job '{0}' running"
 msgstr ""
 
 #: errors.def:172
@@ -953,23 +950,23 @@ msgstr ""
 msgid "database operation interupted"
 msgstr ""
 
-#: errors.def:1004
+#: errors.def:1007
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1007
+#: errors.def:1012
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1008
+#: errors.def:1013
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1009
+#: errors.def:1014
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1010
+#: errors.def:1015
 msgid "instance is not a slave"
 msgstr ""
 
