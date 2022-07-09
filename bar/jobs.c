@@ -63,7 +63,6 @@
 #define _SIMULATE_PURGE
 
 /***************************** Constants *******************************/
-
 #define SESSION_KEY_SIZE                         1024     // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
@@ -1422,6 +1421,81 @@ bool Job_isSomeRunning(void)
   return runningFlag;
 }
 
+bool Job_parseState(const char *name, JobStates *jobState, bool *noStorage, bool *dryRun)
+{
+  assert(name != NULL);
+
+  assert(name != NULL);
+  assert(jobState != NULL);
+
+  if (noStorage != NULL) (*noStorage) = FALSE;
+  if (dryRun    != NULL) (*dryRun)    = FALSE;
+  if      (stringEqualsIgnoreCase(name,"NONE"))
+  {
+    (*jobState) = JOB_STATE_NONE;
+  }
+  else if (stringEqualsIgnoreCase(name,"WAITING"))
+  {
+    (*jobState) = JOB_STATE_WAITING;
+  }
+  else if (stringEqualsIgnoreCase(name,"NO_STORAGE"))
+  {
+    (*jobState) = JOB_STATE_RUNNING;
+    if (noStorage != NULL) (*noStorage) = TRUE;
+  }
+  else if (stringEqualsIgnoreCase(name,"DRY_RUNNING"))
+  {
+    (*jobState) = JOB_STATE_RUNNING;
+    if (dryRun    != NULL) (*dryRun)    = TRUE;
+  }
+  else if (stringEqualsIgnoreCase(name,"RUNNING"))
+  {
+    (*jobState) = JOB_STATE_RUNNING;
+  }
+  else if (stringEqualsIgnoreCase(name,"REQUEST_FTP_PASSWORD"))
+  {
+    (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
+  }
+  else if (stringEqualsIgnoreCase(name,"REQUEST_SSH_PASSWORD"))
+  {
+    (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
+  }
+  else if (stringEqualsIgnoreCase(name,"REQUEST_WEBDAV_PASSWORD"))
+  {
+    (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
+  }
+  else if (stringEqualsIgnoreCase(name,"REQUEST_CRYPT_PASSWORD"))
+  {
+    (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
+  }
+  else if (stringEqualsIgnoreCase(name,"REQUEST_VOLUME"))
+  {
+    (*jobState) = JOB_STATE_REQUEST_VOLUME;
+  }
+  else if (stringEqualsIgnoreCase(name,"DONE"))
+  {
+    (*jobState) = JOB_STATE_DONE;
+  }
+  else if (stringEqualsIgnoreCase(name,"ERROR"))
+  {
+    (*jobState) = JOB_STATE_ERROR;
+  }
+  else if (stringEqualsIgnoreCase(name,"ABORTED"))
+  {
+    (*jobState) = JOB_STATE_ABORTED;
+  }
+  else if (stringEqualsIgnoreCase(name,"DISCONNECTED"))
+  {
+    (*jobState) = JOB_STATE_DISCONNECTED;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
 {
   const char *stateText;
@@ -1459,7 +1533,7 @@ const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
       stateText = "REQUEST_WEBDAV_PASSWORD";
       break;
     case JOB_STATE_REQUEST_CRYPT_PASSWORD:
-      stateText = "request_crypt_password";
+      stateText = "REQUEST_CRYPT_PASSWORD";
       break;
     case JOB_STATE_REQUEST_VOLUME:
       stateText = "REQUEST_VOLUME";
@@ -1603,9 +1677,11 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   FileHandle      fileHandle;
   Errors          error;
   String          line;
-  uint64          n;
-  char            s[64];
+  uint64          n1;
+  uint            n2;
+  char            s1[64],s2[32],s3[256];
   ArchiveTypes    archiveType;
+  JobStates       jobState;
   ScheduleNode    *scheduleNode;
   int             minKeep,maxKeep;
   int             maxAge;
@@ -1644,46 +1720,63 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
     // read file
     if (File_getLine(&fileHandle,line,NULL,NULL))
     {
-      // first line: <last execution time stamp> or <last execution time stamp>+<type>
-      if      (String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n,s))
-      {
-        if (Archive_parseType(s,&archiveType,NULL))
-        {
-          LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-          {
-            if (scheduleNode->archiveType == archiveType)
-            {
-              scheduleNode->lastExecutedDateTime = n;
-            }
-          }
-        }
-        if (n > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n;
-      }
-      else if (String_parse(line,STRING_BEGIN,"%"PRIu64,NULL,&n))
+      /* first line: <last execution time stamp> <type> <state> <error code> <error data>
+                     <last execution time stamp> <type>
+                     <last execution time stamp>
+
+      */
+      if      (   String_parse(line,STRING_BEGIN,"%"PRIu64" %64s %32s %u % 256s",NULL,&n1,s1,s2,&n2,s3)
+               && Archive_parseType(s1,&archiveType,NULL)
+               && Job_parseState(s2,&jobState,NULL,NULL)
+              )
       {
         LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
         {
-          scheduleNode->lastExecutedDateTime = n;
+          scheduleNode->lastExecutedDateTime = n1;
         }
-        if (n > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n;
+        if (n1 > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n1;
+        jobNode->jobState = jobState;
+        jobNode->runningInfo.lastErrorCode = n2;
+        String_setCString(jobNode->runningInfo.lastErrorData,s3);
+      }
+      else if (   String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n1,s1)
+               && Archive_parseType(s1,&archiveType,NULL)
+              )
+      {
+        LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+        {
+          if (scheduleNode->archiveType == archiveType)
+          {
+            scheduleNode->lastExecutedDateTime = n1;
+          }
+        }
+        if (n1 > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n1;
+      }
+      else if (String_parse(line,STRING_BEGIN,"%"PRIu64,NULL,&n1))
+      {
+        LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+        {
+          scheduleNode->lastExecutedDateTime = n1;
+        }
+        if (n1 > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n1;
       }
 
       // other lines: <last execution time stamp>+<type>
       while (File_getLine(&fileHandle,line,NULL,NULL))
       {
-        if (String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n,s))
+        if (String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n1,s1))
         {
-          if (Archive_parseType(s,&archiveType,NULL))
+          if (Archive_parseType(s1,&archiveType,NULL))
           {
             LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
             {
               if (scheduleNode->archiveType == archiveType)
               {
-                scheduleNode->lastExecutedDateTime = n;
+                scheduleNode->lastExecutedDateTime = n1;
               }
             }
           }
-          if (n > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n;
+          if (n1 > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n1;
         }
       }
     }
@@ -1786,8 +1879,15 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       return error;
     }
 
-    // write file: last execution time stamp
-    error = File_printLine(&fileHandle,"%"PRIu64,executeEndDateTime);
+    // write file: last execution time stamp+state+error code+error data
+    error = File_printLine(&fileHandle,
+                           "%"PRIu64" %s %s %u %s",
+                           executeEndDateTime,
+                           Archive_archiveTypeToString(archiveType),
+                           Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
+                           jobNode->runningInfo.lastErrorCode,
+                           String_cString(jobNode->runningInfo.lastErrorData)
+                          );
     if (error != ERROR_NONE)
     {
       File_close(&fileHandle);
@@ -1795,7 +1895,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       return error;
     }
 
-    // write file: last execution time stamp+type
+    // write file: last execution time stamp+type+state+message
     for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
     {
       // get last executed date/time
@@ -1811,7 +1911,11 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       // write <last execution time stamp>+<type>
       if (lastExecutedDateTime > 0LL)
       {
-        error = File_printLine(&fileHandle,"%"PRIu64" %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType));
+        error = File_printLine(&fileHandle,
+                               "%"PRIu64" %s",
+                               lastExecutedDateTime,
+                               Archive_archiveTypeToString(archiveType)
+                              );
         if (error != ERROR_NONE)
         {
           File_close(&fileHandle);

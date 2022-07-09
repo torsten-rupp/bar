@@ -1155,7 +1155,7 @@ LOCAL_INLINE bool isSlavePaired(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getSlaveStateText(ServerStates slaveState)
+LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 {
   const char *stateText;
 
@@ -10258,7 +10258,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 *            jobUUID=<uuid>
 *          Result:
 *            lastExecutedDateTime=<time stamp>
-*            lastErrorMessage=<text>
+*            lastErrorCode=<n>
+*            lastErrorData=<text>
 *            executionCountNormal=<n>
 *            executionCountFull=<n>
 *            executionCountIncremental=<n>

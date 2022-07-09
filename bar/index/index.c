@@ -89,8 +89,6 @@ const IndexId INDEX_ID_ANY  = {INDEX_TYPE_NONE,-1LL};
 #define INDEX_OPEN_MASK_MODE  0x0000000F
 #define INDEX_OPEN_MASK_FLAGS 0xFFFF0000
 
-#define DATABASE_TIMEOUT (5*60*MS_PER_SECOND)
-
 // TODO:
 #define MAX_SQL_COMMAND_LENGTH (2*4096)
 
@@ -1260,7 +1258,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                     &entityId,
                                     NULL,  // archiveType,
                                     NULL,  // createdDateTime,
-                                    NULL,  // lastErrorMessage
+                                    NULL,  // lastErrorCode
+                                    NULL,  // lastErrorData
                                     NULL,  // totalSize
                                     NULL,  // totalEntryCount
                                     NULL,  // totalEntrySize
@@ -1299,7 +1298,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                   &uuidId,
                                   NULL,  // jobUUID
                                   NULL,  // lastCheckedDateTime
-                                  NULL,  // lastErrorMessage
+                                  NULL,  // lastErrorCode
+                                  NULL,  // lastErrorData
                                   NULL,  // size
                                   NULL,  // totalEntryCount
                                   NULL  // totalEntrySize

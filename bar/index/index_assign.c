@@ -874,7 +874,8 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                                   &entityId,
                                   NULL,  // archiveType,
                                   NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage
+                                  NULL,  // lastErrorCode
+                                  NULL,  // lastErrorData
                                   NULL,  // totalSize
                                   NULL,  // totalEntryCount
                                   NULL,  // totalEntrySize
