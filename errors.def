@@ -511,7 +511,7 @@ ERROR READ_DIRECTORY                   TR("read directory fail")
 ERROR FILE_EXISTS_
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),"file '%s' already exists",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR("file '%s' already exists"),ERROR_DATA);
   }
   else
   {

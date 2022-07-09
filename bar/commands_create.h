@@ -84,6 +84,7 @@
 *          isAbortedFunction            - is abort check callback (can be
 *                                         NULL)
 *          isAbortedUserData            - user data for is aborted check
+*          logHandle                    - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -

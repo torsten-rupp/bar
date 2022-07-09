@@ -26,44 +26,44 @@ CREATE INDEX jobUUID ON uuids(jobUUID);
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
- id                        BIGSERIAL PRIMARY KEY NOT NULL,
- jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
- scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
- hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
- userName                  TEXT,
- created                   TIMESTAMP DEFAULT NULL,
- type                      INT DEFAULT NULL,
- parentJobUUID             INT DEFAULT 0,
- bidFlag                   BOOLEAN DEFAULT FALSE,
- lockedCount               INT DEFAULT 0,
- deletedFlag               BOOLEAN DEFAULT FALSE,
+  id                        BIGSERIAL PRIMARY KEY NOT NULL,
+  jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
+  scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
+  hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
+  userName                  TEXT,
+  created                   TIMESTAMP DEFAULT NULL,
+  type                      INT DEFAULT NULL,
+  parentJobUUID             INT DEFAULT 0,
+  bidFlag                   BOOLEAN DEFAULT FALSE,
+  lockedCount               INT DEFAULT 0,
+  deletedFlag               BOOLEAN DEFAULT FALSE,
 
-  // Note: updated via Index_updateEntitiesInfos()
- totalEntryCount           BIGINT DEFAULT 0,
- totalEntrySize            BIGINT DEFAULT 0,
+   // Note: updated via Index_updateEntitiesInfos()
+  totalEntryCount           BIGINT DEFAULT 0,
+  totalEntrySize            BIGINT DEFAULT 0,
 
- totalFileCount            BIGINT DEFAULT 0,
- totalFileSize             BIGINT DEFAULT 0,
- totalImageCount           BIGINT DEFAULT 0,
- totalImageSize            BIGINT DEFAULT 0,
- totalDirectoryCount       BIGINT DEFAULT 0,
- totalLinkCount            BIGINT DEFAULT 0,
- totalHardlinkCount        BIGINT DEFAULT 0,
- totalHardlinkSize         BIGINT DEFAULT 0,
- totalSpecialCount         BIGINT DEFAULT 0,
+  totalFileCount            BIGINT DEFAULT 0,
+  totalFileSize             BIGINT DEFAULT 0,
+  totalImageCount           BIGINT DEFAULT 0,
+  totalImageSize            BIGINT DEFAULT 0,
+  totalDirectoryCount       BIGINT DEFAULT 0,
+  totalLinkCount            BIGINT DEFAULT 0,
+  totalHardlinkCount        BIGINT DEFAULT 0,
+  totalHardlinkSize         BIGINT DEFAULT 0,
+  totalSpecialCount         BIGINT DEFAULT 0,
 
- totalEntryCountNewest     BIGINT DEFAULT 0,
- totalEntrySizeNewest      BIGINT DEFAULT 0,
+  totalEntryCountNewest     BIGINT DEFAULT 0,
+  totalEntrySizeNewest      BIGINT DEFAULT 0,
 
- totalFileCountNewest      BIGINT DEFAULT 0,
- totalFileSizeNewest       BIGINT DEFAULT 0,
- totalImageCountNewest     BIGINT DEFAULT 0,
- totalImageSizeNewest      BIGINT DEFAULT 0,
- totalDirectoryCountNewest BIGINT DEFAULT 0,
- totalLinkCountNewest      BIGINT DEFAULT 0,
- totalHardlinkCountNewest  BIGINT DEFAULT 0,
- totalHardlinkSizeNewest   BIGINT DEFAULT 0,
- totalSpecialCountNewest   BIGINT DEFAULT 0,
+  totalFileCountNewest      BIGINT DEFAULT 0,
+  totalFileSizeNewest       BIGINT DEFAULT 0,
+  totalImageCountNewest     BIGINT DEFAULT 0,
+  totalImageSizeNewest      BIGINT DEFAULT 0,
+  totalDirectoryCountNewest BIGINT DEFAULT 0,
+  totalLinkCountNewest      BIGINT DEFAULT 0,
+  totalHardlinkCountNewest  BIGINT DEFAULT 0,
+  totalHardlinkSizeNewest   BIGINT DEFAULT 0,
+  totalSpecialCountNewest   BIGINT DEFAULT 0,
 
   // Note: redundancy for faster access
   uuidId                   BIGINT DEFAULT 0  // no foreign key reference
@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS storages(
   mode                      INT DEFAULT ${MODE_MANUAL},
 
   lastChecked               TIMESTAMP DEFAULT '1970-01-01 00:00:00',
+//TODO: errorCode, errorMessage -> errorData
   errorMessage              TEXT,
   deletedFlag               BOOLEAN DEFAULT FALSE,
 

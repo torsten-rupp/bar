@@ -2594,7 +2594,8 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                 &entityId,
                                 NULL,  // archiveType
                                 NULL,  // createdDateTime
-                                NULL,  // lastErrorMessage
+                                NULL,  // lastErrorCode
+                                NULL,  // lastErrorData
                                 NULL,  // totalSize
                                 NULL,  // totalEntryCount
                                 NULL,  // totalEntrySize
@@ -2787,7 +2788,8 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
                                &entityId,
                                &archiveType,
                                &createdDateTime,
-                               NULL,  // lastErrorMessage
+                               NULL,  // lastErrorCode
+                               NULL,  // lastErrorData
                                &totalSize,
                                &totalEntryCount,
                                &totalEntrySize,
@@ -3544,7 +3546,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                       &entityId,
                                       &archiveType,
                                       &createdDateTime,
-                                      NULL,  // lastErrorMessage
+                                      NULL,  // lastErrorCode
+                                      NULL,  // lastErrorData
                                       NULL,  // totalSize,
                                       NULL,  // totalEntryCount,
                                       NULL,  // totalEntrySize,
@@ -5367,9 +5370,12 @@ NULL,//                                                        scheduleTitle,
                                              ? 100.0-(jobNode->statusInfo.storage.totalSize*100.0)/jobNode->statusInfo.total.size
                                              : 0.0;
 
-    // store last executed date/time, last error message
+    // store last executed date/time, last error code/message
     jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
-    String_setCString(jobNode->runningInfo.lastErrorMessage,Error_getText(jobNode->runningInfo.error));
+    jobNode->runningInfo.lastErrorCode        = Error_getCode(jobNode->runningInfo.error);
+    jobNode->runningInfo.lastErrorNumber      = Error_getErrno(jobNode->runningInfo.error);
+    String_setCString(jobNode->runningInfo.lastErrorData,Error_getData(jobNode->runningInfo.error));
+//    String_setCString(jobNode->runningInfo.lastErrorText,Error_getText(jobNode->runningInfo.error));
 
     // log job result
     switch (jobNode->jobType)
@@ -10204,7 +10210,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu",
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -10229,7 +10235,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
                           jobNode->runningInfo.lastExecutedDateTime,
-                          jobNode->runningInfo.lastErrorMessage,
+                          jobNode->runningInfo.lastErrorCode,
+                          jobNode->runningInfo.lastErrorData,
                           jobNode->runningInfo.estimatedRestTime
                          );
     }
@@ -10299,9 +10306,10 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
+                        "lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
                         jobNode->runningInfo.lastExecutedDateTime,
-                        jobNode->runningInfo.lastErrorMessage,
+                        jobNode->runningInfo.lastErrorCode,
+                        jobNode->runningInfo.lastErrorData,
                         jobNode->executionCount.normal,
                         jobNode->executionCount.full,
                         jobNode->executionCount.incremental,
@@ -10991,11 +10999,11 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            volumeNumber=<number>
 *            volumeProgress=<n [0..100]>
 *            requestedVolumeNumber=<n>
+*            message=<text>
 *            entriesPerSecond=<n [1/s]>
 *            bytesPerSecond=<n [bytes/s]>
 *            storageBytesPerSecond=<n [bytes/s]>
 *            estimatedRestTime=<n [s]>
-*            message=<text>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -11028,11 +11036,11 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%s errorCode=%u errorNumber=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%s errorCode=%u errorNumber=%u errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
-                        Error_getCode(jobNode->runningInfo.error),
-                        Error_getErrno(jobNode->runningInfo.error),
-                        Error_getData(jobNode->runningInfo.error),
+                        jobNode->runningInfo.lastErrorCode,
+                        jobNode->runningInfo.lastErrorNumber,
+                        jobNode->runningInfo.lastErrorData,
                         jobNode->statusInfo.done.count,
                         jobNode->statusInfo.done.size,
                         jobNode->statusInfo.total.count,
@@ -15573,7 +15581,8 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 *            jobUUID=<uuid> \
 *            name=<name> \
 *            lastExecutedDateTime=<time stamp [s]> \
-*            lastErrorMessage=<text> \
+*            lastErrorCode=<n> \
+*            lastErrorData=<text> \
 *            totalSize=<n> \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
@@ -15589,7 +15598,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     IndexId uuidId;
     String  jobUUID;
     uint64  lastExecutedDateTime;
-    String  lastErrorMessage;
+    uint    lastErrorCode;
+    String  lastErrorData;
     uint64  totalSize;
     ulong   totalEntryCount;
     uint64  totalEntrySize;
@@ -15618,7 +15628,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
     UNUSED_VARIABLE(userData);
 
-    String_delete(uuidNode->lastErrorMessage);
+    String_delete(uuidNode->lastErrorData);
     String_delete(uuidNode->jobUUID);
   }
 
@@ -15628,7 +15638,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   IndexModeSet     indexModeSet;
   String           name;
   UUIDList         uuidList;
-  String           lastErrorMessage;
+  uint             lastErrorCode;
+  String           lastErrorData;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          uuidId;
@@ -15682,7 +15693,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
   // init variables
   List_init(&uuidList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeUUIDNode,NULL));
-  lastErrorMessage = String_new();
+  lastErrorData = String_new();
 
   // get UUIDs from database (Note: store into list to avoid dead-lock in job list)
   error = Index_initListUUIDs(&indexQueryHandle,
@@ -15695,7 +15706,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                              );
   if (error != ERROR_NONE)
   {
-    String_delete(lastErrorMessage);
+    String_delete(lastErrorData);
     List_done(&uuidList);
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init uuid list fail");
@@ -15708,7 +15719,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                               &uuidId,
                               jobUUID,
                               &lastExecutedDateTime,
-                              lastErrorMessage,
+                              &lastErrorCode,
+                              lastErrorData,
                               &totalSize,
                               &totalEntryCount,
                               &totalEntrySize
@@ -15723,7 +15735,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     uuidNode->uuidId               = uuidId;
     uuidNode->jobUUID              = String_duplicate(jobUUID);
     uuidNode->lastExecutedDateTime = lastExecutedDateTime;
-    uuidNode->lastErrorMessage     = String_duplicate(lastErrorMessage);
+    uuidNode->lastErrorCode        = lastErrorCode;
+    uuidNode->lastErrorData        = String_duplicate(lastErrorData);
     uuidNode->totalSize            = totalSize;
     uuidNode->totalEntryCount      = totalEntryCount;
     uuidNode->totalEntrySize       = totalEntrySize;
@@ -15750,12 +15763,13 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
       // send result
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "uuidId=%"PRIu64" jobUUID=%S name=%'S lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                          "uuidId=%"PRIu64" jobUUID=%S name=%'S lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                           uuidNode->uuidId,
                           uuidNode->jobUUID,
                           name,
                           uuidNode->lastExecutedDateTime,
-                          uuidNode->lastErrorMessage,
+                          uuidNode->lastErrorCode,
+                          uuidNode->lastErrorData,
                           uuidNode->totalSize,
                           uuidNode->totalEntryCount,
                           uuidNode->totalEntrySize
@@ -15778,7 +15792,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
       if (!exitsFlag)
       {
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0",
+                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0",
                             jobNode->job.uuid,
                             jobNode->name
                            );
@@ -15789,7 +15803,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(lastErrorMessage);
+  String_delete(lastErrorData);
   List_done(&uuidList);
   String_delete(name);
 }
@@ -15814,7 +15828,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 *            scheduleUUID=<uuid> \
 *            archiveType=<type> \
 *            createdDateTime=<time stamp [s]> \
-*            lastErrorMessage=<error message>
+*            lastErrorCode=<n>
+*            lastErrorData=<text>
 *            totalSize=<n> \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
@@ -15840,7 +15855,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   StaticString         (scheduleUUID,MISC_UUID_STRING_LENGTH);
   uint64               createdDateTime;
   ArchiveTypes         archiveType;
-  String               lastErrorMessage;
+  uint                 lastErrorCode;
+  String               lastErrorData;
   uint64               totalSize;
   uint                 totalEntryCount;
   uint64               totalEntrySize;
@@ -15892,8 +15908,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // initialize variables
-  jobName          = String_new();
-  lastErrorMessage = String_new();
+  jobName       = String_new();
+  lastErrorData = String_new();
 
   // get entities
   error = Index_initListEntities(&indexQueryHandle,
@@ -15913,7 +15929,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init entity list fail");
-    String_delete(lastErrorMessage);
+    String_delete(lastErrorData);
     String_delete(jobName);
     String_delete(name);
     return;
@@ -15926,7 +15942,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                 &entityId,
                                 &archiveType,
                                 &createdDateTime,
-                                lastErrorMessage,
+                                &lastErrorCode,
+                                lastErrorData,
                                 &totalSize,
                                 &totalEntryCount,
                                 &totalEntrySize,
@@ -15964,7 +15981,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%"PRIindexId" archiveType=%s createdDateTime=%"PRIu64" lastErrorMessage=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
+                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%"PRIindexId" archiveType=%s createdDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -15972,7 +15989,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                         entityId,
                         Archive_archiveTypeToString(archiveType),
                         createdDateTime,
-                        lastErrorMessage,
+                        lastErrorCode,
+                        lastErrorData,
                         totalSize,
                         totalEntryCount,
                         totalEntrySize,
@@ -15984,7 +16002,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(lastErrorMessage);
+  String_delete(lastErrorData);
   String_delete(jobName);
   String_delete(name);
 }

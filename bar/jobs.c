@@ -1097,7 +1097,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecondFilter       );
   Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecondFilter     );
 
-  String_delete(jobNode->runningInfo.lastErrorMessage);
+  String_delete(jobNode->runningInfo.lastErrorData);
 
   String_delete(jobNode->volumeMessage);
 
@@ -1283,7 +1283,9 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->volumeUnloadFlag                 = FALSE;
 
   jobNode->runningInfo.lastExecutedDateTime = 0LL;
-  jobNode->runningInfo.lastErrorMessage     = String_new();
+  jobNode->runningInfo.lastErrorCode        = 0;
+  jobNode->runningInfo.lastErrorNumber      = 0;
+  jobNode->runningInfo.lastErrorData        = String_new();
 
   Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecondFilter,     10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
@@ -1358,7 +1360,9 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->volumeUnloadFlag                 = FALSE;
 
   newJobNode->runningInfo.lastExecutedDateTime = 0LL;
-  newJobNode->runningInfo.lastErrorMessage     = String_new();
+  newJobNode->runningInfo.lastErrorCode        = 0;
+  newJobNode->runningInfo.lastErrorNumber      = 0;
+  newJobNode->runningInfo.lastErrorData        = String_new();
 
   Misc_performanceFilterInit(&newJobNode->runningInfo.entriesPerSecondFilter,     10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);

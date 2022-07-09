@@ -223,13 +223,17 @@ typedef struct JobNode
   struct
   {
     uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
-    String            lastErrorMessage;
+    uint              lastErrorCode;
+    uint              lastErrorNumber;
+    String            lastErrorData;
+
+//    String            lastMessage;
 
     PerformanceFilter entriesPerSecondFilter;
     PerformanceFilter bytesPerSecondFilter;
     PerformanceFilter storageBytesPerSecondFilter;
 
-    Errors            error;                            // error code
+    Errors            error;                            // error
 
     double            entriesPerSecond;                 // average processed entries last 10s [1/s]
     double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
