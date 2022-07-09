@@ -223,13 +223,15 @@ typedef struct JobNode
   struct
   {
     uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
-    String            lastErrorMessage;
+    uint              lastErrorCode;
+    uint              lastErrorNumber;
+    String            lastErrorData;
 
     PerformanceFilter entriesPerSecondFilter;
     PerformanceFilter bytesPerSecondFilter;
     PerformanceFilter storageBytesPerSecondFilter;
 
-    Errors            error;                            // error code
+    Errors            error;                            // error
 
     double            entriesPerSecond;                 // average processed entries last 10s [1/s]
     double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
@@ -1136,6 +1138,19 @@ INLINE bool Job_isSomeActive(void)
 \***********************************************************************/
 
 bool Job_isSomeRunning(void);
+
+/***********************************************************************\
+* Name   : Job_parseState
+* Purpose: parse job state
+* Input  : name     - name of job state
+* Output : jobState  - job state
+*          noStorage - no storage (can be NULL)
+*          dryRun    - dry run (can be NULL)
+* Return : TRUE if parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Job_parseState(const char *name, JobStates *jobState, bool *noStorage, bool *dryRun);
 
 /***********************************************************************\
 * Name   : Job_getStateText

@@ -1335,7 +1335,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 *          jobUUID              - unique job UUID (can be NULL)
 *          lastExecutedDateTime - last executed date/time stamp [s] (can
 *                                 be NULL)
-*          lastErrorMessage     - last error message (can be NULL)
+*          lastErrorCode        - last error code (can be NULL)
+*          lastErrorData        - last error data (can be NULL)
 *          totalSize            - total sum of storage size [bytes] (can
 *                                 be NULL)
 *          totalEntryCount      - total number of entries (can be NULL)
@@ -1349,7 +1350,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        IndexId          *indexId,
                        String           jobUUID,
                        uint64           *lastExecutedDateTime,
-                       String           lastErrorMessage,
+                       uint             *lastErrorCode,
+                       String           lastErrorData,
                        uint64           *totalSize,
                        uint             *totalEntryCount,
                        uint64           *totalEntrySize
@@ -1509,7 +1511,8 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 *          entityId         - index id of entity
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
-*          lastErrorMessage - last storage error message (can be NULL)
+*          lastErrorCode    - last storage error code (can be NULL)
+*          lastErrorData    - last storage error data (can be NULL)
 *          totalSize        - total sum of storage size [bytes] (can be
 *                             NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
@@ -1527,7 +1530,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          IndexId          *entityId,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
-                         String           lastErrorMessage,
+                         uint             *lastErrorCode,
+                         String           lastErrorData,
                          uint64           *totalSize,
                          uint             *totalEntryCount,
                          uint64           *totalEntrySize,

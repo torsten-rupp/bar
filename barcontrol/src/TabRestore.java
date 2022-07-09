@@ -835,7 +835,8 @@ public class TabRestore
     public String  scheduleUUID;                  // schedule UUID
     public String  name;
     public long    lastExecutedDateTime;          // last executed date/time stamp [s]
-    public String  lastErrorMessage;              // last error message
+    public int     lastErrorCode;                 // last error code
+    public String  lastErrorData;                 // last error data
     public long    totalSize;
     public long    totalEntryCount;
     public long    totalEntrySize;
@@ -872,7 +873,8 @@ public class TabRestore
      * @param scheduleUUID schedule uuid
      * @param name job name
      * @param lastExecutedDateTime last executed date/time tamp [s]
-     * @param lastErrorMessage last error message text
+     * @param lastErrorCOde last error code
+     * @param lastErrorData last error message data
      * @param totalSize total size [byte]
      * @param totalEntryCount total number of entries of storage
      * @param totalEntrySize total suf of entry sizes
@@ -882,7 +884,8 @@ public class TabRestore
                   String scheduleUUID,
                   String name,
                   long   lastExecutedDateTime,
-                  String lastErrorMessage,
+                  int    lastErrorCode,
+                  String lastErrorData,
                   long   totalSize,
                   long   totalEntryCount,
                   long   totalEntrySize
@@ -899,7 +902,8 @@ public class TabRestore
       this.scheduleUUID         = scheduleUUID;
       this.name                 = name;
       this.lastExecutedDateTime = lastExecutedDateTime;
-      this.lastErrorMessage     = lastErrorMessage;
+      this.lastErrorCode        = lastErrorCode;
+      this.lastErrorData        = lastErrorData;
       this.totalSize            = totalSize;
       this.totalEntryCount      = totalEntryCount;
       this.totalEntrySize       = totalEntrySize;
@@ -910,7 +914,8 @@ public class TabRestore
      * @param jobUUID job uuid
      * @param name job name
      * @param lastExecutedDateTime last executed date/time tamp [s]
-     * @param lastErrorMessage last error message text
+     * @param lastErrorCOde last error code
+     * @param lastErrorData last error message data
      * @param totalSize total size [byte]
      * @param totalEntryCount total number of entries of storage
      * @param totalEntrySize total suf of entry sizes
@@ -919,7 +924,8 @@ public class TabRestore
                   String jobUUID,
                   String name,
                   long   lastExecutedDateTime,
-                  String lastErrorMessage,
+                  int    lastErrorCode,
+                  String lastErrorData,
                   long   totalSize,
                   long   totalEntryCount,
                   long   totalEntrySize
@@ -930,7 +936,8 @@ public class TabRestore
            (String)null, // scheduleUUID
            name,
            lastExecutedDateTime,
-           lastErrorMessage,
+           lastErrorCode,
+           lastErrorData,
            totalSize,
            totalEntryCount,
            totalEntrySize
@@ -947,7 +954,8 @@ public class TabRestore
       this.scheduleUUID         = otherIndexData.scheduleUUID;
       this.name                 = otherIndexData.name;
       this.lastExecutedDateTime = otherIndexData.lastExecutedDateTime;
-      this.lastErrorMessage     = otherIndexData.lastErrorMessage;
+      this.lastErrorCode        = otherIndexData.lastErrorCode;
+      this.lastErrorData        = otherIndexData.lastErrorData;
       this.totalSize            = otherIndexData.totalSize;
       this.totalEntryCount      = otherIndexData.totalEntryCount;
       this.totalEntrySize       = otherIndexData.totalEntrySize;
@@ -1052,7 +1060,8 @@ public class TabRestore
     public String       scheduleUUID;
     public ArchiveTypes archiveType;
     public long         createdDateTime;
-    public String       lastErrorMessage;     // last error message
+    public int          lastErrorCode;        // last error code
+    public String       lastErrorData;        // last error data
     public long         totalSize;
     public long         totalEntryCount;
     public long         totalEntrySize;
@@ -1091,7 +1100,8 @@ Dprintf.dprintf("");
      * @param scheduleUUID schedule uuid
      * @param archiveType archive type
      * @param createdDateTime create date/time (timestamp)
-     * @param lastErrorMessage last error message text
+     * @param lastErrorCode last error message code
+     * @param lastErrorData last error message data
      * @param totalSize total size [byte]
      * @param totalEntryCount total number of entresi of storage
      * @param totalEntrySize total suf of entry sizes
@@ -1102,7 +1112,8 @@ Dprintf.dprintf("");
                     String       scheduleUUID,
                     ArchiveTypes archiveType,
                     long         createdDateTime,
-                    String       lastErrorMessage,
+                    int          lastErrorCode,
+                    String       lastErrorData,
                     long         totalSize,
                     long         totalEntryCount,
                     long         totalEntrySize,
@@ -1119,7 +1130,8 @@ Dprintf.dprintf("");
       this.scheduleUUID     = scheduleUUID;
       this.archiveType      = archiveType;
       this.createdDateTime  = createdDateTime;
-      this.lastErrorMessage = lastErrorMessage;
+      this.lastErrorCode    = lastErrorCode;
+      this.lastErrorData    = lastErrorData;
       this.totalSize        = totalSize;
       this.totalEntryCount  = totalEntryCount;
       this.totalEntrySize   = totalEntrySize;
@@ -1218,7 +1230,8 @@ Dprintf.dprintf("");
       out.writeObject(scheduleUUID);
       out.writeObject(archiveType);
       out.writeObject(createdDateTime);
-      out.writeObject(lastErrorMessage);
+      out.writeObject(lastErrorCode);
+      out.writeObject(lastErrorData);
       out.writeObject(totalSize);
       out.writeObject(totalEntryCount);
       out.writeObject(totalEntrySize);
@@ -1239,7 +1252,8 @@ Dprintf.dprintf("");
       scheduleUUID     = (String)in.readObject();
       archiveType      = (ArchiveTypes)in.readObject();
       createdDateTime  = (Long)in.readObject();
-      lastErrorMessage = (String)in.readObject();
+      lastErrorData    = (String)in.readObject();
+      lastErrorCode    = (Integer)in.readObject();
       totalSize        = (Long)in.readObject();
       totalEntryCount  = (Long)in.readObject();
       totalEntrySize   = (Long)in.readObject();
@@ -2203,12 +2217,12 @@ Dprintf.dprintf("");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-Dprintf.dprintf("valueMap=%s",valueMap);
                                      long   uuidId               = valueMap.getLong  ("uuidId"              );
                                      String jobUUID              = valueMap.getString("jobUUID"             );
                                      String name                 = valueMap.getString("name"                );
                                      long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                     String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     int    lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
+                                     String lastErrorData        = valueMap.getString("lastErrorData"    );
                                      long   totalSize            = valueMap.getLong  ("totalSize"           );
                                      long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
                                      long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
@@ -2217,7 +2231,8 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                                                                      jobUUID,
                                                                                      name,
                                                                                      lastExecutedDateTime,
-                                                                                     lastErrorMessage,
+                                                                                     lastErrorCode,
+                                                                                     lastErrorData,
                                                                                      totalSize,
                                                                                      totalEntryCount,
                                                                                      totalEntrySize
@@ -2363,7 +2378,8 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                      String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
                                      ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                      long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                     String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                     int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"                 );
+                                     String       lastErrorData    = valueMap.getString("lastErrorData"                 );
                                      long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
                                      long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
@@ -2375,7 +2391,8 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                                                                            scheduleUUID,
                                                                                            archiveType,
                                                                                            createdDateTime,
-                                                                                           lastErrorMessage,
+                                                                                           lastErrorCode,
+                                                                                           lastErrorData,
                                                                                            totalSize,
                                                                                            totalEntryCount,
                                                                                            totalEntrySize,
@@ -4392,7 +4409,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.lastErrorMessage);
+// TODO: code+data
+      label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.lastErrorData);
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4505,7 +4523,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorMessage);
+// TODO: code+data
+      label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorData);
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -7412,7 +7431,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                    String jobUUID              = valueMap.getString("jobUUID"             );
                                    String name                 = valueMap.getString("name"                );
                                    long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                   String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                   int    lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
+                                   String lastErrorData        = valueMap.getString("lastErrorData"       );
                                    long   totalSize            = valueMap.getLong  ("totalSize"           );
                                    long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
                                    long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
@@ -7422,7 +7442,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                                                                    jobUUID,
                                                                                    name,
                                                                                    lastExecutedDateTime,
-                                                                                   lastErrorMessage,
+                                                                                   lastErrorCode,
+                                                                                   lastErrorData,
                                                                                    totalSize,
                                                                                    totalEntryCount,
                                                                                    totalEntrySize
@@ -7446,7 +7467,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                    String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
                                    ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                    long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                   String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                   int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"                 );
+                                   String       lastErrorData    = valueMap.getString("lastErrorData"                 );
                                    long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                    long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
                                    long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
@@ -7466,7 +7488,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                                                                scheduleUUID,
                                                                                archiveType,
                                                                                createdDateTime,
-                                                                               lastErrorMessage,
+                                                                               lastErrorCode,
+                                                                               lastErrorData,
                                                                                totalSize,
                                                                                totalEntryCount,
                                                                                totalEntrySize,

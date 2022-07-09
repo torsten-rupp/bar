@@ -2059,7 +2059,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          IndexId          *entityId,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
-                         String           lastErrorMessage,
+                         uint             *lastErrorCode,
+                         String           lastErrorData,
                          uint64           *totalSize,
                          uint             *totalEntryCount,
                          uint64           *totalEntrySize,
@@ -2077,6 +2078,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
+// TODO:
+if (lastErrorCode != NULL) (*lastErrorCode) = 0;
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
                            &uuidDatabaseId,
                            jobUUID,
@@ -2084,7 +2087,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            scheduleUUID,
                            createdDateTime,
                            archiveType,
-                           lastErrorMessage,
+// TODO:                           lastErrorCode
+                           lastErrorData,
                            totalSize,
                            totalEntryCount,
                            totalEntrySize,

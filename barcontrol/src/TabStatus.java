@@ -2568,7 +2568,7 @@ public class TabStatus
       {
         final ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
-1,//                                 3,  // debugLevel
+                                 3,  // debugLevel
                                  valueMap
                                 );
 
@@ -2657,6 +2657,10 @@ public class TabStatus
         });
       }
       catch (Exception exception)
+      {
+        // ignored
+      }
+      catch (ConnectionError error)
       {
         // ignored
       }
