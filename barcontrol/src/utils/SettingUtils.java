@@ -2370,7 +2370,7 @@ throwable.printStackTrace();
       }
 
       // close file
-      output.close();
+      output.close(); output = null;
 
       // reset modfied, save last external modified time
       modifiedFlag = false;

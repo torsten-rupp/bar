@@ -827,10 +827,7 @@ class ReadThread extends Thread
                       catch (Throwable throwable)
                       {
                         // ignored
-                        if (Settings.debugLevel > 0)
-                        {
-                          BARControl.printStackTrace(throwable);
-                        }
+                        BARControl.logThrowable(throwable);
                       }
                     }
 
@@ -1356,8 +1353,9 @@ BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
 public class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int              PROTOCOL_VERSION_MAJOR = 7;
-  private final static int              PROTOCOL_VERSION_MINOR = 0;
+  public final static int               PROTOCOL_VERSION_MAJOR = 7;
+  public final static int               PROTOCOL_VERSION_MINOR = 0;
+  public final static String            PROTOCOL_VERSION = PROTOCOL_VERSION_MAJOR+"."+PROTOCOL_VERSION_MINOR;
 
   public final static String            DEFAULT_CA_FILE_NAME          = "bar-ca.pem";           // default certificate authority file name
   public final static String            DEFAULT_CERTIFICATE_FILE_NAME = "bar-server-cert.pem";  // default certificate file name
@@ -3794,24 +3792,17 @@ throw new Error("NYI");
       catch (InvalidKeyException exception)
       {
         // ignored
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
+        BARControl.logThrowable(exception);
       }
       catch (IllegalBlockSizeException exception)
       {
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
+        // ignored
+        BARControl.logThrowable(exception);
       }
       catch (BadPaddingException exception)
       {
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
+        // ignored
+        BARControl.logThrowable(exception);
       }
       if (encryptedPasswordBytes == null)
       {
