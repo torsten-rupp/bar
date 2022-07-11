@@ -120,13 +120,13 @@ public class BARWidgets
   private final static Image IMAGE_DIRECTORY = Widgets.loadImage(Display.getDefault(),"directory.png");
 
   /** create new text widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @return text widget
    */
-  public static Text newText(Composite            parentComposite,
+  public static Text newText(Composite            composite,
                              String               toolTipText,
                              final WidgetVariable widgetVariable,
                              final Listener       listener
@@ -134,7 +134,7 @@ public class BARWidgets
   {
     final Text text;
 
-    text = Widgets.newText(parentComposite,SWT.LEFT|SWT.BORDER);
+    text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER);
     text.setToolTipText(toolTipText);
     text.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
     text.addModifyListener(new ModifyListener()
@@ -229,28 +229,28 @@ public class BARWidgets
   }
 
   /** create new text widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @return text widget
    */
-  public static Text newText(Composite      parentComposite,
+  public static Text newText(Composite      composite,
                              String         toolTipText,
                              WidgetVariable widgetVariable
                             )
   {
-    return newText(parentComposite,toolTipText,widgetVariable,(Listener)null);
+    return newText(composite,toolTipText,widgetVariable,(Listener)null);
   }
 
   /** create new number widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @param min,max min/max value
    * @return number widget
    */
-  public static Spinner newNumber(Composite            parentComposite,
+  public static Spinner newNumber(Composite            composite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
                                   final Listener       listener,
@@ -260,7 +260,7 @@ public class BARWidgets
   {
     final Spinner spinner;
 
-    spinner = Widgets.newSpinner(parentComposite);
+    spinner = Widgets.newSpinner(composite);
     spinner.setToolTipText(toolTipText);
     spinner.setMinimum(min);
     spinner.setMaximum(max);
@@ -379,31 +379,31 @@ public class BARWidgets
   }
 
   /** create new number widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param min,max min/max value
    * @return number widget
    */
-  public static Spinner newNumber(Composite      parentComposite,
+  public static Spinner newNumber(Composite      composite,
                                   String         toolTipText,
                                   WidgetVariable widgetVariable,
                                   int            min,
                                   int            max
                                  )
   {
-    return newNumber(parentComposite,toolTipText,widgetVariable,(Listener)null,min,max);
+    return newNumber(composite,toolTipText,widgetVariable,(Listener)null,min,max);
   }
 
   /** create new checkbox widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @param text checkbox text
    * @return button widget
    */
-  public static Button newCheckbox(Composite            parentComposite,
+  public static Button newCheckbox(Composite            composite,
                                    String               toolTipText,
                                    final WidgetVariable widgetVariable,
                                    final Listener       listener,
@@ -412,7 +412,7 @@ public class BARWidgets
   {
     final Button button;
 
-    button = Widgets.newCheckbox(parentComposite,text);
+    button = Widgets.newCheckbox(composite,text);
     button.setToolTipText(toolTipText);
 
     button.addSelectionListener(new SelectionListener()
@@ -479,30 +479,30 @@ public class BARWidgets
   }
 
   /** create new checkbox widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param text checkbox text
    * @return button widget
    */
-  public static Button newCheckbox(Composite      parentComposite,
+  public static Button newCheckbox(Composite      composite,
                                    String         toolTipText,
                                    WidgetVariable widgetVariable,
                                    String         text
                                   )
   {
-    return newCheckbox(parentComposite,toolTipText,widgetVariable,(Listener)null,text);
+    return newCheckbox(composite,toolTipText,widgetVariable,(Listener)null,text);
   }
 
   /** create new radio widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @param text checkbox text
    * @return button widget
    */
-  public static Button newRadio(Composite            parentComposite,
+  public static Button newRadio(Composite            composite,
                                 String               toolTipText,
                                 final WidgetVariable widgetVariable,
                                 final Listener       listener,
@@ -511,7 +511,7 @@ public class BARWidgets
   {
     final Button button;
 
-    button = Widgets.newRadio(parentComposite,text);
+    button = Widgets.newRadio(composite,text);
     button.setToolTipText(toolTipText);
 
     button.addSelectionListener(new SelectionListener()
@@ -578,19 +578,19 @@ public class BARWidgets
   }
 
   /** create new radio widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param text checkbox text
    * @return button widget
    */
-  public static Button newRadio(Composite      parentComposite,
+  public static Button newRadio(Composite      composite,
                                 String         toolTipText,
                                 WidgetVariable widgetVariable,
                                 String         text
                                )
   {
-    return newRadio(parentComposite,toolTipText,widgetVariable,(Listener)null,text);
+    return newRadio(composite,toolTipText,widgetVariable,(Listener)null,text);
   }
 
   /** get size
@@ -610,7 +610,7 @@ public class BARWidgets
     i = 0;
     while (i < items.length/2)
     {
-      if (string.equals(items[i*2+0]))
+      if (string.equals((String)items[i*2+0]))
       {
         n = (Long)items[i*2+1];
         break;
@@ -722,21 +722,21 @@ public class BARWidgets
   }
 
   /** create new byte size widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable or null
    * @param listener listener or null
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize(Composite            parentComposite,
+  public static Combo newByteSize(Composite            composite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
                                   final Listener       listener,
                                   final Object[]       items
                                  )
   {
-    final Shell  shell = parentComposite.getShell();
+    final Shell  shell = composite.getShell();
     final String values[];
     final Combo  combo;
 
@@ -750,7 +750,7 @@ public class BARWidgets
     }
 
     // create combo widget
-    combo = Widgets.newCombo(parentComposite);
+    combo = Widgets.newCombo(composite);
     combo.setToolTipText(toolTipText);
     combo.setItems(values);
     combo.setData("showedErrorDialog",false);
@@ -763,18 +763,29 @@ public class BARWidgets
         public void modifyText(ModifyEvent modifyEvent)
         {
           Combo widget = (Combo)modifyEvent.widget;
-          long  n0     = getSize(items,widget.getText(),0);
-          long  n1;
 
-          if (listener != null)
+          Color color = COLOR_MODIFIED;
+          try
           {
-            n1 = getSize(items,listener.getString(widgetVariable),0);
+            long  n0 = getSize(items,widget.getText());
+            long  n1;
+
+            if (listener != null)
+            {
+              n1 = getSize(items,listener.getString(widgetVariable),0);
+            }
+            else
+            {
+              n1 = getSize(items,widgetVariable.getString(),0);
+            }
+            if (n0 == n1) color = null;
           }
-          else
+          catch (NumberFormatException exception)
           {
-            n1 = getSize(items,widgetVariable.getString(),0);
+            // ignored
           }
-          widget.setBackground((n0 != n1) ? COLOR_MODIFIED : null);
+
+          widget.setBackground(color);
           widget.setData("showedErrorDialog",false);
         }
       });
@@ -786,7 +797,7 @@ public class BARWidgets
         Combo  widget = (Combo)selectionEvent.widget;
 
         String string = widget.getText();
-        if (!string.isEmpty())
+//        if (!string.isEmpty())
         {
           long n = 0;
 
@@ -826,7 +837,7 @@ public class BARWidgets
         Combo  widget = (Combo)selectionEvent.widget;
 
         String string = widget.getText();
-        if (!string.isEmpty())
+//        if (!string.isEmpty())
         {
           long n = 0;
 
@@ -927,8 +938,7 @@ public class BARWidgets
             @Override
             public String getString(WidgetVariable variable)
             {
-
-              return Units.formatSize(getSize(items,variable.getString(),0));
+              return getSizeString(items,variable.getString(),0);
             }
           };
       Widgets.addModifyListener(widgetModifiedListener);
@@ -960,69 +970,69 @@ public class BARWidgets
   }
 
   /** create new byte size widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize(Composite      parentComposite,
+  public static Combo newByteSize(Composite      composite,
                                   String         toolTipText,
                                   WidgetVariable widgetVariable,
                                   Object[]       items
                                  )
   {
-    return newByteSize(parentComposite,toolTipText,widgetVariable,(Listener)null,items);
+    return newByteSize(composite,toolTipText,widgetVariable,(Listener)null,items);
   }
 
   /** create new byte size widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param listener listener or null
    * @param values combo values
    * @return number widgets
    */
-  public static Combo newByteSize(Composite      parentComposite,
+  public static Combo newByteSize(Composite      composite,
                                   String         toolTipText,
                                   final Listener listener,
                                   final Object[] items
                                  )
   {
-    return newByteSize(parentComposite,toolTipText,(WidgetVariable)null,listener,items);
+    return newByteSize(composite,toolTipText,(WidgetVariable)null,listener,items);
   }
 
   /** create new byte size widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize(Composite parentComposite,
+  public static Combo newByteSize(Composite composite,
                                   String    toolTipText,
                                   Object[]  items
                                  )
   {
-    return newByteSize(parentComposite,toolTipText,(Listener)null,items);
+    return newByteSize(composite,toolTipText,(Listener)null,items);
   }
   /** create new time widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @param values combo values [text,value]
    * @return number widget
    */
-  public static Combo newTime(Composite            parentComposite,
+  public static Combo newTime(Composite            composite,
                               String               toolTipText,
                               final WidgetVariable widgetVariable,
                               String[]             values,
                               final Listener       listener
                              )
   {
-    final Shell shell = parentComposite.getShell();
+    final Shell shell = composite.getShell();
     final Combo combo;
 
-    combo = Widgets.newCombo(parentComposite);
+    combo = Widgets.newCombo(composite);
     combo.setToolTipText(toolTipText);
     combo.setItems(values);
     combo.setData("showedErrorDialog",false);
@@ -1327,44 +1337,44 @@ public class BARWidgets
   }
 
   /** create new time widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param values combo values
    * @return number widget
    */
-  public static Combo newTime(Composite      parentComposite,
+  public static Combo newTime(Composite      composite,
                               String         toolTipText,
                               WidgetVariable widgetVariable,
                               String[]       values
                              )
   {
-    return newTime(parentComposite,toolTipText,widgetVariable,values,(Listener)null);
+    return newTime(composite,toolTipText,widgetVariable,values,(Listener)null);
   }
 
   /** create new path name widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @return composite
    */
-  public static Composite newDirectory(Composite            parentComposite,
+  public static Composite newDirectory(Composite            composite,
                                        String               toolTipText,
                                        final WidgetVariable widgetVariable,
                                        final Listener       listener
                                       )
   {
-    final Shell shell = parentComposite.getShell();
-    Composite   composite;
+    final Shell shell = composite.getShell();
+    Composite   subComposite;
     final Text  text;
     Button      button;
 
-    composite = Widgets.newComposite(parentComposite,SWT.NONE);
-    composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    subComposite = Widgets.newComposite(composite,SWT.NONE);
+    subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+    Widgets.layout(subComposite,0,0,TableLayoutData.WE);
     {
-      text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER);
+      text = Widgets.newText(subComposite,SWT.LEFT|SWT.BORDER);
       text.setToolTipText(toolTipText);
       text.setText(widgetVariable.getString());
       Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -1422,7 +1432,7 @@ public class BARWidgets
         }
       });
 
-      button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
       button.setToolTipText(BARControl.tr("Select path name. Ctrl+Click to select local directory."));
       Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
@@ -1457,25 +1467,25 @@ public class BARWidgets
       });
     }
 
-    return composite;
+    return subComposite;
   }
 
   /** create new path name widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @return composite
    */
-  public static Composite newDirectory(Composite            parentComposite,
+  public static Composite newDirectory(Composite            composite,
                                        String               toolTipText,
                                        final WidgetVariable widgetVariable
                                       )
   {
-    return newDirectory(parentComposite,toolTipText,widgetVariable,(Listener)null);
+    return newDirectory(composite,toolTipText,widgetVariable,(Listener)null);
   }
 
   /** create new file name widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
@@ -1483,7 +1493,7 @@ public class BARWidgets
    * @param defaultFileExtension default file extension pattern or null
    * @return composite
    */
-  public static Composite newFile(Composite            parentComposite,
+  public static Composite newFile(Composite            composite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
                                   final Listener       listener,
@@ -1491,16 +1501,16 @@ public class BARWidgets
                                   final String         defaultFileExtension
                                  )
   {
-    final Shell shell = parentComposite.getShell();
-    Composite   composite;
+    final Shell shell = composite.getShell();
+    Composite   subComposite;
     final Text  text;
     Button      button;
 
-    composite = Widgets.newComposite(parentComposite,SWT.NONE);
-    composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    subComposite = Widgets.newComposite(composite,SWT.NONE);
+    subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+    Widgets.layout(subComposite,0,0,TableLayoutData.WE);
     {
-      text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER);
+      text = Widgets.newText(subComposite,SWT.LEFT|SWT.BORDER);
       text.setToolTipText(toolTipText);
       text.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
       Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -1581,7 +1591,7 @@ public class BARWidgets
         }
       });
 
-      button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
       button.setToolTipText(BARControl.tr("Select file name. Ctrl+Click to select local file."));
       Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
@@ -1620,25 +1630,25 @@ public class BARWidgets
       });
     }
 
-    return composite;
+    return subComposite;
   }
 
   /** create new file name widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
    * @return composite
    */
-  public static Composite newFile(Composite            parentComposite,
+  public static Composite newFile(Composite            composite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
                                   final String[]       fileExtensions,
                                   final String         defaultFileExtension
                                  )
   {
-    return newFile(parentComposite,
+    return newFile(composite,
                    toolTipText,
                    widgetVariable,
                    (Listener)null,
@@ -1648,13 +1658,13 @@ public class BARWidgets
   }
 
   /** create new password widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param listener listener or null
    * @return text widget
    */
-  public static Text newPassword(Composite            parentComposite,
+  public static Text newPassword(Composite            composite,
                                  String               toolTipText,
                                  final WidgetVariable widgetVariable,
                                  final Listener       listener
@@ -1662,7 +1672,7 @@ public class BARWidgets
   {
     final Text text;
 
-    text = Widgets.newText(parentComposite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+    text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
     text.setToolTipText(toolTipText);
     text.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
     text.addModifyListener(new ModifyListener()
@@ -1757,17 +1767,17 @@ public class BARWidgets
   }
 
   /** create new password widget
-   * @param parentComposite parent composite
+   * @param composite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @return text widget
    */
-  public static Text newPassword(Composite      parentComposite,
+  public static Text newPassword(Composite      composite,
                                  String         toolTipText,
                                  WidgetVariable widgetVariable
                                 )
   {
-    return newPassword(parentComposite,toolTipText,widgetVariable,(Listener)null);
+    return newPassword(composite,toolTipText,widgetVariable,(Listener)null);
   }
 
   enum WidgetTypes
@@ -1820,11 +1830,26 @@ public class BARWidgets
             label = Widgets.newLabel(subSubComposite,BARControl.tr("Max. storage size")+":");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
-            maxStorageSize = Widgets.newCombo(subSubComposite);
-            maxStorageSize.setToolTipText(BARControl.tr("Storage size limit."));
-            maxStorageSize.setItems(new String[]{"","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
+            maxStorageSize = BARWidgets.newByteSize(subSubComposite,
+                                                    BARControl.tr("Storage size limit."),
+                                                    maxStorageSizeVariable,
+                                                    new Object[]{BARControl.tr("unlimited"), 0L,
+                                                                 Units.formatSize(  1*Units.G),  1*Units.G,
+                                                                 Units.formatSize(  2*Units.G),  2*Units.G,
+                                                                 Units.formatSize(  4*Units.G),  4*Units.G,
+                                                                 Units.formatSize(  8*Units.G),  8*Units.G,
+                                                                 Units.formatSize( 64*Units.G), 64*Units.G,
+                                                                 Units.formatSize(128*Units.G),128*Units.G,
+                                                                 Units.formatSize(512*Units.G),512*Units.G,
+                                                                 Units.formatSize(  1*Units.T),  1*Units.T,
+                                                                 Units.formatSize(  2*Units.T),  2*Units.T,
+                                                                 Units.formatSize(  4*Units.T),  4*Units.T,
+                                                                 Units.formatSize(  8*Units.T),  8*Units.T
+                                                                }
+                                                   );
             maxStorageSize.setData("showedErrorDialog",false);
             Widgets.layout(maxStorageSize,0,1,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
+/*
             maxStorageSize.addModifyListener(new ModifyListener()
             {
               @Override
@@ -1987,6 +2012,7 @@ public class BARWidgets
                 }
               });
             }
+*/
           }
           row++;
         }
@@ -4125,214 +4151,34 @@ public class BARWidgets
       subComposite = Widgets.newComposite(this,SWT.NONE);
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        volumeSize = Widgets.newCombo(subComposite);
-        volumeSize.setToolTipText(BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."));
-        volumeSize.setItems(new String[]{"425M","430M","470M","520M","560","650M","660M","720M","850M","2G","3G","3.2G","4G","6.4G","7.2G","8G","20G","25G","40G","50G","80G","100G"});
+        volumeSize = BARWidgets.newByteSize(subComposite,
+                                            BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."),
+                                            volumeSizeVariable,
+                                            new Object[]{Units.formatSize(       425*Units.M ),       425*Units.M,
+                                                         Units.formatSize(       430*Units.M ),       430*Units.M,
+                                                         Units.formatSize(       470*Units.M ),       470*Units.M,
+                                                         Units.formatSize(       520*Units.M ),       520*Units.M,
+                                                         Units.formatSize(       560*Units.M ),       560*Units.M,
+                                                         Units.formatSize(       650*Units.M ),       650*Units.M,
+                                                         Units.formatSize(       660*Units.M ),       660*Units.M,
+                                                         Units.formatSize(       720*Units.M ),       720*Units.M,
+                                                         Units.formatSize(       850*Units.M ),       850*Units.M,
+                                                         Units.formatSize(         2*Units.G ),         2*Units.G,
+                                                         Units.formatSize((long)(3.2*Units.G)),(long)(3.2*Units.G),
+                                                         Units.formatSize(         4*Units.G ),         4*Units.G,
+                                                         Units.formatSize((long)(6.4*Units.G)),(long)(6.4*Units.G),
+                                                         Units.formatSize((long)(7.2*Units.G)),(long)(7.2*Units.G),
+                                                         Units.formatSize(         8*Units.G ),         8*Units.G,
+                                                         Units.formatSize(        20*Units.G ),        20*Units.G,
+                                                         Units.formatSize(        25*Units.G ),        25*Units.G,
+                                                         Units.formatSize(        40*Units.G ),        40*Units.G,
+                                                         Units.formatSize(        50*Units.G ),        50*Units.G,
+                                                         Units.formatSize(        80*Units.G ),        80*Units.G,
+                                                         Units.formatSize(       100*Units.G ),       100*Units.G
+                                                        }
+                                           );
         volumeSize.setData("showedErrorDialog",false);
         Widgets.layout(volumeSize,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
-        volumeSize.addModifyListener(new ModifyListener()
-        {
-          @Override
-          public void modifyText(ModifyEvent modifyEvent)
-          {
-            Combo  widget = (Combo)modifyEvent.widget;
-            String string = widget.getText();
-
-            if (   (volumeSizeVariable != null)
-                && !string.isEmpty()
-               )
-            {
-              Color color = COLOR_MODIFIED;
-              try
-              {
-                long n = Units.parseByteSize(string);
-                if (volumeSizeVariable.getLong() == n) color = null;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
-              widget.setBackground(color);
-              widget.setData("showedErrorDialog",false);
-            }
-          }
-        });
-        volumeSize.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-            Combo  widget = (Combo)selectionEvent.widget;
-            String string = widget.getText();
-
-            if (!string.isEmpty())
-            {
-              try
-              {
-                long    n           = Units.parseByteSize(string);
-                boolean changedFlag = (volumeSizeVariable != null) ? volumeSizeVariable.set(n) : true;
-
-                if (volumeSizeVariable != null)
-                {
-                  volumeSizeVariable.set(n);
-                }
-                widget.setText(Units.formatByteSize(n));
-                widget.setBackground(null);
-
-                long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
-                if (   changedFlag
-                    && ecc.getSelection()
-                    && archivePartSizeFlag.getBoolean()
-                    && (archivePartSize.getLong() > 0)
-                    && ((size%archivePartSize.getLong()) > 0)
-                    && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
-                   )
-                {
-                  Dialogs.warning(composite.getShell(),CD_DVD_BD_INFO);
-                }
-              }
-              catch (NumberFormatException exception)
-              {
-                if (!(Boolean)widget.getData("showedErrorDialog"))
-                {
-                  widget.setData("showedErrorDialog",true);
-                  Dialogs.error(composite.getShell(),
-                                BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",
-                                              string
-                                             )
-                               );
-                  widget.forceFocus();
-                }
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo  widget = (Combo)selectionEvent.widget;
-            String string = widget.getText();
-
-            if (!string.isEmpty())
-            {
-              try
-              {
-                long    n           = Units.parseByteSize(string);
-                boolean changedFlag = (volumeSizeVariable != null) ? volumeSizeVariable.set(n) : true;
-
-                if (volumeSizeVariable != null)
-                {
-                  volumeSizeVariable.set(n);
-                }
-                widget.setText(Units.formatByteSize(n));
-                widget.setBackground(null);
-
-                long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
-                if (   changedFlag
-                    && ecc.getSelection()
-                    && archivePartSizeFlag.getBoolean()
-                    && (archivePartSize.getLong() > 0)
-                    && ((size%archivePartSize.getLong()) > 0)
-                    && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
-                   )
-                {
-                  Dialogs.warning(composite.getShell(),CD_DVD_BD_INFO);
-                }
-              }
-              catch (NumberFormatException exception)
-              {
-                if (!(Boolean)widget.getData("showedErrorDialog"))
-                {
-                  widget.setData("showedErrorDialog",true);
-                  Dialogs.error(composite.getShell(),
-                                BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",
-                                              string
-                                             )
-                               );
-                  widget.forceFocus();
-                }
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-          }
-        });
-        volumeSize.addFocusListener(new FocusListener()
-        {
-          @Override
-          public void focusGained(FocusEvent focusEvent)
-          {
-            Combo widget = (Combo)focusEvent.widget;
-
-            widget.setData("showedErrorDialog",false);
-          }
-          @Override
-          public void focusLost(FocusEvent focusEvent)
-          {
-            Combo  widget = (Combo)focusEvent.widget;
-            String string = widget.getText();
-
-            if (!string.isEmpty())
-            {
-              try
-              {
-                long    n           = Units.parseByteSize(string);
-                boolean changedFlag = (volumeSizeVariable != null) ? volumeSizeVariable.set(n) : true;
-
-                if (volumeSizeVariable != null)
-                {
-                  volumeSizeVariable.set(n);
-                }
-                widget.setText(Units.formatByteSize(n));
-                widget.setBackground(null);
-
-                long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
-                if (   changedFlag
-                    && ecc.getSelection()
-                    && archivePartSizeFlag.getBoolean()
-                    && (archivePartSize.getLong() > 0)
-                    && ((size%archivePartSize.getLong()) > 0)
-                    && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
-                   )
-                {
-                  Dialogs.warning(composite.getShell(),CD_DVD_BD_INFO);
-                }
-              }
-              catch (NumberFormatException exception)
-              {
-                if (!(Boolean)widget.getData("showedErrorDialog"))
-                {
-                  widget.setData("showedErrorDialog",true);
-                  Dialogs.error(composite.getShell(),
-                                BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",
-                                              string
-                                             )
-                               );
-                  widget.forceFocus();
-                }
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-          }
-        });
-        if (volumeSizeVariable != null)
-        {
-          Widgets.addModifyListener(new WidgetModifyListener(volumeSize,volumeSizeVariable)
-          {
-            @Override
-            public void modified(Combo combo, WidgetVariable variable)
-            {
-              combo.setText(Units.formatByteSize(variable.getLong()));
-            }
-          });
-        }
       }
       row++;
 
@@ -4660,177 +4506,40 @@ public class BARWidgets
         Widgets.layout(subComposite,row,1,TableLayoutData.WE);
         {
           volumeSize = Widgets.newCombo(subComposite);
-          volumeSize.setToolTipText(BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."));
-          volumeSize.setItems(new String[]{"2G","3G","3.2G","4G","6.4G","7.2G","8G","20G","25G","40G","50G","80G","100G","1T","2T","4T","8T","16T","32T"});
+          volumeSize = BARWidgets.newByteSize(subComposite,
+                                              BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."),
+                                              volumeSizeVariable,
+                                              new Object[]{Units.formatSize(       425*Units.M ),       425*Units.M,
+                                                           Units.formatSize(       430*Units.M ),       430*Units.M,
+                                                           Units.formatSize(       470*Units.M ),       470*Units.M,
+                                                           Units.formatSize(       520*Units.M ),       520*Units.M,
+                                                           Units.formatSize(       560*Units.M ),       560*Units.M,
+                                                           Units.formatSize(       650*Units.M ),       650*Units.M,
+                                                           Units.formatSize(       660*Units.M ),       660*Units.M,
+                                                           Units.formatSize(       720*Units.M ),       720*Units.M,
+                                                           Units.formatSize(       850*Units.M ),       850*Units.M,
+                                                           Units.formatSize(         2*Units.G ),         2*Units.G,
+                                                           Units.formatSize((long)(3.2*Units.G)),(long)(3.2*Units.G),
+                                                           Units.formatSize(         4*Units.G ),         4*Units.G,
+                                                           Units.formatSize((long)(6.4*Units.G)),(long)(6.4*Units.G),
+                                                           Units.formatSize((long)(7.2*Units.G)),(long)(7.2*Units.G),
+                                                           Units.formatSize(         8*Units.G ),         8*Units.G,
+                                                           Units.formatSize(        20*Units.G ),        20*Units.G,
+                                                           Units.formatSize(        25*Units.G ),        25*Units.G,
+                                                           Units.formatSize(        40*Units.G ),        40*Units.G,
+                                                           Units.formatSize(        50*Units.G ),        50*Units.G,
+                                                           Units.formatSize(        80*Units.G ),        80*Units.G,
+                                                           Units.formatSize(       100*Units.G ),       100*Units.G,
+                                                           Units.formatSize(         1*Units.T ),         1*Units.T,
+                                                           Units.formatSize(         2*Units.T ),         2*Units.T,
+                                                           Units.formatSize(         4*Units.T ),         4*Units.T,
+                                                           Units.formatSize(         5*Units.T ),         8*Units.T,
+                                                           Units.formatSize(        16*Units.T ),        16*Units.T,
+                                                           Units.formatSize(        32*Units.T ),        32*Units.T
+                                                          }
+                                             );
           volumeSize.setData("showedErrorDialog",false);
           Widgets.layout(volumeSize,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
-          volumeSize.addModifyListener(new ModifyListener()
-          {
-            @Override
-            public void modifyText(ModifyEvent modifyEvent)
-            {
-              Combo  widget = (Combo)modifyEvent.widget;
-              String string = widget.getText();
-
-              if (   (volumeSizeVariable != null)
-                  && !string.isEmpty()
-                 )
-              {
-                Color color = COLOR_MODIFIED;
-                try
-                {
-                  long n = Units.parseByteSize(string);
-                  if (volumeSizeVariable.getLong() == n) color = null;
-                }
-                catch (NumberFormatException exception)
-                {
-                }
-                widget.setBackground(color);
-                widget.setData("showedErrorDialog",false);
-              }
-            }
-          });
-          volumeSize.addSelectionListener(new SelectionListener()
-          {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-              Combo  widget = (Combo)selectionEvent.widget;
-              String string = widget.getText();
-
-              if (!string.isEmpty())
-              {
-                try
-                {
-                  long    n           = Units.parseByteSize(string);
-                  boolean changedFlag = (volumeSizeVariable != null) ? volumeSizeVariable.set(n) : true;
-
-                  if (volumeSizeVariable != null)
-                  {
-                    volumeSizeVariable.set(n);
-                  }
-                  widget.setText(Units.formatByteSize(n));
-                  widget.setBackground(null);
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(composite.getShell(),
-                                  BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",
-                                                string
-                                               )
-                                 );
-                    widget.forceFocus();
-                  }
-                }
-                catch (Exception exception)
-                {
-                  // ignored
-                }
-              }
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Combo  widget = (Combo)selectionEvent.widget;
-              String string = widget.getText();
-
-              if (!string.isEmpty())
-              {
-                try
-                {
-                  long    n           = Units.parseByteSize(string);
-                  boolean changedFlag = (volumeSizeVariable != null) ? volumeSizeVariable.set(n) : true;
-
-                  if (volumeSizeVariable != null)
-                  {
-                    volumeSizeVariable.set(n);
-                  }
-                  widget.setText(Units.formatByteSize(n));
-                  widget.setBackground(null);
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(composite.getShell(),
-                                  BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",
-                                                string
-                                               )
-                                 );
-                    widget.forceFocus();
-                  }
-                }
-                catch (Exception exception)
-                {
-                  // ignored
-                }
-              }
-            }
-          });
-          volumeSize.addFocusListener(new FocusListener()
-          {
-            @Override
-            public void focusGained(FocusEvent focusEvent)
-            {
-              Combo widget = (Combo)focusEvent.widget;
-
-              widget.setData("showedErrorDialog",false);
-            }
-            @Override
-            public void focusLost(FocusEvent focusEvent)
-            {
-              Combo  widget = (Combo)focusEvent.widget;
-              String string = widget.getText();
-
-              if (!string.isEmpty())
-              {
-                try
-                {
-                  long    n           = Units.parseByteSize(string);
-                  boolean changedFlag = (volumeSizeVariable != null) ? volumeSizeVariable.set(n) : true;
-
-                  if (volumeSizeVariable != null)
-                  {
-                    volumeSizeVariable.set(n);
-                  }
-                  widget.setText(Units.formatByteSize(n));
-                  widget.setBackground(null);
-                }
-                catch (NumberFormatException exception)
-                {
-                  if (!(Boolean)widget.getData("showedErrorDialog"))
-                  {
-                    widget.setData("showedErrorDialog",true);
-                    Dialogs.error(composite.getShell(),
-                                  BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",
-                                                string
-                                               )
-                                 );
-                    widget.forceFocus();
-                  }
-                }
-                catch (Exception exception)
-                {
-                  // ignored
-                }
-              }
-            }
-          });
-          if (volumeSizeVariable != null)
-          {
-            Widgets.addModifyListener(new WidgetModifyListener(volumeSize,volumeSizeVariable)
-            {
-              @Override
-              public void modified(Combo combo, WidgetVariable variable)
-              {
-                combo.setText(Units.formatByteSize(variable.getLong()));
-              }
-            });
-          }
         }
         row++;
       }
