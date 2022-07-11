@@ -727,22 +727,14 @@ ERROR EXEC_FAIL
   stringSet(errorText,sizeof(errorText),TR("execute external program fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
-  }
-  if (ERROR_ERRNO != 0)
-  {
-    stringFormatAppend(errorText,sizeof(errorText),", exitcode: %d",ERROR_ERRNO);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR EXEC_TERMINATE
-  stringSet(errorText,sizeof(errorText),TR("terminate external program fail"));
+  stringSet(errorText,sizeof(errorText),TR("terminated external program"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
-  }
-  if (ERROR_ERRNO != 0)
-  {
-    stringFormatAppend(errorText,sizeof(errorText),", signal: %d",ERROR_ERRNO);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 // --- BARControl protocol ----------------------------------------------

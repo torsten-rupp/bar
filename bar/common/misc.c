@@ -324,7 +324,6 @@ LOCAL Errors execute(const char        *command,
     bool       sleepFlag;
     String     line;
     int        exitcode;
-    int        terminateSignal;
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -333,25 +332,28 @@ LOCAL Errors execute(const char        *command,
     text  = String_new();
     error = ERROR_NONE;
 
-    // get command as text
     if (errorText != NULL)
     {
+      // get error text
       String_setCString(text,errorText);
+      String_trim(text,STRING_WHITE_SPACES);
+      String_replaceAllCString(text,STRING_BEGIN,"\n","; ");
     }
     else
     {
+      // get command as text
       String_setCString(text,command);
       if ((arguments != NULL) && (arguments[0] != NULL))
       {
         s = &arguments[1];
         while ((*s) != NULL)
         {
-          String_joinCString(text,*s,' ' );
+          String_joinCString(text,*s,' ');
           s++;
         }
       }
     }
-  //fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
+//fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
 
     #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
       // create i/o pipes
@@ -413,7 +415,7 @@ LOCAL Errors execute(const char        *command,
       }
       else if (pid < 0)
       {
-        error = ERRORX_(EXEC_FAIL,errno,"%s",String_cString(text));
+        error = ERRORX_(EXEC_FAIL,0,"'%s', error %d",String_cString(text),errno);
 
         close(pipeStderr[0]);
         close(pipeStderr[1]);
@@ -485,24 +487,22 @@ LOCAL Errors execute(const char        *command,
       if      (WIFEXITED(status))
       {
         exitcode = WEXITSTATUS(status);
-        if (exitcode != 0)
+        if (exitcode == 0)
         {
-          error = ERRORX_(EXEC_FAIL,exitcode,"%s",String_cString(text));
-          String_delete(text);
-          return error;
+          error = ERROR_NONE;
+        }
+        else
+        {
+          error = ERRORX_(EXEC_FAIL,0,"'%s', exitcode %d",String_cString(text),exitcode);
         }
       }
       else if (WIFSIGNALED(status))
       {
-        terminateSignal = WTERMSIG(status);
-        error = ERRORX_(EXEC_TERMINATE,0,"%s",String_cString(text),terminateSignal);
-        String_delete(text);
-        return error;
+        error = ERRORX_(EXEC_TERMINATE,0,"'%s', signal %d",String_cString(text),WTERMSIG(status));
       }
       else
       {
-        String_delete(text);
-        return ERROR_UNKNOWN;
+        error = ERROR_UNKNOWN;
       }
     #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
       #error pipe()/fork()/waitpid() not available nor Windows system!
@@ -2550,7 +2550,7 @@ Errors Misc_executeScript(const char        *script,
       String_delete(command);
       return ERROR_OPEN_FILE;
     }
-    error = File_write(&fileHandle,script,strlen(script));
+    error = File_write(&fileHandle,script,stringLength(script));
     if (error != ERROR_NONE)
     {
       (void)File_delete(tmpFileName,FALSE);
@@ -2887,7 +2887,7 @@ bool Misc_base64DecodeCString(void *data, uint maxDataLength, uint *dataLength, 
   assert(data != NULL);
   assert(s != NULL);
 
-  return base64Decode(data,maxDataLength,dataLength,s,strlen(s));
+  return base64Decode(data,maxDataLength,dataLength,s,stringLength(s));
 }
 
 bool Misc_base64DecodeBuffer(void *data, uint maxDataLength, uint *dataLength, const void *buffer, uint bufferLength)
@@ -2924,7 +2924,7 @@ uint Misc_base64DecodeLengthCString(const char *s)
 
   assert(s != NULL);
 
-  n = strlen(s);
+  n = stringLength(s);
   length = (n/4)*3;
   if ((n >= 1) && (s[n-1] == '=')) length--;
   if ((n >= 2) && (s[n-2] == '=')) length--;
@@ -2979,7 +2979,7 @@ bool Misc_hexDecodeCString(void *data, uint *dataLength, const char *s, uint max
   assert(data != NULL);
   assert(s != NULL);
 
-  return hexDecode(data,dataLength,s,strlen(s),maxDataLength);
+  return hexDecode(data,dataLength,s,stringLength(s),maxDataLength);
 }
 
 uint Misc_hexDecodeLength(ConstString string, ulong index)
@@ -3000,7 +3000,7 @@ uint Misc_hexDecodeLengthCString(const char *s)
 {
   assert(s != NULL);
 
-  return strlen(s)/2;
+  return stringLength(s)/2;
 }
 
 #if   defined(PLATFORM_LINUX)

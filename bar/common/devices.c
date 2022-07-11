@@ -188,7 +188,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
     }
 
     // get error
-    error = ERRORX_(EXEC_FAIL,errorCode,"%s",String_cString(s));
+    error = ERRORX_(EXEC_FAIL,0,"'%s', error %d",String_cString(s),errorCode);
 
     // free resources
     String_delete(s);
@@ -196,12 +196,26 @@ LOCAL Errors execute(const char *command, const char *arguments[])
     return error;
   }
 
+  String text;
+  uint   i;
   pid_t  pid;
   Errors error;
   int    status;
 
   assert(arguments != NULL);
   assert(arguments[0] != NULL);
+
+  // init variables
+  text = String_new();
+
+  // format command
+  String_joinCString(text,command,' ');
+  i = 1;
+  while (arguments[i] != NULL)
+  {
+    String_joinCString(text,arguments[i],' ');
+    i++;
+  }
 
   pid = fork();
   if      (pid == 0)
@@ -219,33 +233,39 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   }
   else if (pid < 0)
   {
-    error = getError(errno);
+    error = ERRORX_(EXEC_FAIL,0,"'%s', error %d",String_cString(text),errno);
+    String_delete(text);
     return error;
   }
 
   if (waitpid(pid,&status,0) == -1)
   {
-    error = ERRORX_(EXEC_FAIL,errno,"%s",command);
+    error = ERRORX_(EXEC_FAIL,0,"'%s', error %d",String_cString(text),errno);
   }
   if      (WIFEXITED(status))
   {
-    if (WEXITSTATUS(status) == 0)
+    exitcode = WEXITSTATUS(status);
+    if (exitcode == 0)
     {
       error = ERROR_NONE;
     }
     else
     {
-      error = getError(WEXITSTATUS(status));
+      error = ERRORX_(EXEC_FAIL,0,"'%s', exitcode %d",String_cString(text),exitcode);
+      String_delete(text);
     }
   }
   else if (WIFSIGNALED(status))
   {
-    error = getError(WTERMSIG(status));
+    error = ERRORX_(EXEC_TERMINATE,0,"'%s', signal %d",String_cString(text),WTERMSIG(status));
   }
   else
   {
     error = ERROR_UNKNOWN;
   }
+  
+  // free resources
+  String_delete(text);
 
   return error;
 }
