@@ -2493,7 +2493,7 @@ public class TabJobs
   private WidgetVariable  sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
   private WidgetVariable  maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
   private WidgetVariable  maxBandWidth              = new WidgetVariable<Long>   ("max-band-width",0L);
-  private WidgetVariable  volumeSize                = new WidgetVariable<Long>   ("volume-size",0L);
+  private WidgetVariable  volumeSize                = new WidgetVariable<String> ("volume-size","");
   private WidgetVariable  ecc                       = new WidgetVariable<Boolean>("ecc",false);
   private WidgetVariable  blank                     = new WidgetVariable<Boolean>("blank",false);
   private WidgetVariable  waitFirstVolume           = new WidgetVariable<Boolean>("wait-first-volume",false);
@@ -2506,7 +2506,7 @@ public class TabJobs
   private WidgetVariable  postCommand               = new WidgetVariable<String> ("post-command","");
   private WidgetVariable  slavePreCommand           = new WidgetVariable<String> ("slave-pre-command","");
   private WidgetVariable  slavePostCommand          = new WidgetVariable<String> ("slave-post-command","");
-  private WidgetVariable  maxStorageSize            = new WidgetVariable<Long>   ("max-storage-size",0L);
+  private WidgetVariable  maxStorageSize            = new WidgetVariable<String> ("max-storage-size","");
   private WidgetVariable  comment                   = new WidgetVariable<String> ("comment","");
 
   // variables
@@ -8874,7 +8874,7 @@ TODO: implement delete entity
         maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-band-width")));
         maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
 */
-        volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"volume-size"),0));
+        BARServer.getJobOption(jobData.uuid,volumeSize);
         BARServer.getJobOption(jobData.uuid,ecc);
         BARServer.getJobOption(jobData.uuid,blank);
         BARServer.getJobOption(jobData.uuid,waitFirstVolume);
@@ -8887,7 +8887,7 @@ TODO: implement delete entity
         BARServer.getJobOption(jobData.uuid,postCommand);
         BARServer.getJobOption(jobData.uuid,slavePreCommand);
         BARServer.getJobOption(jobData.uuid,slavePostCommand);
-        maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
+        BARServer.getJobOption(jobData.uuid,maxStorageSize);
         BARServer.getJobOption(jobData.uuid,comment);
 
         display.syncExec(new Runnable()
