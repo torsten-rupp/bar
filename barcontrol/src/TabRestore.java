@@ -3018,10 +3018,7 @@ Dprintf.dprintf("");
         }
         catch (Exception exception)
         {
-          if (Settings.debugLevel > 0)
-          {
-            BARControl.printError(exception);
-          }
+          BARControl.logThrowable(exception);
         }
 
         // update storage table segment
@@ -3813,10 +3810,7 @@ Dprintf.dprintf("");
           // ignored
           totalEntryCount = 0;
           totalEntrySize  = 0;
-          if (Settings.debugLevel > 0)
-          {
-            BARControl.printError(exception);
-          }
+          BARControl.logThrowable(exception);
         }
 
         // show warning if too many entries
@@ -4100,10 +4094,7 @@ Dprintf.dprintf("");
         }
         catch (Exception exception)
         {
-          if (Settings.debugLevel > 0)
-          {
-            BARControl.printError(exception);
-          }
+          BARControl.logThrowable(exception);
         }
 
         // update entry table segment
@@ -4855,10 +4846,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
       catch (Exception exception)
       {
         // ignored
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
+        BARControl.logThrowable(exception);
       }
     }
 
@@ -7257,10 +7245,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               }
               catch (Exception exception)
               {
-                if (Settings.debugLevel > 0)
-                {
-                  BARControl.printError(exception);
-                }
+                BARControl.logThrowable(exception);
               }
             }
             else
@@ -7329,6 +7314,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                 {
                   busyDialog.close();
                   Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
+                  BARControl.logThrowable(exception);
                 }
               }
             }
@@ -7509,10 +7495,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     }
     catch (Exception exception)
     {
-      if (Settings.debugLevel > 0)
-      {
-        BARControl.printError(exception);
-      }
+      BARControl.logThrowable(exception);
     }
   }
 
@@ -7792,6 +7775,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                       exception.getMessage()
                                      )
                        );
+          BARControl.logThrowable(exception);
           return false;
         }
 
@@ -7838,6 +7822,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
             catch (Exception exception)
             {
               Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+              BARControl.logThrowable(exception);
               return false;
             }
 
@@ -7958,6 +7943,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           catch (Exception exception)
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+            BARControl.logThrowable(exception);
           }
 
           if (busyDialog.isAborted())
@@ -8066,6 +8052,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           catch (Exception exception)
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+            BARControl.logThrowable(exception);
           }
 
           if (busyDialog.isAborted())
@@ -8176,6 +8163,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           catch (Exception exception)
           {
             Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+            BARControl.logThrowable(exception);
           }
 
           if (busyDialog.isAborted())
@@ -8291,6 +8279,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               catch (Exception exception)
               {
                 Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+                BARControl.logThrowable(exception);
               }
             }
           }
@@ -8349,6 +8338,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         catch (Exception exception)
         {
           Dialogs.error(shell,BARControl.tr("Cannot refresh database indices with error state!\n\n(error: {0})",exception.getMessage()));
+          BARControl.logThrowable(exception);
         }
         finally
         {
@@ -9011,6 +9001,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         catch (Exception exception)
         {
           Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",exception.getMessage()));
+          BARControl.logThrowable(exception);
           return;
         }
 
@@ -9033,10 +9024,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         }
         catch (Exception exception)
         {
-          if (Settings.debugLevel > 0)
-          {
-            BARControl.printError(exception);
-          }
+          BARControl.logThrowable(exception);
         }
       }
       finally
@@ -9400,6 +9388,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         {
           busyDialog.close();
           Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",exception.getMessage()));
+          BARControl.logThrowable(exception);
         }
       }
     }

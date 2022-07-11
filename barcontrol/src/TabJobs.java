@@ -763,11 +763,10 @@ public class TabJobs
       }
       catch (Exception exception)
       {
+        BARControl.logThrowable(exception);
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
           System.exit(ExitCodes.FAIL);
         }
       }
@@ -9060,6 +9059,7 @@ throw new Error("NYI");
         catch (Exception exception)
         {
           Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",exception.getMessage()));
+          BARControl.logThrowable(exception);
           return false;
         }
         catch (CommunicationError error)
@@ -9209,6 +9209,7 @@ throw new Error("NYI");
                                       exception.getMessage()
                                      )
                        );
+          BARControl.logThrowable(exception);
           return false;
         }
         catch (CommunicationError error)
@@ -9360,6 +9361,7 @@ throw new Error("NYI");
                                       exception.getMessage()
                                      )
                        );
+          BARControl.logThrowable(exception);
           return false;
         }
         catch (CommunicationError error)
@@ -9401,6 +9403,7 @@ throw new Error("NYI");
       catch (Exception exception)
       {
         Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),exception.getMessage()));
+        BARControl.logThrowable(exception);
         return false;
       }
       catch (CommunicationError error)
@@ -10081,6 +10084,7 @@ throw new Error("NYI");
     catch (Exception exception)
     {
        Dialogs.error(shell,BARControl.tr("Cannot get file list (error: {0})",exception.getMessage()));
+       BARControl.logThrowable(exception);
     }
     finally
     {
@@ -10531,6 +10535,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
 
@@ -10598,6 +10603,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
 
@@ -10945,6 +10951,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
 
@@ -11008,6 +11015,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
 
@@ -11431,6 +11439,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
 
@@ -11482,6 +11491,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
 
@@ -11529,6 +11539,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
 
@@ -11726,6 +11737,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return false;
     }
 
@@ -11765,6 +11777,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return false;
     }
 
@@ -11808,6 +11821,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
   }
@@ -11859,6 +11873,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
   }
@@ -11892,6 +11907,7 @@ throw new Error("NYI");
                                   exception.getMessage()
                                  )
                    );
+      BARControl.logThrowable(exception);
       return;
     }
   }
@@ -12055,6 +12071,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
 
@@ -12099,6 +12116,7 @@ throw new Error("NYI");
                                         exception.getMessage()
                                        )
                          );
+            BARControl.logThrowable(exception);
             return;
           }
 
@@ -12200,6 +12218,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
     }
 
@@ -13381,10 +13400,8 @@ throw new Error("NYI");
       }
       catch (IllegalArgumentException exception)
       {
-        if (Settings.debugLevel > 0)
-        {
-          System.err.println("ERROR: "+exception.getMessage());
-        }
+        // ignored
+        BARControl.logThrowable(exception);
       }
     }
     busyDialog.done();
@@ -14008,6 +14025,7 @@ throw new Error("NYI");
                                       exception.getMessage()
                                      )
                        );
+          BARControl.logThrowable(exception);
           return;
         }
 
@@ -14077,6 +14095,7 @@ throw new Error("NYI");
                                         exception.getMessage()
                                        )
                          );
+            BARControl.logThrowable(exception);
             return;
           }
         }
@@ -14128,6 +14147,7 @@ throw new Error("NYI");
                                         exception.getMessage()
                                        )
                          );
+            BARControl.logThrowable(exception);
             return;
           }
 
@@ -14177,6 +14197,7 @@ throw new Error("NYI");
             catch (Exception exception)
             {
               Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",exception.getMessage()));
+              BARControl.logThrowable(exception);
               return;
             }
 
@@ -14217,6 +14238,7 @@ throw new Error("NYI");
                                       exception.getMessage()
                                      )
                        );
+          BARControl.logThrowable(exception);
           return;
         }
       }
@@ -14782,6 +14804,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
 
@@ -14818,6 +14841,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
 
@@ -14849,6 +14873,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
 
@@ -15112,6 +15137,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
     }
@@ -15143,6 +15169,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
       finally
@@ -15178,6 +15205,7 @@ throw new Error("NYI");
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
       finally

@@ -518,6 +518,7 @@ public class TabStatus
         {
           BARServer.disconnect();
           BARControl.internalError(throwable);
+          System.exit(ExitCodes.FAIL);
         }
       }
     }
@@ -2345,6 +2346,7 @@ public class TabStatus
                                                                                  exception.getMessage()
                                                                                 )
                                                             );
+                                               BARControl.logThrowable(exception);
                                                return;
                                              }
                                            }
@@ -2762,6 +2764,7 @@ public class TabStatus
                                       exception.getMessage()
                                      )
                        );
+          BARControl.logThrowable(exception);
           return;
         }
       }
@@ -2787,6 +2790,7 @@ public class TabStatus
                                     exception.getMessage()
                                    )
                      );
+        BARControl.logThrowable(exception);
         return;
       }
     }
@@ -2981,6 +2985,7 @@ public class TabStatus
       catch (Exception exception)
       {
         Dialogs.error(shell,BARControl.tr("Cannot pause job (error: {0})",exception.getMessage()));
+        BARControl.logThrowable(exception);
       }
     }
   }
@@ -3001,6 +3006,7 @@ public class TabStatus
     catch (Exception exception)
     {
       Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: {0})",exception.getMessage()));
+      BARControl.logThrowable(exception);
     }
   }
 
@@ -3054,6 +3060,7 @@ public class TabStatus
     catch (Exception exception)
     {
       Dialogs.error(shell,BARControl.tr("Cannot change volume (error: {0})",exception.getMessage()));
+      BARControl.logThrowable(exception);
     }
   }
 
@@ -3068,6 +3075,7 @@ public class TabStatus
     catch (Exception exception)
     {
       Dialogs.error(shell,BARControl.tr("Cannot reset job (error: {0})",exception.getMessage()));
+      BARControl.logThrowable(exception);
     }
   }
 

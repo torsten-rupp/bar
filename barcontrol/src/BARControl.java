@@ -16,10 +16,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
 import java.io.Serializable;
 
 import java.net.URI;
@@ -2028,13 +2030,14 @@ public class BARControl
   }
 
   /** print stack trace
+   * @param output output stream
    * @param throwable throwable
    */
-  public static void printStackTrace(Throwable throwable)
+  public static void printStackTrace(PrintStream output, Throwable throwable)
   {
     for (StackTraceElement stackTraceElement : throwable.getStackTrace())
     {
-      System.err.println("  "+stackTraceElement);
+      output.println("  "+stackTraceElement);
     }
     Throwable cause = throwable.getCause();
     while (cause != null)
@@ -2042,10 +2045,65 @@ public class BARControl
       System.err.println("Caused by:");
       for (StackTraceElement stackTraceElement : cause.getStackTrace())
       {
-        System.err.println("  "+stackTraceElement);
+        output.println("  "+stackTraceElement);
       }
       cause = cause.getCause();
     }
+  }
+
+  /** print stack trace
+   * @param throwable throwable
+   */
+  public static void printStackTrace(Throwable throwable)
+  {
+    printStackTrace(System.err,throwable);
+  }
+
+  /** log throwable information
+   * @param throwable throwable
+   */
+  public static void logThrowable(Throwable throwable)
+  {
+    final String BARCONTROL_LOG_FILE_NAME = System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.log";
+
+    // output to console
+    if (Settings.debugLevel > 0)
+    {
+      printError(throwable);
+    }    
+
+    // store into log file
+    PrintStream output = null;
+    try
+    {
+      File file = new File(BARCONTROL_LOG_FILE_NAME);
+
+      // create directory
+      File directory = file.getParentFile();
+      if ((directory != null) && !directory.exists()) directory.mkdirs();
+
+      // open file
+      output = new PrintStream(new FileOutputStream(file,true));
+
+      // write version+stack trace
+      output.println("Date/Time: "+new Date().toString());
+      output.println("Version: "+VERSION);
+      output.println("Protocol version: "+BARServer.PROTOCOL_VERSION);
+      output.println("Java version: "+System.getProperty("java.version"));
+      printStackTrace(output,throwable);
+      output.println("---");
+
+      // close file
+      output.close(); output = null;
+    }
+    catch (IOException exception)
+    {
+      // ignored
+    }
+    finally
+    {
+      if (output != null) output.close();
+    }   
   }
 
   /** print error to stderr
@@ -2081,6 +2139,8 @@ public class BARControl
   public static void printInternalError(String format, Object... args)
   {
     System.err.println("INTERNAL ERROR: "+String.format(format,args));
+    System.err.println("Version "+VERSION);
+    System.err.println("Please report this error to "+EMAIL_ADDRESS+".");
   }
 
   /** print internal error to stderr
@@ -2088,8 +2148,9 @@ public class BARControl
    */
   public static void printInternalError(Throwable throwable)
   {
-    printInternalError("%s",throwable.getMessage());
+    System.err.println("INTERNAL ERROR: "+throwable.getMessage());
     printStackTrace(throwable);
+    logThrowable(throwable);
     System.err.println("Version "+VERSION);
     System.err.println("Please report this error to "+EMAIL_ADDRESS+".");
   }
@@ -2434,6 +2495,7 @@ if (false) {
       if (Settings.debugLevel > 0)
       {
         printError("cannot get job list (error: %s)",exception.getMessage());
+        logThrowable(exception);
         BARServer.disconnect();
         System.exit(ExitCodes.FAIL);
       }
@@ -3878,10 +3940,7 @@ if (false) {
       }
       catch (Throwable throwable)
       {
-        if (Settings.debugLevel > 0)
-        {
-          printInternalError(throwable);
-        }
+        printInternalError(throwable);
         showFatalError(throwable);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
@@ -4712,6 +4771,8 @@ if (false) {
     final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     Thread.currentThread().setName("BARControl");
+// TODO:
+logThrowable(new Throwable());
 
     // init localization
     i18n = I18nFactory.getI18n(getClass(),
@@ -5828,9 +5889,10 @@ Dprintf.dprintf("still not supported");
                                          }
                                          catch (Exception exception)
                                          {
+                                           // ignored
                                            if (Settings.debugLevel > 0)
                                            {
-                                             printError(exception);
+                                             logThrowable(exception);
                                              System.exit(ExitCodes.FAIL);
                                            }
                                          }
