@@ -1362,7 +1362,7 @@ public class BARServer
   public final static String            DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String            DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
-  public static String                  pathSeparator = "/";
+  public static char                    filePathSeparator = '/';
 
   private final static int              SOCKET_READ_TIMEOUT    =  60*1000;                      // timeout reading socket [ms]
   private final static int              TIMEOUT                = 120*1000;                      // global timeout [ms]
@@ -2145,14 +2145,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
 
-      // get file separator character
+      // get file separator characters
       syncExecuteCommand(input,
                          output,
+// TODO: rename to FILE_PATH_SEPARATOR?
                          "GET name=PATH_SEPARATOR",
                          2,  // debugLevel
                          valueMap
                         );
-      pathSeparator = valueMap.getString("value","/");
+      filePathSeparator = valueMap.getChar("value",'/');
     }
     catch (BARException exception)
     {
@@ -3914,13 +3915,14 @@ throw new Error("NYI");
       this(absolutePath,0,hiddenFlag);
     }
 
-    /** create remote file
-     * @param absolutePath absolute path
+    /** get path
+     * @return path
      */
-/*    public RemoteFile(String absolutePath)
+    @Override
+    public String getPath()
     {
-      this(absolutePath,false);
-    }*/
+      return absoluteFile.getPath().replace(File.separatorChar,BARServer.filePathSeparator);
+    }
 
     /** get absolute file
      * @return absolute file
@@ -3937,7 +3939,7 @@ throw new Error("NYI");
     @Override
     public String getAbsolutePath()
     {
-      return absoluteFile.getPath();
+      return absoluteFile.getPath().replace(File.separatorChar,BARServer.filePathSeparator);
     }
 
     /** get parent file
@@ -3947,16 +3949,16 @@ throw new Error("NYI");
     @Override
     public RemoteFile getParentFile()
     {
-      String path = absoluteFile.getPath();
+      String path = getAbsolutePath();
 
-      int i = path.lastIndexOf(BARServer.pathSeparator);
+      int i = path.lastIndexOf(BARServer.filePathSeparator);
       if      (i >= 1)
       {
         return new RemoteFile(path.substring(0,i),false);
       }
       else if (i == 0)
       {
-        return new RemoteFile(BARServer.pathSeparator,false);
+        return new RemoteFile(Character.toString(BARServer.filePathSeparator),false);
       }
       else
       {
@@ -4049,7 +4051,12 @@ throw new Error("NYI");
       // get name
       if (path != null)
       {
-        if (!path.endsWith(BARServer.pathSeparator)) path = path+BARServer.pathSeparator;
+        if (   path.isEmpty()
+            || (path.charAt(path.length()-1) != BARServer.filePathSeparator)
+           )
+        {
+          path = path+BARServer.filePathSeparator;
+        }
         name = path+name;
       }
 
@@ -4092,7 +4099,12 @@ throw new Error("NYI");
       }
 
       // force an absolute path
-      if (!name.startsWith(BARServer.pathSeparator)) name = BARServer.pathSeparator+name;
+      if (   name.isEmpty()
+          || (name.charAt(0) != BARServer.filePathSeparator)
+         )
+      {
+        name = BARServer.filePathSeparator+name;
+      }
 
       return new RemoteFile(name,fileType,size,dateTime,hiddenFlag);
     }
@@ -4108,7 +4120,7 @@ throw new Error("NYI");
     }
 
     /** get absolute path
-     * @param path path
+     * @param file file
      * @return absolute path
      */
     @Override
@@ -4304,8 +4316,10 @@ throw new Error("NYI");
     @Override
     public boolean isRoot(RemoteFile file)
     {
+      String rootPath = file.getAbsolutePath();
 // TODO:
-      return file.getAbsolutePath() == BARServer.pathSeparator;
+      return    (rootPath.length() == 1)
+             && (rootPath.charAt(0) == BARServer.filePathSeparator);
     }
 
     /** check if directory

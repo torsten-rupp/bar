@@ -7703,7 +7703,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         // guess a date
         for (IndexData indexData : indexDataHashSet)
         {
-          String archiveNameParts[] = StringUtils.splitArray(indexData.getName(),BARServer.pathSeparator);
+          String archiveNameParts[] = StringUtils.splitArray(indexData.getName(),BARServer.filePathSeparator);
           for (String archiveNamePart : archiveNameParts)
           {
             for (SimpleDateFormat dateFormat : DATE_FORMATS)

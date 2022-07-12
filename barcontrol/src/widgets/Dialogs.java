@@ -610,7 +610,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   public abstract T getParentFile(T file);
 
   /** get absolute path
-   * @param path path
+   * @param file file
    * @return absolute path
    */
   public abstract String getAbsolutePath(T file);
@@ -5259,7 +5259,7 @@ class Dialogs
             if (file.isDirectory())
             {
               // set new path, clear name
-              T newPath = listDirectory.newFileInstance(((T)widgetPath.getData()).getPath(),file.getName());
+              T newPath = listDirectory.newFileInstance(((T)widgetPath.getData()).getAbsolutePath(),file.getName());
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
               if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
@@ -5436,7 +5436,7 @@ class Dialogs
           T file = (T)widgetPath.getData();
           close(dialog,
                 (widgetName != null)
-                  ? listDirectory.getAbsolutePath(listDirectory.newFileInstance(file.getPath(),
+                  ? listDirectory.getAbsolutePath(listDirectory.newFileInstance(file.getAbsolutePath(),
                                                   widgetName.getText())
                                                  )
                   : listDirectory.getAbsolutePath(file)
