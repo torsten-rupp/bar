@@ -623,7 +623,7 @@ public class TabJobs
         this.jobUUID   = jobUUID;
         this.name      = name;
         this.forceFlag = forceFlag;
-        this.depth     = StringUtils.splitArray(name,BARServer.pathSeparator,true).length;
+        this.depth     = StringUtils.splitArray(name,BARServer.filePathSeparator,true).length;
         this.timeout   = timeout;
         this.treeItem  = treeItem;
       }
@@ -9693,12 +9693,13 @@ throw new Error("NYI");
       TreeItem[] treeItems = widgetFileTree.getItems();
 
       StringBuilder buffer = new StringBuilder();
-      for (String part : StringUtils.splitArray(entryData.pattern,BARServer.pathSeparator,true))
+      for (String part : StringUtils.splitArray(entryData.pattern,BARServer.filePathSeparator,true))
       {
         // expand name
-        if ((buffer.length() == 0) && !buffer.toString().endsWith(BARServer.pathSeparator))
+        if (   (buffer.length() == 0)
+            || (buffer.charAt(buffer.length()-1) != BARServer.filePathSeparator))
         {
-          buffer.append(BARServer.pathSeparator);
+          buffer.append(BARServer.filePathSeparator);
         }
         buffer.append(part);
 
@@ -12653,7 +12654,7 @@ throw new Error("NYI");
         // column 1
         addDragAndDrop(composite,"-","'-'",                                                                             0,0);
         addDragAndDrop(composite,"_","'_'",                                                                             1,0);
-        addDragAndDrop(composite,BARServer.pathSeparator,BARServer.pathSeparator,                                       2,0);
+        addDragAndDrop(composite,BARServer.filePathSeparator,BARServer.filePathSeparator,                               2,0);
         addDragAndDrop(composite,".bar","'.bar'",                                                                       3,0);
         subComposite = Widgets.newComposite(composite,SWT.NONE);
         subComposite.setToolTipText(BARControl.tr("Use drag&drop to add name parts."));
