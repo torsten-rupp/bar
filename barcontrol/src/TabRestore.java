@@ -2362,6 +2362,7 @@ Dprintf.dprintf("");
 
         // get entity list for UUID
         final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
+Dprintf.dprintf("xxxxxxxxxx");
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
                                                      uuidIndexData[0].jobUUID,
                                                      storageIndexStateSet.nameList("|"),
@@ -2384,6 +2385,7 @@ Dprintf.dprintf("");
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
                                      long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
                                      long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+Dprintf.dprintf("entityId=%d",entityId);
 
                                      // add entity data index
                                      EntityIndexData entityIndexData = new EntityIndexData(entityId,
@@ -7995,6 +7997,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
    */
   private void assignStorages(HashSet<IndexData> indexDataHashSet, EntityIndexData toEntityIndexData)
   {
+Dprintf.dprintf("xxxxxxxxxxxxxx");
     if (!indexDataHashSet.isEmpty())
     {
       final BusyDialog busyDialog;
@@ -8039,7 +8042,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
             }
             else if (indexData instanceof StorageIndexData)
             {
-              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGNxxx toEntityId=%lld storageId=%lld",
                                                            toEntityIndexData.id,
                                                            indexData.id
                                                           ),

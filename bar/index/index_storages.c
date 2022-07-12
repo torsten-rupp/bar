@@ -2253,15 +2253,13 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
                        NULL,  // changedRowCount
                        DATABASE_TABLES
                        (
-                         "storages \
-                            LEFT JOIN entities ON entities.id=storages.entityId \
-                         "
+                         "storages"
                        ),
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_STRING  ("storages.name"),
-                         DATABASE_COLUMN_DATETIME("entities.created"),
+                         DATABASE_COLUMN_STRING  ("name"),
+                         DATABASE_COLUMN_DATETIME("created"),
                        ),
                        "storages.id=?",
                        DATABASE_FILTERS

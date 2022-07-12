@@ -2090,6 +2090,7 @@ public class BARControl
       output.println("Version: "+VERSION);
       output.println("Protocol version: "+BARServer.PROTOCOL_VERSION);
       output.println("Java version: "+System.getProperty("java.version"));
+      output.println("Error: "+throwable.getMessage());
       printStackTrace(output,throwable);
       output.println("---");
 

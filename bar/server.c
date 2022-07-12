@@ -131,6 +131,7 @@ typedef struct ExpirationEntityNode
   uint64                size;
   ulong                 totalEntryCount;
   uint64                totalEntrySize;
+  bool                  lockedFlag;
   const PersistenceNode *persistenceNode;
 } ExpirationEntityNode;
 
@@ -1938,17 +1939,6 @@ LOCAL void schedulerThreadCode(void)
         year--;
         month = 12;
       }
-// TODO: remove
-#if 0
-if (executeScheduleNode != NULL)
-{
-fprintf(stderr,"%s:%d: %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNode->jobUUID),executeScheduleDateTime);
-}
-else
-{
-fprintf(stderr,"%s:%d: no schedule found\n",__FILE__,__LINE__);
-}
-#endif
 
       if (executeScheduleNode != NULL)
       {
@@ -2671,7 +2661,8 @@ LOCAL ExpirationEntityNode *newExpirationNode(IndexId      entityId,
                                               uint64       createdDateTime,
                                               uint64       size,
                                               ulong        totalEntryCount,
-                                              uint64       totalEntrySize
+                                              uint64       totalEntrySize,
+                                              bool         lockedFlag
                                              )
 {
   ExpirationEntityNode *expirationEntityNode;
@@ -2688,6 +2679,7 @@ LOCAL ExpirationEntityNode *newExpirationNode(IndexId      entityId,
   expirationEntityNode->size            = size;
   expirationEntityNode->totalEntryCount = totalEntryCount;
   expirationEntityNode->totalEntrySize  = totalEntrySize;
+  expirationEntityNode->lockedFlag      = lockedFlag;
   expirationEntityNode->persistenceNode = NULL;
 
   return expirationEntityNode;
@@ -2720,6 +2712,7 @@ LOCAL ExpirationEntityNode *duplicateExpirationNode(const ExpirationEntityNode *
   expirationEntityNode->size            = fromExpirationEntityNode->size;
   expirationEntityNode->totalEntryCount = fromExpirationEntityNode->totalEntryCount;
   expirationEntityNode->totalEntrySize  = fromExpirationEntityNode->totalEntrySize;
+  expirationEntityNode->lockedFlag      = fromExpirationEntityNode->lockedFlag;
   expirationEntityNode->persistenceNode = NULL;
 
   return expirationEntityNode;
@@ -2728,9 +2721,9 @@ LOCAL ExpirationEntityNode *duplicateExpirationNode(const ExpirationEntityNode *
 /***********************************************************************\
 * Name   : getExpirationEntityList
 * Purpose: get expiration list for all entities
-* Input  : expirationList - expiration list
+* Input  : expirationList - expiration list variale
 *          indexHandle    - index handle (can be NULL)
-* Output : -
+* Output : expirationList - expiration list (descend ordering)
 * Return : TRUE iff got expiration list
 * Notes  : -
 \***********************************************************************/
@@ -2798,26 +2791,36 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
           )
     {
 //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
-      if (lockedCount == 0)
-      {
-        // create expiration node
-        expirationEntityNode = newExpirationNode(entityId,
-                                                 jobUUID,
-                                                 archiveType,
-                                                 createdDateTime,
-                                                 totalSize,
-                                                 totalEntryCount,
-                                                 totalEntrySize
-                                                );
-        assert(expirationEntityNode != NULL);
+      // create expiration node
+      expirationEntityNode = newExpirationNode(entityId,
+                                               jobUUID,
+                                               archiveType,
+                                               createdDateTime,
+                                               totalSize,
+                                               totalEntryCount,
+                                               totalEntrySize,
+                                               (lockedCount > 0)
+                                              );
+      assert(expirationEntityNode != NULL);
 
-        // add to list
-        List_append(expirationEntityList,expirationEntityNode);
-      }
+      // add to list
+      List_append(expirationEntityList,expirationEntityNode);
     }
 
     Index_doneList(&indexQueryHandle);
   }
+
+  // check if list is sorted descending by create date/time
+  #ifndef NDEBUG
+    {
+      uint64 lastCreatedDateTime = MAX_UINT64;
+      LIST_ITERATE(expirationEntityList,expirationEntityNode)
+      {
+        assert(expirationEntityNode->createdDateTime <= lastCreatedDateTime);
+        lastCreatedDateTime = expirationEntityNode->createdDateTime;
+      }
+    }
+  #endif
 
   return TRUE;
 }
@@ -2853,12 +2856,25 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
   assert(jobUUID != NULL);
   assert(Job_isListLocked());
 
+  // check if list is sorted descending by create date/time
+  #ifndef NDEBUG
+    {
+      uint64 lastCreatedDateTime = MAX_UINT64;
+      LIST_ITERATE(expirationEntityList,expirationEntityNode)
+      {
+        assert(expirationEntityNode->createdDateTime <= lastCreatedDateTime);
+        lastCreatedDateTime = expirationEntityNode->createdDateTime;
+      }
+    }
+  #endif
+
   // init variables
   List_init(jobExpirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
 
   now = Misc_getCurrentDateTime();
   LIST_ITERATE(expirationEntityList,expirationEntityNode)
   {
+//fprintf(stderr,"%s:%d: uuid=%s id=%llu\n",__FILE__,__LINE__,String_cString(expirationEntityNode->jobUUID),Index_getDatabaseId(expirationEntityNode->entityId));
     if (   String_equals(expirationEntityNode->jobUUID,jobUUID)
         #ifdef SIMULATE_PURGE
         && !Array_contains(&simulatedPurgeEntityIdArray,&expirationEntityNode->entityId)
@@ -2922,6 +2938,18 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
       List_append(jobExpirationEntityList,jobExpirationEntityNode);
     }
   }
+
+  // check if list is sorted descending by create date/time
+  #ifndef NDEBUG
+    {
+      uint64 lastCreatedDateTime = MAX_UINT64;
+      LIST_ITERATE(jobExpirationEntityList,expirationEntityNode)
+      {
+        assert(expirationEntityNode->createdDateTime <= lastCreatedDateTime);
+        lastCreatedDateTime = expirationEntityNode->createdDateTime;
+      }
+    }
+  #endif
 }
 
 /***********************************************************************\
@@ -3022,7 +3050,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   expiredJobName = String_new();
-// TODO: free correct
   List_init(&expirationEntityList,
             CALLBACK_(NULL,NULL),
             CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL)
@@ -3072,7 +3099,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
             totalEntitySize  = 0LL;
             inTransit        = FALSE;
 
-            if (jobExpirationEntityNode->persistenceNode != NULL)
+            if (   !jobExpirationEntityNode->lockedFlag
+                && (jobExpirationEntityNode->persistenceNode != NULL)
+               )
             {
               // calculate number/total size of entities in persistence periode
               LIST_ITERATE(&jobExpirationEntityList,otherJobExpirationEntityNode)
@@ -11034,6 +11063,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
       Job_listUnlock();
       return;
     }
+// TODO:fprintf(stderr,"%s:%d: %llu %llu\n",__FILE__,__LINE__,jobNode->statusInfo.entry.doneSize,jobNode->statusInfo.entry.totalSize);
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,

@@ -6477,7 +6477,13 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                   stringToUInt(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].u,&tail);
                   break;
                 case DATABASE_DATATYPE_DATETIME:
-                  stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].dateTime,NULL);
+                  {
+                    const char *s;
+
+                    // Note: PostgreSQL sometimes return a float value! Thus ignore the fraction part at the "."
+                    stringToUInt64(PQgetvalue(databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowIndex,i),&databaseStatementHandle->results[i].dateTime,&s);
+                    UNUSED_VARIABLE(s);
+                  }
                   break;
                 case DATABASE_DATATYPE_STRING:
                   String_setBuffer(databaseStatementHandle->results[i].string,
