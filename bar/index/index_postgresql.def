@@ -12,7 +12,7 @@ CREATE TABLE meta (
 );
 
 INSERT INTO meta (name,value) VALUES ('version',${VERSION});
-INSERT INTO meta (name,value) VALUES ('datetime',NOW()) ;
+INSERT INTO meta (name,value) VALUES ('datetime',DATE_TRUNC('second',CURRENT_TIMESTAMP::timestamp));
 
 
 // --- uuids --------------------------
