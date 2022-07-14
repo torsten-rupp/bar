@@ -284,7 +284,7 @@ sub processFile($$)
 
           print CFILE_HANDLE "#define INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
-          print CFILE_HANDLE "CREATE INDEX $indexName ON $tableName ($columns)\\\n";
+          print CFILE_HANDLE "CREATE INDEX IF NOT EXISTS $indexName ON $tableName ($columns)\\\n";
           print CFILE_HANDLE "\"\n";
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
           print CFILE_HANDLE "\n";
