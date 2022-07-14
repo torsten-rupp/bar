@@ -1534,6 +1534,79 @@ public class BARControl
     }
   }
 
+  /** job info
+   */
+  class JobInfo
+  {
+    String              jobUUID;
+    String              name;
+    JobData.States      state;
+    String              slaveHostName;
+    JobData.SlaveStates slaveState;
+    String              archiveType;
+    long                archivePartSize;
+// TODO: enum
+    String              deltaCompressAlgorithm;
+// TODO: enum
+    String              byteCompressAlgorithm;
+// TODO: enum
+    String              cryptAlgorithm;
+// TODO: enum
+    String              cryptType;
+// TODO: enum
+    String              cryptPasswordMode;
+    long                lastExecutedDateTime;
+    long                estimatedRestTime;
+
+    /** create login data
+     * @param jobUUID
+     * @param name
+     * @param state
+     * @param slaveHostName
+     * @param slaveState
+     * @param archiveType
+     * @param archivePartSize
+     * @param deltaCompressAlgorithm
+     * @param byteCompressAlgorithm
+     * @param cryptAlgorithm
+     * @param cryptType
+     * @param cryptPasswordMode
+     * @param lastExecutedDateTime
+     * @param estimatedRestTime
+     */
+    JobInfo(String              jobUUID,
+            String              name,
+            JobData.States      state,
+            String              slaveHostName,
+            JobData.SlaveStates slaveState,
+            String              archiveType,
+            long                archivePartSize,
+            String              deltaCompressAlgorithm,
+            String              byteCompressAlgorithm,
+            String              cryptAlgorithm,
+            String              cryptType,
+            String              cryptPasswordMode,
+            long                lastExecutedDateTime,
+            long                estimatedRestTime
+           )
+    {
+      this.jobUUID                = jobUUID;
+      this.name                   = name;
+      this.state                  = state;
+      this.slaveHostName          = slaveHostName;
+      this.slaveState             = slaveState;
+      this.archiveType            = archiveType;
+      this.archivePartSize        = archivePartSize;
+      this.deltaCompressAlgorithm = deltaCompressAlgorithm;
+      this.byteCompressAlgorithm  = byteCompressAlgorithm;
+      this.cryptAlgorithm         = cryptAlgorithm;
+      this.cryptType              = cryptType;
+      this.cryptPasswordMode      = cryptPasswordMode;
+      this.lastExecutedDateTime   = lastExecutedDateTime;
+      this.estimatedRestTime      = estimatedRestTime;
+    }
+  };
+
   /** list local directory
    */
   public static ListDirectory<File> listDirectory = new ListDirectory<File>()
@@ -2070,7 +2143,7 @@ public class BARControl
     if (Settings.debugLevel > 0)
     {
       printError(throwable);
-    }    
+    }
 
     // store into log file
     PrintStream output = null;
@@ -2104,7 +2177,7 @@ public class BARControl
     finally
     {
       if (output != null) output.close();
-    }   
+    }
   }
 
   /** print error to stderr
@@ -5085,24 +5158,9 @@ logThrowable(new Throwable());
           }
 
           // get joblist
-          final int n[] = {0};
+          final ArrayList<JobInfo> jobInfoList = new ArrayList<JobInfo>();
           try
           {
-            System.out.println(String.format("%-32s %-18s %-20s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-13s",
-                                             BARControl.tr("Name"),
-                                             BARControl.tr("State"),
-                                             BARControl.tr("Host name"),
-                                             BARControl.tr("Type"),
-                                             BARControl.tr("Part size"),
-                                             BARControl.tr("Compress"),
-                                             BARControl.tr("Crypt"),
-                                             BARControl.tr("Crypt type"),
-                                             BARControl.tr("Mode"),
-                                             BARControl.tr("Last executed"),
-                                             BARControl.tr("Estimated [s]")
-                                            )
-                              );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                      1,  // debug level
                                      new Command.ResultHandler()
@@ -5119,14 +5177,20 @@ logThrowable(new Throwable());
                                          JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
                                          String              archiveType            = valueMap.getString("archiveType"                         );
                                          long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
+// TODO: enum
                                          String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
+// TODO: enum
                                          String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
+// TODO: enum
                                          String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
+// TODO: enum
                                          String              cryptType              = valueMap.getString("cryptType"                           );
+// TODO: enum
                                          String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
                                          long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
                                          long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
 
+/*
                                          String compressAlgorithms;
                                          if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
                                          else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
@@ -5139,7 +5203,7 @@ logThrowable(new Throwable());
                                            cryptPasswordMode = "-";
                                          }
 
-                                         System.out.println(String.format("%-32s %-18s %-20s %-12s %14d %-25s %-14s %-10s %-8s %-19s %13d",
+                                         System.out.println(String.format("%-32s %-18s %-20s %-12s %14d %-25s %-15s %-10s %-8s %-19s %13d",
                                                                           name,
                                                                           (serverState[0] == BARServer.States.RUNNING)
                                                                             ? JobData.formatStateText(state,slaveHostName,slaveState)
@@ -5156,11 +5220,85 @@ logThrowable(new Throwable());
                                                                          )
                                                            );
                                          n[0]++;
+*/
+                                         jobInfoList.add(new JobInfo(jobUUID,
+                                                                     name,
+                                                                     state,
+                                                                     slaveHostName,
+                                                                     slaveState,
+                                                                     archiveType,
+                                                                     archivePartSize,
+                                                                     deltaCompressAlgorithm,
+                                                                     byteCompressAlgorithm,
+                                                                     cryptAlgorithm,
+                                                                     cryptType,
+                                                                     cryptPasswordMode,
+                                                                     lastExecutedDateTime,
+                                                                     estimatedRestTime
+                                                                    )
+                                                        );
                                        }
                                      }
                                     );
+
+            Collections.sort(jobInfoList,new Comparator<JobInfo>()
+            {
+              @Override
+              public int compare(JobInfo jobInfo1, JobInfo jobInfo2)
+              {
+                return jobInfo1.name.compareTo(jobInfo2.name);
+              }
+            });
+
+            System.out.println(String.format("%-32s %-18s %-20s %-12s %-14s %-25s %-15s %-10s %-8s %-19s %-13s",
+                                             BARControl.tr("Name"),
+                                             BARControl.tr("State"),
+                                             BARControl.tr("Host name"),
+                                             BARControl.tr("Type"),
+                                             BARControl.tr("Part size"),
+                                             BARControl.tr("Compress"),
+                                             BARControl.tr("Crypt"),
+                                             BARControl.tr("Crypt type"),
+                                             BARControl.tr("Mode"),
+                                             BARControl.tr("Last executed"),
+                                             BARControl.tr("Estimated [s]")
+                                            )
+                              );
+
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#job|1<jobs}",n[0]));
+            for (JobInfo jobInfo : jobInfoList)
+            {
+              String compressAlgorithms;
+              if      (!jobInfo.deltaCompressAlgorithm.equalsIgnoreCase("none") && !jobInfo.byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = jobInfo.deltaCompressAlgorithm+"+"+jobInfo.byteCompressAlgorithm;
+              else if (!jobInfo.deltaCompressAlgorithm.equalsIgnoreCase("none")                                                           ) compressAlgorithms = jobInfo.deltaCompressAlgorithm;
+              else if (                                                            !jobInfo.byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = jobInfo.byteCompressAlgorithm;
+              else                                                                                                                          compressAlgorithms = "-";
+              if (jobInfo.cryptAlgorithm.equalsIgnoreCase("none"))
+              {
+                jobInfo.cryptAlgorithm    = "-";
+                jobInfo.cryptType         = "-";
+                jobInfo.cryptPasswordMode = "-";
+              }
+
+              System.out.println(String.format("%-32s %-18s %-20s %-12s %14d %-25s %-15s %-10s %-8s %-19s %13d",
+                                              jobInfo.name,
+                                              (serverState[0] == BARServer.States.RUNNING)
+                                                ? JobData.formatStateText(jobInfo.state,jobInfo.slaveHostName,jobInfo.slaveState)
+                                                : BARControl.tr("suspended"),
+                                              jobInfo.slaveHostName,
+                                              jobInfo.archiveType.toString(),
+                                              jobInfo.archivePartSize,
+                                              compressAlgorithms,
+                                              jobInfo.cryptAlgorithm,
+                                              jobInfo.cryptType,
+                                              jobInfo.cryptPasswordMode,
+                                              (jobInfo.lastExecutedDateTime > 0) ? DATE_FORMAT.format(new Date(jobInfo.lastExecutedDateTime*1000)) : "",
+                                              jobInfo.estimatedRestTime
+                                             )
+                               );
+            }
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#job|1<jobs}",jobInfoList.size()));
           }
           catch (Exception exception)
           {
