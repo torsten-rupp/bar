@@ -5190,37 +5190,6 @@ logThrowable(new Throwable());
                                          long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
                                          long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
 
-/*
-                                         String compressAlgorithms;
-                                         if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
-                                         else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
-                                         else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
-                                         else                                                                                                          compressAlgorithms = "-";
-                                         if (cryptAlgorithm.equalsIgnoreCase("none"))
-                                         {
-                                           cryptAlgorithm    = "-";
-                                           cryptType         = "-";
-                                           cryptPasswordMode = "-";
-                                         }
-
-                                         System.out.println(String.format("%-32s %-18s %-20s %-12s %14d %-25s %-15s %-10s %-8s %-19s %13d",
-                                                                          name,
-                                                                          (serverState[0] == BARServer.States.RUNNING)
-                                                                            ? JobData.formatStateText(state,slaveHostName,slaveState)
-                                                                            : BARControl.tr("suspended"),
-                                                                          slaveHostName,
-                                                                          archiveType.toString(),
-                                                                          archivePartSize,
-                                                                          compressAlgorithms,
-                                                                          cryptAlgorithm,
-                                                                          cryptType,
-                                                                          cryptPasswordMode,
-                                                                          (lastExecutedDateTime > 0) ? DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)) : "",
-                                                                          estimatedRestTime
-                                                                         )
-                                                           );
-                                         n[0]++;
-*/
                                          jobInfoList.add(new JobInfo(jobUUID,
                                                                      name,
                                                                      state,
