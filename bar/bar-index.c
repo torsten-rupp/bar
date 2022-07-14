@@ -1064,25 +1064,24 @@ LOCAL void outputProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   if (estimatedRestTime < (99999*60*60))
   {
-    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
-                       " / %7.1f%% %5uh:%02umin:%02us %c",
-                       (float)progress/10.0,
-                       estimatedRestTime/(60*60),
-                       estimatedRestTime%(60*60)/60,
-                       estimatedRestTime%60,
-                       WHEEL[wheelIndex]
-                      );
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%7.1f%% %5uh:%02umin:%02us %c",
+                 (float)progress/10.0,
+                 estimatedRestTime/(60*60),
+                 estimatedRestTime%(60*60)/60,
+                 estimatedRestTime%60,
+                 WHEEL[wheelIndex]
+                );
   }
   else
   {
-    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
-                       " / %7.1f%% -----h:--min:--s %c",
-                       (float)progress/10.0,
-                       WHEEL[wheelIndex]
-                      );
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%7.1f%% -----h:--min:--s %c",
+                 (float)progress/10.0,
+                 WHEEL[wheelIndex]
+                );
   }
   outputProgressBufferLength = stringLength(outputProgressBuffer);
 
@@ -1128,6 +1127,53 @@ LOCAL void outputProgressDone(ulong totalTime,
   UNUSED_RESULT(fwrite("\n",1,1,stdout));
 
   fflush(stdout);
+}
+
+/***********************************************************************\
+* Name   : getPostgreSQLFTSTokens
+* Purpose: get PostgreSQL full-text-seach tokens from text
+* Input  : string - token string variable
+*          text   - text (can be NULL)
+* Output : -
+* Return : token string
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getPostgreSQLFTSTokens(String tokens, ConstString text)
+{
+  bool           spaceFlag;
+  StringIterator stringIterator;
+  Codepoint      codepoint;
+
+  String_clear(tokens);
+
+  if (text != NULL)
+  {
+    spaceFlag = FALSE;
+    STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
+    {
+      if (codepoint < 128)
+      {
+        if      (isalnum((int)codepoint))
+        {
+          String_appendCharUTF8(tokens,codepoint);
+          spaceFlag = FALSE;
+        }
+        else if (!spaceFlag)
+        {
+          String_appendChar(tokens,' ');
+          spaceFlag = TRUE;
+        }
+      }
+      else
+      {
+        String_appendCharUTF8(tokens,codepoint);
+        spaceFlag = FALSE;
+      }
+    }
+  }
+
+  return tokens;
 }
 
 #include "index/index_version6.c"
@@ -2288,7 +2334,10 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 
 LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 {
-  Errors error;
+  Errors       error;
+  uint         maxSteps;
+  uint64       n;
+  ProgressInfo progressInfo;
 
   printInfo("Create FTS indizes:\n");
 
@@ -2319,14 +2368,15 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         // nothing to do
         break;
     }
-    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
     if (error != ERROR_NONE)
     {
+      printInfo("FAIL\n");
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
     }
+    printInfo("OK\n");
 
-    // create new FTS tables (if not exists)
+    // create new FTS tables (if not exists)    
     printInfo("  Create FTS indizes...");
     switch (Database_getType(databaseHandle))
     {
@@ -2345,60 +2395,6 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                      )
                                     );
           }
-          if (error == ERROR_NONE)
-          {
-            error = Database_insertSelect(databaseHandle,
-                                          NULL,  // changedRowCount
-                                          "FTS_storages",
-                                          DATABASE_FLAG_IGNORE,
-                                          DATABASE_COLUMNS
-                                          (
-                                            DATABASE_COLUMN_KEY   ("storageId"),
-                                            DATABASE_COLUMN_STRING("name")
-                                          ),
-                                          DATABASE_TABLES
-                                          (
-                                            "storages"
-                                          ),
-                                          DATABASE_COLUMNS
-                                          (
-                                            DATABASE_COLUMN_KEY   ("id"),
-                                            DATABASE_COLUMN_STRING("name")
-                                          ),
-                                          DATABASE_FILTERS_NONE,
-                                          NULL,  // groupBy
-                                          NULL,  // orderBy
-                                          0LL,
-                                          DATABASE_UNLIMITED
-                                         );
-          }
-          if (error == ERROR_NONE)
-          {
-            error = Database_insertSelect(databaseHandle,
-                                          NULL,  // changedRowCount
-                                          "FTS_entries",
-                                          DATABASE_FLAG_IGNORE,
-                                          DATABASE_COLUMNS
-                                          (
-                                            DATABASE_COLUMN_KEY   ("entryId"),
-                                            DATABASE_COLUMN_STRING("name")
-                                          ),
-                                          DATABASE_TABLES
-                                          (
-                                            "entries"
-                                          ),
-                                          DATABASE_COLUMNS
-                                          (
-                                            DATABASE_COLUMN_KEY   ("id"),
-                                            DATABASE_COLUMN_STRING("name")
-                                          ),
-                                          DATABASE_FILTERS_NONE,
-                                          NULL,  // groupBy
-                                          NULL,  // orderBy
-                                          0LL,
-                                          DATABASE_UNLIMITED
-                                         );
-          }
         }
         break;
       case DATABASE_TYPE_MARIADB:
@@ -2408,12 +2404,265 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         // nothing to do
         break;
     }
-    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
     if (error != ERROR_NONE)
     {
+      printInfo("FAIL\n");
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
     }
+
+    // get max. steps
+    maxSteps = 0LL;
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        maxSteps += 2;
+        break;
+      case DATABASE_TYPE_MARIADB:
+        maxSteps += 0;
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        error = ERROR_NONE;
+
+        if (error == ERROR_NONE)
+        {
+          error = Database_getUInt64(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "COUNT(id)",
+                                     "deletedFlag!=TRUE",
+                                     DATABASE_FILTERS
+                                     (
+                                     ),
+                                     NULL  // group
+                                    );
+          maxSteps += n;
+        }
+        if (error == ERROR_NONE)
+        {
+          error = Database_getUInt64(databaseHandle,
+                                     &n,
+                                     "storages",
+                                     "COUNT(id)",
+                                     "deletedFlag!=TRUE",
+                                     DATABASE_FILTERS
+                                     (
+                                     ),
+                                     NULL  // group
+                                    );
+          maxSteps += n;
+        }
+        break;
+    }
+
+    // fill FTS tables
+    ProgressInfo_init(&progressInfo,
+                      NULL,  // parentProgressInfo
+                      128,  // filterWindowSize
+                      500,  // reportTime
+                      maxSteps,
+                      CALLBACK_(outputProgressInit,NULL),  // progresInitFunction
+                      CALLBACK_(outputProgressDone,NULL),  // progressDoneFunction
+                      CALLBACK_(outputProgressInfo,NULL),
+                      NULL  // userData
+                     );
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        if (error == ERROR_NONE)
+        {
+          error = Database_insertSelect(databaseHandle,
+                                        NULL,  // changedRowCount
+                                        "FTS_storages",
+                                        DATABASE_FLAG_IGNORE,
+                                        DATABASE_COLUMNS
+                                        (
+                                          DATABASE_COLUMN_KEY   ("storageId"),
+                                          DATABASE_COLUMN_STRING("name")
+                                        ),
+                                        DATABASE_TABLES
+                                        (
+                                          "storages"
+                                        ),
+                                        DATABASE_COLUMNS
+                                        (
+                                          DATABASE_COLUMN_KEY   ("id"),
+                                          DATABASE_COLUMN_STRING("name")
+                                        ),
+                                        DATABASE_FILTERS_NONE,
+                                        NULL,  // groupBy
+                                        NULL,  // orderBy
+                                        0LL,
+                                        DATABASE_UNLIMITED
+                                       );
+          ProgressInfo_step(&progressInfo);
+        }
+        if (error == ERROR_NONE)
+        {
+          error = Database_insertSelect(databaseHandle,
+                                        NULL,  // changedRowCount
+                                        "FTS_entries",
+                                        DATABASE_FLAG_IGNORE,
+                                        DATABASE_COLUMNS
+                                        (
+                                          DATABASE_COLUMN_KEY   ("entryId"),
+                                          DATABASE_COLUMN_STRING("name")
+                                        ),
+                                        DATABASE_TABLES
+                                        (
+                                          "entries"
+                                        ),
+                                        DATABASE_COLUMNS
+                                        (
+                                          DATABASE_COLUMN_KEY   ("id"),
+                                          DATABASE_COLUMN_STRING("name")
+                                        ),
+                                        DATABASE_FILTERS_NONE,
+                                        NULL,  // groupBy
+                                        NULL,  // orderBy
+                                        0LL,
+                                        DATABASE_UNLIMITED
+                                       );
+          ProgressInfo_step(&progressInfo);
+        }
+        break;
+      case DATABASE_TYPE_MARIADB:
+        // nothing to do
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        {          
+          String  tokens;
+
+          tokens = String_new();
+          error  = ERROR_NONE;
+
+          if (error == ERROR_NONE)
+          {
+            error = Database_get(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   DatabaseId storageId;
+                                   String     name;
+
+                                   assert(values != NULL);
+                                   assert(valueCount == 2);
+
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
+                                   
+                                   storageId = values[0].id;
+                                   name      = values[1].string;
+//fprintf(stderr,"%s:%d: storageId=%llu\n",__FILE__,__LINE__,storageId);
+
+                                   getPostgreSQLFTSTokens(tokens,name);
+                                   error = Database_insert(databaseHandle,
+                                                           NULL,  // insertRowId
+                                                           "FTS_storages",
+                                                           DATABASE_FLAG_NONE,
+                                                           DATABASE_VALUES
+                                                           (
+                                                             DATABASE_VALUE_KEY   ("storageId", storageId),
+                                                             DATABASE_VALUE_STRING("name",      "to_tsvector(?)", tokens)
+                                                           ),
+                                                           DATABASE_COLUMNS_NONE,
+                                                           DATABASE_FILTERS_NONE
+                                                          );
+
+                                   ProgressInfo_step(&progressInfo);
+
+                                   return error;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_TABLES
+                                 (
+                                   "storages"
+                                 ),
+                                 DATABASE_FLAG_NONE,
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
+                                 "deletedFlag!=TRUE",
+                                 DATABASE_FILTERS
+                                 (
+                                 ),
+                                 NULL,  // groupBy
+                                 NULL,  // orderBy
+                                 0LL,
+                                 DATABASE_UNLIMITED
+                                );
+          }
+          if (error == ERROR_NONE)
+          {
+            error = Database_get(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   DatabaseId entryId;
+                                   String     name;
+
+                                   assert(values != NULL);
+                                   assert(valueCount == 2);
+
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
+                                   
+                                   entryId = values[0].id;
+                                   name    = values[1].string;
+//fprintf(stderr,"%s:%d: entryId=%llu\n",__FILE__,__LINE__,entryId);
+
+                                   getPostgreSQLFTSTokens(tokens,name);
+                                   error = Database_insert(databaseHandle,
+                                                           NULL,  // insertRowId
+                                                           "FTS_entries",
+                                                           DATABASE_FLAG_NONE,
+                                                           DATABASE_VALUES
+                                                           (
+                                                             DATABASE_VALUE_KEY   ("entryId", entryId),
+                                                             DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                                           ),
+                                                           DATABASE_COLUMNS_NONE,
+                                                           DATABASE_FILTERS_NONE
+                                                          );
+
+                                   ProgressInfo_step(&progressInfo);
+
+                                   return error;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_TABLES
+                                 (
+                                   "entries"
+                                 ),
+                                 DATABASE_FLAG_NONE,
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
+                                 "deletedFlag!=TRUE",
+                                 DATABASE_FILTERS
+                                 (
+                                 ),
+                                 NULL,  // groupBy
+                                 NULL,  // orderBy
+                                 0LL,
+                                 DATABASE_UNLIMITED
+                                );
+          }
+
+          String_delete(tokens);
+        }
+        break;
+    }
+    ProgressInfo_done(&progressInfo);
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
+    }
+    printInfo("OK\n");
   }
   if (error != ERROR_NONE)
   {

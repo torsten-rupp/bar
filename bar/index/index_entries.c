@@ -4317,7 +4317,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                 {
                   String tokens;
 
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -4532,7 +4532,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                 {
                   String tokens;
 
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -4709,7 +4709,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
           {
             String tokens;
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "FTS_entries",
@@ -4884,7 +4884,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
           {
             String tokens;
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(linkName);
+            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),linkName);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "FTS_entries",
@@ -5071,7 +5071,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                 {
                   String tokens;
 
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -5270,7 +5270,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
           {
             String tokens;
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(name);
+            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "FTS_entries",

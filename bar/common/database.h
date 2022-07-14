@@ -149,6 +149,7 @@ typedef enum
   DATABASE_DATATYPE_BLOB,
 
   DATABASE_DATATYPE_ARRAY,
+  DATABASE_DATATYPE_FTS,
 
   DATABASE_DATATYPE_UNKNOWN,
 } DatabaseDataTypes;
@@ -207,7 +208,8 @@ typedef enum
 } DatabaseTemporaryTableIds;
 
 #define DATABASE_COMPARE_FLAG_NONE          0
-#define DATABASE_COMPARE_FLAG_INCLUDE_VIEWS (1 << 0)
+#define DATABASE_COMPARE_IGNORE_OBSOLETE    (1 << 0)
+#define DATABASE_COMPARE_FLAG_INCLUDE_VIEWS (1 << 1)
 
 // database check types
 typedef enum

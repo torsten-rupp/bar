@@ -160,14 +160,13 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
   return string;
 }
 
-String IndexCommon_getPostgreSQLFTSTokens(ConstString text)
+String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text)
 {
-  String         tokens;
   bool           spaceFlag;
   StringIterator stringIterator;
   Codepoint      codepoint;
 
-  tokens = String_new();
+  String_clear(string);
 
   if (text != NULL)
   {
@@ -178,24 +177,24 @@ String IndexCommon_getPostgreSQLFTSTokens(ConstString text)
       {
         if      (isalnum((int)codepoint))
         {
-          String_appendCharUTF8(tokens,codepoint);
+          String_appendCharUTF8(string,codepoint);
           spaceFlag = FALSE;
         }
         else if (!spaceFlag)
         {
-          String_appendChar(tokens,' ');
+          String_appendChar(string,' ');
           spaceFlag = TRUE;
         }
       }
       else
       {
-        String_appendCharUTF8(tokens,codepoint);
+        String_appendCharUTF8(string,codepoint);
         spaceFlag = FALSE;
       }
     }
   }
 
-  return tokens;
+  return string;
 }
 
 String IndexCommon_getFTSMatchString(String         string,

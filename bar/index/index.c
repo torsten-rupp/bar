@@ -2838,7 +2838,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                                    &indexHandle.databaseHandle,
                                    INDEX_CONST_REFERENCE_TABLE_NAMES,
                                    INDEX_CONST_REFERENCE_TABLE_NAME_COUNT,
-                                   DATABASE_COMPARE_FLAG_INCLUDE_VIEWS
+                                   DATABASE_COMPARE_IGNORE_OBSOLETE|DATABASE_COMPARE_FLAG_INCLUDE_VIEWS
                                   );
           closeIndex(&indexHandle);
         }
@@ -2848,6 +2848,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
       Database_drop(&indexDatabaseSpecifierReference,NULL);
 
       Database_doneSpecifier(&indexDatabaseSpecifierReference);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
       if (error != ERROR_NONE)
       {

@@ -142,7 +142,7 @@ CREATE TABLE FTS_storages(
   name      TSVECTOR
 );
 CREATE INDEX ON FTS_storages (storageId);
-CREATE INDEX ON FTS_storages USING GIST(name);
+CREATE INDEX ON FTS_storages USING GIN(name);
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
@@ -212,7 +212,7 @@ CREATE TABLE FTS_entries(
   name    TSVECTOR
 );
 CREATE INDEX ON FTS_entries (entryId);
-CREATE INDEX ON FTS_entries USING GIST(name);
+CREATE INDEX ON FTS_entries USING GIN(name);
 
 //TODO
 // --- skipped entries -------------------------------------------------
