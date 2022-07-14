@@ -14,7 +14,6 @@ CREATE TABLE meta (
 INSERT INTO meta (name,value) VALUES ('version',${VERSION});
 INSERT INTO meta (name,value) VALUES ('datetime',DATE_TRUNC('second',CURRENT_TIMESTAMP::timestamp));
 
-
 // --- uuids --------------------------
 CREATE TABLE IF NOT EXISTS uuids(
   id      BIGSERIAL PRIMARY KEY NOT NULL,
@@ -22,7 +21,7 @@ CREATE TABLE IF NOT EXISTS uuids(
   UNIQUE(jobUUID)
 );
 
-CREATE INDEX jobUUID ON uuids(jobUUID);
+CREATE INDEX ON uuids (jobUUID);
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
@@ -69,9 +68,9 @@ CREATE TABLE IF NOT EXISTS entities(
   uuidId                   BIGINT DEFAULT 0  // no foreign key reference
 );
 
-CREATE INDEX ON entities(jobUUID,created,type);
-CREATE INDEX ON entities(hostName);
-CREATE INDEX ON entities(deletedFlag);
+CREATE INDEX ON entities (jobUUID,created,type);
+CREATE INDEX ON entities (hostName);
+CREATE INDEX ON entities (deletedFlag);
 
 INSERT INTO entities(id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',CURRENT_TIMESTAMP,0,0,FALSE);
 
@@ -129,20 +128,20 @@ CREATE TABLE IF NOT EXISTS storages(
   uuidId                    BIGINT DEFAULT 0  // no foreign key reference
 );
 
-CREATE INDEX ON storages(uuidId,entityId,name,created,state);
-CREATE INDEX ON storages(entityId,name,created,state);
-CREATE INDEX ON storages(name,totalEntryCount,created,state);
-CREATE INDEX ON storages(created,name,totalEntryCount,state);
-CREATE INDEX ON storages(userName);
-CREATE INDEX ON storages(state,name,totalEntryCount,created);
-CREATE INDEX ON storages(deletedFlag);
+CREATE INDEX ON storages (uuidId,entityId,name,created,state);
+CREATE INDEX ON storages (entityId,name,created,state);
+CREATE INDEX ON storages (name,totalEntryCount,created,state);
+CREATE INDEX ON storages (created,name,totalEntryCount,state);
+CREATE INDEX ON storages (userName);
+CREATE INDEX ON storages (state,name,totalEntryCount,created);
+CREATE INDEX ON storages (deletedFlag);
 
 // full-text-search
 CREATE TABLE FTS_storages(
   storageId BIGINT REFERENCES storages(id) ON DELETE CASCADE,
   name      TSVECTOR
 );
-CREATE INDEX ON FTS_storages(storageId);
+CREATE INDEX ON FTS_storages (storageId);
 CREATE INDEX ON FTS_storages USING GIST(name);
 
 // --- entries ---------------------------------------------------------
@@ -168,12 +167,12 @@ CREATE TABLE IF NOT EXISTS entries(
   size            BIGINT DEFAULT 0
 );
 
-CREATE INDEX ON entries(uuidId,entityId,type,name);
-CREATE INDEX ON entries(entityId,type,name);
-CREATE INDEX ON entries(name,size,type,timeLastChanged);
-CREATE INDEX ON entries(type,size,name,timeLastChanged);
-CREATE INDEX ON entries(size,type,name,timeLastChanged);
-CREATE INDEX ON entries(timeLastChanged,name,size,type);
+CREATE INDEX ON entries (uuidId,entityId,type,name);
+CREATE INDEX ON entries (entityId,type,name);
+CREATE INDEX ON entries (name,size,type,timeLastChanged);
+CREATE INDEX ON entries (type,size,name,timeLastChanged);
+CREATE INDEX ON entries (size,type,name,timeLastChanged);
+CREATE INDEX ON entries (timeLastChanged,name,size,type);
 
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
@@ -195,13 +194,13 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
 
   UNIQUE(name)
 );
-CREATE INDEX ON entriesNewest(entryId,name,size,timeLastChanged);
-CREATE INDEX ON entriesNewest(name,size,type,timeLastChanged);
-CREATE INDEX ON entriesNewest(type,entryId,name,size,timeLastChanged);
-CREATE INDEX ON entriesNewest(size,type,name,timeLastChanged);
-CREATE INDEX ON entriesNewest(type,size,name,timeLastChanged);
-CREATE INDEX ON entriesNewest(timeLastChanged,name,size,type);
-CREATE INDEX ON entriesNewest(entityId,type,entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest (entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
+CREATE INDEX ON entriesNewest (type,entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest (size,type,name,timeLastChanged);
+CREATE INDEX ON entriesNewest (type,size,name,timeLastChanged);
+CREATE INDEX ON entriesNewest (timeLastChanged,name,size,type);
+CREATE INDEX ON entriesNewest (entityId,type,entryId,name,size,timeLastChanged);
 
 // TODO: implement multi-line support
 CREATE OR REPLACE FUNCTION entriesTriggerFunction() RETURNS TRIGGER LANGUAGE PLPGSQL AS $$ BEGIN UPDATE entriesNewest  SET uuidId=NEW.uuidId  WHERE entryId=OLD.id;UPDATE entriesNewest  SET entityId=NEW.entityId  WHERE entryId=OLD.id;  UPDATE entriesNewest  SET entryId        =NEW.id,      uuidId         =NEW.uuidId,      entityId       =NEW.entityId,      type           =NEW.type,      timeLastChanged=NEW.timeLastChanged,      userId         =NEW.userId,      groupId        =NEW.groupId,      permission     =NEW.permission,      size           =NEW.size  WHERE     entryId!=NEW.id        AND name=NEW.name        AND type=NEW.type        AND NEW.timeLastChanged>timeLastChanged; END $$;
@@ -212,7 +211,7 @@ CREATE TABLE FTS_entries(
   entryId BIGINT REFERENCES entries(id) ON DELETE CASCADE,
   name    TSVECTOR
 );
-CREATE INDEX ON FTS_entries(entryId);
+CREATE INDEX ON FTS_entries (entryId);
 CREATE INDEX ON FTS_entries USING GIST(name);
 
 //TODO
@@ -225,9 +224,9 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
 
   deletedFlag BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX ON skippedEntries(entityId,type,name);
-CREATE INDEX ON skippedEntries(name);
-CREATE INDEX ON skippedEntries(type,name);
+CREATE INDEX ON skippedEntries (entityId,type,name);
+CREATE INDEX ON skippedEntries (name);
+CREATE INDEX ON skippedEntries (type,name);
 
 
 // --- entry fragments -------------------------------------------------
@@ -240,8 +239,8 @@ CREATE TABLE IF NOT EXISTS entryFragments(
 //  UNIQUE (entryId,"offset")
 );
 
-CREATE INDEX ON entryFragments(entryId);
-CREATE INDEX ON entryFragments(storageId);
+CREATE INDEX ON entryFragments (entryId);
+CREATE INDEX ON entryFragments (storageId);
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
@@ -252,7 +251,7 @@ CREATE TABLE IF NOT EXISTS fileEntries(
 
   UNIQUE (entryId)
 );
-CREATE INDEX ON fileEntries(entryId);
+CREATE INDEX ON fileEntries (entryId);
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
@@ -266,7 +265,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   UNIQUE (entryId)
 );
 
-CREATE INDEX ON imageEntries(entryId);
+CREATE INDEX ON imageEntries (entryId);
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
@@ -287,9 +286,9 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   UNIQUE (entryId)
 );
 
-CREATE INDEX ON directoryEntries(entryId);
-CREATE INDEX ON directoryEntries(storageId,name);
-CREATE INDEX ON directoryEntries(name);
+CREATE INDEX ON directoryEntries (entryId);
+CREATE INDEX ON directoryEntries (storageId,name);
+CREATE INDEX ON directoryEntries (name);
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
@@ -302,8 +301,8 @@ CREATE TABLE IF NOT EXISTS linkEntries(
   UNIQUE (entryId)
 );
 
-CREATE INDEX ON linkEntries(entryId);
-CREATE INDEX ON linkEntries(storageId);
+CREATE INDEX ON linkEntries (entryId);
+CREATE INDEX ON linkEntries (storageId);
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
@@ -315,7 +314,7 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
   UNIQUE (entryId)
 );
 
-CREATE INDEX ON hardlinkEntries(entryId);
+CREATE INDEX ON hardlinkEntries (entryId);
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
@@ -330,8 +329,8 @@ CREATE TABLE IF NOT EXISTS specialEntries(
   UNIQUE (entryId)
 );
 
-CREATE INDEX ON specialEntries(entryId);
-CREATE INDEX ON specialEntries(storageId);
+CREATE INDEX ON specialEntries (entryId);
+CREATE INDEX ON specialEntries (storageId);
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
@@ -352,9 +351,9 @@ CREATE TABLE IF NOT EXISTS history(
   errorEntrySize    BIGINT
 );
 
-CREATE INDEX ON history(jobUUID,created,type);
-CREATE INDEX ON history(created);
-CREATE INDEX ON history(errorMessage);
+CREATE INDEX ON history (jobUUID,created,type);
+CREATE INDEX ON history (created);
+CREATE INDEX ON history (errorMessage);
 
 // --- debug only ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS log(
