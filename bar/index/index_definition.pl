@@ -261,20 +261,6 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MARIADB")
-        {
-          push(@indexNames, $indexName);
-          push(@definitions, "INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName));
-
-          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName).";\n";
-
-          print CFILE_HANDLE "#define INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_ \\\n";
-          print CFILE_HANDLE "\"\\\n";
-          print CFILE_HANDLE "CREATE INDEX $indexName ON $tableName ($columns)\\\n";
-          print CFILE_HANDLE "\"\n";
-          print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
-          print CFILE_HANDLE "\n";
-        }
         elsif ($suffix eq "POSTGRESQL")
         {
           push(@indexNames, $indexName);

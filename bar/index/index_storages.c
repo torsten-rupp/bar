@@ -5344,7 +5344,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
           {
             String tokens;
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(storageName);
+            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),storageName);
             error = Database_insert(&indexHandle->databaseHandle,
                                      NULL,  // insertRowId
                                      "FTS_storages",
@@ -5561,7 +5561,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
             {
               String tokens;
 
-              tokens = IndexCommon_getPostgreSQLFTSTokens(storageName);
+              tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),storageName);
               error = Database_update(&indexHandle->databaseHandle,
                                       NULL,  // changedRowCount
                                       "FTS_storages",

@@ -737,6 +737,8 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
       return (dataType1 == DATABASE_DATATYPE_BLOB);
     case DATABASE_DATATYPE_ARRAY:
       return (dataType1 == DATABASE_DATATYPE_ARRAY);
+    case DATABASE_DATATYPE_FTS:
+      return (dataType1 == DATABASE_DATATYPE_FTS);
 
     case DATABASE_DATATYPE_UNKNOWN:
       return FALSE;
@@ -9128,7 +9130,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                     }
                                     else
                                     {
-                                      HALT_INTERNAL_ERROR("unknown database type '%s'",String_cString(type));
+                                      HALT_INTERNAL_ERROR("unknown type '%s' in table '%s'",String_cString(type),tableName);
                                     }
                                     i++;
                                   }
@@ -9228,9 +9230,13 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                     {
                                       columns[i].type = DATABASE_DATATYPE_BLOB;
                                     }
+                                    else if (String_startsWithCString(type,"tsvector"))
+                                    {
+                                      columns[i].type = DATABASE_DATATYPE_FTS;
+                                    }
                                     else
                                     {
-                                      HALT_INTERNAL_ERROR("unknown database type '%s'",String_cString(type));
+                                      HALT_INTERNAL_ERROR("unknown type '%s' in table '%s'",String_cString(type),tableName);
                                     }
                                     i++;
                                   }
@@ -12365,8 +12371,8 @@ Errors Database_compare(DatabaseHandle     *referenceDatabaseHandle,
   StringList         referenceTableNameList,tableNameList;
   StringListIterator stringListIterator;
   String             tableName;
-  DatabaseColumn     referenceColumns[DATABASE_MAX_TABLE_COLUMNS],compareColumns[DATABASE_MAX_TABLE_COLUMNS];
-  uint               referenceColumnCount,compareColumnCount;
+  DatabaseColumn     referenceColumns[DATABASE_MAX_TABLE_COLUMNS],columns[DATABASE_MAX_TABLE_COLUMNS];
+  uint               referenceColumnCount,columnCount;
   uint               i,j;
 
   assert(referenceDatabaseHandle != NULL);
@@ -12386,7 +12392,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
     StringList_done(&referenceTableNameList);
     return error;
   }
-  if ((compareFlags & DATABASE_COMPARE_FLAG_INCLUDE_VIEWS) != 0)
+  if (IS_SET(compareFlags,DATABASE_COMPARE_FLAG_INCLUDE_VIEWS))
   {
     error = Database_getViewList(&referenceTableNameList,referenceDatabaseHandle);
     if (error != ERROR_NONE)
@@ -12406,7 +12412,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
     StringList_done(&referenceTableNameList);
     return error;
   }
-  if ((compareFlags & DATABASE_COMPARE_FLAG_INCLUDE_VIEWS) != 0)
+  if (IS_SET(compareFlags,DATABASE_COMPARE_FLAG_INCLUDE_VIEWS))
   {
     error = Database_getViewList(&tableNameList,databaseHandle);
     if (error != ERROR_NONE)
@@ -12438,8 +12444,8 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         {
           break;
         }
-        error = getTableColumns(compareColumns,
-                                &compareColumnCount,
+        error = getTableColumns(columns,
+                                &columnCount,
                                 DATABASE_MAX_TABLE_COLUMNS,
                                 databaseHandle,
                                 String_cString(tableName)
@@ -12453,14 +12459,14 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         for (i = 0; i < referenceColumnCount; i++)
         {
           // find column
-          j = ARRAY_FIND(compareColumnNames,compareColumnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,compareColumns[j].name));
-          if (j < compareColumnCount)
+          j = ARRAY_FIND(columnNames,columnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,columns[j].name));
+          if (j < columnCount)
           {
             if (   (referenceColumns[j].type != DATABASE_DATATYPE_NONE)
-                && !areCompatibleTypes(referenceColumns[i].type,compareColumns[j].type)
+                && !areCompatibleTypes(referenceColumns[i].type,columns[j].type)
                )
             {
-              error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s in %s: %d != %d",referenceColumns[i].name,String_cString(tableName),referenceColumns[i].type,compareColumns[j].type);
+              error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s in %s: %d != %d",referenceColumns[i].name,String_cString(tableName),referenceColumns[i].type,columns[j].type);
             }
           }
           else
@@ -12473,23 +12479,26 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
           break;
         }
 
-        // check for obsolete columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
-        for (i = 0; i < compareColumnCount; i++)
+        if (!IS_SET(compareFlags,DATABASE_COMPARE_IGNORE_OBSOLETE))
         {
-          // find column
-          j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEqualsIgnoreCase(compareColumns[i].name,referenceColumns[j].name));
-          if (j >= referenceColumnCount)
+          // check for obsolete columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
+          for (i = 0; i < columnCount; i++)
           {
-            error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s in %s",compareColumns[i].name,String_cString(tableName));
+            // find column
+            j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEqualsIgnoreCase(columns[i].name,referenceColumns[j].name));
+            if (j >= referenceColumnCount)
+            {
+              error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s in %s",columns[i].name,String_cString(tableName));
+            }
           }
-        }
-        if (error != ERROR_NONE)
-        {
-          break;
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
         }
 
         // free resources
-        freeTableColumns(compareColumns,compareColumnCount);
+        freeTableColumns(columns,columnCount);
         freeTableColumns(referenceColumns,referenceColumnCount);
       }
       else
@@ -12499,12 +12508,15 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
     }
   }
 
-  // check for obsolete tables
-  STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)
+  if (!IS_SET(compareFlags,DATABASE_COMPARE_IGNORE_OBSOLETE))
   {
-    if (!StringList_contains(&referenceTableNameList,tableName))
+    // check for obsolete tables
+    STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)
     {
-      error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,"%s",String_cString(tableName));
+      if (!StringList_contains(&referenceTableNameList,tableName))
+      {
+        error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,"%s",String_cString(tableName));
+      }
     }
   }
 

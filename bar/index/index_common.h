@@ -492,13 +492,14 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
 /***********************************************************************\
 * Name   : IndexCommon_getPostgreSQLFTSTokens
 * Purpose: get PostgreSQL full-text-seach tokens from text
-* Input  : text - text (can be NULL)
+* Input  : string - token string variable
+*          text   - text (can be NULL)
 * Output : -
 * Return : token string
 * Notes  : -
 \***********************************************************************/
 
-String IndexCommon_getPostgreSQLFTSTokens(ConstString text);
+String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text);
 
 /***********************************************************************\
 * Name   : IndexCommon_getFTSMatchString
