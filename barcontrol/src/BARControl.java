@@ -1559,20 +1559,20 @@ public class BARControl
     long                estimatedRestTime;
 
     /** create login data
-     * @param jobUUID
-     * @param name
-     * @param state
-     * @param slaveHostName
-     * @param slaveState
-     * @param archiveType
-     * @param archivePartSize
-     * @param deltaCompressAlgorithm
-     * @param byteCompressAlgorithm
-     * @param cryptAlgorithm
-     * @param cryptType
-     * @param cryptPasswordMode
-     * @param lastExecutedDateTime
-     * @param estimatedRestTime
+     * @param jobUUID job UUID
+     * @param name name
+     * @param state state
+     * @param slaveHostName slave host name
+     * @param slaveState slave state
+     * @param archiveType archive type
+     * @param archivePartSize archive part size [bytes]
+     * @param deltaCompressAlgorithm delta compress algorithm
+     * @param byteCompressAlgorithm byte compress algorithm
+     * @param cryptAlgorithm crypt algorithm
+     * @param cryptType crypt type
+     * @param cryptPasswordMode crypt password mode
+     * @param lastExecutedDateTime last executed date/time
+     * @param estimatedRestTime estimated rest time [s]
      */
     JobInfo(String              jobUUID,
             String              name,
