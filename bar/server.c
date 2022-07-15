@@ -2318,13 +2318,25 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   // log
   if (error == ERROR_NONE)
   {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Deleted storage #%lld: '%s', created at %s",
-               Index_getDatabaseId(storageId),
-               String_cString(storageName),
-               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
-              );
+    if (createdDateTime > 0LL)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Deleted storage #%lld: '%s', created at %s",
+                 Index_getDatabaseId(storageId),
+                 String_cString(storageName),
+                 String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                );
+    }
+    else
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Deleted storage #%lld: '%s'",
+                 Index_getDatabaseId(storageId),
+                 String_cString(storageName)
+                );
+    }
   }
   else
   {
@@ -2482,13 +2494,25 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   // log
   if (error == ERROR_NONE)
   {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Deleted entity #%lld: job '%s', created at %s",
-               Index_getDatabaseId(entityId),
-               String_cString(jobName),
-               String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
-              );
+    if (createdDateTime > 0LL)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Deleted entity #%lld: job '%s', created at %s",
+                 Index_getDatabaseId(entityId),
+                 String_cString(jobName),
+                 String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                );
+    }
+    else
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Deleted entity #%lld: job '%s'",
+                 Index_getDatabaseId(entityId),
+                 String_cString(jobName)
+                );
+    }
   }
   else
   {
@@ -2832,7 +2856,8 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
 *          expirationEntityList    - expiration list
 *          jobUUID                 - job UUID
 *          persistenceList         - job persistence list
-* Output : jobExpirationEntityList - job expiration list
+* Output : jobExpirationEntityList - job expiration entity list with
+                                     all entities with 
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -3032,16 +3057,19 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   Array                      entityIdArray;
   String                     expiredJobName;
   ExpirationEntityList       expirationEntityList;
+  uint64                     now;
   IndexId                    expiredEntityId;
   ArchiveTypes               expiredArchiveType;
   uint64                     expiredCreatedDateTime;
   ulong                      expiredTotalEntryCount;
   uint64                     expiredTotalEntrySize;
+  const char                 *expiredReason;
   MountList                  mountList;
   Errors                     error;
   const JobNode              *jobNode;
   ExpirationEntityList       jobExpirationEntityList;
   const ExpirationEntityNode *jobExpirationEntityNode,*otherJobExpirationEntityNode;
+  uint                       age;
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
@@ -3064,11 +3092,13 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                            );
 
     // init variables
+    now                    = Misc_getCurrentDateTime();
     expiredEntityId        = INDEX_ID_NONE;
     expiredArchiveType     = ARCHIVE_TYPE_NONE;
     expiredCreatedDateTime = 0LL;
     expiredTotalEntryCount = 0;
     expiredTotalEntrySize  = 0LL;
+    expiredReason          = NULL;
     List_init(&mountList,
               CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
               CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
@@ -3120,6 +3150,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               {
                 totalEntityCount++;
               }
+              
+              // get age
+              age = (now-jobExpirationEntityNode->createdDateTime)/S_PER_DAY;
 
               // check if "in-transit"
               inTransit = isInTransit(jobExpirationEntityNode);
@@ -3128,24 +3161,28 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               if (   !inTransit
                   && hasPersistence(jobNode,jobExpirationEntityNode->archiveType)
                   && (   (jobExpirationEntityNode->persistenceNode == NULL)
-                      || ((   (jobExpirationEntityNode->persistenceNode->maxKeep > 0)
-                           && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
-                           && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
-                          )
+                      || (   (jobExpirationEntityNode->persistenceNode->minKeep != KEEP_ALL)
+                          && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->minKeep)
                          )
                      )
+                  && !Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId)
                  )
               {
-                // find oldest entry
-                while (   (jobExpirationEntityNode->next != NULL)
-                       && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
-                      )
+                if       (   (jobExpirationEntityNode->persistenceNode == NULL)
+                          || (   (jobExpirationEntityNode->persistenceNode->maxKeep != KEEP_ALL)
+                              && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
+                              && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
+                             )
+                         )
                 {
-                  jobExpirationEntityNode = jobExpirationEntityNode->next;
-                }
+                  // no persistence or over max-keep limit -> find oldest entry                                    
+                  while (   (jobExpirationEntityNode->next != NULL)
+                         && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
+                        )
+                  {
+                    jobExpirationEntityNode = jobExpirationEntityNode->next;
+                  }
 
-                if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId))
-                {
                   // get expired entity
                   expiredEntityId        = jobExpirationEntityNode->entityId;
                   String_set(expiredJobName,jobNode->name);
@@ -3153,6 +3190,30 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                   expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
                   expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
                   expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
+                  expiredReason          = "max. keep limit reached";
+
+                  // get mount list
+                  List_copy(&mountList,
+                            NULL,
+                            &jobNode->job.options.mountList,
+                            NULL,
+                            NULL
+                           );
+                }
+                else if  (   (jobExpirationEntityNode->persistenceNode->maxAge != AGE_FOREVER)
+                          && (age > (uint)jobExpirationEntityNode->persistenceNode->maxAge)
+                         )
+                {
+                  // older than max-age                  
+
+                  // get expired entity
+                  expiredEntityId        = jobExpirationEntityNode->entityId;
+                  String_set(expiredJobName,jobNode->name);
+                  expiredArchiveType     = jobExpirationEntityNode->archiveType;
+                  expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
+                  expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
+                  expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
+                  expiredReason          = "max. age reached";
 
                   // get mount list
                   List_copy(&mountList,
@@ -3197,9 +3258,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
                     #ifdef SIMULATE_PURGE
-                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)",
+                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
                     #else /* not SIMULATE_PURGE */
-                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
+                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
@@ -3207,7 +3268,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
-                    expiredTotalEntrySize
+                    expiredTotalEntrySize,
+                    expiredReason
                    );
       }
       else

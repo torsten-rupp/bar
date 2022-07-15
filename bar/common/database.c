@@ -3357,7 +3357,6 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           return ERRORX_(DATABASE,0,"init locking");
         }
       #endif /* DATABASE_LOCK_PER_INSTANCE */
-      databaseNode->lockType                = DATABASE_LOCK_TYPE_NONE;
 
       databaseNode->pendingReadCount        = 0;
       databaseNode->readCount               = 0;

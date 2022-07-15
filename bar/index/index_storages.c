@@ -6087,23 +6087,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;
         }
-//fprintf(stderr,"%s, %d: deleted storageId=%lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
-#if 0
-fprintf(stderr,"%s, %d: deleted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
-fprintf(stderr,"%s, %d: totalEntry=%lu %"PRIu64"  totalFile=%lu %"PRIu64"  totalImage=%lu %"PRIu64"  totalDirectory=%lu  totalLink=%lu  totalHardlink=%lu %"PRIu64" totalSpecial=%lu\n",__FILE__,__LINE__,
-                               totalEntryCount,
-                               totalEntrySize,
-                               totalFileCount,
-                               totalFileSize,
-                               totalImageCount,
-                               totalImageSize,
-                               totalDirectoryCount,
-                               totalLinkCount,
-                               totalHardlinkCount,
-                               totalHardlinkSize,
-                               totalSpecialCount
-);
-#endif
 
         // update aggregates
         error = Database_update(&indexHandle->databaseHandle,

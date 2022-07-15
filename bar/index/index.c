@@ -2848,7 +2848,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
       Database_drop(&indexDatabaseSpecifierReference,NULL);
 
       Database_doneSpecifier(&indexDatabaseSpecifierReference);
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
       if (error != ERROR_NONE)
       {
