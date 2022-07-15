@@ -313,7 +313,6 @@ typedef struct DatabaseNode
   DatabaseSpecifier           databaseSpecifier;
   uint                        openCount;
 
-  DatabaseLockTypes           lockType;
   uint                        pendingReadCount;
   uint                        readCount;
   pthread_cond_t              readTrigger;
