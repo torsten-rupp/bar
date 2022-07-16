@@ -7962,6 +7962,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
+            break;
           }
 
           if (busyDialog.isAborted())
@@ -8071,6 +8072,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
+            break;
           }
 
           if (busyDialog.isAborted())
@@ -8182,6 +8184,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           {
             Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
+            break;
           }
 
           if (busyDialog.isAborted())
