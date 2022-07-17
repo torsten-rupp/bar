@@ -1697,7 +1697,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       ConstString  findScheduleUUID,
                       ConstString  findHostName,
                       ArchiveTypes findArchiveType,
-                      uint64       findCreatedDateTime,
+                      uint64       findCreatedDate,
+                      uint64       findCreatedTime,
                       String       jobUUID,
                       String       scheduleUUID,
                       IndexId      *uuidId,
@@ -1728,7 +1729,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   Database_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
   Database_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
   Database_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
-  Database_filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%"PRIu64,findCreatedDateTime);
+  Database_filterAppend(filterString,findCreatedDate != 0LL,"AND","%s=%"PRIu64,Database_filterDateString(&indexHandle->databaseHandle,"entities.created"),findCreatedDate);
+  Database_filterAppend(filterString,findCreatedTime != 0L,"AND","%s=%"PRIu64,Database_filterTimeString(&indexHandle->databaseHandle,"entities.created"),findCreatedTime);
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(filterString));
 
   result = FALSE;

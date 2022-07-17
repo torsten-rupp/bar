@@ -28,6 +28,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumSet;
@@ -7486,7 +7487,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                }
                               );
 
-
       synchronized(assignToLock)
       {
         this.assignToUUIDIndexDataList  = assignToUUIDIndexDataList;
@@ -7518,6 +7518,14 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     // update menu
     if (uuidIndexDataList != null)
     {
+      Collections.sort(assignToUUIDIndexDataList,new Comparator<UUIDIndexData>()
+      {
+        @Override
+        public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
+        {
+          return uuidIndexData1.name.compareTo(uuidIndexData2.name);
+        }
+      });
       for (UUIDIndexData uuidIndexData : uuidIndexDataList)
       {
         Menu subMenu = Widgets.insertMenu(menu,
@@ -7646,6 +7654,16 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
 
     if (entityIndexDataList != null)
     {
+      Collections.sort(entityIndexDataList,new Comparator<EntityIndexData>()
+      {
+        @Override
+        public int compare(EntityIndexData entityIndexData1, EntityIndexData entityIndexData2)
+        {
+          if      (entityIndexData1.createdDateTime < entityIndexData2.createdDateTime) return -1;
+          else if (entityIndexData1.createdDateTime > entityIndexData2.createdDateTime) return  1;
+          else                                                                          return  0;
+        }
+      });
       for (EntityIndexData entityIndexData : entityIndexDataList)
       {
         if (entityIndexData.archiveType == archiveType)
@@ -7843,6 +7861,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
       }
 
       updateStorageTreeTableThread.triggerUpdate();
+      updateAssignTo();
     }
 
     return true;
@@ -7944,6 +7963,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
+            break;
           }
 
           if (busyDialog.isAborted())
@@ -7965,6 +7985,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
+      updateAssignTo();
     }
   }
 
@@ -7995,7 +8016,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
    */
   private void assignStorages(HashSet<IndexData> indexDataHashSet, EntityIndexData toEntityIndexData)
   {
-Dprintf.dprintf("xxxxxxxxxxxxxx");
     if (!indexDataHashSet.isEmpty())
     {
       final BusyDialog busyDialog;
@@ -8040,7 +8060,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
             }
             else if (indexData instanceof StorageIndexData)
             {
-              BARServer.executeCommand(StringParser.format("INDEX_ASSIGNxxx toEntityId=%lld storageId=%lld",
+              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
                                                            toEntityIndexData.id,
                                                            indexData.id
                                                           ),
@@ -8054,6 +8074,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
+            break;
           }
 
           if (busyDialog.isAborted())
@@ -8165,6 +8186,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
           {
             Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
+            break;
           }
 
           if (busyDialog.isAborted())
@@ -8186,6 +8208,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
+      updateAssignTo();
     }
   }
 
@@ -8535,6 +8558,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
                                      }
                                     );
             busyDialog.done();
+
             updateStorageTreeTableThread.triggerUpdate();
           }
           catch (final Exception exception)
@@ -8654,6 +8678,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
                                                                 ),
                                              0  // debugLevel
                                             );
+                    Widgets.removeTreeItem(widgetStorageTree,indexData);
                   }
                   else if (indexData instanceof EntityIndexData)
                   {
@@ -8662,6 +8687,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
                                                                 ),
                                               0  // debugLevel
                                              );
+                    Widgets.removeTreeItem(widgetStorageTree,indexData);
                   }
                   else if (indexData instanceof StorageIndexData)
                   {
@@ -8671,9 +8697,6 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
                                              0  // debugLevel
                                             );
                   }
-
-                  Widgets.removeTreeItem(widgetStorageTree,indexData);
-                  Widgets.removeTableItem(widgetStorageTable,indexData);
                 }
                 catch (final Exception exception)
                 {
@@ -8706,6 +8729,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
               });
 
               updateStorageTreeTableThread.triggerUpdate();
+              updateAssignTo();
             }
 //TODO: pass error to caller?
             catch (final CommunicationError error)
@@ -8842,6 +8866,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
                   });
 
                   updateStorageTreeTableThread.triggerUpdate();
+                  updateAssignTo();
 
                   return;
                 }
@@ -8861,6 +8886,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
                 });
 
                 updateStorageTreeTableThread.triggerUpdate();
+                updateAssignTo();
               }
 //TODO: pass to caller?
               catch (final CommunicationError error)
@@ -9134,6 +9160,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxx");
               });
 
               updateStorageTreeTableThread.triggerUpdate();
+              updateAssignTo();
               tabJobs.updateJobData();
             }
 //TODO: pass to caller?

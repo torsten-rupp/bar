@@ -1622,6 +1622,11 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else
   {
+    if (storageSpecifier->archivePatternString != NULL)
+    {
+      Pattern_done(&storageSpecifier->archivePattern);
+      String_delete(storageSpecifier->archivePatternString);
+    }
     storageSpecifier->archivePatternString = NULL;
   }
 
@@ -4500,7 +4505,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   return error;
 }
 
-Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
+Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
                       ConstString             directory,
                       const char              *patternString,
                       StorageFunction         storageFunction,

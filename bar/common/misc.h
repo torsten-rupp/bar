@@ -820,6 +820,40 @@ INLINE bool Misc_isLeapYear(uint year)
 bool Misc_isDayLightSaving(uint64 dateTime);
 
 /***********************************************************************\
+* Name   : Misc_extractDate
+* Purpose: extract date from date/time
+* Input  : dateTime - date/time (seconds since 1970-1-1 00:00:00)
+* Output : -
+* Return : date since midnight (time 00:00:00)
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint64 Misc_extractDate(uint64 dateTime);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE uint64 Misc_extractDate(uint64 dateTime)
+{
+  return dateTime-(dateTime % S_PER_DAY);
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Misc_extractTime
+* Purpose: extract time from date/time
+* Input  : dateTime - date/time (seconds since 1970-1-1 00:00:00)
+* Output : -
+* Return : time
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint32 Misc_extractTime(uint64 dateTime);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE uint32 Misc_extractTime(uint64 dateTime)
+{
+  return (uint32)(dateTime % S_PER_DAY);
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Misc_makeDateTime
 * Purpose: create date/time from parts
 * Input  : year             - year, YYYY

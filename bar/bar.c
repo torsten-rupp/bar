@@ -3839,7 +3839,8 @@ LOCAL Errors runDebug(void)
                             NULL,  // findScheduleUUID
                             NULL,  // findHostName
                             ARCHIVE_TYPE_ANY,
-                            0LL,  // findCreatedDateTime
+                            0LL,  // findCreatedDate
+                            0L,  // findCreatedTime
                             NULL,  // jobUUID
                             NULL,  // scheduleUUID
                             NULL,  // uuidId

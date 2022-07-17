@@ -2188,6 +2188,32 @@ void Database_filter(String filterString, const char *format, ...);
 void Database_filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...);
 
 /***********************************************************************\
+* Name   : Database_filterDateString
+* Purpose: get date filter string
+* Input  : columnName - column name
+* Output : -
+* Return : filter stirng
+* Notes  : -
+\***********************************************************************/
+
+char *Database_filterDateString(const DatabaseHandle *databaseHandle,
+                                const char           *columnName
+                               );
+
+/***********************************************************************\
+* Name   : Database_filterTimeString
+* Purpose: get time filter string
+* Input  : columnName - column name
+* Output : -
+* Return : filter stirng
+* Notes  : -
+\***********************************************************************/
+
+char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
+                                const char           *columnName
+                               );
+
+/***********************************************************************\
 * Name   : Database_execute
 * Purpose: execute SQL statement
 * Input  : databaseHandle  - database handle

@@ -573,10 +573,11 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                    && Index_findEntity(newIndexHandle,
                                                        INDEX_ID_NONE,
                                                        jobUUID,
-                                                       NULL,  // scheduleUUID
-                                                       NULL,  // hostName
+                                                       NULL,  // findScheduleUUID
+                                                       NULL,  // findHostName
                                                        ARCHIVE_TYPE_ANY,
-                                                       0LL,  // createdDateTime
+                                                       0LL,  // findCreatedDate
+                                                       0L,  // findCreatedTime
                                                        NULL,  // jobUUID
                                                        NULL,  // scheduleUUID
                                                        NULL,  // uuidId

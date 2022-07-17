@@ -1771,7 +1771,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
+Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
                       ConstString             directory,
                       const char              *patternString,
                       StorageFunction         storageFunction,
