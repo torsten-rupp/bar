@@ -7861,6 +7861,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
       }
 
       updateStorageTreeTableThread.triggerUpdate();
+      updateAssignTo();
     }
 
     return true;
@@ -7984,6 +7985,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
+      updateAssignTo();
     }
   }
 
@@ -8206,6 +8208,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
+      updateAssignTo();
     }
   }
 
@@ -8555,6 +8558,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                      }
                                     );
             busyDialog.done();
+
             updateStorageTreeTableThread.triggerUpdate();
           }
           catch (final Exception exception)
@@ -8674,6 +8678,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                                                 ),
                                              0  // debugLevel
                                             );
+                    Widgets.removeTreeItem(widgetStorageTree,indexData);
                   }
                   else if (indexData instanceof EntityIndexData)
                   {
@@ -8682,6 +8687,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                                                 ),
                                               0  // debugLevel
                                              );
+                    Widgets.removeTreeItem(widgetStorageTree,indexData);
                   }
                   else if (indexData instanceof StorageIndexData)
                   {
@@ -8691,9 +8697,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                              0  // debugLevel
                                             );
                   }
-
-                  Widgets.removeTreeItem(widgetStorageTree,indexData);
-                  Widgets.removeTableItem(widgetStorageTable,indexData);
                 }
                 catch (final Exception exception)
                 {
@@ -8726,6 +8729,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               });
 
               updateStorageTreeTableThread.triggerUpdate();
+              updateAssignTo();
             }
 //TODO: pass error to caller?
             catch (final CommunicationError error)
@@ -8862,6 +8866,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                   });
 
                   updateStorageTreeTableThread.triggerUpdate();
+                  updateAssignTo();
 
                   return;
                 }
@@ -8881,6 +8886,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                 });
 
                 updateStorageTreeTableThread.triggerUpdate();
+                updateAssignTo();
               }
 //TODO: pass to caller?
               catch (final CommunicationError error)
@@ -9154,6 +9160,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               });
 
               updateStorageTreeTableThread.triggerUpdate();
+              updateAssignTo();
               tabJobs.updateJobData();
             }
 //TODO: pass to caller?

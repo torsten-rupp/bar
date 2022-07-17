@@ -61,7 +61,7 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
-#define _SIMULATE_PURGE
+#define _SIMULATE_PURGE            // simulate purge entities/storages only
 
 /***************************** Constants *******************************/
 
@@ -2386,13 +2386,15 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   string  = String_new();
 
   // find entity
+fprintf(stderr,"%s:%d: ---- entityId %lld\n",__FILE__,__LINE__,entityId);
   if (!Index_findEntity(indexHandle,
                         entityId,
                         NULL,  // findJobUUID,
                         NULL,  // findScheduleUUID
-                        NULL,  // hostName
+                        NULL,  // findHostName
                         ARCHIVE_TYPE_ANY,
-                        0LL,  // find createdDateTime,
+                        0LL,  // findCreatedDate
+                        0L,  // findCreatedTime
                         jobUUID,
                         NULL,  // scheduleUUID
                         NULL,  // uuidId
@@ -2450,6 +2452,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     String_delete(jobName);
     return error;
   }
+String storageName = String_new();
   while (   (error == ERROR_NONE)
          && !isQuit()
          && Index_getNextStorage(&indexQueryHandle,
@@ -2463,7 +2466,8 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  NULL,  // createdDateTime
                                  NULL,  // archiveType
                                  &storageId,
-                                 NULL,  // storageName
+//                                 NULL,  // storageName
+storageName,
                                  NULL,  // createdDateTime
                                  NULL,  // size
                                  NULL,  // indexState
@@ -2475,8 +2479,10 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                 )
         )
   {
-    error = deleteStorage(indexHandle,storageId);
+//    error = deleteStorage(indexHandle,storageId);
+fprintf(stderr,"%s:%d: wpoul delete storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
   }
+String_delete(storageName);
   Index_doneList(&indexQueryHandle);
   if (isQuit())
   {
@@ -2485,6 +2491,8 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     return ERROR_INTERRUPTED;
   }
 
+// TODO:
+#if 0
   // delete entity index
   if (error == ERROR_NONE)
   {
@@ -2524,6 +2532,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                Error_getText(error)
               );
   }
+#endif
 
   // free resources
   String_delete(string);
@@ -2857,7 +2866,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
 *          jobUUID                 - job UUID
 *          persistenceList         - job persistence list
 * Output : jobExpirationEntityList - job expiration entity list with
-                                     all entities with 
+                                     all entities with
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -3063,7 +3072,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   uint64                     expiredCreatedDateTime;
   ulong                      expiredTotalEntryCount;
   uint64                     expiredTotalEntrySize;
-  const char                 *expiredReason;
+  String                     expiredReason;
   MountList                  mountList;
   Errors                     error;
   const JobNode              *jobNode;
@@ -3078,6 +3087,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   expiredJobName = String_new();
+  expiredReason  = String_new();
   List_init(&expirationEntityList,
             CALLBACK_(NULL,NULL),
             CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL)
@@ -3098,7 +3108,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     expiredCreatedDateTime = 0LL;
     expiredTotalEntryCount = 0;
     expiredTotalEntrySize  = 0LL;
-    expiredReason          = NULL;
     List_init(&mountList,
               CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
               CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
@@ -3150,7 +3159,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               {
                 totalEntityCount++;
               }
-              
+
               // get age
               age = (now-jobExpirationEntityNode->createdDateTime)/S_PER_DAY;
 
@@ -3175,7 +3184,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                              )
                          )
                 {
-                  // no persistence or over max-keep limit -> find oldest entry                                    
+                  // no persistence or over max-keep limit -> find oldest entry
                   while (   (jobExpirationEntityNode->next != NULL)
                          && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
                         )
@@ -3190,7 +3199,14 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                   expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
                   expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
                   expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
-                  expiredReason          = "max. keep limit reached";
+                  if (jobExpirationEntityNode->persistenceNode == NULL)
+                  {
+                    String_format(expiredReason,"max. keep limit reached (%u)",(uint)jobExpirationEntityNode->persistenceNode->maxKeep);
+                  }
+                  else
+                  {
+                    String_format(expiredReason,"no persistence definition");
+                  }
 
                   // get mount list
                   List_copy(&mountList,
@@ -3204,7 +3220,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                           && (age > (uint)jobExpirationEntityNode->persistenceNode->maxAge)
                          )
                 {
-                  // older than max-age                  
+                  // older than max-age
 
                   // get expired entity
                   expiredEntityId        = jobExpirationEntityNode->entityId;
@@ -3213,7 +3229,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                   expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
                   expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
                   expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
-                  expiredReason          = "max. age reached";
+                  String_format(expiredReason,"max. age reached (%u days)",jobExpirationEntityNode->persistenceNode->maxAge);
 
                   // get mount list
                   List_copy(&mountList,
@@ -3242,25 +3258,13 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
       if (error == ERROR_NONE)
       {
         // delete expired entity
-        #ifndef SIMULATE_PURGE
-          error = deleteEntity(indexHandle,expiredEntityId);
-        #else /* not SIMULATE_PURGE */
-          Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
-          error = ERROR_NONE;
-        #endif /* SIMULATE_PURGE */
-
-        // unmount devices
-        (void)unmountAll(&mountList);
-      }
-      if (error == ERROR_NONE)
-      {
         plogMessage(NULL,  // logHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
                     #ifdef SIMULATE_PURGE
-                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
+                      "Purge expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
                     #else /* not SIMULATE_PURGE */
-                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
+                      "Purge expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
@@ -3269,18 +3273,29 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
                     expiredTotalEntrySize,
-                    expiredReason
+                    String_cString(expiredReason)
                    );
+        #ifndef SIMULATE_PURGE
+          error = deleteEntity(indexHandle,expiredEntityId);
+        #else /* not SIMULATE_PURGE */
+// TODO:
+error = deleteEntity(indexHandle,expiredEntityId);
+          Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
+          error = ERROR_NONE;
+        #endif /* SIMULATE_PURGE */
+
+        // unmount devices
+        (void)unmountAll(&mountList);
       }
-      else
+      if (error != ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
                     #ifdef SIMULATE_PURGE
-                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
+                      "Purge entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated) failed: %s",
                     #else /* not SIMULATE_PURGE */
-                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
+                      "Purge entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) failed: %s",
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
@@ -3303,6 +3318,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
         );
 
   // free resources
+  String_delete(expiredReason);
   String_delete(expiredJobName);
   Array_done(&entityIdArray);
 
@@ -17674,11 +17690,12 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   {
     if (Index_findEntity(indexHandle,
                          entityId,
-                         NULL,  // jobUUID
-                         NULL,  // scheduleUUID
-                         NULL,  // hostName
+                         NULL,  // findJobUUID
+                         NULL,  // findScheduleUUID
+                         NULL,  // findHostName
                          ARCHIVE_TYPE_ANY,
-                         0LL,  // createdDateTime
+                         0LL,  // findCreatedDate
+                         0L,  // findCreatedTime
                          uuid,
                          NULL,  // scheduleUUID
                          NULL,  // uuidId
@@ -18579,6 +18596,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
   // parse storage specifier
   error = Storage_parseName(&storageSpecifier,pattern);
+  error = Storage_parseName(&storageSpecifier,pattern);
+  error = Storage_parseName(&storageSpecifier,pattern);
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
@@ -18642,7 +18661,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                             Misc_getCurrentDateTime(),
                                             NULL  // errorMessage
                                            );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
               if (error == ERROR_NONE)
               {
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
@@ -18778,16 +18796,19 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                                      updateRequestedFlag = TRUE;
                                    }
                                  }
-                                 if (error != ERROR_NONE)
-                                 {
-                                   return error;
-                                 }
                                }
                              }
 
-                             foundFlag = TRUE;
+                             if (error == ERROR_NONE)
+                             {
+                               foundFlag = TRUE;
 
-                             return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
+                               return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
+                             }
+                             else
+                             {
+                               return error;
+                             }
                            },NULL),
                            CALLBACK_INLINE(void,(ulong doneCount, ulong totalCount, void *userData),
                            {
@@ -19154,7 +19175,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   {
     stateAny = TRUE;
   }
-  name = String_new();
+  name      = String_new();
+  uuidId    = INDEX_ID_NONE;
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
+  String_clear(jobUUID);
   if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
@@ -19578,8 +19603,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  name = String_new();
-  name = String_new();
+  name      = String_new();
+  uuidId    = INDEX_ID_NONE;
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
+  String_clear(jobUUID);
   if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)

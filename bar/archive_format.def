@@ -353,6 +353,7 @@ CHUNK META_ENTRY "MENT" MetaEntry
   string   hostName;
   string   jobUUID;
   string   scheduleUUID;
+#TODO: entityUUID
   uint16   archiveType;
   uint64   createdDateTime;
   string   comment;

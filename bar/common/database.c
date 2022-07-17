@@ -1469,14 +1469,13 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
 
 /***********************************************************************\
 * Name   : sqlite3FromUnixTime
-* Purpose: callback for FROM_UNIXTIME function to convert Unix timestamp
-*          (Unix epoch, UTC) to date/time
+* Purpose: callback for NOW() function
 * Input  : context - SQLite3 context
 *          argc    - number of arguments
 *          argv    - argument array
 * Output : -
 * Return : -
-* Notes  : FROM_UNIXTIME(timestamp[,format])
+* Notes  : NOW()
 \***********************************************************************/
 
 LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
@@ -14600,6 +14599,62 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
     va_start(arguments,format);
     String_appendVFormat(filterString,format,arguments);
     va_end(arguments);
+  }
+}
+
+char *Database_filterDateString(const DatabaseHandle *databaseHandle,
+                                const char           *columnName
+                               )
+{
+  static char buffer[128];
+
+  assert(databaseHandle != NULL);
+  assert(columnName != NULL);
+
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      return stringFormat(buffer,sizeof(buffer),"DATE(DATETIME(%s,'unixepoch'))",columnName);
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        return stringFormat(buffer,sizeof(buffer),"DATE(%s)",columnName);
+      #else /* HAVE_MARIADB */
+        return NULL;
+      #endif /* HAVE_MARIADB */
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        return stringFormat(buffer,sizeof(buffer),"%s::date",columnName);
+      #else /* HAVE_POSTGRESQL */
+        return NULL;
+      #endif /* HAVE_POSTGRESQL */
+  }
+}
+
+char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
+                                const char           *columnName
+                               )
+{
+  static char buffer[128];
+
+  assert(databaseHandle != NULL);
+  assert(columnName != NULL);
+
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      return stringFormat(buffer,sizeof(buffer),"TIME(DATETIME(%s,'unixepoch'))",columnName);
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        return stringFormat(buffer,sizeof(buffer),"TIME(%s)",columnName);
+      #else /* HAVE_MARIADB */
+        return NULL;
+      #endif /* HAVE_MARIADB */
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        return stringFormat(buffer,sizeof(buffer),"%s::time",columnName);
+      #else /* HAVE_POSTGRESQL */
+        return NULL;
+      #endif /* HAVE_POSTGRESQL */
   }
 }
 

@@ -4339,7 +4339,10 @@ class Dialogs
         if (!table.isDisposed())
         {
           {
-            dialog.setCursor(CURSOR_WAIT);
+            if (!dialog.isDisposed())
+            {
+              dialog.setCursor(CURSOR_WAIT);
+            }
           }
           try
           {
@@ -4399,7 +4402,10 @@ class Dialogs
           }
           finally
           {
-            dialog.setCursor((Cursor)null);
+            if (!dialog.isDisposed())
+            {
+              dialog.setCursor((Cursor)null);
+            }
           }
         }
       }
