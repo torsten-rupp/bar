@@ -2376,7 +2376,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
     }
     printInfo("OK\n");
 
-    // create new FTS tables (if not exists)    
+    // create new FTS tables (if not exists)
     printInfo("  Create FTS indizes...");
     switch (Database_getType(databaseHandle))
     {
@@ -2530,7 +2530,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         // nothing to do
         break;
       case DATABASE_TYPE_POSTGRESQL:
-        {          
+        {
           String  tokens;
 
           tokens = String_new();
@@ -2549,7 +2549,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    UNUSED_VARIABLE(userData);
                                    UNUSED_VARIABLE(valueCount);
-                                   
+
                                    storageId = values[0].id;
                                    name      = values[1].string;
 //fprintf(stderr,"%s:%d: storageId=%llu\n",__FILE__,__LINE__,storageId);
@@ -2606,7 +2606,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    UNUSED_VARIABLE(userData);
                                    UNUSED_VARIABLE(valueCount);
-                                   
+
                                    entryId = values[0].id;
                                    name    = values[1].string;
 //fprintf(stderr,"%s:%d: entryId=%llu\n",__FILE__,__LINE__,entryId);
@@ -8573,6 +8573,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                        {
                          DatabaseId entityId;
                          uint       type;
+                         uint64     createdDateTime;
                          ulong      totalEntryCount;
                          uint64     totalEntrySize;
                          ulong      totalFileCount;
@@ -8590,26 +8591,27 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          uint       i;
 
                          assert(values != NULL);
-                         assert(valueCount == 27);
+                         assert(valueCount == 28);
 
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
                          entityId            = values[0].id;
                          type                = values[1].u;
-                         totalEntryCount     = values[4].u;
-                         totalEntrySize      = values[5].u64;
-                         totalFileCount      = values[6].u;
-                         totalFileSize       = values[7].u64;
-                         totalImageCount     = values[8].u;
-                         totalImageSize      = values[9].u64;
-                         totalDirectoryCount = values[10].u;
-                         totalLinkCount      = values[11].u;
-                         totalhardlinkCount  = values[12].u;
-                         totalHardlinkSize   = values[13].u64;
-                         totalSpecialCount   = values[14].u;
+                         createdDateTime     = values[4].dateTime;
+                         totalEntryCount     = values[5].u;
+                         totalEntrySize      = values[6].u64;
+                         totalFileCount      = values[7].u;
+                         totalFileSize       = values[8].u64;
+                         totalImageCount     = values[9].u;
+                         totalImageSize      = values[10].u64;
+                         totalDirectoryCount = values[11].u;
+                         totalLinkCount      = values[12].u;
+                         totalhardlinkCount  = values[13].u;
+                         totalHardlinkSize   = values[14].u64;
+                         totalSpecialCount   = values[15].u;
 
-                         uuidId              = values[26].id;
+                         uuidId              = values[27].id;
 
                          printf("  Id              : %"PRIi64"\n",entityId);
                          printf("    Type          : %s\n",
@@ -8619,6 +8621,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                );
                          printf("    Job UUID      : %s\n",String_cString(values[ 2].string));
                          printf("    Schedule UUID : %s\n",String_cString(values[ 3].string));
+                         printf("    Created       : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
                          printf("\n");
                          printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -8674,7 +8677,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                         DATABASE_FILTER_KEY  (entityId)
                                       ),
                                       NULL,  // groupBy
-                                      NULL,  // orderBy
+                                      "id",
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
@@ -8690,36 +8693,37 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_KEY   ("id"),
-                         DATABASE_COLUMN_UINT  ("type"),
-                         DATABASE_COLUMN_STRING("jobUUID"),
-                         DATABASE_COLUMN_STRING("scheduleUUID"),
+                         DATABASE_COLUMN_KEY     ("id"),
+                         DATABASE_COLUMN_UINT    ("type"),
+                         DATABASE_COLUMN_STRING  ("jobUUID"),
+                         DATABASE_COLUMN_STRING  ("scheduleUUID"),
+                         DATABASE_COLUMN_DATETIME("created"),
 
-                         DATABASE_COLUMN_UINT  ("totalEntryCount"),
-                         DATABASE_COLUMN_UINT64("totalEntrySize"),
+                         DATABASE_COLUMN_UINT    ("totalEntryCount"),
+                         DATABASE_COLUMN_UINT64  ("totalEntrySize"),
 
-                         DATABASE_COLUMN_UINT  ("totalFileCount"),
-                         DATABASE_COLUMN_UINT64("totalFileSize"),
-                         DATABASE_COLUMN_UINT  ("totalImageCount"),
-                         DATABASE_COLUMN_UINT64("totalImageSize"),
-                         DATABASE_COLUMN_UINT  ("totalDirectoryCount"),
-                         DATABASE_COLUMN_UINT  ("totalLinkCount"),
-                         DATABASE_COLUMN_UINT  ("totalHardlinkCount"),
-                         DATABASE_COLUMN_UINT64("totalHardlinkSize"),
-                         DATABASE_COLUMN_UINT  ("totalSpecialCount"),
+                         DATABASE_COLUMN_UINT    ("totalFileCount"),
+                         DATABASE_COLUMN_UINT64  ("totalFileSize"),
+                         DATABASE_COLUMN_UINT    ("totalImageCount"),
+                         DATABASE_COLUMN_UINT64  ("totalImageSize"),
+                         DATABASE_COLUMN_UINT    ("totalDirectoryCount"),
+                         DATABASE_COLUMN_UINT    ("totalLinkCount"),
+                         DATABASE_COLUMN_UINT    ("totalHardlinkCount"),
+                         DATABASE_COLUMN_UINT64  ("totalHardlinkSize"),
+                         DATABASE_COLUMN_UINT    ("totalSpecialCount"),
 
-                         DATABASE_COLUMN_UINT  ("totalEntryCountNewest"),
-                         DATABASE_COLUMN_UINT64("totalEntrySizeNewest"),
+                         DATABASE_COLUMN_UINT    ("totalEntryCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("totalEntrySizeNewest"),
 
-                         DATABASE_COLUMN_UINT  ("totalFileCountNewest"),
-                         DATABASE_COLUMN_UINT64("totalFileSizeNewest"),
-                         DATABASE_COLUMN_UINT  ("totalImageCountNewest"),
-                         DATABASE_COLUMN_UINT64("totalImageSizeNewest"),
-                         DATABASE_COLUMN_UINT  ("totalDirectoryCountNewest"),
-                         DATABASE_COLUMN_UINT  ("totalLinkCountNewest"),
-                         DATABASE_COLUMN_UINT  ("totalHardlinkCountNewest"),
-                         DATABASE_COLUMN_UINT64("totalHardlinkSizeNewest"),
-                         DATABASE_COLUMN_UINT  ("totalSpecialCountNewest"),
+                         DATABASE_COLUMN_UINT    ("totalFileCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("totalFileSizeNewest"),
+                         DATABASE_COLUMN_UINT    ("totalImageCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("totalImageSizeNewest"),
+                         DATABASE_COLUMN_UINT    ("totalDirectoryCountNewest"),
+                         DATABASE_COLUMN_UINT    ("totalLinkCountNewest"),
+                         DATABASE_COLUMN_UINT    ("totalHardlinkCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("totalHardlinkSizeNewest"),
+                         DATABASE_COLUMN_UINT    ("totalSpecialCountNewest"),
 
                          DATABASE_COLUMN_KEY   ("uuidId")
                        ),
@@ -8734,7 +8738,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          DATABASE_FILTER_BOOL  (Array_isEmpty(&entityIds))
                        ),
                        NULL,  // groupBy
-                       NULL,  // orderBy
+                       "id ASC",
                        0LL,
                        DATABASE_UNLIMITED
                       );
@@ -8774,7 +8778,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   DatabaseId storageId;
   Errors     error;
   char       filterString[1024];
-  char       buffer[64];
 
   storageIdsString = String_new();
   ARRAY_ITERATE(&storageIds,i,storageId)
@@ -8812,6 +8815,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
                          DatabaseId storageId;
+                         char       buffer[64];
 
                          assert(values != NULL);
                          assert(valueCount == 1);
@@ -8824,19 +8828,31 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          error = Database_get(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                               {
-                                                uint   state;
-                                                uint   mode;
-                                                ulong  totalEntryCount;
-                                                uint64 totalEntrySize;
-                                                ulong  totalFileCount;
-                                                uint64 totalFileSize;
-                                                ulong  totalImageCount;
-                                                uint64 totalImageSize;
-                                                ulong  totalDirectoryCount;
-                                                ulong  totalLinkCount;
-                                                ulong  totalHardlinkCount;
-                                                uint64 totalHardlinkSize;
-                                                ulong  totalSpecialCount;
+                                                DatabaseId id;
+                                                DatabaseId uuidId;
+                                                DatabaseId entityId;
+                                                String     jobUUID;
+                                                String     scheduleUUID;
+                                                String     name;
+                                                uint64     createdDateTime;
+                                                String     hostname;
+                                                String     userName;
+                                                String     comment;
+                                                uint       state;
+                                                uint       mode;
+                                                uint64     lastCheckedDateTime;
+                                                String     *message;
+                                                ulong      totalEntryCount;
+                                                uint64     totalEntrySize;
+                                                ulong      totalFileCount;
+                                                uint64     totalFileSize;
+                                                ulong      totalImageCount;
+                                                uint64     totalImageSize;
+                                                ulong      totalDirectoryCount;
+                                                ulong      totalLinkCount;
+                                                ulong      totalHardlinkCount;
+                                                uint64     totalHardlinkSize;
+                                                ulong      totalSpecialCount;
 
                                                 assert(values != NULL);
                                                 assert(valueCount == 36);
@@ -8844,8 +8860,20 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 UNUSED_VARIABLE(valueCount);
                                                 UNUSED_VARIABLE(userData);
 
+                                                id                  = values[ 0].id;
+                                                uuidId              = values[ 1].id;
+                                                entityId            = values[ 2].id;
+                                                jobUUID             = values[ 3].string;
+                                                scheduleUUID        = values[ 4].string;
+                                                name                = values[ 5].string;
+                                                createdDateTime     = values[ 6].dateTime;
+                                                hostname            = values[ 7].string;
+                                                userName            = values[ 8].string;
+                                                comment             = values[ 9].string;
                                                 state               = values[10].u;
                                                 mode                = values[11].u;
+                                                lastCheckedDateTime = values[12].dateTime;
+                                                message             = values[13].s;
                                                 totalEntryCount     = values[14].u;
                                                 totalEntrySize      = values[15].u64;
                                                 totalFileCount      = values[16].u;
@@ -8858,12 +8886,12 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 totalHardlinkSize   = values[23].u64;
                                                 totalSpecialCount   = values[24].u;
 
-                                                printf("  Id              : %"PRIi64"\n",values[ 0].id);
-                                                printf("    Name          : %s\n",String_cString(values[ 5].string));
-                                                printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,FALSE,NULL));
-                                                printf("    Host name     : %s\n",String_cString(values[ 7].string));
-                                                printf("    User name     : %s\n",String_cString(values[ 8].string));
-                                                printf("    Comment       : %s\n",String_cString(values[ 9].string));
+                                                printf("  Id              : %"PRIi64"\n",id);
+                                                printf("    Name          : %s\n",String_cString(name));
+                                                printf("    Created       : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
+                                                printf("    Host name     : %s\n",String_cString(hostname));
+                                                printf("    User name     : %s\n",String_cString(userName));
+                                                printf("    Comment       : %s\n",String_cString(comment));
                                                 printf("    State         : %s\n",
                                                        (state <= INDEX_CONST_STATE_ERROR)
                                                          ? STATE_TEXT[state]
@@ -8874,8 +8902,8 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                          ? MODE_TEXT[mode]
                                                          : stringFormat(buffer,sizeof(buffer),"unknown (%d)",mode)
                                                       );
-                                                printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,FALSE,NULL));
-                                                printf("    Error message : %s\n",(values[13].s != NULL) ? values[13].s : "");
+                                                printf("    Last checked  : %s\n",(lastCheckedDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,FALSE,NULL) : "-");
+                                                printf("    Error message : %s\n",String_cString(message));
                                                 printf("\n");
                                                 printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                                                 printf("\n");
@@ -8886,10 +8914,10 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
                                                 printf("    Special       : %lu\n",totalSpecialCount);
                                                 printf("\n");
-                                                printf("    UUID id       : %"PRIi64"\n",values[1].id);
-                                                printf("    Entity id     : %"PRIi64"\n",values[2].id);
-                                                printf("    Job UUID      : %s\n",String_cString(values[3].string));
-                                                printf("    Schedule UUID : %s\n",String_cString(values[4].string));
+                                                printf("    UUID id       : %"PRIi64"\n",uuidId);
+                                                printf("    Entity id     : %"PRIi64"\n",entityId);
+                                                printf("    Job UUID      : %s\n",String_cString(jobUUID));
+                                                printf("    Schedule UUID : %s\n",String_cString(scheduleUUID));
 
                                                 return ERROR_NONE;
                                               },NULL),
@@ -8957,7 +8985,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 DATABASE_FILTER_BOOL (String_isEmpty(name))
                                               ),
                                               NULL,  // groupBy
-                                              NULL,  // orderBy
+                                              "storages.id ASC",
                                               0LL,
                                               DATABASE_UNLIMITED
                                              );
@@ -9194,7 +9222,7 @@ String_format(ftsSubSelect,"SELECT id FROM entries");
                                                 DATABASE_FILTER_BOOL (String_isEmpty(name))
                                               ),
                                               NULL,  // groupBy
-                                              NULL,  // orderBy
+                                              "entries.id ASC",
                                               0LL,
                                               DATABASE_UNLIMITED
                                              );
