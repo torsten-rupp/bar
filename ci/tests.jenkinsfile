@@ -135,7 +135,7 @@ def tests()
         // run tests
         script
         {
-          if (params.TESTS)
+          if (params.VALGRIND)
           {
             docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
             {
