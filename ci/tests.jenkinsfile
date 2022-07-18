@@ -103,7 +103,7 @@ def tests()
                   sh "sudo /etc/init.d/rsyslog stop || true"
                 }
                 break;
-              case "FULL":
+              case "FULL":               
                 docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
                 {
                   // start services
@@ -122,6 +122,37 @@ def tests()
                   sh "sudo /etc/init.d/rsyslog stop || true"
                 }
                 break;
+            }
+          }
+        }
+      }
+    }
+
+    timeout(time: 240, unit: 'MINUTES')
+    {
+      stage("Valgrind")
+      {
+        // run tests
+        script
+        {
+          if (params.TESTS)
+          {
+            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            {
+              // start services
+              sh "sudo /etc/init.d/rsyslog start"
+              sh "sudo /etc/init.d/apache2 start"
+              sh "sudo /etc/init.d/ssh start"
+              sh "sudo /etc/init.d/vsftpd start"
+
+              sh "rm -f bar-test-valgrind.log"
+              sh "make test_smoke-valgrind O='--verbose=1' | tee -a bar-test-valgrind.log"
+
+              // stop services
+              sh "sudo /etc/init.d/vsftpd stop || true"
+              sh "sudo /etc/init.d/ssh stop || true"
+              sh "sudo /etc/init.d/apache2 stop || true"
+              sh "sudo /etc/init.d/rsyslog stop || true"
             }
           }
         }
@@ -203,10 +234,10 @@ def tests()
   {
     script
     {
-//      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log', allowEmptyArchive: true
+//      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log', allowEmptyArchive: true
 sh "ps auxw"
 sh "ls -la /var/log"
-      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
     }
 
     cleanWs notFailBuild: true
