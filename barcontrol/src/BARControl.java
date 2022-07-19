@@ -4845,8 +4845,6 @@ if (false) {
     final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     Thread.currentThread().setName("BARControl");
-// TODO:
-logThrowable(new Throwable());
 
     // init localization
     i18n = I18nFactory.getI18n(getClass(),
@@ -4927,7 +4925,7 @@ logThrowable(new Throwable());
         }
         catch (ConnectionError error)
         {
-          printError(BARControl.tr("cannot connect to server (error: {0})"),error.getMessage());
+          printError(BARControl.tr("cannot connect to server (error: {0})",error.getMessage()));
           System.exit(ExitCodes.FAIL);
         }
 

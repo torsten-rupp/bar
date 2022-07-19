@@ -652,9 +652,11 @@ public class TabRestore
               IndexStates indexState1 = indexData1.getState();
               IndexStates indexState2 = indexData2.getState();
               result = indexState1.compareTo(indexState2);
-              return result;
+              nextSortMode = SortModes.ID;
+              break;
             default:
-              return result;
+              nextSortMode = SortModes.ID;
+              break;
           }
         }
         while (result == 0);
@@ -2206,7 +2208,7 @@ Dprintf.dprintf("");
         });
         if (isRequestUpdate()) return;
 
-        // update UUID list
+        // get UUID list
         final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
         BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=%s indexModeSet=* name=%'S",
                                                      storageIndexStateSet.nameList("|"),
@@ -3347,6 +3349,7 @@ Dprintf.dprintf("");
     // sort modes
     enum SortModes
     {
+      ID,
       NAME,
       TYPE,
       SIZE,
@@ -3385,34 +3388,57 @@ Dprintf.dprintf("");
     @Override
     public int compare(EntryIndexData entryIndexData1, EntryIndexData entryIndexData2)
     {
-      if      ((entryIndexData1 != null) && (entryIndexData2 != null))
+      SortModes nextSortMode = sortMode;
+      int       result;
+
+      if ((entryIndexData1 == null) && (entryIndexData2 == null))
       {
-        switch (sortMode)
-        {
-          case NAME:
-            return entryIndexData1.name.compareTo(entryIndexData2.name);
-          case TYPE:
-            return entryIndexData1.entryType.compareTo(entryIndexData2.entryType);
-          case SIZE:
-            if      (entryIndexData1.size < entryIndexData2.size) return -1;
-            else if (entryIndexData1.size > entryIndexData2.size) return  1;
-            else                                                  return  0;
-          case DATE:
-            if      (entryIndexData1.dateTime < entryIndexData2.dateTime) return -1;
-            else if (entryIndexData1.dateTime > entryIndexData2.dateTime) return  1;
-            else                                                          return  0;
-          default:
-            return 0;
-        }
+        return 0;
       }
-      else if (entryIndexData1 != null)
+      else if (entryIndexData1 == null)
+      {
+        return 1;
+      }
+      else if (entryIndexData2 == null)
       {
         return -1;
       }
       else
       {
-        return 1;
+        result = 0;
+        do
+        {
+          switch (sortMode)
+          {
+            case ID:
+              return new Long(entryIndexData1.id).compareTo(entryIndexData2.id);
+            case NAME:
+              result = entryIndexData1.name.compareTo(entryIndexData2.name);
+              nextSortMode = SortModes.TYPE;
+              break;
+            case TYPE:
+              result = entryIndexData1.entryType.compareTo(entryIndexData2.entryType);
+              nextSortMode = SortModes.SIZE;
+              break;
+            case SIZE:
+              if      (entryIndexData1.size < entryIndexData2.size) result = -1;
+              else if (entryIndexData1.size > entryIndexData2.size) result =  1;
+              nextSortMode = SortModes.DATE;
+              break;
+            case DATE:
+              if      (entryIndexData1.dateTime < entryIndexData2.dateTime) result = -1;
+              else if (entryIndexData1.dateTime > entryIndexData2.dateTime) result =  1;
+              nextSortMode = SortModes.ID;
+              break;
+            default:
+              nextSortMode = SortModes.ID;
+              break;
+          }
+        }
+        while (result == 0);
       }
+
+      return result;
     }
   }
 
@@ -8357,7 +8383,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                                       ),
                                    0  // debugLevel
                                   );
-          updateStorageTreeTableThread.triggerUpdate();
         }
         catch (Exception exception)
         {
@@ -8374,6 +8399,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     {
       Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indices\n\n(error: {0})",error.toString()));
     }
+
+    updateStorageTreeTableThread.triggerUpdate();
   }
 
   /** add storages to index database
@@ -8558,8 +8585,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                                      }
                                     );
             busyDialog.done();
-
-            updateStorageTreeTableThread.triggerUpdate();
           }
           catch (final Exception exception)
           {
@@ -8576,6 +8601,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               });
             }
           }
+
+          updateStorageTreeTableThread.triggerUpdate();
         }
       });
     }
@@ -8727,9 +8754,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                   busyDialog.close();
                 }
               });
-
-              updateStorageTreeTableThread.triggerUpdate();
-              updateAssignTo();
             }
 //TODO: pass error to caller?
             catch (final CommunicationError error)
@@ -8763,8 +8787,12 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               BARControl.internalError(throwable);
             }
 
-            // update entry list
+            // update
+Dprintf.dprintf("_");
+//            updateStorageTreeTableThread.triggerUpdate();
+Dprintf.dprintf("_");
             updateEntryTableThread.triggerUpdate();
+            updateAssignTo();
           }
         });
       }
@@ -8853,23 +8881,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                     }
                   }
                 }
-                if (command.getErrorCode() != BARException.NONE)
-                {
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      busyDialog.close();
-                      Dialogs.error(shell,BARControl.tr("Cannot remove database indices with error state!\n\n(error: {0})",errorMessage[0]));
-                    }
-                  });
-
-                  updateStorageTreeTableThread.triggerUpdate();
-                  updateAssignTo();
-
-                  return;
-                }
                 if (busyDialog.isAborted())
                 {
                   command.abort();
@@ -8885,8 +8896,17 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                   }
                 });
 
-                updateStorageTreeTableThread.triggerUpdate();
-                updateAssignTo();
+                if (command.getErrorCode() != BARException.NONE)
+                {
+                  display.syncExec(new Runnable()
+                  {
+                    @Override
+                    public void run()
+                    {
+                      Dialogs.error(shell,BARControl.tr("Cannot remove database indices with error state!\n\n(error: {0})",errorMessage[0]));
+                    }
+                  });
+                }
               }
 //TODO: pass to caller?
               catch (final CommunicationError error)
@@ -8919,6 +8939,9 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                 BARServer.disconnect();
                 BARControl.internalError(throwable);
               }
+
+              updateStorageTreeTableThread.triggerUpdate();
+              updateAssignTo();
             }
           });
         }
