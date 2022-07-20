@@ -8801,12 +8801,20 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
           if (databaseRowFunction != NULL)
           {
             // step
-            while (getNextRow(databaseStatementHandle,flags,timeout))
+            if (getNextRow(databaseStatementHandle,flags,timeout))
             {
-              error = databaseRowFunction(databaseStatementHandle->results,
-                                          databaseStatementHandle->resultCount,
-                                          databaseRowUserData
-                                         );
+              do
+              {
+                error = databaseRowFunction(databaseStatementHandle->results,
+                                            databaseStatementHandle->resultCount,
+                                            databaseRowUserData
+                                           );
+              }
+              while (getNextRow(databaseStatementHandle,flags,timeout));
+            }
+            else
+            {
+              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
             }
 
             // get number of changes
@@ -8830,12 +8838,20 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             if (databaseRowFunction != NULL)
             {
               // step
-              while (getNextRow(databaseStatementHandle,flags,timeout))
+              if (getNextRow(databaseStatementHandle,flags,timeout))
               {
-                error = databaseRowFunction(databaseStatementHandle->results,
-                                            databaseStatementHandle->resultCount,
-                                            databaseRowUserData
-                                           );
+                do
+                {
+                  error = databaseRowFunction(databaseStatementHandle->results,
+                                              databaseStatementHandle->resultCount,
+                                              databaseRowUserData
+                                             );
+                }
+                while (getNextRow(databaseStatementHandle,flags,timeout));
+              }
+              else
+              {
+                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
               }
 
               // get number of changes
@@ -8864,12 +8880,20 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             if (databaseRowFunction != NULL)
             {
               // step
-              while (getNextRow(databaseStatementHandle,flags,timeout))
+              if (getNextRow(databaseStatementHandle,flags,timeout))
               {
-                error = databaseRowFunction(databaseStatementHandle->results,
-                                            databaseStatementHandle->resultCount,
-                                            databaseRowUserData
-                                           );
+                do
+                {
+                  error = databaseRowFunction(databaseStatementHandle->results,
+                                              databaseStatementHandle->resultCount,
+                                              databaseRowUserData
+                                             );
+                }
+                while (getNextRow(databaseStatementHandle,flags,timeout));
+              }
+              else
+              {
+                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
               }
 
               // get number of changes
@@ -16261,6 +16285,8 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                       uint                 filterCount
                      )
 {
+  Errors error;
+
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -16270,7 +16296,7 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
 
   (*value) = DATABASE_ID_NONE;
 
-  return Database_get(databaseHandle,
+  error = Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
                         assert(values != NULL);
@@ -16301,6 +16327,14 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                       0LL,
                       1LL
                      );
+// TODO: work-around: if not found set newest entry to NONE
+if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+{
+  (*value) = DATABASE_ID_NONE;
+  error = ERROR_NONE;
+}
+
+  return error;
 }
 
 Errors Database_getIds(DatabaseHandle      *databaseHandle,
@@ -16312,6 +16346,8 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                        uint                 filterCount
                       )
 {
+  Errors error;
+
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -16321,37 +16357,44 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
 
   Array_clear(ids);
 
-  return Database_get(databaseHandle,
-                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                      {
-                        assert(values != NULL);
-                        assert(valueCount == 1);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
+     
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+     
+                         Array_append(ids,&values[0].id);
+     
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         tableName
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY   (columnName)
+                       ),
+                       filter,
+                       filters,
+                       filterCount,
+                       NULL,  // groupBy
+                       NULL,  // orderBy
+                       0,
+                       DATABASE_UNLIMITED
+                      );
+// TODO: work-around: if not found set newest entry to NONE
+if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+{
+  error = ERROR_NONE;
+}
 
-                        UNUSED_VARIABLE(userData);
-                        UNUSED_VARIABLE(valueCount);
-
-                        Array_append(ids,&values[0].id);
-
-                        return ERROR_NONE;
-                      },NULL),
-                      NULL,  // changedRowCount
-                      DATABASE_TABLES
-                      (
-                        tableName
-                      ),
-                      DATABASE_FLAG_NONE,
-                      DATABASE_COLUMNS
-                      (
-                        DATABASE_COLUMN_KEY   (columnName)
-                      ),
-                      filter,
-                      filters,
-                      filterCount,
-                      NULL,  // groupBy
-                      NULL,  // orderBy
-                      0,
-                      DATABASE_UNLIMITED
-                     );
+  return error;
 }
 
 Errors Database_getMaxId(DatabaseHandle       *databaseHandle,

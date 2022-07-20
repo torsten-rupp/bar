@@ -1069,6 +1069,7 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
 
 LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  Errors       error;
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUUID,MISC_UUID_STRING_LENGTH);
   IndexId      uuidId;
@@ -1099,49 +1100,33 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   if (indexHandle != NULL)
   {
     // find job data
-    if (Index_findUUID(indexHandle,
-                       String_cString(jobUUID),
-                       String_cString(scheduleUUUID),
-                       &uuidId,
-                       &executionCountNormal,
-                       &executionCountFull,
-                       &executionCountIncremental,
-                       &executionCountDifferential,
-                       &executionCountContinuous,
-                       &averageDurationNormal,
-                       &averageDurationFull,
-                       &averageDurationIncremental,
-                       &averageDurationDifferential,
-                       &averageDurationContinuous,
-                       &totalEntityCount,
-                       &totalStorageCount,
-                       &totalStorageSize,
-                       &totalEntryCount,
-                       &totalEntrySize
-                      )
-       )
+    error = Index_findUUID(indexHandle,
+                           String_cString(jobUUID),
+                           String_cString(scheduleUUUID),
+                           &uuidId,
+                           &executionCountNormal,
+                           &executionCountFull,
+                           &executionCountIncremental,
+                           &executionCountDifferential,
+                           &executionCountContinuous,
+                           &averageDurationNormal,
+                           &averageDurationFull,
+                           &averageDurationIncremental,
+                           &averageDurationDifferential,
+                           &averageDurationContinuous,
+                           &totalEntityCount,
+                           &totalStorageCount,
+                           &totalStorageSize,
+                           &totalEntryCount,
+                           &totalEntrySize
+                          );
+    if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,
                           id,
                           TRUE,
-                          ERROR_NONE,
-                          "uuidId=%lld executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
-                          uuidId,
-                          executionCountNormal,
-                          executionCountFull,
-                          executionCountIncremental,
-                          executionCountDifferential,
-                          executionCountContinuous,
-                          averageDurationNormal,
-                          averageDurationFull,
-                          averageDurationIncremental,
-                          averageDurationDifferential,
-                          averageDurationContinuous,
-                          totalEntityCount,
-                          totalStorageCount,
-                          totalStorageSize,
-                          totalEntryCount,
-                          totalEntrySize
+                          error,
+                          ""
                          );
     }
     else

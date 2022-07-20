@@ -354,26 +354,26 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
 
 // ----------------------------------------------------------------------
 
-bool Index_findUUID(IndexHandle  *indexHandle,
-                    const char   *findJobUUID,
-                    const char   *findScheduleUUID,
-                    IndexId      *uuidId,
-                    uint         *executionCountNormal,
-                    uint         *executionCountFull,
-                    uint         *executionCountIncremental,
-                    uint         *executionCountDifferential,
-                    uint         *executionCountContinuous,
-                    uint64       *averageDurationNormal,
-                    uint64       *averageDurationFull,
-                    uint64       *averageDurationIncremental,
-                    uint64       *averageDurationDifferential,
-                    uint64       *averageDurationContinuous,
-                    uint         *totalEntityCount,
-                    uint         *totalStorageCount,
-                    uint64       *totalStorageSize,
-                    uint         *totalEntryCount,
-                    uint64       *totalEntrySize
-                   )
+Errors Index_findUUID(IndexHandle  *indexHandle,
+                      const char   *findJobUUID,
+                      const char   *findScheduleUUID,
+                      IndexId      *uuidId,
+                      uint         *executionCountNormal,
+                      uint         *executionCountFull,
+                      uint         *executionCountIncremental,
+                      uint         *executionCountDifferential,
+                      uint         *executionCountContinuous,
+                      uint64       *averageDurationNormal,
+                      uint64       *averageDurationFull,
+                      uint64       *averageDurationIncremental,
+                      uint64       *averageDurationDifferential,
+                      uint64       *averageDurationContinuous,
+                      uint         *totalEntityCount,
+                      uint         *totalStorageCount,
+                      uint64       *totalStorageSize,
+                      uint         *totalEntryCount,
+                      uint64       *totalEntrySize
+                     )
 {
   Errors error;
 
@@ -382,7 +382,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return FALSE;
+    return ERROR_DATABASE_NOT_FOUND;
   }
 
   if (indexHandle->masterIO == NULL)
@@ -415,7 +415,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                             if (totalStorageSize            != NULL) (*totalStorageSize           ) = values[13].u64;
                             if (totalEntryCount             != NULL) (*totalEntryCount            ) = values[14].u;
                             if (totalEntrySize              != NULL) (*totalEntrySize             ) = values[15].u64;
-
+                            
                             return ERROR_NONE;
                           },NULL),
                           NULL,  // changedRowCount
@@ -504,7 +504,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                         if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
                                         if (totalEntryCount             != NULL) StringMap_getUInt  (resultMap,"totalEntryCount",            totalEntryCount,            0   );
                                         if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
-
+                                        
                                         return ERROR_NONE;
                                       }
                                       else
@@ -518,7 +518,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                    );
   }
 
-  return (error == ERROR_NONE);
+  return error;
 }
 
 Errors Index_getUUIDsInfos(IndexHandle *indexHandle,

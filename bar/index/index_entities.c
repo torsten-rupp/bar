@@ -1691,24 +1691,24 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
 
 /*---------------------------------------------------------------------*/
 
-bool Index_findEntity(IndexHandle  *indexHandle,
-                      IndexId      findEntityId,
-                      ConstString  findJobUUID,
-                      ConstString  findScheduleUUID,
-                      ConstString  findHostName,
-                      ArchiveTypes findArchiveType,
-                      uint64       findCreatedDate,
-                      uint64       findCreatedTime,
-                      String       jobUUID,
-                      String       scheduleUUID,
-                      IndexId      *uuidId,
-                      IndexId      *entityId,
-                      ArchiveTypes *archiveType,
-                      uint64       *createdDateTime,
-                      String       lastErrorMessage,
-                      uint         *totalEntryCount,
-                      uint64       *totalEntrySize
-                     )
+Errors Index_findEntity(IndexHandle  *indexHandle,
+                        IndexId      findEntityId,
+                        ConstString  findJobUUID,
+                        ConstString  findScheduleUUID,
+                        ConstString  findHostName,
+                        ArchiveTypes findArchiveType,
+                        uint64       findCreatedDate,
+                        uint64       findCreatedTime,
+                        String       jobUUID,
+                        String       scheduleUUID,
+                        IndexId      *uuidId,
+                        IndexId      *entityId,
+                        ArchiveTypes *archiveType,
+                        uint64       *createdDateTime,
+                        String       lastErrorMessage,
+                        uint         *totalEntryCount,
+                        uint64       *totalEntrySize
+                       )
 {
   String filterString;
   Errors error;
@@ -1719,7 +1719,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return FALSE;
+    return ERROR_DATABASE_NOT_FOUND;
   }
 
   // get filters
@@ -1732,8 +1732,6 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   Database_filterAppend(filterString,findCreatedDate != 0LL,"AND","%s=%"PRIu64,Database_filterDateString(&indexHandle->databaseHandle,"entities.created"),findCreatedDate);
   Database_filterAppend(filterString,findCreatedTime != 0L,"AND","%s=%"PRIu64,Database_filterTimeString(&indexHandle->databaseHandle,"entities.created"),findCreatedTime);
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(filterString));
-
-  result = FALSE;
 
   INDEX_DOX(error,
             indexHandle,
@@ -1758,8 +1756,6 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                           if (lastErrorMessage != NULL) String_set(lastErrorMessage,values[6].string);
                           if (totalEntryCount  != NULL) (*totalEntryCount) = values[7].u;
                           if (totalEntrySize   != NULL) (*totalEntrySize)  = values[8].u64;
-
-                          result = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -1797,16 +1793,11 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                         1LL
                        );
   });
-  if (error != ERROR_NONE)
-  {
-    Database_deleteFilter(filterString);
-    return FALSE;
-  }
 
   // free resources
   Database_deleteFilter(filterString);
 
-  return result;
+  return error;
 }
 
 Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,

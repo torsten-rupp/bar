@@ -999,6 +999,8 @@ ERROR DATABASE_TIMEOUT
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_ENTRY_NOT_FOUND         TR("database entry not found")
+
 // --- master/slave -----------------------------------------------------
 ERROR MASTER_DISCONNECTED              TR("master disconnected")
 ERROR SLAVE_DISCONNECTED               TR("slave disconnected")

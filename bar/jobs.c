@@ -1806,7 +1806,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
     if (scheduleNode->deprecatedPersistenceFlag)
     {
       // map 0 -> all/forever
-      minKeep = (scheduleNode->minKeep != 0) ? scheduleNode->minKeep : KEEP_ALL;
+      minKeep = scheduleNode->minKeep;
       maxKeep = (scheduleNode->maxKeep != 0) ? scheduleNode->maxKeep : KEEP_ALL;
       maxAge  = (scheduleNode->maxAge  != 0) ? scheduleNode->maxAge  : AGE_FOREVER;
 

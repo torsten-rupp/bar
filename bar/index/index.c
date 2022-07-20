@@ -1574,8 +1574,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                     NULL,  // errorMessage
                                     NULL,  // totalEntryCount
                                     NULL  // totalEntrySize
-                                   )
-           && (error == ERROR_NONE)
+                                   ) == ERROR_NONE
           )
     {
       // get printable name (if possible)
@@ -1687,8 +1686,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                                   NULL,  // errorMessage
                                   NULL,  // totalEntryCount
                                   NULL  // totalEntrySize
-                                 )
-         && (error == ERROR_NONE)
+                                 ) == ERROR_NONE
         )
   {
     // get printable name (if possible)

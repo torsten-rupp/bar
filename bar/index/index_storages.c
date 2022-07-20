@@ -150,8 +150,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                     NULL,  // errorMessage
                                     NULL,  // totalEntryCount
                                     NULL  // totalEntrySize
-                                   )
-           && (error == ERROR_NONE)
+                                   ) == ERROR_NONE
           )
     {
       // get printable name (if possible)
@@ -572,7 +571,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   String_delete(name2);
   String_delete(name1);
 
-  if (error == ERROR_NONE)
+  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -659,7 +658,7 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
 
   // free resource
 
-  if (error == ERROR_NONE)
+  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -850,7 +849,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
   String_delete(name2);
   String_delete(name1);
 
-  if (error == ERROR_NONE)
+  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -4100,24 +4099,23 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
 
 // ----------------------------------------------------------------------
 
-bool Index_findStorageById(IndexHandle *indexHandle,
-                           IndexId     findStorageId,
-                           String      jobUUID,
-                           String      scheduleUUID,
-                           IndexId     *uuidId,
-                           IndexId     *entityId,
-                           String      storageName,
-                           uint64      *dateTime,
-                           uint64      *size,
-                           IndexStates *indexState,
-                           IndexModes  *indexMode,
-                           uint64      *lastCheckedDateTime,
-                           String      errorMessage,
-                           uint        *totalEntryCount,
-                           uint64      *totalEntrySize
-                          )
+Errors Index_findStorageById(IndexHandle *indexHandle,
+                             IndexId     findStorageId,
+                             String      jobUUID,
+                             String      scheduleUUID,
+                             IndexId     *uuidId,
+                             IndexId     *entityId,
+                             String      storageName,
+                             uint64      *dateTime,
+                             uint64      *size,
+                             IndexStates *indexState,
+                             IndexModes  *indexMode,
+                             uint64      *lastCheckedDateTime,
+                             String      errorMessage,
+                             uint        *totalEntryCount,
+                             uint64      *totalEntrySize
+                            )
 {
-  bool   foundFlag;
   Errors error;
 
   assert(indexHandle != NULL);
@@ -4126,10 +4124,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return FALSE;
+    return ERROR_DATABASE_NOT_FOUND;
   }
-
-  foundFlag = FALSE;
 
   INDEX_DOX(error,
             indexHandle,
@@ -4156,8 +4152,6 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                           if (errorMessage        != NULL) String_set(errorMessage,values[10].string);
                           if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
                           if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
-
-                          foundFlag = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -4200,28 +4194,27 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                        );
   });
 
-  return foundFlag;
+  return error;
 }
 
-bool Index_findStorageByName(IndexHandle            *indexHandle,
-                             const StorageSpecifier *findStorageSpecifier,
-                             ConstString            findArchiveName,
-                             IndexId                *uuidId,
-                             IndexId                *entityId,
-                             String                 jobUUID,
-                             String                 scheduleUUID,
-                             IndexId                *storageId,
-                             uint64                 *dateTime,
-                             uint64                 *size,
-                             IndexStates            *indexState,
-                             IndexModes             *indexMode,
-                             uint64                 *lastCheckedDateTime,
-                             String                 errorMessage,
-                             uint                   *totalEntryCount,
-                             uint64                 *totalEntrySize
-                            )
+Errors Index_findStorageByName(IndexHandle            *indexHandle,
+                               const StorageSpecifier *findStorageSpecifier,
+                               ConstString            findArchiveName,
+                               IndexId                *uuidId,
+                               IndexId                *entityId,
+                               String                 jobUUID,
+                               String                 scheduleUUID,
+                               IndexId                *storageId,
+                               uint64                 *dateTime,
+                               uint64                 *size,
+                               IndexStates            *indexState,
+                               IndexModes             *indexMode,
+                               uint64                 *lastCheckedDateTime,
+                               String                 errorMessage,
+                               uint                   *totalEntryCount,
+                               uint64                 *totalEntrySize
+                              )
 {
-  bool             foundFlag;
   Errors           error;
   StorageSpecifier storageSpecifier;
   String           storageName;
@@ -4229,18 +4222,15 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   assert(indexHandle != NULL);
   assert(storageId != NULL);
 
-  (*storageId) = INDEX_ID_NONE;
-
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return FALSE;
+    return ERROR_DATABASE_NOT_FOUND;
   }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   storageName = String_new();
-  foundFlag   = FALSE;
 
   INDEX_DOX(error,
             indexHandle,
@@ -4254,34 +4244,33 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                           UNUSED_VARIABLE(userData);
                           UNUSED_VARIABLE(valueCount);
 
-                          if (!foundFlag)
-                          {
-                            String_set(storageName,values[5].string);
+                          String_set(storageName,values[5].string);
 
-                            if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+                          if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+                          {
+                            if (Storage_equalSpecifiers(findStorageSpecifier,
+                                                        findArchiveName,
+                                                        &storageSpecifier,
+                                                        NULL
+                                                       )
+                               )
                             {
-                              foundFlag = Storage_equalSpecifiers(findStorageSpecifier,findArchiveName,
-                                                                  &storageSpecifier,NULL
-                                                                 );
-                              if (foundFlag)
-                              {
-                                if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[0].id);
-                                if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[1].id);
-                                if (jobUUID             != NULL) String_set(jobUUID,values[2].string);
-                                if (scheduleUUID        != NULL) String_set(scheduleUUID,values[3].string);
-                                if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
-                                if (dateTime            != NULL) (*dateTime)            = values[6].u64;
-                                if (size                != NULL) (*size)                = values[7].u64;
-                                if (indexState          != NULL) (*indexState)          = values[8].u;
-                                if (indexMode           != NULL) (*indexMode)           = values[9].u;
-                                if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[10].u64;
-                                if (errorMessage        != NULL) String_set(errorMessage,values[11].string);
-                                if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
-                                if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
-                              }
+                              if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[0].id);
+                              if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[1].id);
+                              if (jobUUID             != NULL) String_set(jobUUID,values[2].string);
+                              if (scheduleUUID        != NULL) String_set(scheduleUUID,values[3].string);
+                              if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
+                              if (dateTime            != NULL) (*dateTime)            = values[6].u64;
+                              if (size                != NULL) (*size)                = values[7].u64;
+                              if (indexState          != NULL) (*indexState)          = values[8].u;
+                              if (indexMode           != NULL) (*indexMode)           = values[9].u;
+                              if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[10].u64;
+                              if (errorMessage        != NULL) String_set(errorMessage,values[11].string);
+                              if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
+                              if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
                             }
                           }
-
+                          
                           return ERROR_NONE;
                         },NULL),
                         NULL,  // changedRowCount
@@ -4324,34 +4313,33 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   {
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
-    return FALSE;
+    return error;
   }
 
   // free resources
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 
-  return foundFlag;
+  return ERROR_NONE;
 }
 
-bool Index_findStorageByState(IndexHandle   *indexHandle,
-                              IndexStateSet findIndexStateSet,
-                              IndexId       *uuidId,
-                              String        jobUUID,
-                              IndexId       *entityId,
-                              String        scheduleUUID,
-                              IndexId       *storageId,
-                              String        storageName,
-                              uint64        *dateTime,
-                              uint64        *size,
-                              IndexModes    *indexMode,
-                              uint64        *lastCheckedDateTime,
-                              String        errorMessage,
-                              uint          *totalEntryCount,
-                              uint64        *totalEntrySize
-                             )
+Errors Index_findStorageByState(IndexHandle   *indexHandle,
+                                IndexStateSet findIndexStateSet,
+                                IndexId       *uuidId,
+                                String        jobUUID,
+                                IndexId       *entityId,
+                                String        scheduleUUID,
+                                IndexId       *storageId,
+                                String        storageName,
+                                uint64        *dateTime,
+                                uint64        *size,
+                                IndexModes    *indexMode,
+                                uint64        *lastCheckedDateTime,
+                                String        errorMessage,
+                                uint          *totalEntryCount,
+                                uint64        *totalEntrySize
+                               )
 {
-  bool   foundFlag;
   String indexStateSetString;
   Errors error;
 
@@ -4361,19 +4349,17 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return FALSE;
+    return ERROR_DATABASE_NOT_FOUND;
   }
 
   // init variables
   indexStateSetString = String_new();
 
-  foundFlag = FALSE;
-
   IndexCommon_getIndexStateSetString(indexStateSetString,findIndexStateSet);
   INDEX_DOX(error,
             indexHandle,
   {
-    char   sqlString[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_get(&indexHandle->databaseHandle,
                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -4398,8 +4384,6 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                           if (errorMessage        != NULL) String_set(errorMessage,values[10].string);
                           if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
                           if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
-
-                          foundFlag = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -4447,7 +4431,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   // free resources
   String_delete(indexStateSetString);
 
-  return foundFlag;
+  return error;
 }
 
 Errors Index_getStorageState(IndexHandle *indexHandle,
@@ -5872,7 +5856,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              0LL,
                              DATABASE_UNLIMITED
                             );
-        if (error != ERROR_NONE)
+        if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
         {
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;
@@ -5935,7 +5919,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              0LL,
                              DATABASE_UNLIMITED
                             );
-        if (error != ERROR_NONE)
+        if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
         {
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;
@@ -5998,7 +5982,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              0LL,
                              DATABASE_UNLIMITED
                             );
-        if (error != ERROR_NONE)
+        if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
         {
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;
@@ -6061,7 +6045,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              0LL,
                              DATABASE_UNLIMITED
                             );
-        if (error != ERROR_NONE)
+        if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
         {
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;
