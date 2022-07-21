@@ -15734,6 +15734,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                   scheduleUUID,
                                   hostName,
                                   archiveType,
+// TODO: add and use entityUUID instead of date
                                   Misc_extractDate(createdDateTime),
                                   0L,  // findCreatedTime
                                   NULL,  // jobUUID,
