@@ -891,6 +891,9 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                              String      errorMessage
                             )
 {
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
   return Database_get(&indexHandle->databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
@@ -4215,6 +4218,7 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
                                uint64                 *totalEntrySize
                               )
 {
+  bool             foundFlag;
   Errors           error;
   StorageSpecifier storageSpecifier;
   String           storageName;
@@ -4229,6 +4233,7 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
   }
 
   // init variables
+  foundFlag   = FALSE;
   Storage_initSpecifier(&storageSpecifier);
   storageName = String_new();
 
@@ -4268,9 +4273,11 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
                               if (errorMessage        != NULL) String_set(errorMessage,values[11].string);
                               if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
                               if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
+
+                              foundFlag = TRUE;
                             }
                           }
-                          
+
                           return ERROR_NONE;
                         },NULL),
                         NULL,  // changedRowCount
@@ -4315,12 +4322,13 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
+  assert(!INDEX_ID_IS_NONE(*storageId));
 
   // free resources
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 
-  return ERROR_NONE;
+  return foundFlag ? ERROR_NONE : ERROR_DATABASE_ENTRY_NOT_FOUND;
 }
 
 Errors Index_findStorageByState(IndexHandle   *indexHandle,
@@ -4427,6 +4435,12 @@ Errors Index_findStorageByState(IndexHandle   *indexHandle,
                         1LL
                        );
   });
+  if (error != ERROR_NONE)
+  {
+    String_delete(indexStateSetString);
+    return error;
+  }
+  assert(!INDEX_ID_IS_NONE(*storageId));
 
   // free resources
   String_delete(indexStateSetString);
@@ -4799,10 +4813,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                            UNUSED_VARIABLE(userData);
                            UNUSED_VARIABLE(valueCount);
 
-                           (*totalStorageCount) = values[0].u;
-                           (*totalStorageSize)  = values[1].u64;
-                           (*totalEntryCount)   = values[2].u;
-                           (*totalEntrySize)    = values[3].u64;
+                           if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                           if (totalStorageSize  != NULL) (*totalStorageSize)  = values[1].u64;
+                           if (totalEntryCount   != NULL) (*totalEntryCount)   = values[2].u;
+                           if (totalEntrySize    != NULL) (*totalEntrySize)    = values[3].u64;
 
                            return ERROR_NONE;
                          },NULL),
@@ -4836,10 +4850,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                          0LL,
                          1LL
                         );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
 
     if (totalEntryContentSize != NULL)
     {

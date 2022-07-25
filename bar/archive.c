@@ -15206,7 +15206,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   StorageSpecifier   storageSpecifier;
   String             printableStorageName;
   Errors             error;
-  bool               foundFlag;
   uint64             size;
   ulong              entryCount;
   bool               deletedFlag,abortedFlag,serverAllocationPendingFlag;
@@ -15254,6 +15253,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   void doneUpdateIndexProgress(void)
   {
+    // nothing to do
   }
 
   /***********************************************************************\
@@ -15748,6 +15748,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                      NULL,  // totalEntryCount,
                                      NULL  // totalEntrySize
                                     );
+                                    
             if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             {
               // create new entity

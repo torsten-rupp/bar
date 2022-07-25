@@ -1715,6 +1715,7 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
   bool   result;
 
   assert(indexHandle != NULL);
+  assert(entityId != NULL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -1793,6 +1794,12 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
                         1LL
                        );
   });
+  if (error != ERROR_NONE)
+  {
+    Database_deleteFilter(filterString);
+    return error;
+  }
+  assert(!INDEX_ID_IS_NONE(*entityId));
 
   // free resources
   Database_deleteFilter(filterString);

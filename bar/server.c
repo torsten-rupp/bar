@@ -2408,7 +2408,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     String_delete(jobName);
     return error;
   }
-  
+
   // find job name (if possible)
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -3179,8 +3179,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                           )
                     {
                       nextJobExpirationEntityNode = nextJobExpirationEntityNode->next;
-                    }                          
-                    
+                    }
+
                     if (nextJobExpirationEntityNode != NULL)
                     {
                       jobExpirationEntityNode = nextJobExpirationEntityNode;
@@ -4109,27 +4109,25 @@ LOCAL void updateIndexThreadCode(void)
         addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);  // no password
 
         // update index entries
-        while (   !isQuit()
-               && (Index_findStorageByState(indexHandle,
-                                            INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
-                                            &uuidId,
-                                            NULL,  // jobUUID
-                                            &entityId,
-                                            NULL,  // scheduleUUID
-                                            &storageId,
-                                            storageName,
-                                            NULL,  // createdDateTime
-                                            NULL,  // size
-                                            NULL,  // indexMode
-                                            NULL,  // lastCheckedDateTime
-                                            NULL,  // errorMessage
-                                            NULL,  // totalEntryCount
-                                            NULL  // totalEntrySize
-                                           ) == ERROR_NONE
-                  )
-              )
+        storageId = INDEX_ID_NONE;
+        if (Index_findStorageByState(indexHandle,
+                                     INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
+                                     &uuidId,
+                                     NULL,  // jobUUID
+                                     &entityId,
+                                     NULL,  // scheduleUUID
+                                     &storageId,
+                                     storageName,
+                                     NULL,  // createdDateTime
+                                     NULL,  // size
+                                     NULL,  // indexMode
+                                     NULL,  // lastCheckedDateTime
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
+                                    ) == ERROR_NONE
+           )
         {
-fprintf(stderr,"%s:%d: %lld\n",__FILE__,__LINE__,uuidId);
           // pause
           pauseIndexUpdate();
           if (isQuit()) break;
@@ -4304,7 +4302,10 @@ fprintf(stderr,"%s:%d: %lld\n",__FILE__,__LINE__,uuidId);
       if (isQuit()) break;
 
       // sleep and check quit flag/trigger
-      delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
+      if (storageId == INDEX_ID_NONE)
+      {
+        delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
+      }
     }
 
     // done index
@@ -4430,7 +4431,9 @@ LOCAL void autoIndexThreadCode(void)
       pauseIndexUpdate();
       if (isQuit()) break;
 
-      if (Index_isInitialized() && globalOptions.indexDatabaseAutoUpdateFlag)
+      if (   Index_isInitialized()
+          && globalOptions.indexDatabaseAutoUpdateFlag
+         )
       {
         // collect storage locations to check for BAR files
         getStorageDirectories(&storageDirectoryList);
@@ -4537,7 +4540,7 @@ LOCAL void autoIndexThreadCode(void)
                                                if      (error == ERROR_NONE)
                                                {
                                                  // already in index -> check if modified/state
-//fprintf(stderr,"%s:%d: file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,fileInfo->timeModified,lastCheckedDateTime);
+//fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
                                                  if      (fileInfo->timeModified > lastCheckedDateTime)
                                                  {
                                                    // modified -> request update index
@@ -18742,7 +18745,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                                                  NULL,  // totalEntryCount
                                                                  NULL  // totalEntrySize
                                                                 );
-                                 if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+                                 if       (error == ERROR_NONE)
                                  {
                                    if (forceRefresh)
                                    {
@@ -18763,7 +18766,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                      }
                                    }
                                  }
-                                 else
+                                 else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
                                  {
                                    error = Index_newStorage(indexHandle,
                                                             INDEX_ID_NONE, // uuidId

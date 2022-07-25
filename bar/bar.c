@@ -3880,6 +3880,7 @@ LOCAL Errors runDebug(void)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
+        assert(entityId != DATABASE_ID_NONE);
       }
       else if (error != ERROR_NONE)
       {

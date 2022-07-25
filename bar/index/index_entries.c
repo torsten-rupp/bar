@@ -631,6 +631,12 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                            DATABASE_FILTER_KEY(entryId)
                          )
                         );
+// TODO: work-around: ignore not existing
+//  if (error != ERROR_NONE)
+if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+{
+  return ERROR_NONE;
+}
   if (error != ERROR_NONE)
   {
     return error;
@@ -4294,6 +4300,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
 // TODO: do this wit a trigger again?
           if (error == ERROR_NONE)
           {
+            assert(entryId != DATABASE_ID_NONE);
+
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
@@ -4509,6 +4517,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
           // add FTS entry
           if (error == ERROR_NONE)
           {
+            assert(entryId != DATABASE_ID_NONE);
+
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
@@ -4684,6 +4694,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       {
         return error;
       }
+      assert(entryId != DATABASE_ID_NONE);
 
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))
@@ -4858,6 +4869,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       {
         return error;
       }
+      assert(entryId != DATABASE_ID_NONE);
 
       // add FTS entry
 // TODO: do this in a trigger again?
@@ -5047,6 +5059,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
           // add FTS entry
           if (error == ERROR_NONE)
           {
+            assert(entryId != DATABASE_ID_NONE);
+
 // TODO: do this in a trigger again?
             switch (Database_getType(&indexHandle->databaseHandle))
             {
@@ -5245,6 +5259,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       {
         return error;
       }
+      assert(entryId != DATABASE_ID_NONE);
 
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))

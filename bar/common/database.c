@@ -3129,6 +3129,13 @@ LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
 
 // TODO:
 #if 1
+#if 0
+fprintf(stderr,"%s:%d: parameterCount=%d\n",__FILE__,__LINE__,parameterCount);
+for (int i =0; i < parameterCount; i++) {
+  fprintf(stderr,"%s:%d: %d %d: %s\n",__FILE__,__LINE__,statement->parameterLengths[i],statement->parameterFormats[i],statement->parameterValues[i]);
+}
+#endif
+
   postgresqlResult = PQexecPrepared(handle,
                                     statement->name,
                                     parameterCount,
@@ -14647,7 +14654,7 @@ char *Database_filterDateString(const DatabaseHandle *databaseHandle,
       #endif /* HAVE_MARIADB */
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        return stringFormat(buffer,sizeof(buffer),"%s::date",columnName);
+        return stringFormat(buffer,sizeof(buffer),"EXTRACT(EPOCH FROM %s::date)",columnName);
       #else /* HAVE_POSTGRESQL */
         return NULL;
       #endif /* HAVE_POSTGRESQL */
@@ -15209,6 +15216,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   if (insertRowId != NULL)
   {
     (*insertRowId) = getLastInsertRowId(&databaseStatementHandle);
+    assert(*insertRowId != DATABASE_ID_NONE);
   }
 
   // finalize statementHandle
@@ -16327,12 +16335,6 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                       0LL,
                       1LL
                      );
-// TODO: work-around: if not found set newest entry to NONE
-if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-{
-  (*value) = DATABASE_ID_NONE;
-  error = ERROR_NONE;
-}
 
   return error;
 }
@@ -16362,12 +16364,12 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                        {
                          assert(values != NULL);
                          assert(valueCount == 1);
-     
+
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
-     
+
                          Array_append(ids,&values[0].id);
-     
+
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount

@@ -8338,22 +8338,25 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
             BARControl.resetCursor();
           }
 
-          switch (widgetStorageTabFolder.getSelectionIndex())
+          if (!widgetStorageTabFolder.isDisposed())
           {
-            case 0:
-              // tree view
-              for (TreeItem treeItem : widgetStorageTree.getSelection())
-              {
-                updateStorageTreeTableThread.triggerUpdate(treeItem);
-              }
-              break;
-            case 1:
-              // table view
-              for (TableItem tableItem : widgetStorageTable.getSelection())
-              {
-                updateStorageTreeTableThread.triggerUpdate(tableItem);
-              }
-              break;
+            switch (widgetStorageTabFolder.getSelectionIndex())
+            {
+              case 0:
+                // tree view
+                for (TreeItem treeItem : widgetStorageTree.getSelection())
+                {
+                  updateStorageTreeTableThread.triggerUpdate(treeItem);
+                }
+                break;
+              case 1:
+                // table view
+                for (TableItem tableItem : widgetStorageTable.getSelection())
+                {
+                  updateStorageTreeTableThread.triggerUpdate(tableItem);
+                }
+                break;
+            }
           }
         }
       }
