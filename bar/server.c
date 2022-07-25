@@ -1424,11 +1424,6 @@ LOCAL void pairingThreadCode(void)
               if (!Connector_isConnected(&slaveNode->connectorInfo))
               {
                 // try connect to slave
-                logMessage(NULL,  // logHandle,
-                           LOG_TYPE_INFO,
-                           "Try to connect to slave %s:%d",
-                           String_cString(slaveNode->name),slaveNode->port
-                          );
                 error = Connector_connect(&slaveNode->connectorInfo,
                                           slaveNode->name,
                                           slaveNode->port
