@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-18 09:03+0200\n"
+"POT-Creation-Date: 2022-07-25 10:28+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -955,18 +955,22 @@ msgstr ""
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1003
-msgid "master disconnected"
-msgstr ""
-
-#: errors.def:1004
-msgid "slave disconnected"
+#: errors.def:1002
+msgid "database entry not found"
 msgstr ""
 
 #: errors.def:1005
-msgid "slave is not paired"
+msgid "master disconnected"
 msgstr ""
 
 #: errors.def:1006
+msgid "slave disconnected"
+msgstr ""
+
+#: errors.def:1007
+msgid "slave is not paired"
+msgstr ""
+
+#: errors.def:1008
 msgid "instance is not a slave"
 msgstr ""

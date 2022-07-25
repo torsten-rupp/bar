@@ -2126,8 +2126,6 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
 
                        databaseId_ = values[0].id;
                        String_set(name,values[1].string);
-// TODO: Database_get() return code to bool
-result = TRUE;
 
                        return ERROR_NONE;
                      },NULL),
@@ -2322,52 +2320,52 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
   name = String_new();
 
-  Database_get(databaseHandle,
-               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-               {
-                 assert(values != NULL);
-                 assert(valueCount == 4);
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       assert(values != NULL);
+                       assert(valueCount == 4);
 
-                 UNUSED_VARIABLE(userData);
-                 UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
 
-                 databaseId = values[0].id;
-                 dateTime   = values[1].dateTime;
-                 String_set(name,values[2].string);
-                 storedFlag = values[3].b;
+                       databaseId = values[0].id;
+                       dateTime   = values[1].dateTime;
+                       String_set(name,values[2].string);
+                       storedFlag = values[3].b;
 
-                 printf("#%ld: %lu %s %d\n",databaseId,dateTime,String_cString(name),storedFlag);
+                       printf("#%ld: %lu %s %d\n",databaseId,dateTime,String_cString(name),storedFlag);
 
-                 return ERROR_NONE;
-               },NULL),
-               NULL,  // changedRowCount
-               DATABASE_TABLES
-               (
-                 "names"
-               ),
-               DATABASE_FLAG_NONE,
-               DATABASE_COLUMNS
-               (
-                 DATABASE_COLUMN_KEY     ("id"),
-                 DATABASE_COLUMN_DATETIME("dateTime"),
-                 DATABASE_COLUMN_STRING  ("name"),
-                 DATABASE_COLUMN_BOOL    ("storedFlag")
-               ),
-               "    (? OR jobUUID=?) \
-                AND (? OR scheduleUUID=?) \
-               ",
-               DATABASE_FILTERS
-               (
-                 DATABASE_FILTER_BOOL   (jobUUID == NULL),
-                 DATABASE_FILTER_CSTRING(jobUUID),
-                 DATABASE_FILTER_BOOL   (scheduleUUID == NULL),
-                 DATABASE_FILTER_CSTRING(scheduleUUID)
-               ),
-               NULL,  // groupBy
-               NULL,  // orderBy
-               0LL,
-               DATABASE_UNLIMITED
-              );
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "names"
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY     ("id"),
+                       DATABASE_COLUMN_DATETIME("dateTime"),
+                       DATABASE_COLUMN_STRING  ("name"),
+                       DATABASE_COLUMN_BOOL    ("storedFlag")
+                     ),
+                     "    (? OR jobUUID=?) \
+                      AND (? OR scheduleUUID=?) \
+                     ",
+                     DATABASE_FILTERS
+                     (
+                       DATABASE_FILTER_BOOL   (jobUUID == NULL),
+                       DATABASE_FILTER_CSTRING(jobUUID),
+                       DATABASE_FILTER_BOOL   (scheduleUUID == NULL),
+                       DATABASE_FILTER_CSTRING(scheduleUUID)
+                     ),
+                     NULL,  // groupBy
+                     NULL,  // orderBy
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
 
   String_delete(name);
 }

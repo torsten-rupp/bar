@@ -801,30 +801,30 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 *                                        NULL)
 *          totalEntrySize              - total size [bytes] (can be
 *                                        NULL)
-* Return : TRUE if index found, FALSE otherwise
+* Return : ERROR_NONE, ERROR_DATABASE_ENTRY_NOT_FOUND or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findUUID(IndexHandle  *indexHandle,
-                    const char   *findJobUUID,
-                    const char   *findScheduleUUID,
-                    IndexId      *uuidId,
-                    uint         *executionCountNormal,
-                    uint         *executionCountFull,
-                    uint         *executionCountIncremental,
-                    uint         *executionCountDifferential,
-                    uint         *executionCountContinuous,
-                    uint64       *averageDurationNormal,
-                    uint64       *averageDurationFull,
-                    uint64       *averageDurationIncremental,
-                    uint64       *averageDurationDifferential,
-                    uint64       *averageDurationContinuous,
-                    uint         *totalEntityCount,
-                    uint         *totalStorageCount,
-                    uint64       *totalStorageSize,
-                    uint         *totalEntryCount,
-                    uint64       *totalEntrySize
-                   );
+Errors Index_findUUID(IndexHandle  *indexHandle,
+                      const char   *findJobUUID,
+                      const char   *findScheduleUUID,
+                      IndexId      *uuidId,
+                      uint         *executionCountNormal,
+                      uint         *executionCountFull,
+                      uint         *executionCountIncremental,
+                      uint         *executionCountDifferential,
+                      uint         *executionCountContinuous,
+                      uint64       *averageDurationNormal,
+                      uint64       *averageDurationFull,
+                      uint64       *averageDurationIncremental,
+                      uint64       *averageDurationDifferential,
+                      uint64       *averageDurationContinuous,
+                      uint         *totalEntityCount,
+                      uint         *totalStorageCount,
+                      uint64       *totalStorageSize,
+                      uint         *totalEntryCount,
+                      uint64       *totalEntrySize
+                     );
 
 /***********************************************************************\
 * Name   : Index_findEntity
@@ -848,28 +848,28 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 *          lastErrorMessage - last error message (can be NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
 *          totalEntrySize   - total size [bytes] (can be NULL)
-* Return : TRUE if index found, FALSE otherwise
+* Return : ERROR_NONE, ERROR_DATABASE_ENTRY_NOT_FOUND or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findEntity(IndexHandle  *indexHandle,
-                      IndexId      findEntityId,
-                      ConstString  findJobUUID,
-                      ConstString  findScheduleUUID,
-                      ConstString  findHostName,
-                      ArchiveTypes findArchiveType,
-                      uint64       findCreatedDate,
-                      uint64       findCreatedTime,
-                      String       jobUUID,
-                      String       scheduleUUID,
-                      IndexId      *uuidId,
-                      IndexId      *entityId,
-                      ArchiveTypes *archiveType,
-                      uint64       *createdDateTime,
-                      String       lastErrorMessage,
-                      uint         *totalEntryCount,
-                      uint64       *totalEntrySize
-                     );
+Errors Index_findEntity(IndexHandle  *indexHandle,
+                        IndexId      findEntityId,
+                        ConstString  findJobUUID,
+                        ConstString  findScheduleUUID,
+                        ConstString  findHostName,
+                        ArchiveTypes findArchiveType,
+                        uint64       findCreatedDate,
+                        uint64       findCreatedTime,
+                        String       jobUUID,
+                        String       scheduleUUID,
+                        IndexId      *uuidId,
+                        IndexId      *entityId,
+                        ArchiveTypes *archiveType,
+                        uint64       *createdDateTime,
+                        String       lastErrorMessage,
+                        uint         *totalEntryCount,
+                        uint64       *totalEntrySize
+                       );
 
 /***********************************************************************\
 * Name   : Index_findStorageById
@@ -890,26 +890,26 @@ bool Index_findEntity(IndexHandle  *indexHandle,
 *          errorMessage        - last error message
 *          totalEntryCount     - total number of entries (can be NULL)
 *          totalEntrySize      - total size [bytes] (can be NULL)
-* Return : TRUE if index found, FALSE otherwise
+* Return : ERROR_NONE, ERROR_DATABASE_ENTRY_NOT_FOUND or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findStorageById(IndexHandle *indexHandle,
-                           IndexId     findStorageId,
-                           String      jobUUID,
-                           String      scheduleUUID,
-                           IndexId     *uuidId,
-                           IndexId     *entityId,
-                           String      storageName,
-                           uint64      *dateTime,
-                           uint64      *size,
-                           IndexStates *indexState,
-                           IndexModes  *indexMode,
-                           uint64      *lastCheckedDateTime,
-                           String      errorMessage,
-                           uint        *totalEntryCount,
-                           uint64      *totalEntrySize
-                          );
+Errors Index_findStorageById(IndexHandle *indexHandle,
+                             IndexId     findStorageId,
+                             String      jobUUID,
+                             String      scheduleUUID,
+                             IndexId     *uuidId,
+                             IndexId     *entityId,
+                             String      storageName,
+                             uint64      *dateTime,
+                             uint64      *size,
+                             IndexStates *indexState,
+                             IndexModes  *indexMode,
+                             uint64      *lastCheckedDateTime,
+                             String      errorMessage,
+                             uint        *totalEntryCount,
+                             uint64      *totalEntrySize
+                            );
 
 /***********************************************************************\
 * Name   : Index_findStorageByName
@@ -921,7 +921,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 *          entityId            - index id of entity (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
-*          entityId             - index id of entity entry (can be NULL)
+*          entityId            - index id of entity entry (can be NULL)
 *          storageId           - index id of storage entry (can be NULL)
 *          dateTime            - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -932,27 +932,27 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 *          errorMessage        - last error message
 *          totalEntryCount     - total number of entries (can be NULL)
 *          totalEntrySize      - total size [bytes] (can be NULL)
-* Return : TRUE if index found, FALSE otherwise
+* Return : ERROR_NONE, ERROR_DATABASE_ENTRY_NOT_FOUND or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findStorageByName(IndexHandle            *indexHandle,
-                             const StorageSpecifier *findStorageSpecifier,
-                             ConstString            findArchiveName,
-                             IndexId                *uuidId,
-                             IndexId                *entityId,
-                             String                 jobUUID,
-                             String                 scheduleUUID,
-                             IndexId                *storageId,
-                             uint64                 *dateTime,
-                             uint64                 *size,
-                             IndexStates            *indexState,
-                             IndexModes             *indexMode,
-                             uint64                 *lastCheckedDateTime,
-                             String                 errorMessage,
-                             uint                   *totalEntryCount,
-                             uint64                 *totalEntrySize
-                            );
+Errors Index_findStorageByName(IndexHandle            *indexHandle,
+                               const StorageSpecifier *findStorageSpecifier,
+                               ConstString            findArchiveName,
+                               IndexId                *uuidId,
+                               IndexId                *entityId,
+                               String                 jobUUID,
+                               String                 scheduleUUID,
+                               IndexId                *storageId,
+                               uint64                 *dateTime,
+                               uint64                 *size,
+                               IndexStates            *indexState,
+                               IndexModes             *indexMode,
+                               uint64                 *lastCheckedDateTime,
+                               String                 errorMessage,
+                               uint                   *totalEntryCount,
+                               uint64                 *totalEntrySize
+                              );
 
 /***********************************************************************\
 * Name   : Index_findStorageByState
@@ -974,26 +974,26 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 *          errorMessage        - last error message
 *          totalEntryCount     - total number of entries (can be NULL)
 *          totalEntrySize      - total size [bytes] (can be NULL)
-* Return : TRUE if index found, FALSE otherwise
+* Return : ERROR_NONE, ERROR_DATABASE_ENTRY_NOT_FOUND or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findStorageByState(IndexHandle   *indexHandle,
-                              IndexStateSet findIndexStateSet,
-                              IndexId       *uuidId,
-                              String        jobUUID,
-                              IndexId       *entityId,
-                              String        scheduleUUID,
-                              IndexId       *storageId,
-                              String        storageName,
-                              uint64        *dateTime,
-                              uint64        *size,
-                              IndexModes    *indexMode,
-                              uint64        *lastCheckedDateTime,
-                              String        errorMessage,
-                              uint          *totalEntryCount,
-                              uint64        *totalEntrySize
-                             );
+Errors Index_findStorageByState(IndexHandle   *indexHandle,
+                                IndexStateSet findIndexStateSet,
+                                IndexId       *uuidId,
+                                String        jobUUID,
+                                IndexId       *entityId,
+                                String        scheduleUUID,
+                                IndexId       *storageId,
+                                String        storageName,
+                                uint64        *dateTime,
+                                uint64        *size,
+                                IndexModes    *indexMode,
+                                uint64        *lastCheckedDateTime,
+                                String        errorMessage,
+                                uint          *totalEntryCount,
+                                uint64        *totalEntrySize
+                               );
 
 /***********************************************************************\
 * Name   : Index_getStorageState

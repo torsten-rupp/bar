@@ -15253,6 +15253,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   void doneUpdateIndexProgress(void)
   {
+    // nothing to do
   }
 
   /***********************************************************************\
@@ -15727,27 +15728,28 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           }
           else
           {
-            // check if entity with given job UUID/schedule UUID/host name/archive type exists, otherwise create new entity
-            if (!Index_findEntity(indexHandle,
-                                  INDEX_ID_NONE,  // findEntityIndexId
-                                  jobUUID,
-                                  scheduleUUID,
-                                  hostName,
-                                  archiveType,
-// TODO: add and use entityUUID instead of date
-                                  Misc_extractDate(createdDateTime),
-                                  0L,  // findCreatedTime
-                                  NULL,  // jobUUID,
-                                  NULL,  // scheduleUUID,
-                                  NULL,  // uuidIndexId,
-                                  &entityId,
-                                  NULL,  // archiveType,
-                                  NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage,
-                                  NULL,  // totalEntryCount,
-                                  NULL  // totalEntrySize
-                                 )
-               )
+            // check if entity with given job UUID/schedule UUID/host name/archive type exists, otherwise create that entity
+            error = Index_findEntity(indexHandle,
+                                     INDEX_ID_NONE,  // findEntityIndexId
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     archiveType,
+// TODO: add and use entityUUID
+                                     Misc_extractDate(createdDateTime),
+                                     0L,  // findCreatedTime
+                                     NULL,  // jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // uuidIndexId,
+                                     &entityId,
+                                     NULL,  // archiveType,
+                                     NULL,  // createdDateTime,
+                                     NULL,  // lastErrorMessage,
+                                     NULL,  // totalEntryCount,
+                                     NULL  // totalEntrySize
+                                    );
+                                    
+            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             {
               // create new entity
               error = Index_newEntity(indexHandle,
@@ -15760,11 +15762,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                       TRUE,  // locked
                                       &entityId
                                      );
-            }
-            else
-            {
-              // entity exists
-              error = ERROR_NONE;
             }
           }
           if (error != ERROR_NONE)

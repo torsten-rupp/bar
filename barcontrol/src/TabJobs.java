@@ -14435,7 +14435,8 @@ throw new Error("NYI");
 
         widgetMinKeep = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{"0",0,
+        Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{BARControl.tr("unlimited"),Keep.ALL,
+                                                              "0",0,
                                                               "1",1,
                                                               "2",2,
                                                               "3",3,

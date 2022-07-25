@@ -1574,8 +1574,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                     NULL,  // errorMessage
                                     NULL,  // totalEntryCount
                                     NULL  // totalEntrySize
-                                   )
-           && (error == ERROR_NONE)
+                                   ) == ERROR_NONE
           )
     {
       // get printable name (if possible)
@@ -1687,8 +1686,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                                   NULL,  // errorMessage
                                   NULL,  // totalEntryCount
                                   NULL  // totalEntrySize
-                                 )
-         && (error == ERROR_NONE)
+                                 ) == ERROR_NONE
         )
   {
     // get printable name (if possible)
@@ -2242,48 +2240,48 @@ LOCAL void indexThreadCode(void)
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
           storageId = DATABASE_ID_NONE;
-          INDEX_DOX(error,
-                    &indexHandle,
+          INDEX_DO(&indexHandle,
           {
-            return Database_get(&indexHandle.databaseHandle,
-                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                {
-                                  assert(values != NULL);
-                                  assert(valueCount == 3);
+            error = Database_get(&indexHandle.databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 3);
 
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
 
-                                  storageId = values[0].id;
-                                  entityId  = values[1].id;
-                                  String_set(storageName,values[2].string);
+                                   storageId = values[0].id;
+                                   entityId  = values[1].id;
+                                   String_set(storageName,values[2].string);
 
-                                  return ERROR_NONE;
-                                },NULL),
-                                NULL,  // changedRowCount
-                                DATABASE_TABLES
-                                (
-                                  "storages"
-                                ),
-                                DATABASE_FLAG_NONE,
-                                DATABASE_COLUMNS
-                                (
-                                  DATABASE_COLUMN_KEY   ("id"),
-                                  DATABASE_COLUMN_KEY   ("entityId"),
-                                  DATABASE_COLUMN_STRING("name")
-                                ),
-                                "    state!=? \
-                                 AND deletedFlag=TRUE \
-                                ",
-                                DATABASE_FILTERS
-                                (
-                                  DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
-                                ),
-                                NULL,  // groupBy
-                                NULL,  // orderBy
-                                0LL,
-                                1LL
-                               );
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_TABLES
+                                 (
+                                   "storages"
+                                 ),
+                                 DATABASE_FLAG_NONE,
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_KEY   ("entityId"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
+                                 "    state!=? \
+                                  AND deletedFlag=TRUE \
+                                 ",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
+                                 ),
+                                 NULL,  // groupBy
+                                 NULL,  // orderBy
+                                 0LL,
+                                 1LL
+                                );
+            assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
           });
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
               || indexQuitFlag
@@ -3343,11 +3341,66 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       }
     }
 
-    if (   (totalStorageCount != NULL)
-        || (totalStorageSize != NULL)
+    // get total * count/size, total newest count/size
+    if (   (totalEntryCount             != NULL)
+        || (totalEntrySize              != NULL)
+        || (totalEntryContentSize       != NULL)
+        || (totalFileCount              != NULL)
+        || (totalFileSize               != NULL)
+        || (totalImageCount             != NULL)
+        || (totalImageSize              != NULL)
+        || (totalDirectoryCount         != NULL)
+        || (totalLinkCount              != NULL)
+        || (totalHardlinkCount          != NULL)
+        || (totalHardlinkSize           != NULL)
+        || (totalSpecialCount           != NULL)
+        || (totalEntryCountNewest       != NULL)
+        || (totalEntrySizeNewest        != NULL)
+        || (totalEntryContentSizeNewest != NULL)
+        || (totalFileCountNewest        != NULL)
+        || (totalFileSizeNewest         != NULL)
+        || (totalImageCountNewest       != NULL)
+        || (totalImageSizeNewest        != NULL)
+        || (totalDirectoryCountNewest   != NULL)
+        || (totalLinkCountNewest        != NULL)
+        || (totalHardlinkCountNewest    != NULL)
+        || (totalHardlinkSizeNewest     != NULL)
+        || (totalSpecialCountNewest     != NULL)
+        || (totalStorageCount           != NULL)
+        || (totalStorageSize            != NULL)
        )
     {
-      // get total * count/size, total newest count/size
+      if (totalEntryCount             != NULL) (*totalEntryCount            ) = 0;
+      if (totalEntrySize              != NULL) (*totalEntrySize             ) = 0LL;
+      if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = 0LL;
+
+      if (totalFileCount              != NULL) (*totalFileCount             ) = 0;
+      if (totalFileSize               != NULL) (*totalFileSize              ) = 0LL;
+      if (totalImageCount             != NULL) (*totalImageCount            ) = 0;
+      if (totalImageSize              != NULL) (*totalImageSize             ) = 0LL;
+      if (totalDirectoryCount         != NULL) (*totalDirectoryCount        ) = 0;
+      if (totalLinkCount              != NULL) (*totalLinkCount             ) = 0;
+      if (totalHardlinkCount          != NULL) (*totalHardlinkCount         ) = 0;
+      if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = 0LL;
+      if (totalSpecialCount           != NULL) (*totalSpecialCount          ) = 0;
+
+      if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = 0;
+      if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = 0LL;
+      if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = 0LL;
+
+      if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = 0;
+      if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = 0LL;
+      if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = 0;
+      if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = 0LL;
+      if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest  ) = 0;
+      if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest       ) = 0;
+      if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest   ) = 0;
+      if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = 0LL;
+      if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest    ) = 0;
+
+      if (totalStorageCount           != NULL) (*totalStorageCount          ) = 0;
+      if (totalStorageSize            != NULL) (*totalStorageSize           ) = 0LL;
+
       error = Database_get(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                            {
@@ -3438,10 +3491,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                            0LL,
                            1LL
                           );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+      assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
     }
 
     if (totalDeletedStorageCount != NULL)

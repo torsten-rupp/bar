@@ -1975,7 +1975,7 @@ public class BARControl
     new Option("--archive-type",                 null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
     new Option("--abort",                        null,Options.Types.STRING,     "abortJobName"),
     new Option("--pause",                        "-t",Options.Types.INTEGER,    "pauseTime",new Object[]{"s",1,"m",60,"h",60*60}),
-    new Option("--maintenance",                  null,Options.Types.INTEGER,    "maintenanceTime",new Object[]{"s",1,"m",60,"h",60*60}),
+    new Option("--maintenance",                  "-m",Options.Types.INTEGER,    "maintenanceTime",new Object[]{"s",1,"seconds",1,"m",60,"min",60,"minutes",60,"h",60*60,"hours",60*60}),
     new Option("--ping",                         "-i",Options.Types.BOOLEAN,    "pingFlag"),
     new Option("--suspend",                      "-s",Options.Types.BOOLEAN,    "suspendFlag"),
     new Option("--continue",                     "-c",Options.Types.BOOLEAN,    "continueFlag"),
@@ -2386,7 +2386,7 @@ public class BARControl
     System.out.println("         -s|--suspend                               - suspend job execution");
     System.out.println("         -c|--continue                              - continue job execution");
     System.out.println("         -t|--pause=<n>[s|m|h]                      - pause job execution for <n> seconds/minutes/hours");
-    System.out.println("         --maintenance=<n>[s|m|h]                   - set intermediate maintenance for <n> seconds/minutes/hours");
+    System.out.println("         -m|--maintenance=<n>[s|m|h]                - set intermediate maintenance for <n> seconds/minutes/hours");
     System.out.println("         -i|--ping                                  - check connection to server");
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");

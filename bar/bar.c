@@ -3707,24 +3707,24 @@ LOCAL Errors runDebug(void)
     }
 
     // find storage
-    if (!Index_findStorageByName(indexHandle,
-                                 &storageSpecifier,
-                                 NULL,  // archiveName
-                                 NULL,  // uuidId
-                                 NULL,  // entityId
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID
-                                 &storageId,
-                                 NULL,  // createdDateTime
-                                 NULL,  // size
-                                 NULL,  // indexState,
-                                 NULL,  // indexMode
-                                 NULL,  // lastCheckedDateTime,
-                                 NULL,  // errorMessage
-                                 NULL,  // totalEntryCount
-                                 NULL  // totalEntrySize
-                                )
-       )
+    error = Index_findStorageByName(indexHandle,
+                                    &storageSpecifier,
+                                    NULL,  // findArchiveName
+                                    NULL,  // uuidId
+                                    NULL,  // entityId
+                                    NULL,  // jobUUID
+                                    NULL,  // scheduleUUID
+                                    &storageId,
+                                    NULL,  // createdDateTime
+                                    NULL,  // size
+                                    NULL,  // indexState,
+                                    NULL,  // indexMode
+                                    NULL,  // lastCheckedDateTime,
+                                    NULL,  // errorMessage
+                                    NULL,  // totalEntryCount
+                                    NULL  // totalEntrySize
+                                   );
+    if (error != ERROR_NONE)
     {
       printError("cannot find storage '%s' (error: %s)!",
                  globalOptions.debug.indexRemoveStorage,
@@ -3798,23 +3798,24 @@ LOCAL Errors runDebug(void)
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
     // delete storage if it exists
-    if (Index_findStorageByName(indexHandle,
-                                &storageSpecifier,
-                                globalOptions.debug.indexAddStorage,
-                                NULL,  // uuidId,
-                                &entityId,
-                                NULL,  // jobUUID,
-                                NULL,  // scheduleUUID,
-                                &storageId,
-                                NULL,  // dateTime,
-                                NULL,  // size,
-                                NULL,  // indexState,
-                                NULL,  // indexMode,
-                                NULL,  // lastCheckedDateTime,
-                                NULL,  // errorMessage,
-                                NULL,  // totalEntryCount,
-                                NULL  // totalEntrySize
-                               )
+    if (   (Index_findStorageByName(indexHandle,
+                                    &storageSpecifier,
+                                    globalOptions.debug.indexAddStorage,
+                                    NULL,  // uuidId,
+                                    &entityId,
+                                    NULL,  // jobUUID,
+                                    NULL,  // scheduleUUID,
+                                    &storageId,
+                                    NULL,  // dateTime,
+                                    NULL,  // size,
+                                    NULL,  // indexState,
+                                    NULL,  // indexMode,
+                                    NULL,  // lastCheckedDateTime,
+                                    NULL,  // errorMessage,
+                                    NULL,  // totalEntryCount,
+                                    NULL  // totalEntrySize
+                                   ) == ERROR_NONE
+           )
         && (entityId == INDEX_ID_ENTITY(globalOptions.debug.indexEntityId))
        )
     {
@@ -3833,25 +3834,25 @@ LOCAL Errors runDebug(void)
     // create entity
     if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
     {
-      if (!Index_findEntity(indexHandle,
-                            INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
-                            NULL,  // findJobUUID
-                            NULL,  // findScheduleUUID
-                            NULL,  // findHostName
-                            ARCHIVE_TYPE_ANY,
-                            0LL,  // findCreatedDate
-                            0L,  // findCreatedTime
-                            NULL,  // jobUUID
-                            NULL,  // scheduleUUID
-                            NULL,  // uuidId
-                            NULL,  // entityId
-                            NULL,  // archiveType
-                            NULL,  // createdDateTime
-                            NULL,  // lastErrorMessage
-                            NULL,  // totalEntryCount
-                            NULL  // totalEntrySize
-                           )
-         )
+      error = Index_findEntity(indexHandle,
+                               INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
+                               NULL,  // findJobUUID
+                               NULL,  // findScheduleUUID
+                               NULL,  // findHostName
+                               ARCHIVE_TYPE_ANY,
+                               0LL,  // findCreatedDate
+                               0L,  // findCreatedTime
+                               NULL,  // jobUUID
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               NULL,  // archiveType
+                               NULL,  // createdDateTime
+                               NULL,  // lastErrorMessage
+                               NULL,  // totalEntryCount
+                               NULL  // totalEntrySize
+                              );
+      if      (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
       {
         // Note: cannot use Index_newEntity(); specific id is required
         error = Database_insert(&indexHandle->databaseHandle,
@@ -3879,6 +3880,16 @@ LOCAL Errors runDebug(void)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
+        assert(entityId != DATABASE_ID_NONE);
+      }
+      else if (error != ERROR_NONE)
+      {
+        printError("cannot create new entity for storage '%s' (error: %s)!",
+                   String_cString(globalOptions.debug.indexAddStorage),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
       }
     }
 
@@ -3998,24 +4009,24 @@ LOCAL Errors runDebug(void)
     }
 
     // find storage
-    if (!Index_findStorageByName(indexHandle,
-                                 &storageSpecifier,
-                                 NULL,  // archiveName
-                                 NULL,  // uuidId
-                                 NULL,  // entityId
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID
-                                 &storageId,
-                                 NULL,  // createdDateTime
-                                 NULL,  // size
-                                 NULL,  // indexState,
-                                 NULL,  // indexMode
-                                 NULL,  // lastCheckedDateTime,
-                                 NULL,  // errorMessage
-                                 NULL,  // totalEntryCount
-                                 NULL  // totalEntrySize
-                                )
-       )
+    error = Index_findStorageByName(indexHandle,
+                                    &storageSpecifier,
+                                    NULL,  // findArchiveName
+                                    NULL,  // uuidId
+                                    NULL,  // entityId
+                                    NULL,  // jobUUID
+                                    NULL,  // scheduleUUID
+                                    &storageId,
+                                    NULL,  // createdDateTime
+                                    NULL,  // size
+                                    NULL,  // indexState,
+                                    NULL,  // indexMode
+                                    NULL,  // lastCheckedDateTime,
+                                    NULL,  // errorMessage
+                                    NULL,  // totalEntryCount
+                                    NULL  // totalEntrySize
+                                   );
+    if (error != ERROR_NONE)
     {
       printError("cannot find storage '%s' (error: %s)!",
                  globalOptions.debug.indexRefreshStorage,

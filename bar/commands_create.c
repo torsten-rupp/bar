@@ -4985,23 +4985,24 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // check if append and storage exists => assign to existing storage index
         if (   appendFlag
-            && Index_findStorageByName(createInfo->indexHandle,
-                                       &createInfo->storageInfo.storageSpecifier,
-                                       storageMsg.archiveName,
-                                       NULL,  // uuidId
-                                       NULL,  // entityId
-                                       NULL,  // jobUUID,
-                                       NULL,  // scheduleUUID,
-                                       &storageId,
-                                       NULL,  // createdDateTime
-                                       NULL,  // size
-                                       NULL,  // indexMode
-                                       NULL,  // indexState
-                                       NULL,  // lastCheckedDateTime
-                                       NULL,  // errorMessage
-                                       NULL,  // totalEntryCount
-                                       NULL  // totalEntrySize
-                                      )
+            && (Index_findStorageByName(createInfo->indexHandle,
+                                        &createInfo->storageInfo.storageSpecifier,
+                                        storageMsg.archiveName,
+                                        NULL,  // uuidId
+                                        NULL,  // entityId
+                                        NULL,  // jobUUID,
+                                        NULL,  // scheduleUUID,
+                                        &storageId,
+                                        NULL,  // createdDateTime
+                                        NULL,  // size
+                                        NULL,  // indexMode
+                                        NULL,  // indexState
+                                        NULL,  // lastCheckedDateTime
+                                        NULL,  // errorMessage
+                                        NULL,  // totalEntryCount
+                                        NULL  // totalEntrySize
+                                       ) == ERROR_NONE
+               )
            )
         {
           // set index database state
@@ -7943,38 +7944,38 @@ Errors Command_create(ServerIO                     *masterIO,
   if (indexHandle != NULL)
   {
     // get/create index job UUID
-    if (!Index_findUUID(indexHandle,
-                        jobUUID,
-                        NULL,  // scheduleUUID
-                        &uuidId,
-                        NULL,  // executionCountNormal,
-                        NULL,  // executionCountFull,
-                        NULL,  // executionCountIncremental,
-                        NULL,  // executionCountDifferential,
-                        NULL,  // executionCountContinuous,
-                        NULL,  // averageDurationNormal,
-                        NULL,  // averageDurationFull,
-                        NULL,  // averageDurationIncremental,
-                        NULL,  // averageDurationDifferential,
-                        NULL,  // averageDurationContinuous,
-                        NULL,  // totalEntityCount,
-                        NULL,  // totalStorageCount,
-                        NULL,  // totalStorageSize,
-                        NULL,  // totalEntryCount,
-                        NULL  // totalEntrySize
-                       )
-       )
+    error = Index_findUUID(indexHandle,
+                           jobUUID,
+                           NULL,  // scheduleUUID
+                           &uuidId,
+                           NULL,  // executionCountNormal,
+                           NULL,  // executionCountFull,
+                           NULL,  // executionCountIncremental,
+                           NULL,  // executionCountDifferential,
+                           NULL,  // executionCountContinuous,
+                           NULL,  // averageDurationNormal,
+                           NULL,  // averageDurationFull,
+                           NULL,  // averageDurationIncremental,
+                           NULL,  // averageDurationDifferential,
+                           NULL,  // averageDurationContinuous,
+                           NULL,  // totalEntityCount,
+                           NULL,  // totalStorageCount,
+                           NULL,  // totalStorageSize,
+                           NULL,  // totalEntryCount,
+                           NULL  // totalEntrySize
+                          );
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
     {
       error = Index_newUUID(indexHandle,jobUUID,&uuidId);
-      if (error != ERROR_NONE)
-      {
-        printError("cannot create index for '%s' (error: %s)!",
-                   String_cString(printableStorageName),
-                   Error_getText(error)
-                  );
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
+    }
+    if (error != ERROR_NONE)
+    {
+      printError("cannot create index for '%s' (error: %s)!",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
     }
 
     // create new index entity

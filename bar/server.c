@@ -2182,30 +2182,28 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   string      = String_new();
 
   // find storage
-  if (!Index_findStorageById(indexHandle,
-                             storageId,
-                             jobUUID,
-                             NULL,  // scheduleUUID
-                             NULL,  // uuidId
-                             NULL,  // entityId
-                             storageName,
-                             &createdDateTime,
-                             NULL,  // size
-                             NULL,  // indexState
-                             NULL,  // indexMode
-                             NULL,  // lastCheckedDateTime
-                             NULL,  // errorMessage
-                             NULL,  // totalEntryCount
-                             NULL  // totalEntrySize
-                            )
-     )
+  error = Index_findStorageById(indexHandle,
+                                storageId,
+                                jobUUID,
+                                NULL,  // scheduleUUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
+                                storageName,
+                                &createdDateTime,
+                                NULL,  // size
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
+                               );
+  if (error != ERROR_NONE)
   {
     String_delete(string);
     String_delete(storageName);
     return ERROR_DATABASE_INDEX_NOT_FOUND;
   }
-
-  error = ERROR_NONE;
 
   if (!String_isEmpty(storageName))
   {
@@ -2301,52 +2299,52 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       }
       Storage_doneSpecifier(&storageSpecifier);
     }
-  }
-  if (isQuit())
-  {
-    String_delete(string);
-    String_delete(storageName);
-    return ERROR_INTERRUPTED;
-  }
-
-  // delete index
-  if (error == ERROR_NONE)
-  {
-    error = Index_deleteStorage(indexHandle,storageId);
-  }
-
-  // log
-  if (error == ERROR_NONE)
-  {
-    if (createdDateTime > 0LL)
+    if (isQuit())
     {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Deleted storage #%lld: '%s', created at %s",
-                 Index_getDatabaseId(storageId),
-                 String_cString(storageName),
-                 String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
-                );
+      String_delete(string);
+      String_delete(storageName);
+      return ERROR_INTERRUPTED;
+    }
+
+    // delete index
+    if (error == ERROR_NONE)
+    {
+      error = Index_deleteStorage(indexHandle,storageId);
+    }
+
+    // log
+    if (error == ERROR_NONE)
+    {
+      if (createdDateTime > 0LL)
+      {
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Deleted storage #%lld: '%s', created at %s",
+                   Index_getDatabaseId(storageId),
+                   String_cString(storageName),
+                   String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                  );
+      }
+      else
+      {
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Deleted storage #%lld: '%s'",
+                   Index_getDatabaseId(storageId),
+                   String_cString(storageName)
+                  );
+      }
     }
     else
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Deleted storage #%lld: '%s'",
+                 "Delete storage #%lld: '%s' fail (error: %s)",
                  Index_getDatabaseId(storageId),
-                 String_cString(storageName)
+                 String_cString(storageName),
+                 Error_getText(error)
                 );
     }
-  }
-  else
-  {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Delete storage #%lld: '%s' fail (error: %s)",
-               Index_getDatabaseId(storageId),
-               String_cString(storageName),
-               Error_getText(error)
-              );
   }
 
   // free resources
@@ -2386,29 +2384,29 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   string  = String_new();
 
   // find entity
-  if (!Index_findEntity(indexHandle,
-                        entityId,
-                        NULL,  // findJobUUID,
-                        NULL,  // findScheduleUUID
-                        NULL,  // findHostName
-                        ARCHIVE_TYPE_ANY,
-                        0LL,  // findCreatedDate
-                        0L,  // findCreatedTime
-                        jobUUID,
-                        NULL,  // scheduleUUID
-                        NULL,  // uuidId
-                        NULL,  // entityId
-                        NULL,  // archiveType
-                        &createdDateTime,
-                        NULL,  // lastErrorMessage
-                        NULL,  // totalEntryCount
-                        NULL  // totalEntrySize
-                       )
-     )
+  error = Index_findEntity(indexHandle,
+                           entityId,
+                           NULL,  // findJobUUID,
+                           NULL,  // findScheduleUUID
+                           NULL,  // findHostName
+                           ARCHIVE_TYPE_ANY,
+                           0LL,  // findCreatedDate
+                           0L,  // findCreatedTime
+                           jobUUID,
+                           NULL,  // scheduleUUID
+                           NULL,  // uuidId
+                           NULL,  // entityId
+                           NULL,  // archiveType
+                           &createdDateTime,
+                           NULL,  // lastErrorMessage
+                           NULL,  // totalEntryCount
+                           NULL  // totalEntrySize
+                          );
+  if (error != ERROR_NONE)
   {
     String_delete(string);
     String_delete(jobName);
-    return ERROR_DATABASE_INDEX_NOT_FOUND;
+    return error;
   }
 
   // find job name (if possible)
@@ -2548,6 +2546,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                        )
 {
   Errors           error;
+  bool             foundFlag;
   IndexId          uuidId;
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
@@ -2555,29 +2554,29 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   // find UUID
-  if (!Index_findUUID(indexHandle,
-                      String_cString(jobUUID),
-                      NULL,  // findScheduleUUID
-                      &uuidId,
-                      NULL,  // executionCountNormal,
-                      NULL,  // executionCountFull,
-                      NULL,  // executionCountIncremental,
-                      NULL,  // executionCountDifferential,
-                      NULL,  // executionCountContinuous,
-                      NULL,  // averageDurationNormal,
-                      NULL,  // averageDurationFull,
-                      NULL,  // averageDurationIncremental,
-                      NULL,  // averageDurationDifferential,
-                      NULL,  // averageDurationContinuous,
-                      NULL,  // totalEntityCount,
-                      NULL,  // totalStorageCount,
-                      NULL,  // totalStorageSize,
-                      NULL,  // totalEntryCount,
-                      NULL  // totalEntrySize
-                     )
-     )
+  error = Index_findUUID(indexHandle,
+                         String_cString(jobUUID),
+                         NULL,  // findScheduleUUID
+                         &uuidId,
+                         NULL,  // executionCountNormal,
+                         NULL,  // executionCountFull,
+                         NULL,  // executionCountIncremental,
+                         NULL,  // executionCountDifferential,
+                         NULL,  // executionCountContinuous,
+                         NULL,  // averageDurationNormal,
+                         NULL,  // averageDurationFull,
+                         NULL,  // averageDurationIncremental,
+                         NULL,  // averageDurationDifferential,
+                         NULL,  // averageDurationContinuous,
+                         NULL,  // totalEntityCount,
+                         NULL,  // totalStorageCount,
+                         NULL,  // totalStorageSize,
+                         NULL,  // totalEntryCount,
+                         NULL  // totalEntrySize
+                        );
+  if (error != ERROR_NONE)
   {
-    return ERROR_DATABASE_INDEX_NOT_FOUND;
+    return error;
   }
 
   // delete all entities with uuid id
@@ -3180,8 +3179,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                           )
                     {
                       nextJobExpirationEntityNode = nextJobExpirationEntityNode->next;
-                    }                          
-                    
+                    }
+
                     if (nextJobExpirationEntityNode != NULL)
                     {
                       jobExpirationEntityNode = nextJobExpirationEntityNode;
@@ -4110,24 +4109,24 @@ LOCAL void updateIndexThreadCode(void)
         addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);  // no password
 
         // update index entries
-        while (   !isQuit()
-               && Index_findStorageByState(indexHandle,
-                                           INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
-                                           &uuidId,
-                                           NULL,  // jobUUID
-                                           &entityId,
-                                           NULL,  // scheduleUUID
-                                           &storageId,
-                                           storageName,
-                                           NULL,  // createdDateTime
-                                           NULL,  // size
-                                           NULL,  // indexMode
-                                           NULL,  // lastCheckedDateTime
-                                           NULL,  // errorMessage
-                                           NULL,  // totalEntryCount
-                                           NULL  // totalEntrySize
-                                          )
-              )
+        storageId = INDEX_ID_NONE;
+        if (Index_findStorageByState(indexHandle,
+                                     INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
+                                     &uuidId,
+                                     NULL,  // jobUUID
+                                     &entityId,
+                                     NULL,  // scheduleUUID
+                                     &storageId,
+                                     storageName,
+                                     NULL,  // createdDateTime
+                                     NULL,  // size
+                                     NULL,  // indexMode
+                                     NULL,  // lastCheckedDateTime
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
+                                    ) == ERROR_NONE
+           )
         {
           // pause
           pauseIndexUpdate();
@@ -4303,7 +4302,10 @@ LOCAL void updateIndexThreadCode(void)
       if (isQuit()) break;
 
       // sleep and check quit flag/trigger
-      delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
+      if (storageId == INDEX_ID_NONE)
+      {
+        delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
+      }
     }
 
     // done index
@@ -4429,7 +4431,9 @@ LOCAL void autoIndexThreadCode(void)
       pauseIndexUpdate();
       if (isQuit()) break;
 
-      if (Index_isInitialized() && globalOptions.indexDatabaseAutoUpdateFlag)
+      if (   Index_isInitialized()
+          && globalOptions.indexDatabaseAutoUpdateFlag
+         )
       {
         // collect storage locations to check for BAR files
         getStorageDirectories(&storageDirectoryList);
@@ -4516,27 +4520,27 @@ LOCAL void autoIndexThreadCode(void)
                                                Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
                                                // get index id, request index update
-                                               if      (Index_findStorageByName(indexHandle,
-                                                                                &storageSpecifier,
-                                                                                NULL,  // archiveName
-                                                                                NULL,  // uuidId
-                                                                                NULL,  // entityId
-                                                                                NULL,  // jobUUID
-                                                                                NULL,  // scheduleUUID
-                                                                                &storageId,
-                                                                                NULL,  // createdDateTime
-                                                                                NULL,  // size
-                                                                                &indexState,
-                                                                                NULL,  // indexMode
-                                                                                &lastCheckedDateTime,
-                                                                                NULL,  // errorMessage
-                                                                                NULL,  // totalEntryCount
-                                                                                NULL  // totalEntrySize
-                                                                               )
-                                                       )
+                                               error = Index_findStorageByName(indexHandle,
+                                                                               &storageSpecifier,
+                                                                               NULL,  // archiveName
+                                                                               NULL,  // uuidId
+                                                                               NULL,  // entityId
+                                                                               NULL,  // jobUUID
+                                                                               NULL,  // scheduleUUID
+                                                                               &storageId,
+                                                                               NULL,  // createdDateTime
+                                                                               NULL,  // size
+                                                                               &indexState,
+                                                                               NULL,  // indexMode
+                                                                               &lastCheckedDateTime,
+                                                                               NULL,  // errorMessage
+                                                                               NULL,  // totalEntryCount
+                                                                               NULL  // totalEntrySize
+                                                                              );
+                                               if      (error == ERROR_NONE)
                                                {
                                                  // already in index -> check if modified/state
-//fprintf(stderr,"%s:%d: file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,fileInfo->timeModified,lastCheckedDateTime);
+//fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
                                                  if      (fileInfo->timeModified > lastCheckedDateTime)
                                                  {
                                                    // modified -> request update index
@@ -4567,7 +4571,7 @@ LOCAL void autoIndexThreadCode(void)
                                                                                 );
                                                  }
                                                }
-                                               else
+                                               else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
                                                {
                                                  // add to index
                                                  error = Index_newStorage(indexHandle,
@@ -5262,7 +5266,8 @@ LOCAL void jobThreadCode(void)
          )
       {
 //TODO: work-around: delete oldest entity if number of entities+1 > max. entities
-        (void)purgeExpiredEntities(indexHandle,jobUUID,archiveType);
+// TODO: locking
+//        (void)purgeExpiredEntities(indexHandle,jobUUID,archiveType);
       }
 
       // create/restore operaton
@@ -17693,7 +17698,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                          NULL,  // lastErrorMessage
                          NULL,  // totalEntryCount
                          NULL  // totalEntrySize
-                        )
+                        ) == ERROR_NONE
        )
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -17727,7 +17732,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                               NULL,  // errorMessage
                               NULL,  // totalEntryCount
                               NULL  // totalEntrySize
-                             )
+                             ) == ERROR_NONE
        )
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -18638,7 +18643,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                       NULL,  // errorMessage
                                       NULL,  // totalEntryCount
                                       NULL  // totalEntrySize
-                                     )
+                                     ) == ERROR_NONE
              )
           {
             if (forceRefresh)
@@ -18723,24 +18728,24 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                {
                                  printableStorageName = Storage_getPrintableName(NULL,&storageSpecifier,NULL);
 
-                                 if (Index_findStorageByName(indexHandle,
-                                                             &storageSpecifier,
-                                                             NULL,  // archiveName
-                                                             NULL,  // uuidId
-                                                             NULL,  // entityId
-                                                             NULL,  // jobUUID
-                                                             NULL,  // scheduleUUID
-                                                             &storageId,
-                                                             NULL,  // createdDateTime
-                                                             NULL,  // size
-                                                             NULL,  // indexState
-                                                             NULL,  // indexMode
-                                                             NULL,  // lastCheckedDateTime
-                                                             NULL,  // errorMessage
-                                                             NULL,  // totalEntryCount
-                                                             NULL  // totalEntrySize
-                                                            )
-                                    )
+                                 error = Index_findStorageByName(indexHandle,
+                                                                 &storageSpecifier,
+                                                                 NULL,  // findArchiveName
+                                                                 NULL,  // uuidId
+                                                                 NULL,  // entityId
+                                                                 NULL,  // jobUUID
+                                                                 NULL,  // scheduleUUID
+                                                                 &storageId,
+                                                                 NULL,  // createdDateTime
+                                                                 NULL,  // size
+                                                                 NULL,  // indexState
+                                                                 NULL,  // indexMode
+                                                                 NULL,  // lastCheckedDateTime
+                                                                 NULL,  // errorMessage
+                                                                 NULL,  // totalEntryCount
+                                                                 NULL  // totalEntrySize
+                                                                );
+                                 if       (error == ERROR_NONE)
                                  {
                                    if (forceRefresh)
                                    {
@@ -18761,7 +18766,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                      }
                                    }
                                  }
-                                 else
+                                 else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
                                  {
                                    error = Index_newStorage(indexHandle,
                                                             INDEX_ID_NONE, // uuidId

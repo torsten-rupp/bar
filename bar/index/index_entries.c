@@ -365,7 +365,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            0LL,
                            1LL
                           );
-      if (error 1= ERROR_NONE)
+      if (error != ERROR_NONE)
       {
         newestEntryId         = DATABASE_ID_NONE;
         newestTimeLastChanged = 0LL;
@@ -379,7 +379,6 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           if (newestEntryId != DATABASE_ID_NONE)
           {
             // update
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_update(&indexHandle->databaseHandle,
                                     NULL,  // changedRowCount
                                     DATABASE_COLUMN_TYPES(),
@@ -478,7 +477,6 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
     }
 
 // TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_insert(&indexHandle->databaseHandle,
                             NULL,  // insertRowId
                             "entriesNewest",
@@ -539,7 +537,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                   1LL
                                  );
 #else
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_insertSelect(&indexHandle->databaseHandle,
                                   NULL,  // changedRowCount
                                   "entriesNewest",
@@ -634,6 +631,12 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                            DATABASE_FILTER_KEY(entryId)
                          )
                         );
+// TODO: work-around: ignore not existing
+//  if (error != ERROR_NONE)
+if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+{
+  return ERROR_NONE;
+}
   if (error != ERROR_NONE)
   {
     return error;
@@ -641,8 +644,9 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
 
   directoryName = File_getDirectoryName(String_new(),fileName);
   error = ERROR_NONE;
-  while ((error == ERROR_NONE) && !String_isEmpty(directoryName))
+  while (!String_isEmpty(directoryName) && (error == ERROR_NONE))
   {
+    // update directory entry
     error = Database_update(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "directoryEntries",
@@ -668,6 +672,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
 
     if (databaseId != DATABASE_ID_NONE)
     {
+      // update directory entry newest
       error = Database_update(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "directoryEntries",
@@ -4265,7 +4270,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                  DATABASE_FILTER_STRING(name)
                                )
                               );
-        if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
@@ -4295,6 +4300,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
 // TODO: do this wit a trigger again?
           if (error == ERROR_NONE)
           {
+            assert(entryId != DATABASE_ID_NONE);
+
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
@@ -4481,7 +4488,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                  DATABASE_FILTER_STRING(name)
                                )
                               );
-        if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
@@ -4510,6 +4517,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
           // add FTS entry
           if (error == ERROR_NONE)
           {
+            assert(entryId != DATABASE_ID_NONE);
+
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
@@ -4685,6 +4694,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       {
         return error;
       }
+      assert(entryId != DATABASE_ID_NONE);
 
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))
@@ -4859,6 +4869,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       {
         return error;
       }
+      assert(entryId != DATABASE_ID_NONE);
 
       // add FTS entry
 // TODO: do this in a trigger again?
@@ -5019,7 +5030,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                  DATABASE_FILTER_STRING(name),
                                )
                               );
-        if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
@@ -5048,6 +5059,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
           // add FTS entry
           if (error == ERROR_NONE)
           {
+            assert(entryId != DATABASE_ID_NONE);
+
 // TODO: do this in a trigger again?
             switch (Database_getType(&indexHandle->databaseHandle))
             {
@@ -5246,6 +5259,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       {
         return error;
       }
+      assert(entryId != DATABASE_ID_NONE);
 
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))
