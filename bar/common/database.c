@@ -14659,6 +14659,8 @@ char *Database_filterDateString(const DatabaseHandle *databaseHandle,
         return NULL;
       #endif /* HAVE_POSTGRESQL */
   }
+  
+  return NULL;
 }
 
 char *Database_filterTimeString(const DatabaseHandle *databaseHandle,

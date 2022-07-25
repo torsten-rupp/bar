@@ -4322,7 +4322,7 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-  assert(!INDEX_ID_IS_NONE(*storageId));
+  assert(!foundFlag || (storageId == NULL) || !INDEX_ID_IS_NONE(*storageId));
 
   // free resources
   String_delete(storageName);
@@ -4440,7 +4440,7 @@ Errors Index_findStorageByState(IndexHandle   *indexHandle,
     String_delete(indexStateSetString);
     return error;
   }
-  assert(!INDEX_ID_IS_NONE(*storageId));
+  assert((storageId == NULL) || !INDEX_ID_IS_NONE(*storageId));
 
   // free resources
   String_delete(indexStateSetString);
