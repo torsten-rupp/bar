@@ -4850,7 +4850,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                          0LL,
                          1LL
                         );
-    assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
+    assert(   (error == ERROR_NONE)
+           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+          );
 
     if (totalEntryContentSize != NULL)
     {
@@ -4874,6 +4877,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
+        assert(   (error == ERROR_NONE)
+               || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+               || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+              );
       }
       else if (   !String_isEmpty(entityIdsString)
                || !INDEX_ID_IS_ANY(uuidId)
@@ -4898,6 +4905,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
+        assert(   (error == ERROR_NONE)
+               || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+               || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+              );
       }
       else
       {
@@ -4916,10 +4927,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
+        assert(   (error == ERROR_NONE)
+               || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+               || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+              );
       }
     }
 

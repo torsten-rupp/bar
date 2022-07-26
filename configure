@@ -26990,8 +26990,8 @@ _ACEOF
 fi
   fi
 
-if test $VERSION_SQLITE_NUMBER -lt 3024000; then
-  as_fn_error $? "Required SQLite 3.24 (3024000) or newer - found $VERSION_SQLITE" "$LINENO" 5
+if test $VERSION_SQLITE_NUMBER -lt 3038000; then
+  as_fn_error $? "Required SQLite 3.38 (3024000) or newer - found $VERSION_SQLITE" "$LINENO" 5
 fi
 
 cat >>confdefs.h <<_ACEOF

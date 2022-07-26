@@ -1712,7 +1712,6 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
 {
   String filterString;
   Errors error;
-  bool   result;
 
   assert(indexHandle != NULL);
 
@@ -1798,7 +1797,7 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
     Database_deleteFilter(filterString);
     return error;
   }
-  assert((entityId == NULL) || !INDEX_ID_IS_NONE(*entityId));
+  assert((error != ERROR_NONE) || (entityId == NULL) || !INDEX_ID_IS_NONE(*entityId));
 
   // free resources
   Database_deleteFilter(filterString);
