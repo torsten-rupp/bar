@@ -41,7 +41,7 @@
   * upgrade c-areas 1.18.1
   * upgrade curl 7.77.0
   * upgrade pcre 8.44
-  * upgrade SQLite 3.34
+  * upgrade SQLite 3.38
   * upgrade binutils 2.35
   * fixed possible dead-lock on timeout
   * fixed abort restore job if client connection is lost

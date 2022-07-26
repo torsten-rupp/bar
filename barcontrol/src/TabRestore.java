@@ -8791,9 +8791,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
             }
 
             // update
-Dprintf.dprintf("_");
-//            updateStorageTreeTableThread.triggerUpdate();
-Dprintf.dprintf("_");
+            updateStorageTreeTableThread.triggerUpdate();
             updateEntryTableThread.triggerUpdate();
             updateAssignTo();
           }

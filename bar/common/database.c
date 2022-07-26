@@ -14645,10 +14645,10 @@ char *Database_filterDateString(const DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      return stringFormat(buffer,sizeof(buffer),"DATE(DATETIME(%s,'unixepoch'))",columnName);
+      return stringFormat(buffer,sizeof(buffer),"UNIXEPOCH(DATE(DATETIME(%s,'unixepoch')))",columnName);
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        return stringFormat(buffer,sizeof(buffer),"DATE(%s)",columnName);
+        return stringFormat(buffer,sizeof(buffer),"(UNIX_TIMESTAMP(DATE(%s))+(UNIX_TIMESTAMP(TIME(NOW()))-UNIX_TIMESTAMP(UTC_TIME())))",columnName);
       #else /* HAVE_MARIADB */
         return NULL;
       #endif /* HAVE_MARIADB */
@@ -14659,7 +14659,7 @@ char *Database_filterDateString(const DatabaseHandle *databaseHandle,
         return NULL;
       #endif /* HAVE_POSTGRESQL */
   }
-  
+
   return NULL;
 }
 
@@ -14675,10 +14675,10 @@ char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      return stringFormat(buffer,sizeof(buffer),"TIME(DATETIME(%s,'unixepoch'))",columnName);
+      return stringFormat(buffer,sizeof(buffer),"UNIXEPOCH(TIME(DATETIME(%s,'unixepoch')))",columnName);
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        return stringFormat(buffer,sizeof(buffer),"TIME(%s)",columnName);
+        return stringFormat(buffer,sizeof(buffer),"(UNIX_TIMESTAMP(TIME(%s))+(UNIX_TIMESTAMP(TIME(NOW()))-UNIX_TIMESTAMP(UTC_TIME())))",columnName);
       #else /* HAVE_MARIADB */
         return NULL;
       #endif /* HAVE_MARIADB */

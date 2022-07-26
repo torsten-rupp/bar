@@ -517,7 +517,7 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
                                     (findScheduleUUID != NULL) ? findScheduleUUID : ""
                                    );
   }
-  assert((uuidId == NULL) || !INDEX_ID_IS_NONE(*uuidId));
+  assert((error != ERROR_NONE) || (uuidId == NULL) || !INDEX_ID_IS_NONE(*uuidId));
 
   return error;
 }

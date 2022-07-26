@@ -2192,7 +2192,7 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 * Purpose: get date filter string
 * Input  : columnName - column name
 * Output : -
-* Return : filter stirng
+* Return : filter string with date as timestamp (Unix epoch)
 * Notes  : -
 \***********************************************************************/
 
@@ -2205,7 +2205,7 @@ char *Database_filterDateString(const DatabaseHandle *databaseHandle,
 * Purpose: get time filter string
 * Input  : columnName - column name
 * Output : -
-* Return : filter stirng
+* Return : filter string with time as timestamp (seconds since midnight)
 * Notes  : -
 \***********************************************************************/
 
