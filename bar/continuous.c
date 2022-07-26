@@ -117,7 +117,8 @@ typedef struct
   enum
   {
     INIT,
-    DONE
+    DONE,
+    UPDATE
   } type;
   String       name;
   char         jobUUID[MISC_UUID_STRING_LENGTH+1];
@@ -797,6 +798,16 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
         uuidNode->beginTime = beginTime;
         uuidNode->endTime   = endTime;
         uuidNode->cleanFlag = FALSE;
+#if 0
+fprintf(stderr,"%s:%d: update nofitt %s %s: %d:%d .. %d:%d\n",__FILE__,__LINE__,
+uuidNode->jobUUID,
+uuidNode->scheduleUUID,
+uuidNode->beginTime.hour,
+uuidNode->beginTime.minute,
+uuidNode->endTime.hour,
+uuidNode->endTime.minute
+);
+#endif
       }
       if (notifyInfo == NULL)
       {
@@ -1024,6 +1035,89 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
   }
 }
 
+LOCAL void initNotifies(ConstString     name,
+                        const char      *jobUUID,
+                        const char      *scheduleUUID,
+                        ScheduleTime    beginTime,
+                        ScheduleTime    endTime,
+                        const EntryList *entryList
+                       )
+{
+  StringList      nameList;
+  String          baseName;
+  ulong           maxWatches;//,maxInstances;
+  EntryNode       *includeEntryNode;
+  StringTokenizer fileNameTokenizer;
+  ConstString     token;
+
+  assert(name != NULL);
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+  assert(entryList != NULL);
+
+  // init variables
+  StringList_init(&nameList);
+  baseName = String_new();
+
+  maxWatches = getMaxNotifyWatches();
+
+//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s time=%02d:%02d..%02d:%02d\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,initNotifyMsg.beginTime.hour,initNotifyMsg.beginTime.minute,initNotifyMsg.endTime.hour,initNotifyMsg.endTime.minute);
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_CONTINUOUS,
+              LOG_PREFIX,"Start initialize watches for '%s'",
+              String_cString(name)
+             );
+
+  // mark notifies for update or clean
+  markNotifies(jobUUID,scheduleUUID);
+
+  // add notify for include directories
+  LIST_ITERATEX(entryList,includeEntryNode,!quitFlag)
+  {
+    // find base path
+    File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
+    if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+    {
+      if (!String_isEmpty(token))
+      {
+        File_setFileName(baseName,token);
+      }
+      else
+      {
+        File_getSystemDirectory(baseName,FILE_SYSTEM_PATH_ROOT,NULL);
+      }
+    }
+    while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+    {
+      File_appendFileName(baseName,token);
+    }
+    File_doneSplitFileName(&fileNameTokenizer);
+
+    // add directory and sub-directories to notify
+    addNotifySubDirectories(jobUUID,
+                            scheduleUUID,
+                            beginTime,
+                            endTime,
+                            baseName
+                           );
+  }
+
+  // clean not existing notifies for job
+  cleanNotifies(jobUUID,scheduleUUID);
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_CONTINUOUS,
+              LOG_PREFIX,"Done initialize watches for '%s': %lu (max. %lu)",
+              String_cString(name),
+              Dictionary_count(&notifyHandles),
+              maxWatches
+             );
+
+  // free resources
+  String_delete(baseName);
+  StringList_done(&nameList);
+}
+
 /***********************************************************************\
 * Name   : purgeNotifies
 * Purpose: purge notifies for job and schedule
@@ -1129,19 +1223,10 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
 
 LOCAL void continuousInitDoneThreadCode(void)
 {
-  StringList      nameList;
-  String          baseName;
-  ulong           maxWatches;//,maxInstances;
-  InitNotifyMsg   initNotifyMsg;
-  EntryNode       *includeEntryNode;
-  StringTokenizer fileNameTokenizer;
-  ConstString     token;
+  InitNotifyMsg initNotifyMsg;
 
   // init variables
-  StringList_init(&nameList);
-  baseName = String_new();
 
-  maxWatches = getMaxNotifyWatches();
   while (   !quitFlag
          && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
         )
@@ -1149,55 +1234,39 @@ LOCAL void continuousInitDoneThreadCode(void)
     switch (initNotifyMsg.type)
     {
       case INIT:
-//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s time=%02d:%02d..%02d:%02d\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,initNotifyMsg.beginTime.hour,initNotifyMsg.beginTime.minute,initNotifyMsg.endTime.hour,initNotifyMsg.endTime.minute);
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_CONTINUOUS,
-                    LOG_PREFIX,"Start initialize watches for '%s'",
-                    String_cString(initNotifyMsg.name)
-                   );
-
-        // mark notifies for update or clean
-        markNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
-
-        // add notify for include directories
-        LIST_ITERATEX(&initNotifyMsg.entryList,includeEntryNode,!quitFlag)
-        {
-          // find base path
-          File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
-          if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
-          {
-            if (!String_isEmpty(token))
-            {
-              File_setFileName(baseName,token);
-            }
-            else
-            {
-              File_getSystemDirectory(baseName,FILE_SYSTEM_PATH_ROOT,NULL);
-            }
-          }
-          while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
-          {
-            File_appendFileName(baseName,token);
-          }
-          File_doneSplitFileName(&fileNameTokenizer);
-
-          // add directory and sub-directories to notify
-          addNotifySubDirectories(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,initNotifyMsg.beginTime,initNotifyMsg.endTime,baseName);
-        }
-
-        // clean not existing notifies for job
-        cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
-
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_CONTINUOUS,
-                    LOG_PREFIX,"Done initialize watches for '%s': %lu (max. %lu)",
-                    String_cString(initNotifyMsg.name),
-                    Dictionary_count(&notifyHandles),
-                    maxWatches
-                   );
+fprintf(stderr,"%s:%d: init %s %s: %d:%d .. %d:%d\n",__FILE__,__LINE__,
+initNotifyMsg.jobUUID,
+initNotifyMsg.scheduleUUID,
+initNotifyMsg.beginTime.hour,
+initNotifyMsg.beginTime.minute,
+initNotifyMsg.endTime.hour,
+initNotifyMsg.endTime.minute
+);
+        initNotifies(initNotifyMsg.name,
+                     initNotifyMsg.jobUUID,
+                     initNotifyMsg.scheduleUUID,
+                     initNotifyMsg.beginTime,
+                     initNotifyMsg.endTime,
+                     &initNotifyMsg.entryList
+                    );
         break;
       case DONE:
-        purgeNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+fprintf(stderr,"%s:%d: done\n",__FILE__,__LINE__);
+        purgeNotifies(initNotifyMsg.jobUUID,
+                      initNotifyMsg.scheduleUUID
+                     );
+        break;
+      case UPDATE:
+        purgeNotifies(initNotifyMsg.jobUUID,
+                      initNotifyMsg.scheduleUUID
+                     );
+        initNotifies(initNotifyMsg.name,
+                     initNotifyMsg.jobUUID,
+                     initNotifyMsg.scheduleUUID,
+                     initNotifyMsg.beginTime,
+                     initNotifyMsg.endTime,
+                     &initNotifyMsg.entryList
+                    );
         break;
     }
 
@@ -1206,8 +1275,6 @@ LOCAL void continuousInitDoneThreadCode(void)
   }
 
   // free resources
-  String_delete(baseName);
-  StringList_done(&nameList);
 }
 
 /***********************************************************************\
@@ -1472,7 +1539,7 @@ LOCAL void continuousThreadCode(void)
     inotifyEvent = (const struct inotify_event*)buffer;
     while ((n > 0) && !quitFlag)
     {
-#if 0
+#if 1
 fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
    if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
    if (inotifyEvent->mask & IN_ATTRIB)        fprintf(stderr," IN_ATTRIB"       );
@@ -1507,14 +1574,22 @@ fprintf(stderr,"\n");
             // directory changed
             if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
             {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
               // add directory and sub-directories to notify
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                if (inTimeRange(currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-                               )
+fprintf(stderr,"%s:%d: %s: %d:%d .. %d:%d\n",__FILE__,__LINE__,
+uuidNode->jobUUID,
+uuidNode->beginTime.hour,
+uuidNode->beginTime.minute,
+uuidNode->endTime.hour,
+uuidNode->endTime.minute
+);
+                if (isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1560,10 +1635,10 @@ fprintf(stderr,"\n");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                if (inTimeRange(currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-                               )
+                if (isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1598,11 +1673,18 @@ fprintf(stderr,"\n");
             {
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
+fprintf(stderr,"%s:%d: %s: %d:%d .. %d:%d\n",__FILE__,__LINE__,
+uuidNode->jobUUID,
+uuidNode->beginTime.hour,
+uuidNode->beginTime.minute,
+uuidNode->endTime.hour,
+uuidNode->endTime.minute
+);
                 // store into notify database
-                if (inTimeRange(currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-                               )
+                if (isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1644,12 +1726,24 @@ fprintf(stderr,"\n");
             }
             else
             {
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
-                if (inTimeRange(currentHour,currentMinute,
-                                uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                uuidNode->endTime.hour,uuidNode->endTime.hour
-                               )
+fprintf(stderr,"%s:%d: %s: %d:%d .. %d:%d -> %d\n",__FILE__,__LINE__,
+uuidNode->jobUUID,
+uuidNode->beginTime.hour,
+uuidNode->beginTime.minute,
+uuidNode->endTime.hour,
+uuidNode->endTime.minute,
+isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
+);
+                if (isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1973,6 +2067,40 @@ Errors Continuous_initNotify(ConstString     name,
   }
 }
 
+Errors Continuous_updateNotify(ConstString     name,
+                               ConstString     jobUUID,
+                               ConstString     scheduleUUID,
+                               ScheduleTime    beginTime,
+                               ScheduleTime    endTime,
+                               const EntryList *entryList
+                              )
+{
+  InitNotifyMsg initNotifyMsg;
+
+  assert(!String_isEmpty(jobUUID));
+  assert(!String_isEmpty(scheduleUUID));
+  assert(entryList != NULL);
+
+  if (initFlag)
+  {
+    initNotifyMsg.type      = UPDATE;
+    initNotifyMsg.name      = String_duplicate(name);
+    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
+    stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
+    initNotifyMsg.beginTime = beginTime;
+    initNotifyMsg.endTime   = endTime;
+    EntryList_initDuplicate(&initNotifyMsg.entryList,entryList,NULL,NULL);
+
+    (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+
+    return ERROR_NONE;
+  }
+  else
+  {
+    return ERROR_INIT_FILE_NOTIFY;
+  }
+}
+
 Errors Continuous_doneNotify(ConstString name,
                              ConstString jobUUID,
                              ConstString scheduleUUID
@@ -2066,10 +2194,10 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                      NULL,  // weekDay
                      NULL  // isDayLightSaving
                     );
-  if (inTimeRange(currentHour,currentMinute,
-                  beginTime.hour,beginTime.hour,
-                  endTime.hour,endTime.hour
-                 )
+  if (isInTimeRange(currentHour,currentMinute,
+                    beginTime.hour,beginTime.hour,
+                    endTime.hour,endTime.hour
+                   )
      )
   {
     error = addEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
