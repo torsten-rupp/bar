@@ -1368,7 +1368,7 @@ INLINE void Job_setPersistenceModified(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-void Job_flushModified(JobNode *jobNode);
+void Job_flush(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_flushAllModified
@@ -1379,7 +1379,7 @@ void Job_flushModified(JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-void Job_flushAllModified();
+void Job_flushAllModified(void);
 
 /***********************************************************************\
 * Name   : Job_readScheduleInfo

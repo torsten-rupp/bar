@@ -1587,10 +1587,10 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   return scheduleNode;
 }
 
-void Job_flushModified(JobNode *jobNode)
+void Job_flush(JobNode *jobNode)
 {
   assert(Semaphore_isLocked(&jobList.lock));
-  
+
   if (jobNode->includeExcludeModifiedFlag)
   {
     jobNode->includeExcludeModifiedFlag = FALSE;
@@ -1643,7 +1643,7 @@ void Job_flushAllModified()
   {
     JOB_LIST_ITERATE(jobNode)
     {
-      Job_flushModified(jobNode);
+      Job_flush(jobNode);
     }
   }
 }

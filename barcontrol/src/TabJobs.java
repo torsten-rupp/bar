@@ -7912,6 +7912,10 @@ public class TabJobs
               {
                 scheduleData.enabled = tableItem.getChecked();
                 BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
+                BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                         0  // debugLevel
+                                        );
+
               }
               catch (Exception exception)
               {
@@ -10528,6 +10532,10 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
+                              );
     }
     catch (Exception exception)
     {
@@ -10585,6 +10593,8 @@ throw new Error("NYI");
                                                     ),
                                  0  // debugLevel
                                 );
+
+
         for (EntryData entryData : includeHashMap.values())
         {
           BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
@@ -10596,6 +10606,10 @@ throw new Error("NYI");
                                    0  // debugLevel
                                   );
         }
+
+        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                 0  // debugLevel
+                                );
       }
       catch (Exception exception)
       {
@@ -10920,6 +10934,7 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
+// TODO:
 throw new Error("NYI");
       }
     });
@@ -10942,6 +10957,10 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    pattern
                                                   ),
+                               0  // debugLevel
+                              );
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
                                0  // debugLevel
                               );
     }
@@ -10993,6 +11012,7 @@ throw new Error("NYI");
                                0  // debugLevel
                               );
       Widgets.removeAllListItems(widgetExcludeList);
+
       for (String pattern : excludeHashSet)
       {
         BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
@@ -11008,6 +11028,10 @@ throw new Error("NYI");
                                pattern
                               );
       }
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
+                              );
     }
     catch (Exception exception)
     {
@@ -11403,6 +11427,7 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
+// TODO:
 throw new Error("NYI");
       }
     });
@@ -11432,6 +11457,10 @@ throw new Error("NYI");
                                valueMap
                               );
       mountData.id = valueMap.getInt("id");
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
+                              );
     }
     catch (Exception exception)
     {
@@ -11530,6 +11559,10 @@ throw new Error("NYI");
                                                    selectedJobData.uuid,
                                                    mountData.id
                                                   ),
+                               0  // debugLevel
+                              );
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
                                0  // debugLevel
                               );
     }
@@ -11814,6 +11847,10 @@ throw new Error("NYI");
           sourceHashSet.add(pattern);
         }
       }
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
+                              );
     }
     catch (Exception exception)
     {
@@ -11856,6 +11893,7 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
+
       for (String pattern : sourceHashSet)
       {
         BARServer.executeCommand(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
@@ -11866,6 +11904,10 @@ throw new Error("NYI");
                                  0  // debugLevel
                                 );
       }
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
+                              );
     }
     catch (Exception exception)
     {
@@ -11899,6 +11941,10 @@ throw new Error("NYI");
                                                    selectedJobData.uuid
                                                   ),
                                0  // debugLevel\
+                              );
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
                               );
     }
     catch (Exception exception)
@@ -12026,6 +12072,7 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
+// TODO:
 throw new Error("NYI");
       }
     });
@@ -12064,6 +12111,10 @@ throw new Error("NYI");
                                                     ),
                                  0  // debugLevel
                                 );
+
+        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                 0  // debugLevel
+                                );
       }
       catch (Exception exception)
       {
@@ -12096,11 +12147,11 @@ throw new Error("NYI");
   {
     if (selectedJobData != null)
     {
-      for (String pattern : patterns)
+      try
       {
-        if (!compressExcludeHashSet.contains(pattern))
+        for (String pattern : patterns)
         {
-          try
+          if (!compressExcludeHashSet.contains(pattern))
           {
             BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
                                                          selectedJobData.uuid,
@@ -12110,16 +12161,6 @@ throw new Error("NYI");
                                      0  // debugLevel
                                     );
           }
-          catch (Exception exception)
-          {
-            Dialogs.error(shell,
-                          BARControl.tr("Cannot add compress exclude entry:\n\n{0}",
-                                        exception.getMessage()
-                                       )
-                         );
-            BARControl.logThrowable(exception);
-            return;
-          }
 
           compressExcludeHashSet.add(pattern);
           Widgets.insertListItem(widgetCompressExcludeList,
@@ -12128,6 +12169,20 @@ throw new Error("NYI");
                                  pattern
                                 );
         }
+
+        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                 0  // debugLevel
+                                );
+      }
+      catch (Exception exception)
+      {
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot add compress exclude entry:\n\n{0}",
+                                    exception.getMessage()
+                                   )
+                     );
+        BARControl.logThrowable(exception);
+        return;
       }
 
       // update file tree/device images
@@ -12196,6 +12251,7 @@ throw new Error("NYI");
                                0  // debugLevel
                               );
       Widgets.removeAllListItems(widgetCompressExcludeList);
+
       for (String pattern : compressExcludeHashSet)
       {
         BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
@@ -12211,6 +12267,10 @@ throw new Error("NYI");
                                pattern
                               );
       }
+
+      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                               0  // debugLevel
+                              );
     }
     catch (Exception exception)
     {
@@ -14018,6 +14078,10 @@ throw new Error("NYI");
                                   );
           scheduleData.uuid = valueMap.getString("scheduleUUID");
           scheduleDataMap.put(scheduleData.uuid,scheduleData);
+
+          BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                   0  // debugLevel
+                                  );
         }
         catch (Exception exception)
         {
@@ -14030,6 +14094,7 @@ throw new Error("NYI");
           return;
         }
 
+        // update table
         TableItem tableItem = Widgets.updateInsertTableItem(widgetScheduleTable,
                                                             new ScheduleDataComparator(widgetScheduleTable),
                                                             scheduleData,
@@ -14064,6 +14129,7 @@ throw new Error("NYI");
         {
           try
           {
+// TODO: change to SCHEDULE_LIST_UPDATE?
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.weekDaysToString());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime());
@@ -14076,18 +14142,9 @@ throw new Error("NYI");
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
-            Widgets.updateTableItem(tableItem,
-                                    scheduleData,
-                                    scheduleData.getDate(),
-                                    scheduleData.getWeekDays(),
-                                    scheduleData.getTime(),
-                                    scheduleData.archiveType.getText(),
-                                    scheduleData.getBeginTime(),
-                                    scheduleData.getEndTime(),
-                                    scheduleData.customText,
-                                    scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
-                                   );
-            tableItem.setChecked(scheduleData.enabled);
+            BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                     0  // debugLevel
+                                    );
           }
           catch (Exception exception)
           {
@@ -14099,6 +14156,20 @@ throw new Error("NYI");
             BARControl.logThrowable(exception);
             return;
           }
+
+          // update table
+          Widgets.updateTableItem(tableItem,
+                                  scheduleData,
+                                  scheduleData.getDate(),
+                                  scheduleData.getWeekDays(),
+                                  scheduleData.getTime(),
+                                  scheduleData.archiveType.getText(),
+                                  scheduleData.getBeginTime(),
+                                  scheduleData.getEndTime(),
+                                  scheduleData.customText,
+                                  scheduleData.testCreatedArchives ? BARControl.tr("yes") : BARControl.tr("no")
+                                 );
+          tableItem.setChecked(scheduleData.enabled);
         }
       }
     }
@@ -14140,6 +14211,10 @@ throw new Error("NYI");
                                                  );
             scheduleData.uuid = valueMap.getString("scheduleUUID");
             scheduleDataMap.put(scheduleData.uuid,newScheduleData);
+
+            BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                     0  // debugLevel
+                                    );
           }
           catch (Exception exception)
           {
@@ -14152,6 +14227,7 @@ throw new Error("NYI");
             return;
           }
 
+          // update table
           TableItem newTableItem = Widgets.updateInsertTableItem(widgetScheduleTable,
                                                                  new ScheduleDataComparator(widgetScheduleTable),
                                                                  newScheduleData,
@@ -14182,28 +14258,32 @@ throw new Error("NYI");
       {
         if (Dialogs.confirm(shell,BARControl.tr("Delete {0} selected schedule {0,choice,0#entries|1#entry|1<entries}?",tableItems.length)))
         {
-          for (TableItem tableItem : tableItems)
+          try
           {
-            ScheduleData scheduleData = (ScheduleData)tableItem.getData();
-
-            try
+            for (TableItem tableItem : tableItems)
             {
+              ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+
               BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_REMOVE jobUUID=%s scheduleUUID=%s",
                                                             selectedJobData.uuid,
                                                             scheduleData.uuid
                                                            ),
                                        0  // debugLevel
                                       );
-            }
-            catch (Exception exception)
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",exception.getMessage()));
-              BARControl.logThrowable(exception);
-              return;
+
+              scheduleDataMap.remove(scheduleData.uuid);
+              tableItem.dispose();
             }
 
-            scheduleDataMap.remove(scheduleData.uuid);
-            tableItem.dispose();
+            BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                     0  // debugLevel
+                                    );
+          }
+          catch (Exception exception)
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",exception.getMessage()));
+            BARControl.logThrowable(exception);
+            return;
           }
         }
       }
@@ -14798,6 +14878,10 @@ throw new Error("NYI");
                                  valueMap
                                 );
         persistenceData.id = valueMap.getInt("id");
+
+        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
+                                 0  // debugLevel
+                                );
       }
       catch (Exception exception)
       {
@@ -14865,6 +14949,10 @@ throw new Error("NYI");
                                                      selectedJobData.uuid,
                                                      persistenceData.id
                                                     ),
+                                 0  // debugLevel
+                                );
+
+        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
                                  0  // debugLevel
                                 );
       }

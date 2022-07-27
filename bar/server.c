@@ -2540,7 +2540,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                        )
 {
   Errors           error;
-  bool             foundFlag;
   IndexId          uuidId;
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
@@ -11041,19 +11040,50 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            [jobUUID=<uuid id>]
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  // write all job files
-  Job_writeAllModified();
+  // get job UUID
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+
+  if (!String_isEmpty(jobUUID))
+  {
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      JobNode *jobNode;
+
+      // find job
+      if (!String_isEmpty(jobUUID))
+      {
+        jobNode = Job_findByUUID(jobUUID);
+        if (jobNode == NULL)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+          Job_listUnlock();
+          return;
+        }
+
+        Job_flush(jobNode);
+        Job_write(jobNode);
+      }
+    }
+  }
+  else
+  {
+    Job_flushAllModified();
+    Job_writeAllModified();
+  }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -14212,7 +14242,6 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // notify modified schedule list
-fprintf(stderr,"%s:%d: set %s=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
     Job_setScheduleModified(jobNode);
   }
 
