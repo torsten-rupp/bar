@@ -11187,7 +11187,7 @@ if (xxxId != DATABASE_ID_NONE)
       freeColumnsWidth(printRowData.widths);
 
       String_delete(s);
-      if (error != ERROR_NONE)
+      if ((error != ERROR_NONE) && Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
       {
         printError("SQL command '%s' fail: %s!",String_cString(command),Error_getText(error));
         Array_done(&storageIds);
@@ -11242,7 +11242,7 @@ if (xxxId != DATABASE_ID_NONE)
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (error == ERROR_NONE)
+      if ((error != ERROR_NONE) && Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
       {
         if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));
       }
