@@ -1696,10 +1696,10 @@ LOCAL void schedulerThreadCode(void)
   ScheduleNode    *scheduleNode;
   JobScheduleNode *jobScheduleNode;
   uint64          currentDateTime;
-  DateTime        dateTime;
+  DateTime        current;
   int             year,month,day,hour,minute;
   WeekDays        weekDay;
-  DateTime        lastScheduleDateTime;
+  uint            lastScheduleCheckYear;
   JobScheduleNode *executeScheduleNode;
   uint64          executeScheduleDateTime;
   uint64          scheduleDateTime;
@@ -1792,36 +1792,36 @@ LOCAL void schedulerThreadCode(void)
 
       // check if job have to be executed by regular schedule (check backward in time)
       Misc_splitDateTime(currentDateTime,
-                         &dateTime.year,
-                         &dateTime.month,
-                         &dateTime.day,
-                         &dateTime.hour,
-                         &dateTime.minute,
+                         &current.year,
+                         &current.month,
+                         &current.day,
+                         &current.hour,
+                         &current.minute,
                          NULL,  // second
-                         &dateTime.weekDay,
-                         &dateTime.isDayLightSaving
+                         &current.weekDay,
+                         &current.isDayLightSaving
                         );
       Misc_splitDateTime(jobScheduleNode->lastScheduleCheckDateTime,
-                         &lastScheduleDateTime.year,
-                         &lastScheduleDateTime.month,
-                         &lastScheduleDateTime.day,
-                         &lastScheduleDateTime.hour,
-                         &lastScheduleDateTime.minute,
+                         &lastScheduleCheckYear,
+                         NULL,  // month
+                         NULL,  // day
+                         NULL,  // hour
+                         NULL,  // minute
                          NULL,  // second
-                         &lastScheduleDateTime.weekDay,
+                         NULL,  // weekDay
                          NULL  // isDayLightSaving
                         );
 
 //fprintf(stderr,"%s:%d: currentDateTime=%llu\n",__FILE__,__LINE__,currentDateTime);
 //fprintf(stderr,"%s:%d: dateTime=%d %d %d - %d %d\n",__FILE__,__LINE__,dateTime.year,dateTime.month,dateTime.day,dateTime.hour,dateTime.minute);
-//fprintf(stderr,"%s:%d: lastScheduleDateTime %d %d %d : %d %d\n",__FILE__,__LINE__,lastScheduleDateTime.year,lastScheduleDateTime.month,lastScheduleDateTime.day,lastScheduleDateTime.hour,lastScheduleDateTime.minute);
+//fprintf(stderr,"%s:%d: lastScheduleCheckYear %d: %d %d\n",__FILE__,__LINE__,lastScheduleCheckYear);
       // check if matching with schedule
-      year   = dateTime.year;
-      month  = dateTime.month;
-      day    = dateTime.day;
-      hour   = dateTime.hour;
-      minute = dateTime.minute;
-      while (year >= (int)lastScheduleDateTime.year)
+      year   = current.year;
+      month  = current.month;
+      day    = current.day;
+      hour   = current.hour;
+      minute = current.minute;
+      while (year >= (int)lastScheduleCheckYear)
       {
 //fprintf(stderr,"%s:%d: year=%d\n",__FILE__,__LINE__,year);
         if ((jobScheduleNode->date.year == DATE_ANY) || (jobScheduleNode->date.year == (int)year))
@@ -1856,8 +1856,7 @@ LOCAL void schedulerThreadCode(void)
                             || (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
                            )
                         {
-//fprintf(stderr,"%s:%d: minute=%d\n",__FILE__,__LINE__,minute);
-                          scheduleDateTime = Misc_makeDateTime(year,month,day,hour,minute,0,dateTime.isDayLightSaving);
+                          scheduleDateTime = Misc_makeDateTime(year,month,day,hour,minute,0,current.isDayLightSaving);
                           assert(scheduleDateTime <= currentDateTime);
 
                           if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
@@ -2541,7 +2540,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                        )
 {
   Errors           error;
-  bool             foundFlag;
   IndexId          uuidId;
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
@@ -11042,19 +11040,50 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            [jobUUID=<uuid id>]
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  // write all job files
-  Job_writeAllModified();
+  // get job UUID
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+
+  if (!String_isEmpty(jobUUID))
+  {
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      JobNode *jobNode;
+
+      // find job
+      if (!String_isEmpty(jobUUID))
+      {
+        jobNode = Job_findByUUID(jobUUID);
+        if (jobNode == NULL)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+          Job_listUnlock();
+          return;
+        }
+
+        Job_flush(jobNode);
+        Job_write(jobNode);
+      }
+    }
+  }
+  else
+  {
+    Job_flushAllModified();
+    Job_writeAllModified();
+  }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }

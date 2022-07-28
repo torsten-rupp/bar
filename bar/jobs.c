@@ -1253,6 +1253,10 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->jobType                          = jobType;
 
   jobNode->modifiedFlag                     = FALSE;
+  jobNode->includeExcludeModifiedFlag       = FALSE;
+  jobNode->mountModifiedFlag                = FALSE;
+  jobNode->scheduleModifiedFlag             = FALSE;
+  jobNode->persistenceModifiedFlag          = FALSE;
 
   jobNode->lastScheduleCheckDateTime        = 0LL;
 
@@ -1583,92 +1587,65 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   return scheduleNode;
 }
 
-void Job_setIncludeExcludeModified(JobNode *jobNode)
+void Job_flush(JobNode *jobNode)
 {
-  const ScheduleNode *scheduleNode;
-
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+  if (jobNode->includeExcludeModifiedFlag)
   {
-    if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+    jobNode->includeExcludeModifiedFlag = FALSE;
+  }
+  if (jobNode->mountModifiedFlag)
+  {
+    jobNode->mountModifiedFlag = FALSE;
+  }
+  if (jobNode->scheduleModifiedFlag)
+  {
+    const ScheduleNode *scheduleNode;
+
+    // check if continuous schedule exists, update continuous notifies
+    LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
     {
-      if (scheduleNode->enabled)
+      if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
       {
-        Continuous_initNotify(jobNode->name,
-                              jobNode->job.uuid,
-                              scheduleNode->uuid,
-                              scheduleNode->beginTime,
-                              scheduleNode->endTime,
-                              &jobNode->job.includeEntryList
-                             );
-      }
-      else
-      {
-        Continuous_doneNotify(jobNode->name,
-                              jobNode->job.uuid,
-                              scheduleNode->uuid
-                             );
+        if (scheduleNode->enabled)
+        {
+          Continuous_initNotify(jobNode->name,
+                                jobNode->job.uuid,
+                                scheduleNode->uuid,
+                                scheduleNode->beginTime,
+                                scheduleNode->endTime,
+                                &jobNode->job.includeEntryList
+                               );
+        }
+        else
+        {
+          Continuous_doneNotify(jobNode->name,
+                                jobNode->job.uuid,
+                                scheduleNode->uuid
+                               );
+        }
       }
     }
+    jobNode->scheduleModifiedFlag = FALSE;
   }
-
-  Job_setModified(jobNode);
+  if (jobNode->persistenceModifiedFlag)
+  {
+    jobNode->persistenceModifiedFlag = FALSE;
+  }
 }
 
-void Job_setMountModified(JobNode *jobNode)
+void Job_flushAllModified()
 {
-  const MountNode *mountNode;
+  JobNode *jobNode;
 
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  LIST_ITERATE(&jobNode->job.options.mountList,mountNode)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-  }
-
-  Job_setModified(jobNode);
-}
-
-void Job_setScheduleModified(JobNode *jobNode)
-{
-  const ScheduleNode *scheduleNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-  {
-    if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
+    JOB_LIST_ITERATE(jobNode)
     {
-      if (scheduleNode->enabled)
-      {
-        Continuous_initNotify(jobNode->name,
-                              jobNode->job.uuid,
-                              scheduleNode->uuid,
-                              scheduleNode->beginTime,
-                              scheduleNode->endTime,
-                              &jobNode->job.includeEntryList
-                             );
-      }
-      else
-      {
-        Continuous_doneNotify(jobNode->name,
-                              jobNode->job.uuid,
-                              scheduleNode->uuid
-                             );
-      }
+      Job_flush(jobNode);
     }
   }
-
-  Job_setModified(jobNode);
-}
-
-void Job_setPersistenceModified(JobNode *jobNode)
-{
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  Job_setModified(jobNode);
 }
 
 Errors Job_readScheduleInfo(JobNode *jobNode)
@@ -2312,7 +2289,11 @@ bool Job_read(JobNode *jobNode)
   (void)Job_readScheduleInfo(jobNode);
 
   // reset job modified
-  jobNode->modifiedFlag = FALSE;
+  jobNode->modifiedFlag               = FALSE;
+  jobNode->includeExcludeModifiedFlag = FALSE;
+  jobNode->mountModifiedFlag          = FALSE;
+  jobNode->scheduleModifiedFlag       = FALSE;
+  jobNode->persistenceModifiedFlag    = FALSE;
 
   return failFlag;
 }
@@ -2398,7 +2379,11 @@ Errors Job_rereadAll(ConstString jobsDirectory)
         }
 
         // reset modified flag
-        jobNode->modifiedFlag = FALSE;
+        jobNode->modifiedFlag               = FALSE;
+        jobNode->includeExcludeModifiedFlag = FALSE;
+        jobNode->mountModifiedFlag          = FALSE;
+        jobNode->scheduleModifiedFlag       = FALSE;
+        jobNode->persistenceModifiedFlag    = FALSE;
       }
     }
   }
@@ -2529,7 +2514,11 @@ Errors Job_write(JobNode *jobNode)
   }
 
   // reset modified flag
-  jobNode->modifiedFlag = FALSE;
+  jobNode->modifiedFlag               = FALSE;
+  jobNode->includeExcludeModifiedFlag = FALSE;
+  jobNode->mountModifiedFlag          = FALSE;
+  jobNode->scheduleModifiedFlag       = FALSE;
+  jobNode->persistenceModifiedFlag    = FALSE;
 
   return ERROR_NONE;
 }

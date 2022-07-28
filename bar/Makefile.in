@@ -404,7 +404,6 @@ BAR_SOURCES                 = bar.c \
                               crypt.c \
                               storage.c \
                               index/index.c \
-                              index/index.h \
                               index/index_uuids.c \
                               index/index_entities.c \
                               index/index_entries.c \
