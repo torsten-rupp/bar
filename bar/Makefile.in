@@ -582,14 +582,6 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
 
 BAR_INDEX_SOURCES           = bar-index.c \
                               bar_common.c \
-                              index/index.c \
-                              index/index_uuids.c \
-                              index/index_entities.c \
-                              index/index_entries.c \
-                              index/index_storages.c \
-                              index/index_history.c \
-                              index/index_assign.c \
-                              index/index_common.c \
 
 BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
