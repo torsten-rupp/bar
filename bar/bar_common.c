@@ -478,7 +478,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-bool inTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute)
+bool isInTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute)
 {
   if (TIME_BEGIN(beginHour,beginMinute) <= TIME_END(endHour,endMinute))
   {

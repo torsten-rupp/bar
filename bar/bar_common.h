@@ -1255,7 +1255,7 @@ bool parseBandWidthNumber(ConstString s, ulong *n);
 ulong getBandWidth(BandWidthList *bandWidthList);
 
 /***********************************************************************\
-* Name   : inTimeRange
+* Name   : isInTimeRange
 * Purpose: check if time is in time range
 * Input  : hour,minute           - time
 *          beginHour,beginMinute - begin time range
@@ -1265,7 +1265,7 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 * Notes  : handle begin* > end*
 \***********************************************************************/
 
-bool inTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute);
+bool isInTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute);
 
 #ifdef __cplusplus
   }

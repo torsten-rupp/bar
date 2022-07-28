@@ -184,8 +184,12 @@ typedef struct JobNode
   String              name;                             // name of job
   JobTypes            jobType;                          // job type
 
-  // modified info
+  // modified flags
   bool                modifiedFlag;                     // TRUE iff job config modified
+  bool                includeExcludeModifiedFlag;
+  bool                mountModifiedFlag;
+  bool                scheduleModifiedFlag;
+  bool                persistenceModifiedFlag;
 
   // schedule info
   uint64              lastScheduleCheckDateTime;        // last check date/time (timestamp)
@@ -1271,6 +1275,23 @@ INLINE JobNode *Job_findByName(ConstString name)
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID);
 
 /***********************************************************************\
+* Name   : Job_setModified
+* Purpose: set job modified
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Job_setModified(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_setModified(JobNode *jobNode)
+{
+  jobNode->modifiedFlag = TRUE;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Job_setIncludeExcludeModified
 * Purpose: actions when includes/excludes modified, set modified
 * Input  : jobNode - job node
@@ -1279,7 +1300,13 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
 * Notes  : -
 \***********************************************************************/
 
-void Job_setIncludeExcludeModified(JobNode *jobNode);
+INLINE void Job_setIncludeExcludeModified(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_setIncludeExcludeModified(JobNode *jobNode)
+{
+  jobNode->includeExcludeModifiedFlag = TRUE;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_setMountModified
@@ -1290,7 +1317,13 @@ void Job_setIncludeExcludeModified(JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-void Job_setMountModified(JobNode *jobNode);
+INLINE void Job_setMountModified(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_setMountModified(JobNode *jobNode)
+{
+  jobNode->mountModifiedFlag = TRUE;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_setScheduleModified
@@ -1301,18 +1334,52 @@ void Job_setMountModified(JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-void Job_setScheduleModified(JobNode *jobNode);
+INLINE void Job_setScheduleModified(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_setScheduleModified(JobNode *jobNode)
+{
+  jobNode->scheduleModifiedFlag = TRUE;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_setPersistenceModified
-* Purpose: actions whne persistence modified, set modified
+* Purpose: actions when persistence modified, set modified
 * Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_setPersistenceModified(JobNode *jobNode);
+INLINE void Job_setPersistenceModified(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_setPersistenceModified(JobNode *jobNode)
+{
+  jobNode->persistenceModifiedFlag = TRUE;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Job_flushModified
+* Purpose: flush modified job data
+* Input  : jobNode - job node
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+void Job_flush(JobNode *jobNode);
+
+/***********************************************************************\
+* Name   : Job_flushAllModified
+* Purpose: flush all modified job data
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+void Job_flushAllModified(void);
 
 /***********************************************************************\
 * Name   : Job_readScheduleInfo
@@ -1381,23 +1448,6 @@ Errors Job_write(JobNode *jobNode);
 \***********************************************************************/
 
 void Job_writeAllModified(void);
-
-/***********************************************************************\
-* Name   : Job_setModified
-* Purpose: set job modified
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-INLINE void Job_setModified(JobNode *jobNode);
-#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE void Job_setModified(JobNode *jobNode)
-{
-  jobNode->modifiedFlag = TRUE;
-}
-#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_trigger

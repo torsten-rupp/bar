@@ -104,7 +104,7 @@ void Continuous_done(void);
 
 /***********************************************************************\
 * Name   : Continuous_initNotify
-* Purpose: init notift for job
+* Purpose: init notifies for job
 * Input  : name              - job name
 *          jobUUID           - job UUID
 *          scheduleUUID      - schedule UUID (can be NULL)
@@ -124,7 +124,7 @@ Errors Continuous_initNotify(ConstString     name,
 
 /***********************************************************************\
 * Name   : Continuous_doneNotify
-* Purpose: done notify for job
+* Purpose: done notifies for job
 * Input  : jobUUID      - job UUID
 *          scheduleUUID - schedule UUID (can be NULL)
 * Output : -
