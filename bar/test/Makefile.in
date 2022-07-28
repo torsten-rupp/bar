@@ -6605,6 +6605,9 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)
 	$(INSTALL) -m 664 Makefile.in \
                           $(DIRECTORY)/bar/$(TEST_DATA_DIR)
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive
+	$(INSTALL) -t $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive \
+    archive/*
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
 	$(INSTALL) -m 664 data/zero.dat \
                           data/zero128.dat \
