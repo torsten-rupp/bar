@@ -9408,7 +9408,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
             // check if exists
             T existingData = (T)existingTreeItem.getData();
             if (   (existingData != null)
-                && (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
+                && (comparator.compare(data,existingData) == 0)
                )
             {
               existingTreeItem.setData(data);

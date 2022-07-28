@@ -607,29 +607,35 @@ public class TabRestore
     public int compare(T indexData1, T indexData2)
     {
       SortModes nextSortMode = sortMode;
-      int       result;
+      int       result = 0;
 
       if ((indexData1 == null) && (indexData2 == null))
       {
-        return 0;
+        result = 0;
       }
       else if (indexData1 == null)
       {
-        return 1;
+        result = 1;
       }
       else if (indexData2 == null)
       {
-        return -1;
+        result = -1;
+      }
+      else if (indexData1.id == indexData2.id)
+      {
+        result = 0;
       }
       else
       {
-        result = 0;
+        boolean doneFlag = false;
         do
         {
           switch (nextSortMode)
           {
             case ID:
-              return new Long(indexData1.id).compareTo(indexData2.id);
+              result = new Long(indexData1.id).compareTo(indexData2.id);
+              doneFlag = true;
+              break;
             case NAME:
               String name1 = indexData1.getName();
               String name2 = indexData2.getName();
@@ -659,7 +665,7 @@ public class TabRestore
               break;
           }
         }
-        while (result == 0);
+        while ((result == 0) && !doneFlag);
       }
 
       return result;
@@ -1788,7 +1794,6 @@ Dprintf.dprintf("");
     private Object           trigger                   = new Object();   // trigger update object
     private boolean          requestUpdateStorageCount = false;
     private HashSet<Integer> requestUpdateOffsets      = new HashSet<Integer>();
-    private Command          storageCountCommand       = null;
     private int              totalStorageCount         = 0;
     private long             totalStorageSize          = 0;
     private Command          storageTableCommand       = null;
@@ -1816,7 +1821,7 @@ Dprintf.dprintf("");
       boolean                setUpdateIndicator = true;
       try
       {
-        for (;;)
+        while (true)
         {
           boolean updateIndicator = false;
 
@@ -1847,7 +1852,7 @@ Dprintf.dprintf("");
             // update tree/table
             try
             {
-              // update count
+              // update table count
               if (updateStorageCount)
               {
                 updateStorageTableCount();
@@ -2158,8 +2163,11 @@ Dprintf.dprintf("");
     {
       if (requestUpdateStorageCount)
       {
-        if (storageCountCommand != null) storageCountCommand.abort();
-        if (storageTableCommand != null) storageTableCommand.abort();
+        if (storageTableCommand != null)
+        {
+          storageTableCommand.abort();
+          storageTableCommand = null;
+        }
       }
       trigger.notify();
     }
@@ -2174,7 +2182,6 @@ Dprintf.dprintf("");
         expandedUUIDTreeItems.clear();
       }
 
-      // get UUID list
       {
         // disable redraw
         display.syncExec(new Runnable()
@@ -2286,7 +2293,7 @@ Dprintf.dprintf("");
         });
         if (isRequestUpdate()) return;
 
-        // remove not existing entries
+        // remove not existing UUIDs from tree
         display.syncExec(new Runnable()
         {
           public void run()
@@ -2330,11 +2337,6 @@ Dprintf.dprintf("");
      */
     private void updateEntityTreeItem(final TreeItem uuidTreeItem, final HashSet<TreeItem> expandedEntityTreeItems)
     {
-      if (expandedEntityTreeItems != null)
-      {
-        expandedEntityTreeItems.clear();
-      }
-
       try
       {
         // get UUID index data, get entity items for remove
@@ -2449,7 +2451,8 @@ Dprintf.dprintf("");
         });
         if (isRequestUpdate()) return;
 
-        // remove not existing entries
+        // remove not existing entities from tree
+
         display.syncExec(new Runnable()
         {
           public void run()
@@ -2523,7 +2526,7 @@ Dprintf.dprintf("");
      * @param uuidTreeItems UUID tree items to update
      * @param entityTreeItems updated job tree items
      */
-    private void updateEntityTreeItems(HashSet<TreeItem> uuidTreeItems, HashSet<TreeItem> entityTreeItems)
+    private void updateEntityTreeItems(final HashSet<TreeItem> uuidTreeItems, final HashSet<TreeItem> entityTreeItems)
     {
       entityTreeItems.clear();
 
@@ -2692,7 +2695,7 @@ Dprintf.dprintf("");
         });
         if (isRequestUpdate()) return;
 
-        // remove not existing entries
+        // remove not existing stroages from tree
         display.syncExec(new Runnable()
         {
           public void run()
@@ -3018,6 +3021,7 @@ Dprintf.dprintf("");
                                                               }
                                                              );
           BARServer.asyncCommandWait(storageTableCommand);
+          storageTableCommand = null;
         }
         catch (Exception exception)
         {
@@ -8637,9 +8641,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           storageCount++;
         }
       }
-
-      // set index list
-      setStorageList(indexDataHashSet);
 
       // get total number of entries
       long totalEntryCount;
