@@ -4371,7 +4371,6 @@ Dprintf.dprintf("");
     {
       widgetStorageTreeToolTip.dispose();
     }
-Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
 
     if (uuidIndexData != null)
     {
@@ -10303,8 +10302,6 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
           }
           catch (Throwable throwable)
           {
-Dprintf.dprintf("%s",throwable);
-throwable.printStackTrace();
             // internal error
             BARServer.disconnect();
             BARControl.internalError(throwable);
