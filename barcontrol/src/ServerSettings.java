@@ -3548,7 +3548,6 @@ public class ServerSettings
                                      }
                                    }
                                   );
-//Dprintf.dprintf("i=%d",i);
         }
         catch (Exception exception)
         {
@@ -3561,7 +3560,6 @@ public class ServerSettings
       {
         BARServer.unlockSet();
       }
-//Dprintf.dprintf("i=%d",i);
     }
     busyDialog[0].close();
 
@@ -3679,7 +3677,6 @@ public class ServerSettings
         }
       }
 
-//Dprintf.dprintf("i=%d",i);
       busyDialog[0].close();
     }
   }

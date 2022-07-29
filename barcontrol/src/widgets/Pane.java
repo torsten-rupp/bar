@@ -55,13 +55,16 @@ public class Pane extends Canvas
 
   // --------------------------- variables --------------------------------
   private Composite         composites[];
+  private boolean           initFlag = false;
   private int               offsets[];               // offset of composites
+  private double            weights[];               // size weights [0..1]
   private int               count;                   // number of composites
   private int               style;                   // style flags
   private int               dragIndex;               // index of sash if dragging is in progress, otherwise -1
   private int               dragStart;               // drag start value
   private int               dragDelta;               // current drag delta value
   private HashSet<Listener> resizeListenerSet = new HashSet<Listener>();
+
 
   /* offsets:
 
@@ -108,40 +111,31 @@ public class Pane extends Canvas
     // initialize variables
     this.composites = new Composite[count];
     this.offsets    = new int[count];
+    this.weights    = new double[count];
     this.count      = count;
     this.style      = style;
     this.dragIndex  = -1;
 
     // create sashes
-    Rectangle bounds = getBounds();
-    int dw     = (bounds.width -(count-1)*SIZE)/count;
-    int dh     = (bounds.height-(count-1)*SIZE)/count;
-    int x      = 0;
-    int y      = 0;
-    int width  = 0;
-    int height = 0;
     for (int i = 0; i < count; i++)
     {
       composites[i] = new Composite(this,SWT.NONE);
-      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
-      {
-        composites[i].setBounds(x,0,dw,bounds.height);
-        x += dw + SIZE;
-        offsets[i] = x;
-      }
-      else
-      {
-        composites[i].setBounds(0,y,bounds.width,dh);
-        y += dh + SIZE;
-        offsets[i] = y;
-      }
     }
+    updateSizes();
+    updateWeights();
 
     // add paint listeners
     addPaintListener(new PaintListener()
     {
       public void paintControl(PaintEvent paintEvent)
       {
+        if (!initFlag)
+        {
+          updateSizes();
+          updateWeights();
+          initFlag = true;
+        }
+
         Pane.this.paint(paintEvent);
       }
     });
@@ -151,32 +145,7 @@ public class Pane extends Canvas
     {
       public void handleEvent(Event event)
       {
-        Pane      pane   = Pane.this;
-        Rectangle bounds = pane.getClientArea();
-//Dprintf.dprintf("SWT.Resize this=%s bounds=%s %s",event.widget,bounds,pane.getBounds());
-
-        int dw     = (bounds.width -(pane.count-1)*SIZE)/pane.count;
-        int dh     = (bounds.height-(pane.count-1)*SIZE)/pane.count;
-        int x      = 0;
-        int y      = 0;
-        int width  = 0;
-        int height = 0;
-        for (int i = 0; i < pane.count; i++)
-        {
-          if ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
-          {
-            pane.composites[i].setBounds(x,0,dw,bounds.height);
-            x += dw + SIZE;
-            pane.offsets[i] = x;
-          }
-          else
-          {
-            pane.composites[i].setBounds(0,y,bounds.width,dh);
-            y += dh + SIZE;
-            pane.offsets[i] = y;
-          }
-//Dprintf.dprintf("pane.composites[i]=%s",pane.composites[i].getBounds());
-        }
+        updateSizes();
       }
     });
 
@@ -213,6 +182,8 @@ public class Pane extends Canvas
         // stop dragging slider
         pane.dragIndex = -1;
         pane.dragDelta = 0;
+
+        updateWeights();
       }
     });
     addMouseTrackListener(new MouseTrackListener()
@@ -426,6 +397,7 @@ public class Pane extends Canvas
         offsets[i] = y;
       }
     }
+    updateWeights();
   }
 
   /** set layout
@@ -459,6 +431,60 @@ public class Pane extends Canvas
   public String toString()
   {
     return "Pane@"+hashCode()+" {"+count+", "+(((style & SWT.VERTICAL) == SWT.VERTICAL) ? "vertical" : "horizontal")+"}";
+  }
+
+  /** update pane sizes
+   * @param
+   * @return
+  */
+  private void updateSizes()
+  {
+    Pane      pane   = Pane.this;
+    Rectangle bounds = pane.getClientArea();
+
+    int dw,dh;
+    int x      = 0;
+    int y      = 0;
+    int width  = 0;
+    int height = 0;
+    for (int i = 0; i < pane.count; i++)
+    {
+      if ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
+      {
+        dw = initFlag ? (int)((double)bounds.width*weights[i]) : (bounds.width -(pane.count-1)*SIZE)/pane.count;
+        pane.composites[i].setBounds(x,0,dw,bounds.height);
+        x += dw + SIZE;
+        pane.offsets[i] = x;
+      }
+      else
+      {
+        dh = initFlag ? (int)((double)bounds.height*weights[i]) : (bounds.height -(pane.count-1)*SIZE)/pane.count;
+        pane.composites[i].setBounds(0,y,bounds.width,dh);
+        y += dh + SIZE;
+        pane.offsets[i] = y;
+      }
+//Dprintf.dprintf("pane.composites[i]=%s",pane.composites[i].getBounds());
+    }
+  }
+
+  /** update pane size weights
+   */
+  private void updateWeights()
+  {
+    Rectangle bounds = getBounds();
+    for (int i = 0; i < count; i++)
+    {
+      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+      {
+        int x = offsets[i]-((i > 0) ? offsets[i-1] : 0)-bounds.x;
+        weights[i] = (bounds.height > 0) ? (double)x/(double)bounds.width : 1.0;
+      }
+      else
+      {
+        int y = offsets[i]-((i > 0) ? offsets[i-1] : 0)-bounds.y;
+        weights[i] = (bounds.width > 0) ? (double)y/(double)bounds.height : 1.0;
+      }
+    }
   }
 
   /** paint slider
