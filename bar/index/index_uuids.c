@@ -541,7 +541,10 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
 
-  // init variables
+  if (lastExecutedDateTime != NULL) (*lastExecutedDateTime) = 0LL;
+  if (totalEntityCount     != NULL) (*totalEntityCount)     = 0;
+  if (totalEntryCount      != NULL) (*totalEntryCount)      = 0;
+  if (totalEntrySize       != NULL) (*totalEntrySize)       = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -567,10 +570,6 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
     char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     // get last executed, total entities count, total entry count, total entry size
-    if (lastExecutedDateTime != NULL) (*lastExecutedDateTime) = 0LL;
-    if (totalEntityCount     != NULL) (*totalEntityCount)     = 0;
-    if (totalEntryCount      != NULL) (*totalEntryCount)      = 0;
-    if (totalEntrySize       != NULL) (*totalEntrySize)       = 0LL;
     error = Database_get(&indexHandle->databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
@@ -588,7 +587,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
                            return ERROR_NONE;
                          },NULL),
                          NULL,  // changedRowCount
-  //TODO newest
+//TODO newest
                          DATABASE_TABLES
                          (
                            "uuids \
@@ -616,7 +615,10 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
                          0LL,
                          1LL
                         );
-    assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
+    assert(   (error == ERROR_NONE)
+           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+          );
   });
 
   // free resources

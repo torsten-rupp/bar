@@ -51,9 +51,13 @@ CTAGS_FLAGS                =
 
 CPP                        = @CPP@
 CC                         = @CC@
+#TODO
+#CC_FLAGS                   = @CC_FLAGS@ -g -D_FORTIFY_SOURCE=2
 CC_FLAGS                   = @CC_FLAGS@ -g
 CC_WARN_FLAGS              = @CC_WARN_FLAGS@
 CXX                        = @CXX@
+#TODO
+#CXX_FLAGS                  = @CXX_FLAGS@ -g -D_FORTIFY_SOURCE=2
 CXX_FLAGS                  = @CXX_FLAGS@ -g
 CXX_WARN_FLAGS             = @CXX_WARN_FLAGS@
 CC_FLAGS_RELEASE           = @CC_FLAGS_RELEASE@

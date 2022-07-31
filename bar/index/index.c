@@ -3271,6 +3271,40 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
   assert(indexHandle != NULL);
 
+  if (totalEntityCount            != NULL) (*totalEntityCount           ) = 0;
+  if (totalDeletedEntityCount     != NULL) (*totalDeletedEntityCount    ) = 0;
+
+  if (totalEntryCount             != NULL) (*totalEntryCount            ) = 0;
+  if (totalEntrySize              != NULL) (*totalEntrySize             ) = 0LL;
+  if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = 0LL;
+
+  if (totalFileCount              != NULL) (*totalFileCount             ) = 0;
+  if (totalFileSize               != NULL) (*totalFileSize              ) = 0LL;
+  if (totalImageCount             != NULL) (*totalImageCount            ) = 0;
+  if (totalImageSize              != NULL) (*totalImageSize             ) = 0LL;
+  if (totalDirectoryCount         != NULL) (*totalDirectoryCount        ) = 0;
+  if (totalLinkCount              != NULL) (*totalLinkCount             ) = 0;
+  if (totalHardlinkCount          != NULL) (*totalHardlinkCount         ) = 0;
+  if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = 0LL;
+  if (totalSpecialCount           != NULL) (*totalSpecialCount          ) = 0;
+
+  if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = 0;
+  if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = 0LL;
+  if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = 0LL;
+
+  if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = 0;
+  if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = 0LL;
+  if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = 0;
+  if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = 0LL;
+  if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest  ) = 0;
+  if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest       ) = 0;
+  if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest   ) = 0;
+  if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = 0LL;
+  if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest    ) = 0;
+
+  if (totalStorageCount           != NULL) (*totalStorageCount          ) = 0;
+  if (totalStorageSize            != NULL) (*totalStorageSize           ) = 0LL;
+
   // init variables
 
   // check init error
@@ -3280,7 +3314,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
   }
 
   // init variables
-
+  error = ERROR_NONE;
   INDEX_DOX(error,
             indexHandle,
   {
@@ -3297,10 +3331,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                ),
                                NULL  // orderGroup
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            );
     }
 
     if (totalDeletedEntityCount != NULL)
@@ -3316,10 +3350,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                ),
                                NULL  // orderGroup
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            );
     }
 
     if (totalSkippedEntryCount != NULL)
@@ -3335,10 +3369,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                ),
                                NULL  // orderGroup
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            );
     }
 
     // get total * count/size, total newest count/size
@@ -3370,37 +3404,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
         || (totalStorageSize            != NULL)
        )
     {
-      if (totalEntryCount             != NULL) (*totalEntryCount            ) = 0;
-      if (totalEntrySize              != NULL) (*totalEntrySize             ) = 0LL;
-      if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = 0LL;
-
-      if (totalFileCount              != NULL) (*totalFileCount             ) = 0;
-      if (totalFileSize               != NULL) (*totalFileSize              ) = 0LL;
-      if (totalImageCount             != NULL) (*totalImageCount            ) = 0;
-      if (totalImageSize              != NULL) (*totalImageSize             ) = 0LL;
-      if (totalDirectoryCount         != NULL) (*totalDirectoryCount        ) = 0;
-      if (totalLinkCount              != NULL) (*totalLinkCount             ) = 0;
-      if (totalHardlinkCount          != NULL) (*totalHardlinkCount         ) = 0;
-      if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = 0LL;
-      if (totalSpecialCount           != NULL) (*totalSpecialCount          ) = 0;
-
-      if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = 0;
-      if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = 0LL;
-      if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = 0LL;
-
-      if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = 0;
-      if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = 0LL;
-      if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = 0;
-      if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = 0LL;
-      if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest  ) = 0;
-      if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest       ) = 0;
-      if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest   ) = 0;
-      if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = 0LL;
-      if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest    ) = 0;
-
-      if (totalStorageCount           != NULL) (*totalStorageCount          ) = 0;
-      if (totalStorageSize            != NULL) (*totalStorageSize           ) = 0LL;
-
       error = Database_get(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                            {
@@ -3491,7 +3494,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                            0LL,
                            1LL
                           );
-      assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            );
     }
 
     if (totalDeletedStorageCount != NULL)
@@ -3507,10 +3513,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                ),
                                NULL  // orderGroup
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            );
     }
 
     return ERROR_NONE;
