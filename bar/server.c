@@ -6676,7 +6676,8 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  if (ConfigValue_parse(&CONFIG_VALUES[i],
+  if (ConfigValue_parse(CONFIG_VALUES,
+                        &CONFIG_VALUES[i],
                         NULL, // sectionName
                         String_cString(value),
                         CALLBACK_(NULL,NULL),  // errorFunction
@@ -10153,7 +10154,8 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
       return;
     }
 
-    if (ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+    if (ConfigValue_parse(JOB_CONFIG_VALUES,
+                          &JOB_CONFIG_VALUES[i],
                           NULL, // sectionName
                           String_cString(value),
                           CALLBACK_(NULL,NULL),  // errorFunction
@@ -14220,7 +14222,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
       return;
     }
 
-    if (ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+    if (ConfigValue_parse(JOB_CONFIG_VALUES,
+                          &JOB_CONFIG_VALUES[i],
                           "schedule",
                           String_cString(value),
                           CALLBACK_(NULL,NULL),  // errorFunction

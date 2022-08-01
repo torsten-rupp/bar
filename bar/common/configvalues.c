@@ -1743,14 +1743,16 @@ LOCAL String getUnifiedLine(String unifiedLine, const char *line)
 /***********************************************************************\
 * Name   : setComments
 * Purpose: set comment lines
-* Input  : configValue - config value
-*          commentList - comment lines list
+* Input  : configValues - config values
+*          configValue  - config value
+*          commentList  - comment lines list
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void setComments(const ConfigValue *configValue,
+LOCAL void setComments(const ConfigValue *configValues[],
+                       const ConfigValue *configValue,
                        const StringList  *commentList
                       )
 {
@@ -1773,9 +1775,10 @@ LOCAL void setComments(const ConfigValue *configValue,
   StringList_clear(&commentsNode->commentList);
   STRINGLIST_ITERATE(commentList,iteratorVariable,comment)
   {
-    if (!isDefaultComment(comment))
+    if (!ConfigValue_isDefaultComment(configValues,comment))
     {
       StringList_append(&commentsNode->commentList,comment);
+fprintf(stderr,"%s:%d: add %s\n",__FILE__,__LINE__,String_cString(comment));
     }
   }
 }
@@ -3252,7 +3255,8 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
 
-bool ConfigValue_parse(const ConfigValue    *configValue,
+bool ConfigValue_parse(const ConfigValue    *configValues[],
+                       const ConfigValue    *configValue,
                        const char           *sectionName,
                        const char           *value,
                        ConfigReportFunction errorReportFunction,
@@ -3283,7 +3287,7 @@ bool ConfigValue_parse(const ConfigValue    *configValue,
   // store comments
   if ((commentList != NULL) && !StringList_isEmpty(commentList))
   {
-    setComments(configValue,commentList);
+    setComments(configValues,configValue,commentList);
   }
 
   return TRUE;
@@ -3445,13 +3449,14 @@ bool ConfigValue_isCommentLine(const ConfigValue configValues[], ConstString lin
   return isCommentLine;
 }
 
-void ConfigValue_setComments(const ConfigValue *configValue,
+void ConfigValue_setComments(const ConfigValue *configValues[],
+                             const ConfigValue *configValue,
                              const StringList  *commentList
                             )
 {
   assert(configValue != NULL);
 
-  setComments(configValue,commentList);
+  setComments(configValues,configValue,commentList);
 }
 
 bool ConfigValue_getIntegerValue(int                   *value,
@@ -5417,6 +5422,77 @@ void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uin
 }
 
 #endif /* not NDEBUG */
+
+// TODO: temporary
+
+uint32 getCommentHash(const char *comment)
+{
+  uint32          hash;
+  CStringIterator cstringIterator;
+  int             ch;
+
+  assert(comment != NULL);
+
+  initSimpleHash(&hash);
+
+  CSTRING_CHAR_ITERATE(comment,cstringIterator,ch)
+  {
+    if (isalnum(ch))
+    {
+      updateSimpleHash(&hash,tolower(ch));
+    }
+  }
+
+
+  return doneSimpleHash(hash);
+}
+
+bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
+                                  ConstString       *comment
+                                 )
+{
+  uint32 commentHash;
+  uint   index;
+  uint32 hash;
+
+  commentHash = getCommentHash(String_cString(comment));
+
+  index = 0;
+  while (configValues[index].type != CONFIG_VALUE_TYPE_END)
+  {
+    switch (configValues[index].type)
+    {
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+        if (configValues[index].separator.text != NULL)
+        {
+          hash = getCommentHash(configValues[index].separator.text);
+          if (   (hash == 0)            // empty lines/sepators
+              || (hash == commentHash)
+             )
+          {
+            return TRUE;
+          }
+        }
+        break;
+      case CONFIG_VALUE_TYPE_COMMENT:
+        if (configValues[index].comment.text != NULL)
+        {
+//fprintf(stderr,"%s:%d: commen=%s == configValues[index].comment.text=%s\n",__FILE__,__LINE__,String_cString(comment),configValues[index].comment.text);
+          hash = getCommentHash(configValues[index].comment.text);
+          if (   (hash == 0)            // empty lines/sepators
+              || (hash == commentHash)
+             )
+          {
+            return TRUE;
+          }
+        }
+        break;
+    }
+    index++;
+  }
+
+  return FALSE;
+}
 
 #ifdef __GNUG__
 }

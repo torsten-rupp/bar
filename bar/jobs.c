@@ -1988,7 +1988,7 @@ bool Job_read(JobNode *jobNode)
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
+          ConfigValue_setComments(CONFIG_VALUES,&CONFIG_VALUES[i],&commentList);
           StringList_clear(&commentList);
         }
       }
@@ -2028,7 +2028,8 @@ bool Job_read(JobNode *jobNode)
                               );
           if (i != CONFIG_VALUE_INDEX_NONE)
           {
-            ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+            ConfigValue_parse(JOB_CONFIG_VALUES,
+                              &JOB_CONFIG_VALUES[i],
                               "schedule",
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -2140,7 +2141,8 @@ bool Job_read(JobNode *jobNode)
                                 );
             if (i != CONFIG_VALUE_INDEX_NONE)
             {
-              ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+              ConfigValue_parse(JOB_CONFIG_VALUES,
+                                &JOB_CONFIG_VALUES[i],
                                 "persistence",
                                 String_cString(value),
                                 CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -2234,7 +2236,8 @@ bool Job_read(JobNode *jobNode)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+        ConfigValue_parse(JOB_CONFIG_VALUES,
+                          &JOB_CONFIG_VALUES[i],
                           NULL, // sectionName
                           String_cString(value),
                           CALLBACK_INLINE(void,(const char *errorMessage, void *userData),

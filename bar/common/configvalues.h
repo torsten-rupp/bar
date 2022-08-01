@@ -1291,7 +1291,8 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 /***********************************************************************
 * Name   : ConfigValue_parse
 * Purpose: parse config value
-* Input  : configValue           - config value
+* Input  : configValues          - cpmfig values
+*          configValue           - config value
 *          sectionName           - section name or NULL
 *          value                 - value
 *          errorReportFunction   - error report function (can be NULL)
@@ -1304,7 +1305,8 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_parse(const ConfigValue    *configValue,
+bool ConfigValue_parse(const ConfigValue    *configValues[],
+                       const ConfigValue    *configValue,
                        const char           *sectionName,
                        const char           *value,
                        ConfigReportFunction errorReportFunction,
@@ -1409,14 +1411,16 @@ bool ConfigValue_isCommentLine(const ConfigValue configValues[], ConstString lin
 /***********************************************************************\
 * Name   : ConfigValue_setComments
 * Purpose: set config value comments
-* Input  : configValue - config value
-*          commentList - comment list
+* Input  : configValues - config values
+*          configValue  - config value
+*          commentList  - comment list
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void ConfigValue_setComments(const ConfigValue *configValue,
+void ConfigValue_setComments(const ConfigValue *configValues[],
+                             const ConfigValue *configValue,
                              const StringList  *commentList
                             );
 
@@ -1653,8 +1657,23 @@ void ConfigValue_debugDumpComments(FILE *handle);
 
 void ConfigValue_debugPrintComments(void);
 
+/***********************************************************************\
+* Name   : _
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferLength);
 #endif /* not NDEBUG */
+
+// TODO: temporary
+bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
+                                  ConstString       *comment
+                                 );
+
 
 #ifdef __GNUG__
 }
