@@ -2485,7 +2485,7 @@ Errors Job_write(JobNode *jobNode)
     }
 
     // write job config
-    error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
+    error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode,TRUE);
     if (error != ERROR_NONE)
     {
       logMessage(NULL,  // logHandle

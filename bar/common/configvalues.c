@@ -1773,7 +1773,10 @@ LOCAL void setComments(const ConfigValue *configValue,
   StringList_clear(&commentsNode->commentList);
   STRINGLIST_ITERATE(commentList,iteratorVariable,comment)
   {
-    StringList_append(&commentsNode->commentList,comment);
+    if (!isDefaultComment(comment))
+    {
+      StringList_append(&commentsNode->commentList,comment);
+    }
   }
 }
 
@@ -2580,6 +2583,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
 *          variable                       - variable or NULL
 *          templatesFlag                  - TRUE to write templates
 *          valuesFlag                     - TRUE to write values
+*          customCommentsFlag             - TRUE to store custom comments
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2592,7 +2596,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                              uint              lastValueIndex,
                              const void        *variable,
                              bool              templatesFlag,
-                             bool              valuesFlag
+                             bool              valuesFlag,
+                             bool              customCommentsFlag
                             )
 {
   Errors             error;
@@ -2611,6 +2616,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
   StringList_init(&commentList);
   ITERATE_VALUEX(configValues,index,firstValueIndex,lastValueIndex,error == ERROR_NONE)
   {
+    // find comments for config value
     commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == &configValues[index]);
 
     switch (configValues[index].type)
@@ -2679,7 +2685,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                              sectionLastValueIndex,
                                                              NULL,  // variable
                                                              TRUE,
-                                                             FALSE
+                                                             FALSE,
+                                                             customCommentsFlag
                                                             );
             if (error == ERROR_NONE) error = File_printLine(fileHandle,"#[end]");
 
@@ -2705,6 +2712,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                            NULL,  // data
                                                                            configValues[index].section.userData
                                                                           );
+if (customCommentsFlag)
+{
                 if (commentList != NULL)
                 {
                   StringNode *stringNode;
@@ -2715,6 +2724,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                     error = File_printLine(fileHandle,"# %S",line);
                   }
                 }
+}
 
                 // write section begin
                 if (!String_isEmpty(sectionName))
@@ -2734,7 +2744,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                  sectionLastValueIndex,
                                                                  data,
                                                                  FALSE,
-                                                                 TRUE
+                                                                 TRUE,
+                                                                 customCommentsFlag
                                                                 );
 
                 // write section end
@@ -2765,7 +2776,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                sectionLastValueIndex,
                                                                variable,
                                                                FALSE,
-                                                               TRUE
+                                                               TRUE,
+                                                               customCommentsFlag
                                                               );
 
               // write section end
@@ -2823,9 +2835,12 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
         if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
         break;
       case CONFIG_VALUE_TYPE_COMMENT:
-        if (!stringIsEmpty(configValues[index].comment.text))
+        if (customCommentsFlag)
         {
-          StringList_appendFormat(&commentList,"%s",configValues[index].comment.text);
+          if (!stringIsEmpty(configValues[index].comment.text))
+          {
+            StringList_appendFormat(&commentList,"%s",configValues[index].comment.text);
+          }
         }
         break;
       default:
@@ -2833,9 +2848,13 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                  indent,
                                  &configValues[index],
                                  variable,
+#if 1
                                  (commentsNode != NULL)
                                    ? &commentsNode->commentList
                                    : &commentList,
+#else
+NULL,
+#endif
                                  templatesFlag,
                                  valuesFlag
                                 );
@@ -4645,7 +4664,8 @@ Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const Str
 
 Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                                    const ConfigValue configValues[],
-                                   const void        *variable
+                                   const void        *variable,
+                                   bool              customCommentsFlag
                                   )
 {
   Errors     error;
@@ -4676,7 +4696,8 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                           lastValueIndex,
                           variable,
                           TRUE,
-                          TRUE
+                          TRUE,
+                          customCommentsFlag
                          );
   if (error != ERROR_NONE)
   {

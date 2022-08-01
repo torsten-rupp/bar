@@ -1596,9 +1596,10 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 /***********************************************************************\
 * Name   : ConfigValue_updateConfigFile
 * Purpose: i[date config file from template
-* Input  : configFileName - config file name
-*          configValues   - config values definition
-*          variable       - variable or NULL
+* Input  : configFileName     - config file name
+*          configValues       - config values definition
+*          variable           - variable or NULL
+*          customCommentsFlag - TRUE to store custom comments
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1606,7 +1607,8 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 
 Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                                    const ConfigValue configValues[],
-                                   const void        *variable
+                                   const void        *variable,
+                                   bool              customCommentsFlag
                                   );
 
 /***********************************************************************\

@@ -4343,7 +4343,11 @@ LOCAL Errors bar(int argc, const char *argv[])
 
     configFileName = String_newCString(globalOptions.saveConfigurationFileName);
     if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"Writing configuration file '%s'...",String_cString(configFileName)); }
-    error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
+    error = ConfigValue_writeConfigFile(configFileName,
+                                        CONFIG_VALUES,
+                                        NULL,
+                                        !globalOptions.discardsConfigurationComments
+                                       );
     if (error != ERROR_NONE)
     {
        if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"FAIL!\n"); }
