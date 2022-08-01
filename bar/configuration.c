@@ -1820,6 +1820,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.waitFirstVolumeFlag                             = FALSE;
 
   globalOptions.saveConfigurationFileName                       = NULL;
+  globalOptions.discardsConfigurationComments                   = FALSE;
 
   // debug/test only
   #ifndef NDEBUG
@@ -6704,7 +6705,8 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        if (ConfigValue_parse(&CONFIG_VALUES[i],
+        if (ConfigValue_parse(CONFIG_VALUES,
+                              &CONFIG_VALUES[i],
                               sectionName,
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -6890,7 +6892,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
+          ConfigValue_setComments(CONFIG_VALUES,&CONFIG_VALUES[i],&commentList);
           StringList_clear(&commentList);
         }
       }
@@ -7303,7 +7305,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        if (ConfigValue_parse(&CONFIG_VALUES[i],
+        if (ConfigValue_parse(CONFIG_VALUES,
+                              &CONFIG_VALUES[i],
                               NULL, // section name
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -7698,6 +7701,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,                                                                                "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_SPECIAL      ("config",                            0,  1,2,&configFileList,                                     cmdOptionParseConfigFile,NULL,1,                             "configuration file","file name"                                           ),
   CMD_OPTION_CSTRING      ("save-configuration",                0,  1,1,globalOptions.saveConfigurationFileName,                                                                          "save formated configuration file","file name"                             ),
+  CMD_OPTION_BOOLEAN      ("discard-configuration-comments",    0,  1,1,globalOptions.discardsConfigurationComments,                                                                      "discard custom coments when saving configuration file"                    ),
 
   CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,globalOptions.versionFlag,                                                                                        "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,globalOptions.helpFlag,                                                                                           "output this help"                                                         ),
@@ -9417,7 +9421,7 @@ Errors Configuration_update(void)
     return ERROR_NO_WRITABLE_CONFIG;
   }
 
-  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
+  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL,TRUE);
   if (error != ERROR_NONE)
   {
     logMessage(NULL,  // logHandle
