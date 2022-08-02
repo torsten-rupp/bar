@@ -955,6 +955,7 @@ typedef struct
   bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
 
   const char                  *saveConfigurationFileName;     // configuration save file name
+  bool                        cleanConfigurationComments;     // clean configuration comments on save
 
   // debug/test only
   #ifndef NDEBUG

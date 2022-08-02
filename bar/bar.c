@@ -2417,7 +2417,8 @@ LOCAL bool readFromJob(ConstString fileName)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+        ConfigValue_parse(JOB_CONFIG_VALUES,
+                          &JOB_CONFIG_VALUES[i],
                           NULL, // sectionName,
                           String_cString(value),
                           CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -4343,7 +4344,11 @@ LOCAL Errors bar(int argc, const char *argv[])
 
     configFileName = String_newCString(globalOptions.saveConfigurationFileName);
     if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"Writing configuration file '%s'...",String_cString(configFileName)); }
-    error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
+    error = ConfigValue_writeConfigFile(configFileName,
+                                        CONFIG_VALUES,
+                                        NULL,
+                                        globalOptions.cleanConfigurationComments
+                                       );
     if (error != ERROR_NONE)
     {
        if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"FAIL!\n"); }

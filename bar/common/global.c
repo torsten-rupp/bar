@@ -527,27 +527,22 @@ bool stringVMatch(const char *string, const char *pattern, const char **matchedS
   return matchFlag;
 }
 
-uint32 stringHash(const char *string)
+uint32 stringSimpleHash(const char *string)
 {
-  uint32 hash;
+  uint32          hash;
+  CStringIterator cstringIterator;
+  char            ch;
 
-  hash = 0;
+  initSimpleHash(&hash);
   if (string != NULL)
   {
-    while ((*string) != NUL)
+    CSTRING_CHAR_ITERATE(string,cstringIterator,ch)
     {
-      hash += *string;
-      hash += hash << 10;
-      hash ^= hash >> 6;
-
-      string++;
+      updateSimpleHash(&hash,ch);
     }
-    hash += hash << 3;
-    hash ^= hash >> 11;
-    hash += hash << 15;
   }
 
-  return hash;
+  return doneSimpleHash(hash);
 }
 
 #ifdef NDEBUG

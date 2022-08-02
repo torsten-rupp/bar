@@ -1820,6 +1820,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.waitFirstVolumeFlag                             = FALSE;
 
   globalOptions.saveConfigurationFileName                       = NULL;
+  globalOptions.cleanConfigurationComments                      = FALSE;
 
   // debug/test only
   #ifndef NDEBUG
@@ -6704,7 +6705,8 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        if (ConfigValue_parse(&CONFIG_VALUES[i],
+        if (ConfigValue_parse(CONFIG_VALUES,
+                              &CONFIG_VALUES[i],
                               sectionName,
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -6890,7 +6892,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
+          ConfigValue_setComments(CONFIG_VALUES,&CONFIG_VALUES[i],&commentList);
           StringList_clear(&commentList);
         }
       }
@@ -7303,7 +7305,8 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        if (ConfigValue_parse(&CONFIG_VALUES[i],
+        if (ConfigValue_parse(CONFIG_VALUES,
+                              &CONFIG_VALUES[i],
                               NULL, // section name
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -7698,6 +7701,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,                                                                                "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_SPECIAL      ("config",                            0,  1,2,&configFileList,                                     cmdOptionParseConfigFile,NULL,1,                             "configuration file","file name"                                           ),
   CMD_OPTION_CSTRING      ("save-configuration",                0,  1,1,globalOptions.saveConfigurationFileName,                                                                          "save formated configuration file","file name"                             ),
+  CMD_OPTION_BOOLEAN      ("clean-configuration-comments",      0,  1,1,globalOptions.cleanConfigurationComments,                                                                         "clean comments when saving configuration file"                            ),
 
   CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,globalOptions.versionFlag,                                                                                        "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,globalOptions.helpFlag,                                                                                           "output this help"                                                         ),
@@ -7747,20 +7751,6 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("config",                           &configFileList,-1,                                            configValueConfigFileParse,configValueConfigFileFormat,NULL),
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT("master settings"),
-  CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_SECTION_ARRAY     ("master",NULL,-1,NULL,NULL,
-//TODO
-    CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1,                             "<name>"),
-    CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
-//TODO: required to save?
-    CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
-  ),
-  CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
-  CONFIG_VALUE_STRING            ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1,                  "<file name>"),
-  CONFIG_VALUE_SPACE(),
-
   CONFIG_VALUE_COMMENT("temporary directory"),
   CONFIG_VALUE_STRING            ("tmp-directory",                    &globalOptions.tmpDirectory,-1,                                "<directory>"),
   CONFIG_VALUE_COMMENT("max. temporary space to use [K|M|G|T|P]"),
@@ -7783,6 +7773,19 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_COMMENT("directory with job incremental data"),
   CONFIG_VALUE_STRING            ("incremental-data-directory",       &globalOptions.incrementalDataDirectory,-1,                    "<directory>"),
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_SEPARATOR("master settings"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_SECTION_ARRAY     ("master",NULL,-1,NULL,NULL,
+    CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1,                             "<name>"),
+    CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
+//TODO: required to save?
+    CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
+  ),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
+  CONFIG_VALUE_STRING            ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1,                  "<file name>"),
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("index database"),
@@ -7922,23 +7925,37 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   // commands
   CONFIG_VALUE_SEPARATOR("commands"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("general"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("pre-command",                      &globalOptions.preProcessScript,-1,                            "<command>"),
   CONFIG_VALUE_STRING            ("post-command",                     &globalOptions.postProcessScript,-1,                           "<command>"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("file"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("file-write-pre-command",           &globalOptions.file.writePreProcessCommand,-1,                 "<command>"),
   CONFIG_VALUE_STRING            ("file-write-post-command",          &globalOptions.file.writePostProcessCommand,-1,                "<command>"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("ftp"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("ftp-write-pre-command",            &globalOptions.ftp.writePreProcessCommand,-1,                  "<command>"),
   CONFIG_VALUE_STRING            ("ftp-write-post-command",           &globalOptions.ftp.writePostProcessCommand,-1,                 "<command>"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("scp"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("scp-write-pre-command",            &globalOptions.scp.writePreProcessCommand,-1,                  "<command>"),
   CONFIG_VALUE_STRING            ("scp-write-post-command",           &globalOptions.scp.writePostProcessCommand,-1,                 "<command>"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("sftp"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("sftp-write-pre-command",           &globalOptions.sftp.writePreProcessCommand,-1,                 "<command>"),
   CONFIG_VALUE_STRING            ("sftp-write-post-command",          &globalOptions.sftp.writePostProcessCommand,-1,                "<command>"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("webDAV"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("webdav-write-pre-command",         &globalOptions.webdav.writePreProcessCommand,-1,               "<command>"),
   CONFIG_VALUE_STRING            ("webdav-write-post-command",        &globalOptions.webdav.writePostProcessCommand,-1,              "<command>"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("CD"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("cd-device",                        &globalOptions.cd.deviceName,-1,                               "<command>"),
   CONFIG_VALUE_STRING            ("cd-request-volume-command",        &globalOptions.cd.requestVolumeCommand,-1,                     "<command>"),
@@ -7957,6 +7974,8 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("cd-write-command",                 &globalOptions.cd.writeCommand,-1,                             "<command>"),
   CONFIG_VALUE_STRING            ("cd-write-image-command",           &globalOptions.cd.writeImageCommand,-1,                        "<command>"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("DVD"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("dvd-device",                       &globalOptions.dvd.deviceName,-1,                              "<path>"),
   CONFIG_VALUE_STRING            ("dvd-request-volume-command",       &globalOptions.dvd.requestVolumeCommand,-1,                    "<command>"),
   CONFIG_VALUE_STRING            ("dvd-unload-volume-command",        &globalOptions.dvd.unloadVolumeCommand,-1,                     "<command>"),
@@ -7974,6 +7993,8 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("dvd-write-command",                &globalOptions.dvd.writeCommand,-1,                            "<command>"),
   CONFIG_VALUE_STRING            ("dvd-write-image-command",          &globalOptions.dvd.writeImageCommand,-1,                       "<command>"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("BD"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("bd-device",                        &globalOptions.bd.deviceName,-1,                               "<path>"),
   CONFIG_VALUE_STRING            ("bd-request-volume-command",        &globalOptions.bd.requestVolumeCommand,-1,                     "<command>"),
   CONFIG_VALUE_STRING            ("bd-unload-volume-command",         &globalOptions.bd.unloadVolumeCommand,-1,                      "<command>"),
@@ -7990,6 +8011,8 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("bd-write-post-command",            &globalOptions.bd.writePostProcessCommand,-1,                  "<command>"),
   CONFIG_VALUE_STRING            ("bd-write-command",                 &globalOptions.bd.writeCommand,-1,                             "<command>"),
   CONFIG_VALUE_STRING            ("bd-write-image-command",           &globalOptions.bd.writeImageCommand,-1,                        "<command>"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("device"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("device-request-volume-command",    &globalOptions.defaultDevice.requestVolumeCommand,-1,                        "<command>"),
   CONFIG_VALUE_STRING            ("device-unload-volume-command",     &globalOptions.defaultDevice.unloadVolumeCommand,-1,                         "<command>"),
@@ -9417,7 +9440,7 @@ Errors Configuration_update(void)
     return ERROR_NO_WRITABLE_CONFIG;
   }
 
-  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
+  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL,TRUE);
   if (error != ERROR_NONE)
   {
     logMessage(NULL,  // logHandle

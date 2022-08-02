@@ -2042,7 +2042,9 @@ Errors Continuous_doneNotify(ConstString name,
 Errors Continuous_open(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  uint   continuousVersion;
+  #ifndef NDEBUG
+    uint   continuousVersion;
+  #endif
 
   assert(initFlag);
   assert(databaseHandle != NULL);
