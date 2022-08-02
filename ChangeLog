@@ -10,6 +10,7 @@
   * added option --sparse-files
   * added option --no-stop-on-owner-error
   * added option --server
+  * added option --clean-configuration-comments
   * added begin/end time for continous schedules
   * place pid file into /run by default
   * fixed reading cryption keys via config file

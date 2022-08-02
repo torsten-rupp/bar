@@ -1305,7 +1305,7 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_parse(const ConfigValue    *configValues[],
+bool ConfigValue_parse(const ConfigValue    configValues[],
                        const ConfigValue    *configValue,
                        const char           *sectionName,
                        const char           *value,
@@ -1419,7 +1419,7 @@ bool ConfigValue_isCommentLine(const ConfigValue configValues[], ConstString lin
 * Notes  : -
 \***********************************************************************/
 
-void ConfigValue_setComments(const ConfigValue *configValues[],
+void ConfigValue_setComments(const ConfigValue configValues[],
                              const ConfigValue *configValue,
                              const StringList  *commentList
                             );
@@ -1600,10 +1600,10 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 /***********************************************************************\
 * Name   : ConfigValue_updateConfigFile
 * Purpose: i[date config file from template
-* Input  : configFileName     - config file name
-*          configValues       - config values definition
-*          variable           - variable or NULL
-*          customCommentsFlag - TRUE to store custom comments
+* Input  : configFileName    - config file name
+*          configValues      - config values definition
+*          variable          - variable or NULL
+*          cleanCommentsFlag - TRUE to clean comments
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1612,7 +1612,7 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                                    const ConfigValue configValues[],
                                    const void        *variable,
-                                   bool              customCommentsFlag
+                                   bool              cleanCommentsFlag
                                   );
 
 /***********************************************************************\
@@ -1658,20 +1658,31 @@ void ConfigValue_debugDumpComments(FILE *handle);
 void ConfigValue_debugPrintComments(void);
 
 /***********************************************************************\
-* Name   : _
-* Purpose: 
-* Input  : -
-* Output : -
+* Name   : ConfigValue_debugSHA256
+* Purpose: get SHA256 hash for configuration values
+* Input  : configValues - configuration values
+*          buffer       - SHA256 hash variable
+*          bufferSize   - SHA256 hash variable size
+* Output : buffer - SHA256 hash
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferLength);
+void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferSize);
 #endif /* not NDEBUG */
 
-// TODO: temporary
+// TODO: temporary, make private when moving parsing code to this file
+/***********************************************************************\
+* Name   : ConfigValue_isDefaultComment
+* Purpose: check if default comment
+* Input  : comment
+* Output : -
+* Return : TRUE iff default comment
+* Notes  : -
+\***********************************************************************/
+
 bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
-                                  ConstString       *comment
+                                  ConstString       comment
                                  );
 
 

@@ -318,12 +318,14 @@ LOCAL Errors execute(const char        *command,
   #if   defined(PLATFORM_LINUX)
     String     text;
     const char * const *s;
-    int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
-    pid_t      pid;
-    int        status;
-    bool       sleepFlag;
-    String     line;
-    int        exitcode;
+    #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
+      int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
+      pid_t      pid;
+      int        status;
+      bool       sleepFlag;
+      String     line;
+      int        exitcode;
+    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -505,6 +507,16 @@ LOCAL Errors execute(const char        *command,
         error = ERROR_UNKNOWN;
       }
     #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+      UNUSED_VARIABLE(command);
+      UNUSED_VARIABLE(arguments);
+      UNUSED_VARIABLE(errorText);
+      UNUSED_VARIABLE(stdoutExecuteIOFunction);
+      UNUSED_VARIABLE(stdoutExecuteIOUserData);
+      UNUSED_VARIABLE(stdoutStripCount);
+      UNUSED_VARIABLE(stderrExecuteIOFunction);
+      UNUSED_VARIABLE(stderrExecuteIOUserData);
+      UNUSED_VARIABLE(stderrStripCount);
+
       #error pipe()/fork()/waitpid() not available nor Windows system!
     #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
 

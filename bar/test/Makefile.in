@@ -2242,6 +2242,7 @@ test_arguments: \
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX)  $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/bar.cfg $(LOG)))
 	($(CD) $(UP_DIR); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX)  $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/bar.cfg --save-configuration $(INTERMEDIATE_DIR)/bar-save.cfg $(LOG)))
+	($(CD) $(UP_DIR); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX)  $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/bar.cfg --save-configuration $(INTERMEDIATE_DIR)/bar-save.cfg --clean-configuration-comments $(LOG)))
 	@$(RMF) $(INTERMEDIATE_DIR)/bar-save.cfg
 	@#
 	# working directory
@@ -2730,6 +2731,7 @@ test_config: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/test.cfg) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/test1.cfg) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --save-configuration=$(INTERMEDIATE_DIR)/test2.cfg) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --save-configuration=$(INTERMEDIATE_DIR)/test2.cfg --clean-configuration-comments) $(LOG)
 #TODO
 #	$(call functionTestCheckExitcode,0,0,set -x; test \
 #	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --debug-print-configuration-sha256)` \

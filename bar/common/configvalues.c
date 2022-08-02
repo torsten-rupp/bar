@@ -1751,7 +1751,7 @@ LOCAL String getUnifiedLine(String unifiedLine, const char *line)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void setComments(const ConfigValue *configValues[],
+LOCAL void setComments(const ConfigValue configValues[],
                        const ConfigValue *configValue,
                        const StringList  *commentList
                       )
@@ -1778,7 +1778,6 @@ LOCAL void setComments(const ConfigValue *configValues[],
     if (!ConfigValue_isDefaultComment(configValues,comment))
     {
       StringList_append(&commentsNode->commentList,comment);
-fprintf(stderr,"%s:%d: add %s\n",__FILE__,__LINE__,String_cString(comment));
     }
   }
 }
@@ -1818,7 +1817,7 @@ LOCAL Errors writeCommentLines(FileHandle       *fileHandle,
           || !String_equalsCString(name,nextName)
          )
       {
-        error = File_printLine(fileHandle,"# %*C%S",indent,' ',string);
+        error = File_printLine(fileHandle,"#%*C%S",(indent > 0) ? indent : 1,' ',string);
       }
     }
     String_delete(name);
@@ -2586,7 +2585,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
 *          variable                       - variable or NULL
 *          templatesFlag                  - TRUE to write templates
 *          valuesFlag                     - TRUE to write values
-*          customCommentsFlag             - TRUE to store custom comments
+*          cleanCommentsFlag              - TRUE to clean comments
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2600,7 +2599,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                              const void        *variable,
                              bool              templatesFlag,
                              bool              valuesFlag,
-                             bool              customCommentsFlag
+                             bool              cleanCommentsFlag
                             )
 {
   Errors             error;
@@ -2620,7 +2619,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
   ITERATE_VALUEX(configValues,index,firstValueIndex,lastValueIndex,error == ERROR_NONE)
   {
     // find comments for config value
-    commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == &configValues[index]);
+    commentsNode = !cleanCommentsFlag ? LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == &configValues[index]) : NULL;
 
     switch (configValues[index].type)
     {
@@ -2689,7 +2688,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                              NULL,  // variable
                                                              TRUE,
                                                              FALSE,
-                                                             customCommentsFlag
+                                                             cleanCommentsFlag
                                                             );
             if (error == ERROR_NONE) error = File_printLine(fileHandle,"#[end]");
 
@@ -2705,29 +2704,17 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                                  );
               while ((data != NULL) && (error == ERROR_NONE))
               {
-                const StringList *commentList;
+                const StringList *sectionCommentList;
 
                 if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
 
                 // write comments before section
-                commentList = configValues[index].section.iteratorFunction(&sectionIterator,
-                                                                           CONFIG_VALUE_OPERATION_COMMENTS,
-                                                                           NULL,  // data
-                                                                           configValues[index].section.userData
-                                                                          );
-if (customCommentsFlag)
-{
-                if (commentList != NULL)
-                {
-                  StringNode *stringNode;
-                  String     line;
-
-                  STRINGLIST_ITERATEX(commentList,stringNode,line,error == ERROR_NONE)
-                  {
-                    error = File_printLine(fileHandle,"# %S",line);
-                  }
-                }
-}
+                sectionCommentList = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                                  CONFIG_VALUE_OPERATION_COMMENTS,
+                                                                                  NULL,  // data
+                                                                                  configValues[index].section.userData
+                                                                                 );
+                error = writeCommentLines(fileHandle,0,sectionCommentList,NULL);
 
                 // write section begin
                 if (!String_isEmpty(sectionName))
@@ -2748,7 +2735,7 @@ if (customCommentsFlag)
                                                                  data,
                                                                  FALSE,
                                                                  TRUE,
-                                                                 customCommentsFlag
+                                                                 cleanCommentsFlag
                                                                 );
 
                 // write section end
@@ -2780,7 +2767,7 @@ if (customCommentsFlag)
                                                                variable,
                                                                FALSE,
                                                                TRUE,
-                                                               customCommentsFlag
+                                                               cleanCommentsFlag
                                                               );
 
               // write section end
@@ -2838,12 +2825,9 @@ if (customCommentsFlag)
         if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
         break;
       case CONFIG_VALUE_TYPE_COMMENT:
-        if (customCommentsFlag)
+        if (!stringIsEmpty(configValues[index].comment.text))
         {
-          if (!stringIsEmpty(configValues[index].comment.text))
-          {
-            StringList_appendFormat(&commentList,"%s",configValues[index].comment.text);
-          }
+          StringList_appendFormat(&commentList,"%s",configValues[index].comment.text);
         }
         break;
       default:
@@ -2851,13 +2835,9 @@ if (customCommentsFlag)
                                  indent,
                                  &configValues[index],
                                  variable,
-#if 1
                                  (commentsNode != NULL)
                                    ? &commentsNode->commentList
                                    : &commentList,
-#else
-NULL,
-#endif
                                  templatesFlag,
                                  valuesFlag
                                 );
@@ -3255,7 +3235,7 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
 
-bool ConfigValue_parse(const ConfigValue    *configValues[],
+bool ConfigValue_parse(const ConfigValue    configValues[],
                        const ConfigValue    *configValue,
                        const char           *sectionName,
                        const char           *value,
@@ -3449,7 +3429,7 @@ bool ConfigValue_isCommentLine(const ConfigValue configValues[], ConstString lin
   return isCommentLine;
 }
 
-void ConfigValue_setComments(const ConfigValue *configValues[],
+void ConfigValue_setComments(const ConfigValue configValues[],
                              const ConfigValue *configValue,
                              const StringList  *commentList
                             )
@@ -4670,7 +4650,7 @@ Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const Str
 Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                                    const ConfigValue configValues[],
                                    const void        *variable,
-                                   bool              customCommentsFlag
+                                   bool              cleanCommentsFlag
                                   )
 {
   Errors     error;
@@ -4690,7 +4670,7 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
     return error;
   }
 
-  // find fist/last
+  // find fist/last configuration value
   findFirstLast(configValues,&firstValueIndex,&lastValueIndex);
 
   // write file
@@ -4702,7 +4682,7 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                           variable,
                           TRUE,
                           TRUE,
-                          customCommentsFlag
+                          cleanCommentsFlag
                          );
   if (error != ERROR_NONE)
   {
@@ -5425,7 +5405,7 @@ void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uin
 
 // TODO: temporary
 
-uint32 getCommentHash(const char *comment)
+LOCAL uint32 getCommentHash(const char *comment)
 {
   uint32          hash;
   CStringIterator cstringIterator;
@@ -5448,7 +5428,7 @@ uint32 getCommentHash(const char *comment)
 }
 
 bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
-                                  ConstString       *comment
+                                  ConstString       comment
                                  )
 {
   uint32 commentHash;
@@ -5462,6 +5442,8 @@ bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
   {
     switch (configValues[index].type)
     {
+      case CONFIG_VALUE_TYPE_NONE:
+        break;
       case CONFIG_VALUE_TYPE_BEGIN_SECTION:
         if (configValues[index].separator.text != NULL)
         {
@@ -5473,6 +5455,12 @@ bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
             return TRUE;
           }
         }
+        break;
+      case CONFIG_VALUE_TYPE_END_SECTION:
+        break;
+      case CONFIG_VALUE_TYPE_SEPARATOR:
+        break;
+      case CONFIG_VALUE_TYPE_SPACE:
         break;
       case CONFIG_VALUE_TYPE_COMMENT:
         if (configValues[index].comment.text != NULL)
@@ -5486,6 +5474,22 @@ bool ConfigValue_isDefaultComment(const ConfigValue configValues[],
             return TRUE;
           }
         }
+        break;
+      case CONFIG_VALUE_TYPE_INTEGER:
+      case CONFIG_VALUE_TYPE_INTEGER64:
+      case CONFIG_VALUE_TYPE_DOUBLE:
+      case CONFIG_VALUE_TYPE_BOOLEAN:
+      case CONFIG_VALUE_TYPE_ENUM:
+      case CONFIG_VALUE_TYPE_SELECT:
+      case CONFIG_VALUE_TYPE_SET:
+      case CONFIG_VALUE_TYPE_CSTRING:
+      case CONFIG_VALUE_TYPE_STRING:
+      case CONFIG_VALUE_TYPE_SPECIAL:
+        break;
+      case CONFIG_VALUE_TYPE_IGNORE:
+      case CONFIG_VALUE_TYPE_DEPRECATED:
+        break;
+      case CONFIG_VALUE_TYPE_END:
         break;
     }
     index++;

@@ -2417,7 +2417,8 @@ LOCAL bool readFromJob(ConstString fileName)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+        ConfigValue_parse(JOB_CONFIG_VALUES,
+                          &JOB_CONFIG_VALUES[i],
                           NULL, // sectionName,
                           String_cString(value),
                           CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -4346,7 +4347,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     error = ConfigValue_writeConfigFile(configFileName,
                                         CONFIG_VALUES,
                                         NULL,
-                                        !globalOptions.discardsConfigurationComments
+                                        globalOptions.cleanConfigurationComments
                                        );
     if (error != ERROR_NONE)
     {
