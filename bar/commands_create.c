@@ -7765,26 +7765,9 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
   AUTOFREE_ADD(&autoFreeList,userName,{ String_delete(userName); });
 
-  if (!stringIsEmpty(jobUUID))
-  {
-    printInfo(1,
-              "Start job '%s' %s...",
-              jobUUID,
-              Archive_archiveTypeToString(archiveType)
-             );
-  }
-  else
-  {
-    printInfo(1,
-              "Start job %s...",
-              Archive_archiveTypeToString(archiveType)
-             );
-  }
-
   // check if storage name given
   if (String_isEmpty(storageName))
   {
-    printInfo(1,"FAIL!\n");
     printError("no storage name given!");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NO_STORAGE_NAME;
@@ -7795,7 +7778,6 @@ Errors Command_create(ServerIO                     *masterIO,
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    printInfo(1,"FAIL!\n");
     printError("cannot initialize storage '%s' (error: %s)",
                String_cString(storageName),
                Error_getText(error)
@@ -7835,7 +7817,6 @@ Errors Command_create(ServerIO                     *masterIO,
   error = mountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
-    printInfo(1,"FAIL!\n");
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -7864,7 +7845,6 @@ Errors Command_create(ServerIO                     *masterIO,
                       );
   if (error != ERROR_NONE)
   {
-    printInfo(1,"FAIL!\n");
     printError("cannot initialize storage '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -7882,7 +7862,6 @@ Errors Command_create(ServerIO                     *masterIO,
   if (!Storage_isWritable(&createInfo.storageInfo,directoryName))
   {
     error = ERRORX_(WRITE_FILE,0,"%s",String_cString(storageSpecifier.archiveName));
-    printInfo(1,"FAIL!\n");
     printError("cannot write storage (error: no write access for '%s')!",
                String_cString(storageSpecifier.archiveName)
               );
@@ -7991,7 +7970,6 @@ Errors Command_create(ServerIO                     *masterIO,
     }
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8013,7 +7991,6 @@ Errors Command_create(ServerIO                     *masterIO,
                            );
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8056,7 +8033,6 @@ Errors Command_create(ServerIO                     *masterIO,
                         );
   if (error != ERROR_NONE)
   {
-    printInfo(1,"FAIL!\n");
     printError("cannot create archive file '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -8106,7 +8082,6 @@ Errors Command_create(ServerIO                     *masterIO,
   error = Archive_close(&createInfo.archiveHandle,TRUE);
   if (error != ERROR_NONE)
   {
-    printInfo(1,"FAIL!\n");
     printError("cannot close archive '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -8137,7 +8112,6 @@ Errors Command_create(ServerIO                     *masterIO,
                                    );
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8150,7 +8124,6 @@ Errors Command_create(ServerIO                     *masterIO,
                                  );
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8171,7 +8144,6 @@ Errors Command_create(ServerIO                     *masterIO,
       error = Index_pruneEntity(indexHandle,entityId);
       if (error != ERROR_NONE)
       {
-        printInfo(1,"FAIL!\n");
         printError("cannot create index for '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
@@ -8187,6 +8159,42 @@ Errors Command_create(ServerIO                     *masterIO,
     }
 
     AUTOFREE_REMOVE(&autoFreeList,&entityId);
+  }
+
+  // output statics
+  if (createInfo.failError == ERROR_NONE)
+  {
+    printInfo(1,
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
+              createInfo.statusInfo.done.count,
+              BYTES_SHORT(createInfo.statusInfo.done.size),
+              BYTES_UNIT(createInfo.statusInfo.done.size),
+              createInfo.statusInfo.done.size
+             );
+    printInfo(2,
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) skipped\n",
+              createInfo.statusInfo.skipped.count,
+              BYTES_SHORT(createInfo.statusInfo.skipped.size),
+              BYTES_UNIT(createInfo.statusInfo.skipped.size),
+              createInfo.statusInfo.skipped.size
+             );
+    printInfo(2,
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) with errors\n",
+              createInfo.statusInfo.error.count,
+              BYTES_SHORT(createInfo.statusInfo.error.size),
+              BYTES_UNIT(createInfo.statusInfo.error.size),
+              createInfo.statusInfo.error.size
+             );
+    logMessage(logHandle,
+               LOG_TYPE_ALWAYS,
+               "%lu entries/%.1lf%s (%"PRIu64" bytes) included, %lu entries skipped, %lu entries with errors",
+               createInfo.statusInfo.done.count,
+               BYTES_SHORT(createInfo.statusInfo.done.size),
+               BYTES_UNIT(createInfo.statusInfo.done.size),
+               createInfo.statusInfo.done.size,
+               createInfo.statusInfo.skipped.count,
+               createInfo.statusInfo.error.count
+              );
   }
 
   // write incremental list
@@ -8260,43 +8268,6 @@ Errors Command_create(ServerIO                     *masterIO,
     printWarning("cannot unmount devices (error: %s)",
                  Error_getText(error)
                 );
-  }
-
-  // output statics
-  if (createInfo.failError == ERROR_NONE)
-  {
-    printInfo(1,"OK\n");
-    printInfo(1,
-              "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
-              createInfo.statusInfo.done.count,
-              BYTES_SHORT(createInfo.statusInfo.done.size),
-              BYTES_UNIT(createInfo.statusInfo.done.size),
-              createInfo.statusInfo.done.size
-             );
-    printInfo(2,
-              "%lu entries/%.1lf%s (%"PRIu64" bytes) skipped\n",
-              createInfo.statusInfo.skipped.count,
-              BYTES_SHORT(createInfo.statusInfo.skipped.size),
-              BYTES_UNIT(createInfo.statusInfo.skipped.size),
-              createInfo.statusInfo.skipped.size
-             );
-    printInfo(2,
-              "%lu entries/%.1lf%s (%"PRIu64" bytes) with errors\n",
-              createInfo.statusInfo.error.count,
-              BYTES_SHORT(createInfo.statusInfo.error.size),
-              BYTES_UNIT(createInfo.statusInfo.error.size),
-              createInfo.statusInfo.error.size
-             );
-    logMessage(logHandle,
-               LOG_TYPE_ALWAYS,
-               "%lu entries/%.1lf%s (%"PRIu64" bytes) included, %lu entries skipped, %lu entries with errors",
-               createInfo.statusInfo.done.count,
-               BYTES_SHORT(createInfo.statusInfo.done.size),
-               BYTES_UNIT(createInfo.statusInfo.done.size),
-               createInfo.statusInfo.done.size,
-               createInfo.statusInfo.skipped.count,
-               createInfo.statusInfo.error.count
-              );
   }
 
   // get error code

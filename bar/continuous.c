@@ -2148,7 +2148,6 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                          String         name
                         )
 {
-  bool       result;
   DatabaseId databaseId_;
 
   assert(initFlag);
@@ -2157,71 +2156,69 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   assert(scheduleUUID != NULL);
   assert(name != NULL);
 
-  result = FALSE;
-
 // TODO: lock required?
 //  BLOCK_DOX(result,
 //            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
 //            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
 //  {
-    if (Database_get(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       assert(values != NULL);
-                       assert(valueCount == 2);
+  if (Database_get(databaseHandle,
+                   CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                   {
+                     assert(values != NULL);
+                     assert(valueCount == 2);
 
-                       UNUSED_VARIABLE(userData);
-                       UNUSED_VARIABLE(valueCount);
+                     UNUSED_VARIABLE(userData);
+                     UNUSED_VARIABLE(valueCount);
 
-                       databaseId_ = values[0].id;
-                       String_set(name,values[1].string);
+                     databaseId_ = values[0].id;
+                     String_set(name,values[1].string);
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_TABLES
-                     (
-                       "names"
-                     ),
-                     DATABASE_FLAG_NONE,
-                     DATABASE_COLUMNS
-                     (
-                       DATABASE_COLUMN_KEY   ("id"),
-                       DATABASE_COLUMN_STRING("name")
-                     ),
-                     "    storedFlag=FALSE \
-                      AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
-                      AND jobUUID=? \
-                      AND scheduleUUID=? \
-                     ",
-                     DATABASE_FILTERS
-                     (
-                       DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
-                       DATABASE_FILTER_CSTRING(jobUUID),
-                       DATABASE_FILTER_CSTRING(scheduleUUID)
-                     ),
-                     NULL,  // groupBy
-                     NULL,  // orderBy
-                     0LL,
-                     1LL
-                    ) != ERROR_NONE
-       )
-    {
-      return FALSE;
-    }
+                     return ERROR_NONE;
+                   },NULL),
+                   NULL,  // changedRowCount
+                   DATABASE_TABLES
+                   (
+                     "names"
+                   ),
+                   DATABASE_FLAG_NONE,
+                   DATABASE_COLUMNS
+                   (
+                     DATABASE_COLUMN_KEY   ("id"),
+                     DATABASE_COLUMN_STRING("name")
+                   ),
+                   "    storedFlag=FALSE \
+                    AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                    AND jobUUID=? \
+                    AND scheduleUUID=? \
+                   ",
+                   DATABASE_FILTERS
+                   (
+                     DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
+                     DATABASE_FILTER_CSTRING(jobUUID),
+                     DATABASE_FILTER_CSTRING(scheduleUUID)
+                   ),
+                   NULL,  // groupBy
+                   NULL,  // orderBy
+                   0LL,
+                   1LL
+                  ) != ERROR_NONE
+     )
+  {
+    return FALSE;
+  }
 
-    // mark entry stored
-    if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
-    {
-      return FALSE;
-    }
+  // mark entry as stored
+  if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
 //    return TRUE;
 //  });
 
   if (databaseId != NULL) (*databaseId) = databaseId_;
 
-  return result;
+  return TRUE;
 }
 
 void Continuous_discardEntries(DatabaseHandle *databaseHandle,
