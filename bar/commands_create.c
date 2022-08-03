@@ -7765,9 +7765,26 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
   AUTOFREE_ADD(&autoFreeList,userName,{ String_delete(userName); });
 
+  if (!stringIsEmpty(jobUUID))
+  {
+    printInfo(1,
+              "Start job '%s' %s",
+              jobUUID,
+              Archive_archiveTypeToString(archiveType)
+             );
+  }
+  else
+  {
+    printInfo(1,
+              "Start job %s",
+              Archive_archiveTypeToString(archiveType)
+             );
+  }
+
   // check if storage name given
   if (String_isEmpty(storageName))
   {
+    printInfo(1,"FAIL!\n");
     printError("no storage name given!");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NO_STORAGE_NAME;
@@ -7778,6 +7795,7 @@ Errors Command_create(ServerIO                     *masterIO,
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
+    printInfo(1,"FAIL!\n");
     printError("cannot initialize storage '%s' (error: %s)",
                String_cString(storageName),
                Error_getText(error)
@@ -7817,6 +7835,7 @@ Errors Command_create(ServerIO                     *masterIO,
   error = mountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
+    printInfo(1,"FAIL!\n");
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -7845,6 +7864,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       );
   if (error != ERROR_NONE)
   {
+    printInfo(1,"FAIL!\n");
     printError("cannot initialize storage '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -7862,6 +7882,7 @@ Errors Command_create(ServerIO                     *masterIO,
   if (!Storage_isWritable(&createInfo.storageInfo,directoryName))
   {
     error = ERRORX_(WRITE_FILE,0,"%s",String_cString(storageSpecifier.archiveName));
+    printInfo(1,"FAIL!\n");
     printError("cannot write storage (error: no write access for '%s')!",
                String_cString(storageSpecifier.archiveName)
               );
@@ -7970,6 +7991,7 @@ Errors Command_create(ServerIO                     *masterIO,
     }
     if (error != ERROR_NONE)
     {
+      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -7991,6 +8013,7 @@ Errors Command_create(ServerIO                     *masterIO,
                            );
     if (error != ERROR_NONE)
     {
+      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8033,6 +8056,7 @@ Errors Command_create(ServerIO                     *masterIO,
                         );
   if (error != ERROR_NONE)
   {
+    printInfo(1,"FAIL!\n");
     printError("cannot create archive file '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -8082,6 +8106,7 @@ Errors Command_create(ServerIO                     *masterIO,
   error = Archive_close(&createInfo.archiveHandle,TRUE);
   if (error != ERROR_NONE)
   {
+    printInfo(1,"FAIL!\n");
     printError("cannot close archive '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
@@ -8112,6 +8137,7 @@ Errors Command_create(ServerIO                     *masterIO,
                                    );
     if (error != ERROR_NONE)
     {
+      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8124,6 +8150,7 @@ Errors Command_create(ServerIO                     *masterIO,
                                  );
     if (error != ERROR_NONE)
     {
+      printInfo(1,"FAIL!\n");
       printError("cannot create index for '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
@@ -8144,6 +8171,7 @@ Errors Command_create(ServerIO                     *masterIO,
       error = Index_pruneEntity(indexHandle,entityId);
       if (error != ERROR_NONE)
       {
+        printInfo(1,"FAIL!\n");
         printError("cannot create index for '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
@@ -8237,6 +8265,7 @@ Errors Command_create(ServerIO                     *masterIO,
   // output statics
   if (createInfo.failError == ERROR_NONE)
   {
+    printInfo(1,"OK\n");
     printInfo(1,
               "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
               createInfo.statusInfo.done.count,
