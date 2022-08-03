@@ -1675,13 +1675,24 @@ fprintf(stderr,"\n");
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
             {
-              // file move away -> nothing to do
+              // file moved away -> nothing to do
             }
             else
             {
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
+// TODO: remove
+#if 0
+fprintf(stderr,"%s:%d: %d:%d in %d:%d..%d:%d: %d\n",__FILE__,__LINE__,
+currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour,
+isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
+);
+#endif
                 if (isInTimeRange(currentHour,currentMinute,
                                   uuidNode->beginTime.hour,uuidNode->beginTime.hour,
                                   uuidNode->endTime.hour,uuidNode->endTime.hour
@@ -2137,7 +2148,6 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                          String         name
                         )
 {
-  bool       result;
   DatabaseId databaseId_;
 
   assert(initFlag);
@@ -2146,71 +2156,69 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   assert(scheduleUUID != NULL);
   assert(name != NULL);
 
-  result = FALSE;
-
 // TODO: lock required?
 //  BLOCK_DOX(result,
 //            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
 //            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
 //  {
-    if (Database_get(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       assert(values != NULL);
-                       assert(valueCount == 2);
+  if (Database_get(databaseHandle,
+                   CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                   {
+                     assert(values != NULL);
+                     assert(valueCount == 2);
 
-                       UNUSED_VARIABLE(userData);
-                       UNUSED_VARIABLE(valueCount);
+                     UNUSED_VARIABLE(userData);
+                     UNUSED_VARIABLE(valueCount);
 
-                       databaseId_ = values[0].id;
-                       String_set(name,values[1].string);
+                     databaseId_ = values[0].id;
+                     String_set(name,values[1].string);
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_TABLES
-                     (
-                       "names"
-                     ),
-                     DATABASE_FLAG_NONE,
-                     DATABASE_COLUMNS
-                     (
-                       DATABASE_COLUMN_KEY   ("id"),
-                       DATABASE_COLUMN_STRING("name")
-                     ),
-                     "    storedFlag=FALSE \
-                      AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
-                      AND jobUUID=? \
-                      AND scheduleUUID=? \
-                     ",
-                     DATABASE_FILTERS
-                     (
-                       DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
-                       DATABASE_FILTER_CSTRING(jobUUID),
-                       DATABASE_FILTER_CSTRING(scheduleUUID)
-                     ),
-                     NULL,  // groupBy
-                     NULL,  // orderBy
-                     0LL,
-                     1LL
-                    ) != ERROR_NONE
-       )
-    {
-      return FALSE;
-    }
+                     return ERROR_NONE;
+                   },NULL),
+                   NULL,  // changedRowCount
+                   DATABASE_TABLES
+                   (
+                     "names"
+                   ),
+                   DATABASE_FLAG_NONE,
+                   DATABASE_COLUMNS
+                   (
+                     DATABASE_COLUMN_KEY   ("id"),
+                     DATABASE_COLUMN_STRING("name")
+                   ),
+                   "    storedFlag=FALSE \
+                    AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                    AND jobUUID=? \
+                    AND scheduleUUID=? \
+                   ",
+                   DATABASE_FILTERS
+                   (
+                     DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
+                     DATABASE_FILTER_CSTRING(jobUUID),
+                     DATABASE_FILTER_CSTRING(scheduleUUID)
+                   ),
+                   NULL,  // groupBy
+                   NULL,  // orderBy
+                   0LL,
+                   1LL
+                  ) != ERROR_NONE
+     )
+  {
+    return FALSE;
+  }
 
-    // mark entry stored
-    if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
-    {
-      return FALSE;
-    }
+  // mark entry as stored
+  if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
 //    return TRUE;
 //  });
 
   if (databaseId != NULL) (*databaseId) = databaseId_;
 
-  return result;
+  return TRUE;
 }
 
 void Continuous_discardEntries(DatabaseHandle *databaseHandle,

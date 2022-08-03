@@ -8161,6 +8161,42 @@ Errors Command_create(ServerIO                     *masterIO,
     AUTOFREE_REMOVE(&autoFreeList,&entityId);
   }
 
+  // output statics
+  if (createInfo.failError == ERROR_NONE)
+  {
+    printInfo(1,
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
+              createInfo.statusInfo.done.count,
+              BYTES_SHORT(createInfo.statusInfo.done.size),
+              BYTES_UNIT(createInfo.statusInfo.done.size),
+              createInfo.statusInfo.done.size
+             );
+    printInfo(2,
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) skipped\n",
+              createInfo.statusInfo.skipped.count,
+              BYTES_SHORT(createInfo.statusInfo.skipped.size),
+              BYTES_UNIT(createInfo.statusInfo.skipped.size),
+              createInfo.statusInfo.skipped.size
+             );
+    printInfo(2,
+              "%lu entries/%.1lf%s (%"PRIu64" bytes) with errors\n",
+              createInfo.statusInfo.error.count,
+              BYTES_SHORT(createInfo.statusInfo.error.size),
+              BYTES_UNIT(createInfo.statusInfo.error.size),
+              createInfo.statusInfo.error.size
+             );
+    logMessage(logHandle,
+               LOG_TYPE_ALWAYS,
+               "%lu entries/%.1lf%s (%"PRIu64" bytes) included, %lu entries skipped, %lu entries with errors",
+               createInfo.statusInfo.done.count,
+               BYTES_SHORT(createInfo.statusInfo.done.size),
+               BYTES_UNIT(createInfo.statusInfo.done.size),
+               createInfo.statusInfo.done.size,
+               createInfo.statusInfo.skipped.count,
+               createInfo.statusInfo.error.count
+              );
+  }
+
   // write incremental list
   if (   (createInfo.failError == ERROR_NONE)
       && !createInfo.jobOptions->dryRun
@@ -8232,42 +8268,6 @@ Errors Command_create(ServerIO                     *masterIO,
     printWarning("cannot unmount devices (error: %s)",
                  Error_getText(error)
                 );
-  }
-
-  // output statics
-  if (createInfo.failError == ERROR_NONE)
-  {
-    printInfo(1,
-              "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
-              createInfo.statusInfo.done.count,
-              BYTES_SHORT(createInfo.statusInfo.done.size),
-              BYTES_UNIT(createInfo.statusInfo.done.size),
-              createInfo.statusInfo.done.size
-             );
-    printInfo(2,
-              "%lu entries/%.1lf%s (%"PRIu64" bytes) skipped\n",
-              createInfo.statusInfo.skipped.count,
-              BYTES_SHORT(createInfo.statusInfo.skipped.size),
-              BYTES_UNIT(createInfo.statusInfo.skipped.size),
-              createInfo.statusInfo.skipped.size
-             );
-    printInfo(2,
-              "%lu entries/%.1lf%s (%"PRIu64" bytes) with errors\n",
-              createInfo.statusInfo.error.count,
-              BYTES_SHORT(createInfo.statusInfo.error.size),
-              BYTES_UNIT(createInfo.statusInfo.error.size),
-              createInfo.statusInfo.error.size
-             );
-    logMessage(logHandle,
-               LOG_TYPE_ALWAYS,
-               "%lu entries/%.1lf%s (%"PRIu64" bytes) included, %lu entries skipped, %lu entries with errors",
-               createInfo.statusInfo.done.count,
-               BYTES_SHORT(createInfo.statusInfo.done.size),
-               BYTES_UNIT(createInfo.statusInfo.done.size),
-               createInfo.statusInfo.done.size,
-               createInfo.statusInfo.skipped.count,
-               createInfo.statusInfo.error.count
-              );
   }
 
   // get error code

@@ -556,102 +556,6 @@ LOCAL bool parseServerType(const char *name, ServerTypes *serverType, void *user
 }
 
 /***********************************************************************\
-* Name   : newScheduleNode
-* Purpose: allocate new schedule node
-* Input  : scheduleUUID - schedule UUIDor NULL for generate new UUID
-* Output : -
-* Return : new schedule node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *newScheduleNode(ConstString scheduleUUID)
-{
-  ScheduleNode *scheduleNode;
-
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (scheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  scheduleNode->uuid                      = String_new();
-  scheduleNode->parentUUID                = NULL;
-  scheduleNode->date.year                 = DATE_ANY;
-  scheduleNode->date.month                = DATE_ANY;
-  scheduleNode->date.day                  = DATE_ANY;
-  scheduleNode->weekDaySet                = WEEKDAY_SET_ANY;
-  scheduleNode->time.hour                 = TIME_ANY;
-  scheduleNode->time.minute               = TIME_ANY;
-  scheduleNode->archiveType               = ARCHIVE_TYPE_NORMAL;
-  scheduleNode->interval                  = 0;
-  scheduleNode->customText                = String_new();
-  scheduleNode->deprecatedPersistenceFlag = FALSE;
-  scheduleNode->minKeep                   = 0;
-  scheduleNode->maxKeep                   = 0;
-  scheduleNode->maxAge                    = AGE_FOREVER;
-  scheduleNode->testCreatedArchives       = FALSE;
-  scheduleNode->noStorage                 = FALSE;
-  scheduleNode->enabled                   = FALSE;
-
-  scheduleNode->lastExecutedDateTime      = 0LL;
-  scheduleNode->totalEntityCount          = 0L;
-  scheduleNode->totalStorageCount         = 0L;
-  scheduleNode->totalStorageSize          = 0LL;
-  scheduleNode->totalEntryCount           = 0L;
-  scheduleNode->totalEntrySize            = 0LL;
-
-  if (!String_isEmpty(scheduleUUID))
-  {
-    String_set(scheduleNode->uuid,scheduleUUID);
-  }
-  else
-  {
-    Misc_getUUID(scheduleNode->uuid);
-  }
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : freeScheduleNode
-* Purpose: free schedule node
-* Input  : scheduleNode - schedule node
-*          userData     - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
-{
-  assert(scheduleNode != NULL);
-  assert(scheduleNode->uuid != NULL);
-  assert(scheduleNode->customText != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(scheduleNode->customText);
-  String_delete(scheduleNode->parentUUID);
-  String_delete(scheduleNode->uuid);
-}
-
-/***********************************************************************\
-* Name   : deleteScheduleNode
-* Purpose: delete schedule node
-* Input  : scheduleNode - schedule node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
-{
-  assert(scheduleNode != NULL);
-
-  freeScheduleNode(scheduleNode,NULL);
-  LIST_DELETE_NODE(scheduleNode);
-}
-
-/***********************************************************************\
 * Name   : parseScheduleTime
 * Purpose: parse schedule time
 * Input  : scheduleTime - schedule time variable
@@ -1861,6 +1765,18 @@ LOCAL void schedulerThreadCode(void)
 
                           if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
                           {
+// TODO: remove
+#if 0
+char s[100];
+fprintf(stderr,"%s:%d: %s: %d %d %s\n",__FILE__,__LINE__,String_cString(jobScheduleNode->jobUUID),
+jobScheduleNode->archiveType,
+Continuous_isEntryAvailable(&continuousDatabaseHandle,
+                                                                    jobScheduleNode->jobUUID,
+                                                                    jobScheduleNode->scheduleUUID
+                                                                   ),
+Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
+);
+#endif
                             if      (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_FULL)
                                      && (   (executeScheduleNode == NULL)
                                          || (   (executeScheduleNode->archiveType == jobScheduleNode->archiveType)
@@ -13296,7 +13212,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // create new schedule
-  scheduleNode = newScheduleNode(scheduleUUID);
+  scheduleNode = Job_newScheduleNode(scheduleUUID);
   assert(scheduleNode != NULL);
 
   // parse schedule
@@ -13318,7 +13234,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
                         weekDays,
                         time
                        );
-    deleteScheduleNode(scheduleNode);
+    Job_deleteScheduleNode(scheduleNode);
     String_delete(endTime);
     String_delete(beginTime);
     String_delete(customText);
@@ -13343,7 +13259,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
                         "%S",
                         beginTime
                        );
-    deleteScheduleNode(scheduleNode);
+    Job_deleteScheduleNode(scheduleNode);
     String_delete(endTime);
     String_delete(beginTime);
     String_delete(customText);
@@ -13365,7 +13281,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
                         "%S",
                         endTime
                        );
-    deleteScheduleNode(scheduleNode);
+    Job_deleteScheduleNode(scheduleNode);
     String_delete(endTime);
     String_delete(beginTime);
     String_delete(customText);
@@ -13390,7 +13306,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
-      deleteScheduleNode(scheduleNode);
+      Job_deleteScheduleNode(scheduleNode);
       String_delete(endTime);
       String_delete(beginTime);
       String_delete(customText);

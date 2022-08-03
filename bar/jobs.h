@@ -599,6 +599,54 @@ Errors Job_initAll(void);
 void Job_doneAll(void);
 
 /***********************************************************************\
+* Name   : Job_newScheduleNode
+* Purpose: allocate new schedule node
+* Input  : scheduleUUID - schedule UUID or NULL
+* Output : -
+* Return : new schedule node
+* Notes  : -
+\***********************************************************************/
+
+ScheduleNode *Job_newScheduleNode(ConstString scheduleUUID);
+
+/***********************************************************************\
+* Name   : Job_duplicateScheduleNode
+* Purpose: duplicate schedule node
+* Input  : fromScheduleNode - from schedule node
+*          userData      - user data (not used)
+* Output : -
+* Return : duplicated schedule node
+* Notes  : -
+\***********************************************************************/
+
+ScheduleNode *Job_duplicateScheduleNode(ScheduleNode *fromScheduleNode,
+                                        void         *userData
+                                       );
+
+/***********************************************************************\
+* Name   : Job_freeScheduleNode
+* Purpose: free schedule node
+* Input  : scheduleNode - schedule node
+*          userData     - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_freeScheduleNode(ScheduleNode *scheduleNode, void *userData);
+
+/***********************************************************************\
+* Name   : Job_deleteScheduleNode
+* Purpose: delete schedule node
+* Input  : scheduleNode - schedule node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_deleteScheduleNode(ScheduleNode *scheduleNode);
+
+/***********************************************************************\
 * Name   : Job_newPersistenceNode
 * Purpose: allocate new persistence node
 * Input  : archiveType     - archive type; see ArchiveTypes
