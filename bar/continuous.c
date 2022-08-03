@@ -1675,13 +1675,24 @@ fprintf(stderr,"\n");
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
             {
-              // file move away -> nothing to do
+              // file moved away -> nothing to do
             }
             else
             {
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
+// TODO: remove
+#if 0
+fprintf(stderr,"%s:%d: %d:%d in %d:%d..%d:%d: %d\n",__FILE__,__LINE__,
+currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour,
+isInTimeRange(currentHour,currentMinute,
+                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                  uuidNode->endTime.hour,uuidNode->endTime.hour
+                                 )
+);
+#endif
                 if (isInTimeRange(currentHour,currentMinute,
                                   uuidNode->beginTime.hour,uuidNode->beginTime.hour,
                                   uuidNode->endTime.hour,uuidNode->endTime.hour

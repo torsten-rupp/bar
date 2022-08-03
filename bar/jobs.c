@@ -110,152 +110,6 @@ uint64 jobListLockTimestamp;
   extern "C" {
 #endif
 
-/***********************************************************************\
-* Name   : newScheduleNode
-* Purpose: allocate new schedule node
-* Input  : -
-* Output : -
-* Return : new schedule node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *newScheduleNode(void)
-{
-  ScheduleNode *scheduleNode;
-
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (scheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  scheduleNode->uuid                      = String_new();
-  scheduleNode->parentUUID                = NULL;
-  scheduleNode->date.year                 = DATE_ANY;
-  scheduleNode->date.month                = DATE_ANY;
-  scheduleNode->date.day                  = DATE_ANY;
-  scheduleNode->weekDaySet                = WEEKDAY_SET_ANY;
-  scheduleNode->time.hour                 = TIME_ANY;
-  scheduleNode->time.minute               = TIME_ANY;
-  scheduleNode->archiveType               = ARCHIVE_TYPE_NORMAL;
-  scheduleNode->interval                  = 0;
-  scheduleNode->customText                = String_new();
-  scheduleNode->deprecatedPersistenceFlag = FALSE;
-  scheduleNode->minKeep                   = 0;
-  scheduleNode->maxKeep                   = 0;
-  scheduleNode->maxAge                    = AGE_FOREVER;
-  scheduleNode->noStorage                 = FALSE;
-  scheduleNode->enabled                   = FALSE;
-
-  scheduleNode->lastExecutedDateTime      = 0LL;
-  scheduleNode->totalEntityCount          = 0L;
-  scheduleNode->totalStorageCount         = 0L;
-  scheduleNode->totalStorageSize          = 0LL;
-  scheduleNode->totalEntryCount           = 0LL;
-  scheduleNode->totalEntrySize            = 0LL;
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : duplicateScheduleNode
-* Purpose: duplicate schedule node
-* Input  : fromScheduleNode - from schedule node
-*          userData      - user data (not used)
-* Output : -
-* Return : duplicated schedule node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
-                                          void         *userData
-                                         )
-{
-  ScheduleNode *scheduleNode;
-
-  assert(fromScheduleNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (scheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  scheduleNode->uuid                      = Misc_getUUID(String_new());
-  scheduleNode->parentUUID                = String_duplicate(fromScheduleNode->parentUUID);
-  scheduleNode->date.year                 = fromScheduleNode->date.year;
-  scheduleNode->date.month                = fromScheduleNode->date.month;
-  scheduleNode->date.day                  = fromScheduleNode->date.day;
-  scheduleNode->weekDaySet                = fromScheduleNode->weekDaySet;
-  scheduleNode->time.hour                 = fromScheduleNode->time.hour;
-  scheduleNode->time.minute               = fromScheduleNode->time.minute;
-  scheduleNode->archiveType               = fromScheduleNode->archiveType;
-  scheduleNode->interval                  = fromScheduleNode->interval;
-  scheduleNode->customText                = String_duplicate(fromScheduleNode->customText);
-  scheduleNode->beginTime                 = fromScheduleNode->beginTime;
-  scheduleNode->endTime                   = fromScheduleNode->endTime;
-  scheduleNode->testCreatedArchives       = fromScheduleNode->testCreatedArchives;
-  scheduleNode->noStorage                 = fromScheduleNode->noStorage;
-  scheduleNode->enabled                   = fromScheduleNode->enabled;
-
-  scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
-
-  scheduleNode->totalEntityCount          = 0L;
-  scheduleNode->totalStorageCount         = 0L;
-  scheduleNode->totalStorageSize          = 0LL;
-  scheduleNode->totalEntryCount           = 0LL;
-  scheduleNode->totalEntrySize            = 0LL;
-
-// TODO: remove
-  // deprecated
-  scheduleNode->deprecatedPersistenceFlag = fromScheduleNode->deprecatedPersistenceFlag;
-  scheduleNode->minKeep                   = fromScheduleNode->minKeep;
-  scheduleNode->maxKeep                   = fromScheduleNode->maxKeep;
-  scheduleNode->maxAge                    = fromScheduleNode->maxAge;
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : freeScheduleNode
-* Purpose: free schedule node
-* Input  : scheduleNode - schedule node
-*          userData     - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
-{
-  assert(scheduleNode != NULL);
-  assert(scheduleNode->uuid != NULL);
-  assert(scheduleNode->customText != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(scheduleNode->customText);
-  String_delete(scheduleNode->parentUUID);
-  String_delete(scheduleNode->uuid);
-}
-
-/***********************************************************************\
-* Name   : deleteScheduleNode
-* Purpose: delete schedule node
-* Input  : scheduleNode - schedule node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
-{
-  assert(scheduleNode != NULL);
-
-  freeScheduleNode(scheduleNode,NULL);
-  LIST_DELETE_NODE(scheduleNode);
-}
-
 #if 0
 //TODO: remove
 /***********************************************************************\
@@ -330,6 +184,129 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
   return 1;
 }
 #endif
+
+ScheduleNode *Job_newScheduleNode(ConstString scheduleUUID)
+{
+  ScheduleNode *scheduleNode;
+
+  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (scheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  scheduleNode->uuid                      = String_new();
+  scheduleNode->parentUUID                = NULL;
+  scheduleNode->date.year                 = DATE_ANY;
+  scheduleNode->date.month                = DATE_ANY;
+  scheduleNode->date.day                  = DATE_ANY;
+  scheduleNode->weekDaySet                = WEEKDAY_SET_ANY;
+  scheduleNode->time.hour                 = TIME_ANY;
+  scheduleNode->time.minute               = TIME_ANY;
+  scheduleNode->archiveType               = ARCHIVE_TYPE_NORMAL;
+  scheduleNode->interval                  = 0;
+  scheduleNode->customText                = String_new();
+  scheduleNode->beginTime.hour            = TIME_ANY;
+  scheduleNode->beginTime.minute          = TIME_ANY;
+  scheduleNode->endTime.hour              = TIME_ANY;
+  scheduleNode->endTime.minute            = TIME_ANY;
+  scheduleNode->testCreatedArchives       = FALSE;
+  scheduleNode->noStorage                 = FALSE;
+  scheduleNode->enabled                   = FALSE;
+
+  scheduleNode->deprecatedPersistenceFlag = FALSE;
+  scheduleNode->minKeep                   = 0;
+  scheduleNode->maxKeep                   = 0;
+  scheduleNode->maxAge                    = AGE_FOREVER;
+
+  scheduleNode->lastExecutedDateTime      = 0LL;
+  scheduleNode->totalEntityCount          = 0L;
+  scheduleNode->totalStorageCount         = 0L;
+  scheduleNode->totalStorageSize          = 0LL;
+  scheduleNode->totalEntryCount           = 0LL;
+  scheduleNode->totalEntrySize            = 0LL;
+
+  if (!String_isEmpty(scheduleUUID))
+  {
+    String_set(scheduleNode->uuid,scheduleUUID);
+  }
+  else
+  {
+    Misc_getUUID(scheduleNode->uuid);
+  }
+
+  return scheduleNode;
+}
+
+ScheduleNode *Job_duplicateScheduleNode(ScheduleNode *fromScheduleNode,
+                                        void         *userData
+                                       )
+{
+  ScheduleNode *scheduleNode;
+
+  assert(fromScheduleNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (scheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  scheduleNode->uuid                      = Misc_getUUID(String_new());
+  scheduleNode->parentUUID                = String_duplicate(fromScheduleNode->parentUUID);
+  scheduleNode->date.year                 = fromScheduleNode->date.year;
+  scheduleNode->date.month                = fromScheduleNode->date.month;
+  scheduleNode->date.day                  = fromScheduleNode->date.day;
+  scheduleNode->weekDaySet                = fromScheduleNode->weekDaySet;
+  scheduleNode->time.hour                 = fromScheduleNode->time.hour;
+  scheduleNode->time.minute               = fromScheduleNode->time.minute;
+  scheduleNode->archiveType               = fromScheduleNode->archiveType;
+  scheduleNode->interval                  = fromScheduleNode->interval;
+  scheduleNode->customText                = String_duplicate(fromScheduleNode->customText);
+  scheduleNode->beginTime                 = fromScheduleNode->beginTime;
+  scheduleNode->endTime                   = fromScheduleNode->endTime;
+  scheduleNode->testCreatedArchives       = fromScheduleNode->testCreatedArchives;
+  scheduleNode->noStorage                 = fromScheduleNode->noStorage;
+  scheduleNode->enabled                   = fromScheduleNode->enabled;
+
+  scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
+
+  scheduleNode->totalEntityCount          = 0L;
+  scheduleNode->totalStorageCount         = 0L;
+  scheduleNode->totalStorageSize          = 0LL;
+  scheduleNode->totalEntryCount           = 0LL;
+  scheduleNode->totalEntrySize            = 0LL;
+
+// TODO: remove
+  // deprecated
+  scheduleNode->deprecatedPersistenceFlag = fromScheduleNode->deprecatedPersistenceFlag;
+  scheduleNode->minKeep                   = fromScheduleNode->minKeep;
+  scheduleNode->maxKeep                   = fromScheduleNode->maxKeep;
+  scheduleNode->maxAge                    = fromScheduleNode->maxAge;
+
+  return scheduleNode;
+}
+
+void Job_freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
+{
+  assert(scheduleNode != NULL);
+  assert(scheduleNode->uuid != NULL);
+  assert(scheduleNode->customText != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(scheduleNode->customText);
+  String_delete(scheduleNode->parentUUID);
+  String_delete(scheduleNode->uuid);
+}
+
+void Job_deleteScheduleNode(ScheduleNode *scheduleNode)
+{
+  assert(scheduleNode != NULL);
+
+  Job_freeScheduleNode(scheduleNode,NULL);
+  LIST_DELETE_NODE(scheduleNode);
+}
 
 PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
                                         int          minKeep,
@@ -2013,7 +1990,7 @@ bool Job_read(JobNode *jobNode)
       UNUSED_VARIABLE(i);
 
       // new schedule
-      scheduleNode = newScheduleNode();
+      scheduleNode = Job_newScheduleNode(NULL);
       assert(scheduleNode != NULL);
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -2105,7 +2082,7 @@ bool Job_read(JobNode *jobNode)
       else
       {
         // duplicate -> discard
-        deleteScheduleNode(scheduleNode);
+        Job_deleteScheduleNode(scheduleNode);
       }
     }
     else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
@@ -2727,7 +2704,7 @@ void Job_initOptions(JobOptions *jobOptions)
                                 NULL,  // fromDeltaSourceListFromNode
                                 NULL  // fromDeltaSourceListToNode
                                );
-  List_init(&jobOptions->scheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_init(&jobOptions->scheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Job_freeScheduleNode,NULL));
   List_init(&jobOptions->persistenceList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
   jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
@@ -2846,8 +2823,8 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->scheduleList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_((ListNodeDuplicateFunction)duplicateScheduleNode,NULL),
-                     CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Job_duplicateScheduleNode,NULL),
+                     CALLBACK_((ListNodeFreeFunction)Job_freeScheduleNode,NULL)
                     );
   List_initDuplicate(&jobOptions->persistenceList,
                      &fromJobOptions->persistenceList,
