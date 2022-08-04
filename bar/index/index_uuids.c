@@ -486,31 +486,24 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-                                      StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
-                                      if (!INDEX_ID_IS_NONE(*uuidId))
-                                      {
-                                        if (executionCountNormal        != NULL) StringMap_getUInt  (resultMap,"executionCountNormal",       executionCountNormal,       0   );
-                                        if (executionCountFull          != NULL) StringMap_getUInt  (resultMap,"executionCountFull",         executionCountFull,         0   );
-                                        if (executionCountIncremental   != NULL) StringMap_getUInt  (resultMap,"executionCountIncremental",  executionCountIncremental,  0   );
-                                        if (executionCountDifferential  != NULL) StringMap_getUInt  (resultMap,"executionCountDifferential", executionCountDifferential, 0   );
-                                        if (executionCountContinuous    != NULL) StringMap_getUInt  (resultMap,"executionCountContinuous",   executionCountContinuous,   0   );
-                                        if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL );
-                                        if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL );
-                                        if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL );
-                                        if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL );
-                                        if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL );
-                                        if (totalEntityCount            != NULL) StringMap_getUInt  (resultMap,"totalEntityCount",           totalEntityCount,           0L  );
-                                        if (totalStorageCount           != NULL) StringMap_getUInt  (resultMap,"totalStorageCount",          totalStorageCount,          0   );
-                                        if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
-                                        if (totalEntryCount             != NULL) StringMap_getUInt  (resultMap,"totalEntryCount",            totalEntryCount,            0   );
-                                        if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
+                                      if (uuidId                      != NULL) StringMap_getInt64 (resultMap,"uuidId",                     uuidId,                     INDEX_ID_NONE);
+                                      if (executionCountNormal        != NULL) StringMap_getUInt  (resultMap,"executionCountNormal",       executionCountNormal,       0            );
+                                      if (executionCountFull          != NULL) StringMap_getUInt  (resultMap,"executionCountFull",         executionCountFull,         0            );
+                                      if (executionCountIncremental   != NULL) StringMap_getUInt  (resultMap,"executionCountIncremental",  executionCountIncremental,  0            );
+                                      if (executionCountDifferential  != NULL) StringMap_getUInt  (resultMap,"executionCountDifferential", executionCountDifferential, 0            );
+                                      if (executionCountContinuous    != NULL) StringMap_getUInt  (resultMap,"executionCountContinuous",   executionCountContinuous,   0            );
+                                      if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL          );
+                                      if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL          );
+                                      if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL          );
+                                      if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL          );
+                                      if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL          );
+                                      if (totalEntityCount            != NULL) StringMap_getUInt  (resultMap,"totalEntityCount",           totalEntityCount,           0L           );
+                                      if (totalStorageCount           != NULL) StringMap_getUInt  (resultMap,"totalStorageCount",          totalStorageCount,          0            );
+                                      if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL          );
+                                      if (totalEntryCount             != NULL) StringMap_getUInt  (resultMap,"totalEntryCount",            totalEntryCount,            0            );
+                                      if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL          );
 
-                                        return ERROR_NONE;
-                                      }
-                                      else
-                                      {
-                                        return ERROR_DATABASE_INDEX_NOT_FOUND;
-                                      }
+                                      return ERROR_NONE;
                                     },NULL),
                                     "INDEX_FIND_UUID jobUUID=%'s scheduleUUID=%'s",
                                     findJobUUID,
