@@ -1052,9 +1052,10 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
 *            scheduleUUUID=<text>
 *          Result:
 *            uuidId=<n>
-*            lastExecutedDateTime=<n>
-*            lastErrorMessage=<text>
-*            executionCount=<n>
+*            executionCountNormal=<n>
+*            executionCountFull=<n>
+*            executionCountIncremental=<n>
+*            executionCountContinuous=<n>
 *            averageDurationNormal=<n>
 *            averageDurationFull=<n>
 *            averageDurationIncremental=<n>
@@ -1120,24 +1121,39 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                            &totalEntryCount,
                            &totalEntrySize
                           );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
       sendResult(connectorInfo,
-                          id,
-                          TRUE,
-                          error,
-                          ""
-                         );
+                 id,
+                 TRUE,
+                 ERROR_NONE,
+                 "uuidId=%lld executionCountNormal=%u executionCountFull=%u executionCountIncremental=%u executionCountDifferential=%u executionCountContinuous=%u averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%u totalStorageCount=%u totalStorageSize=%"PRIu64" totalEntryCount=%u totalEntrySize=%"PRIu64,
+                 uuidId,
+                 executionCountNormal,
+                 executionCountFull,
+                 executionCountIncremental,
+                 executionCountDifferential,
+                 executionCountContinuous,
+                 averageDurationNormal,
+                 averageDurationFull,
+                 averageDurationIncremental,
+                 averageDurationDifferential,
+                 averageDurationContinuous,
+                 totalEntityCount,
+                 totalStorageCount,
+                 totalStorageSize,
+                 totalEntryCount,
+                 totalEntrySize
+                );
     }
     else
     {
       sendResult(connectorInfo,
-                          id,
-                          TRUE,
-                          ERROR_NONE,
-                          "uuidId=%lld",
-                          INDEX_ID_NONE
-                         );
+                 id,
+                 TRUE,
+                 error,
+                 ""
+                );
     }
   }
   else
