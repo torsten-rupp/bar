@@ -12331,6 +12331,15 @@ throw new Error("NYI");
       this.bounds = new Rectangle(0,0,0,0);
     }
 
+    /** create name part
+     * @param ch character
+     */
+    StorageNamePart(char ch)
+    {
+      this.string = String.valueOf(ch);
+      this.bounds = new Rectangle(0,0,0,0);
+    }
+
     /** write storage name part object to object stream
      * Note: must be implented because Java serializaion API cannot write
      *       inner classes without writing outer classes, too!
@@ -12825,6 +12834,7 @@ throw new Error("NYI");
         int i = 0;
         while (i < fileName.length())
         {
+Dprintf.dprintf("fileName.charAt(i)=%s",fileName.charAt(i));
           switch (fileName.charAt(i))
           {
             case '%':
@@ -12865,8 +12875,25 @@ throw new Error("NYI");
               storageNamePartList.add(new StorageNamePart(null));
               break;
             case '/':
+            case '-':
+              // separating character
+              storageNamePartList.add(new StorageNamePart(fileName.charAt(i)));
+              storageNamePartList.add(new StorageNamePart(null));
               i++;
-              storageNamePartList.add(new StorageNamePart("/"));
+              break;
+            case '.':
+              // extension
+              buffer = new StringBuilder();
+              buffer.append('.'); i++;
+              while (   (i < fileName.length())
+                     && (fileName.charAt(i) != '%')
+                     && (fileName.charAt(i) != '#')
+                     && (fileName.charAt(i) != '/')
+                    )
+              {
+                buffer.append(fileName.charAt(i)); i++;
+              }
+              storageNamePartList.add(new StorageNamePart(buffer.toString()));
               storageNamePartList.add(new StorageNamePart(null));
               break;
             default:
@@ -12876,6 +12903,8 @@ throw new Error("NYI");
                      && (fileName.charAt(i) != '%')
                      && (fileName.charAt(i) != '#')
                      && (fileName.charAt(i) != '/')
+                     && (fileName.charAt(i) != '-')
+                     && (fileName.charAt(i) != '.')
                     )
               {
                 buffer.append(fileName.charAt(i)); i++;
