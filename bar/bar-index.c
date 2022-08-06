@@ -478,13 +478,23 @@ LOCAL const char *getByteUnitShort(uint64 n)
 LOCAL void printPercentage(ulong n, ulong count)
 {
   double percentage;
+  double d;
+  char   buffer[64];
+  uint   bufferLength;
 
   if (verboseFlag)
   {
     percentage = (count > 0) ? ((double)n*1000.0)/((double)count*10.0) : 0.0;
     if (percentage > 100.0) percentage = 100.0;
 
-    fprintf(stdout,"%5.1lf%%\b\b\b\b\b\b",percentage); fflush(stdout);
+    d = (count > 0) ? floor(log10((double)count)) : 0;
+    stringFormat(buffer,sizeof(buffer),"%5.1lf%% (%*"PRIu64"/%*"PRIu64")",percentage,1+(int)d,n,1+(int)d,count);
+    bufferLength = stringLength(buffer);
+
+    fwrite(buffer,bufferLength,1,stdout);
+    stringFill(buffer,sizeof(buffer),bufferLength,'\b');
+    fwrite(buffer,bufferLength,1,stdout);
+    fflush(stdout);
   }
 }
 
@@ -5846,6 +5856,8 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
+  const uint INCREMENT_SIZE = 4096;
+
   String storageName;
   Errors error;
   ulong  total;
@@ -5863,33 +5875,37 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   // clean fragments/directory entries/link entries/special entries without or an empty storage name
   printInfo("  entries without storage name...");
   n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  do
   {
-    Array_clear(&ids);
-    (void)Database_getIds(databaseHandle,
-                          &ids,
-                          "entryFragments \
-                             LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                          ",
-                          "entryFragments.id",
-                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-    (void)Database_deleteArray(databaseHandle,
-                               &n,
-                               "entryFragments",
-                               DATABASE_FLAG_NONE,
-                               "id=?",
-                               DATABASE_DATATYPE_KEY,
-                               Array_cArray(&ids),
-                               Array_length(&ids),
-                               DATABASE_UNLIMITED
-                              );
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      Array_clear(&ids);
+      (void)Database_getIds(databaseHandle,
+                            &ids,
+                            "entryFragments \
+                               LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                            ",
+                            "entryFragments.id",
+                            "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            INCREMENT_SIZE
+                           );
+      (void)Database_deleteArray(databaseHandle,
+                                 &n,
+                                 "entryFragments",
+                                 DATABASE_FLAG_NONE,
+                                 "id=?",
+                                 DATABASE_DATATYPE_KEY,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids),
+                                 DATABASE_UNLIMITED
+                                );
+    }
+    (void)Database_flush(databaseHandle);
   }
-  (void)Database_flush(databaseHandle);
+  while (!Array_isEmpty(&ids));
 
   do
   {
@@ -5906,9 +5922,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             DATABASE_FILTERS
                             (
                             ),
-                            4096
+                            INCREMENT_SIZE
                            );
-fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
       (void)Database_deleteArray(databaseHandle,
                                  &n,
                                  "directoryEntries",
@@ -5924,62 +5939,70 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   }
   while (!Array_isEmpty(&ids));
 
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  do
   {
-    Array_clear(&ids);
-    (void)Database_getIds(databaseHandle,
-                          &ids,
-                          "linkEntries \
-                             LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                          ",
-                          "linkEntries.id",
-                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-    (void)Database_deleteArray(databaseHandle,
-                               &n,
-                               "linkEntries",
-                               DATABASE_FLAG_NONE,
-                               "id=?",
-                               DATABASE_DATATYPE_KEY,
-                               Array_cArray(&ids),
-                               Array_length(&ids),
-                               DATABASE_UNLIMITED
-                              );
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      Array_clear(&ids);
+      (void)Database_getIds(databaseHandle,
+                            &ids,
+                            "linkEntries \
+                               LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                            ",
+                            "linkEntries.id",
+                            "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            INCREMENT_SIZE
+                           );
+      (void)Database_deleteArray(databaseHandle,
+                                 &n,
+                                 "linkEntries",
+                                 DATABASE_FLAG_NONE,
+                                 "id=?",
+                                 DATABASE_DATATYPE_KEY,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids),
+                                 DATABASE_UNLIMITED
+                                );
+    }
+    (void)Database_flush(databaseHandle);
   }
-  (void)Database_flush(databaseHandle);
+  while (!Array_isEmpty(&ids));
 
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  do
   {
-    Array_clear(&ids);
-    (void)Database_getIds(databaseHandle,
-                          &ids,
-                          "specialEntries \
-                             LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                          ",
-                          "specialEntries.id",
-                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-    (void)Database_deleteArray(databaseHandle,
-                               &n,
-                               "specialEntries",
-                               DATABASE_FLAG_NONE,
-                               "id=?",
-                               DATABASE_DATATYPE_KEY,
-                               Array_cArray(&ids),
-                               Array_length(&ids),
-                               DATABASE_UNLIMITED
-                              );
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      Array_clear(&ids);
+      (void)Database_getIds(databaseHandle,
+                            &ids,
+                            "specialEntries \
+                               LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                            ",
+                            "specialEntries.id",
+                            "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            INCREMENT_SIZE
+                           );
+      (void)Database_deleteArray(databaseHandle,
+                                 &n,
+                                 "specialEntries",
+                                 DATABASE_FLAG_NONE,
+                                 "id=?",
+                                 DATABASE_DATATYPE_KEY,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids),
+                                 DATABASE_UNLIMITED
+                                );
+    }
+    (void)Database_flush(databaseHandle);
+    printInfo("%lu\n",n);
   }
-  (void)Database_flush(databaseHandle);
-  printInfo("%lu\n",n);
+  while (!Array_isEmpty(&ids));
   total += n;
 
   // clean entries without fragments
@@ -6060,7 +6083,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   {
     printPercentage(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += 1000)
+    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
@@ -6071,7 +6094,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
                                    "id=?",
                                    DATABASE_DATATYPE_KEY,
                                    &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,1000),
+                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
                                    DATABASE_UNLIMITED
                                   );
       }
@@ -6102,7 +6125,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   {
     printPercentage(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += 1000)
+    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
@@ -6113,7 +6136,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
                                    "id=?",
                                    DATABASE_DATATYPE_KEY,
                                    &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,1000),
+                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
                                    DATABASE_UNLIMITED
                                   );
       }
@@ -6144,7 +6167,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   {
     printPercentage(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += 1000)
+    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
@@ -6155,7 +6178,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
                                    "id=?",
                                    DATABASE_DATATYPE_KEY,
                                    &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,1000),
+                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
                                    DATABASE_UNLIMITED
                                   );
       }
@@ -6186,7 +6209,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   {
     printPercentage(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += 1000)
+    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
@@ -6197,7 +6220,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
                                    "id=?",
                                    DATABASE_DATATYPE_KEY,
                                    &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,1000),
+                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
                                    DATABASE_UNLIMITED
                                   );
       }
@@ -6228,7 +6251,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   {
     printPercentage(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += 1000)
+    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
@@ -6239,7 +6262,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
                                    "id=?",
                                    DATABASE_DATATYPE_KEY,
                                    &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,1000),
+                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
                                    DATABASE_UNLIMITED
                                   );
       }
@@ -6270,7 +6293,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
   {
     printPercentage(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += 1000)
+    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
@@ -6281,7 +6304,7 @@ fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
                                    "id=?",
                                    DATABASE_DATATYPE_KEY,
                                    &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,1000),
+                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
                                    DATABASE_UNLIMITED
                                   );
       }
@@ -10793,7 +10816,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = log10((double)values[0].id);
+                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
                    maxIdLength          = 1+(uint)d;
                    maxStorageNameLength = (uint)values[1].u;
 
@@ -10894,7 +10917,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = log10((double)values[0].id);
+                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
                    maxIdLength          = 1+(uint)d;
                    maxEntryNameLength   = values[1].u;
                    maxStorageNameLength = values[2].u;
@@ -11019,7 +11042,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = log10((double)values[0].id);
+                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
                    maxIdLength          = 1+(uint)d;
                    maxEntryNameLength   = values[1].u;
                    maxStorageNameLength = values[2].u;
