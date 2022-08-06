@@ -3158,6 +3158,7 @@ for (int i =0; i < parameterCount; i++) {
     {
       statement->result = postgresqlResult;
       stringToUInt64(PQcmdTuples(postgresqlResult),&statement->rowCount,NULL);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,statement->rowCount);
       error = ERROR_NONE;
     }
     else
@@ -14689,6 +14690,8 @@ char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
         return NULL;
       #endif /* HAVE_POSTGRESQL */
   }
+
+  return NULL;
 }
 
 Errors Database_execute(DatabaseHandle          *databaseHandle,
@@ -15730,6 +15733,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
       printf("DEBUG: %s\n",String_cString(sqlString));
     }
   #endif
+printf("DEBUG: %s\n",String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,
