@@ -1756,7 +1756,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1781,7 +1782,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1806,7 +1808,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1831,7 +1834,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_LINK)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1856,7 +1860,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1881,7 +1886,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -2694,7 +2700,8 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
                           (
                             DATABASE_FILTER_UINT(INDEX_STATE_OK),
                             DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {

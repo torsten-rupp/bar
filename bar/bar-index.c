@@ -3444,7 +3444,8 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                             "deletedFlag!=TRUE",
                             DATABASE_FILTERS
                             (
-                            )
+                            ),
+                            DATABASE_UNLIMITED
                            );
     if (error != ERROR_NONE)
     {
@@ -5874,7 +5875,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
                           DATABASE_FILTERS
                           (
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
     (void)Database_deleteArray(databaseHandle,
                                &n,
@@ -5888,32 +5890,40 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
   }
   (void)Database_flush(databaseHandle);
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+
+  do
   {
-    Array_clear(&ids);
-    (void)Database_getIds(databaseHandle,
-                          &ids,
-                          "directoryEntries \
-                             LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                          ",
-                          "directoryEntries.id",
-                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
-                          DATABASE_FILTERS
-                          (
-                          )
-                         );
-    (void)Database_deleteArray(databaseHandle,
-                               &n,
-                               "directoryEntries",
-                               DATABASE_FLAG_NONE,
-                               "id=?",
-                               DATABASE_DATATYPE_KEY,
-                               Array_cArray(&ids),
-                               Array_length(&ids),
-                               DATABASE_UNLIMITED
-                              );
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      Array_clear(&ids);
+      (void)Database_getIds(databaseHandle,
+                            &ids,
+                            "directoryEntries \
+                               LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                            ",
+                            "directoryEntries.id",
+                            "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            4096
+                           );
+fprintf(stderr,"%s:%d: %u\n",__FILE__,__LINE__,Array_length(&ids));
+      (void)Database_deleteArray(databaseHandle,
+                                 &n,
+                                 "directoryEntries",
+                                 DATABASE_FLAG_NONE,
+                                 "id=?",
+                                 DATABASE_DATATYPE_KEY,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids),
+                                 DATABASE_UNLIMITED
+                                );
+    }
+    (void)Database_flush(databaseHandle);
   }
-  (void)Database_flush(databaseHandle);
+  while (!Array_isEmpty(&ids));
+
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     Array_clear(&ids);
@@ -5926,7 +5936,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
                           DATABASE_FILTERS
                           (
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
     (void)Database_deleteArray(databaseHandle,
                                &n,
@@ -5940,6 +5951,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
   }
   (void)Database_flush(databaseHandle);
+
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     Array_clear(&ids);
@@ -5952,7 +5964,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
                           DATABASE_FILTERS
                           (
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
     (void)Database_deleteArray(databaseHandle,
                                &n,
@@ -5988,6 +6001,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  image entries without fragments...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -6006,6 +6020,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  hardlink entries without fragments...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -6038,7 +6053,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_FILE)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error == ERROR_NONE)
   {
@@ -6079,7 +6095,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_IMAGE)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error == ERROR_NONE)
   {
@@ -6120,7 +6137,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_DIRECTORY)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error == ERROR_NONE)
   {
@@ -6161,7 +6179,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_LINK)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error == ERROR_NONE)
   {
@@ -6202,7 +6221,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_HARDLINK)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error == ERROR_NONE)
   {
@@ -6243,7 +6263,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_SPECIAL)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error == ERROR_NONE)
   {
@@ -6903,7 +6924,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    DATABASE_FILTERS
                                    (
                                      DATABASE_FILTER_KEY(storageId)
-                                   )
+                                   ),
+                                   DATABASE_UNLIMITED
                                   );
         }
 
@@ -6918,7 +6940,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    DATABASE_FILTERS
                                    (
                                      DATABASE_FILTER_KEY(storageId)
-                                   )
+                                   ),
+                                   DATABASE_UNLIMITED
                                   );
         }
         if (error == ERROR_NONE)
@@ -6931,7 +6954,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    DATABASE_FILTERS
                                    (
                                      DATABASE_FILTER_KEY(storageId)
-                                   )
+                                   ),
+                                   DATABASE_UNLIMITED
                                   );
         }
         if (error == ERROR_NONE)
@@ -6944,7 +6968,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    DATABASE_FILTERS
                                    (
                                      DATABASE_FILTER_KEY(storageId)
-                                   )
+                                   ),
+                                  DATABASE_UNLIMITED
                                   );
         }
 

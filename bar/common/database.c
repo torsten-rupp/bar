@@ -16347,7 +16347,8 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                        const char           *columnName,
                        const char           *filter,
                        const DatabaseFilter filters[],
-                       uint                 filterCount
+                       uint                 filterCount,
+                       uint64               limit
                       )
 {
   Errors error;
@@ -16390,7 +16391,7 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                        NULL,  // groupBy
                        NULL,  // orderBy
                        0,
-                       DATABASE_UNLIMITED
+                       limit
                       );
 // TODO: work-around: if not found set newest entry to NONE
 if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)

@@ -741,7 +741,8 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(storageId)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -766,7 +767,8 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(storageId)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -789,7 +791,8 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(storageId)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -812,7 +815,8 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(storageId)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -859,7 +863,8 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
                           "entryFragments.id IS NULL",
                           DATABASE_FILTERS
                           (
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {
@@ -898,7 +903,8 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
                           "entryFragments.id IS NULL",
                           DATABASE_FILTERS
                           (
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {
@@ -937,7 +943,8 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
                           "entryFragments.id IS NULL",
                           DATABASE_FILTERS
                           (
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {
