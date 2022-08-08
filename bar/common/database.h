@@ -2605,6 +2605,7 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
 *          filter         - filter string
 *          filters        - filter values
 *          filterCount    - filter values count
+*          limit          - limit
 * Output : ids - database ids array
 * Return : ERROR_NONE or error code
 * Notes  : values are added to array!
@@ -2616,7 +2617,8 @@ Errors Database_getIds(DatabaseHandle       *databaseHandle,
                        const char           *columnName,
                        const char           *filter,
                        const DatabaseFilter filters[],
-                       uint                 filterCount
+                       uint                 filterCount,
+                       uint64               limit
                       );
 
 /***********************************************************************\

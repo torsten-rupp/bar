@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS entities(
 // insert default entity (Note: requires an update, because MySQL does not allow to insert with id=0)
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (1,'','',0,0,0,0);
 UPDATE entities SET id=${DEFAULT_ENTITY_DATABASE_ID} WHERE id=1;
+ALTER TABLE entities AUTO_INCREMENT = 1;
 
 // insert/delete/update triggeres
 /*

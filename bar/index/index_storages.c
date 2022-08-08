@@ -1124,7 +1124,7 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
 * Input  : indexHandle  - index handle
 *          storageId    - storage id
 *          progressInfo - progress info
-*          entryIds     - entry ids
+*          entryIds     - entry ids of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1756,7 +1756,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1781,7 +1782,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1806,7 +1808,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1831,7 +1834,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_LINK)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1856,7 +1860,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1881,7 +1886,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1958,13 +1964,13 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
   if (error == ERROR_NONE)
   {
     error = IndexEntry_collectIds(&entryIds,
-                                       indexHandle,
-                                       storageId,
-                                       progressInfo
-                                      );
+                                  indexHandle,
+                                  storageId,
+                                  progressInfo
+                                 );
   }
 
-  // purge entry fragments
+  // purge storage fragments
   if (error == ERROR_NONE)
   {
     error = clearStorageFragments(indexHandle,
@@ -1987,8 +1993,16 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
       }
       break;
     case DATABASE_TYPE_MARIADB:
+      // nothing to do (using a view)
       break;
     case DATABASE_TYPE_POSTGRESQL:
+      if (error == ERROR_NONE)
+      {
+        error = clearStorageFTSEntries(indexHandle,
+                                       progressInfo,
+                                       &entryIds
+                                      );
+      }
       break;
   }
 
@@ -2298,7 +2312,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
           do
           {
             doneFlag = TRUE;
-    // TODO:
+// TODO:
             error = IndexCommon_purge(indexHandle,
                                       &doneFlag,
                                       #ifndef NDEBUG
@@ -2337,7 +2351,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
           do
           {
             doneFlag = TRUE;
-    // TODO:
+// TODO:
             error = IndexCommon_purge(indexHandle,
                                       &doneFlag,
                                       #ifndef NDEBUG
@@ -2694,7 +2708,8 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
                           (
                             DATABASE_FILTER_UINT(INDEX_STATE_OK),
                             DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {

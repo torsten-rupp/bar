@@ -1019,7 +1019,8 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {
@@ -2460,7 +2461,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
-                              )
+                              ),
+                              DATABASE_UNLIMITED
                              );
       if (error != ERROR_NONE)
       {

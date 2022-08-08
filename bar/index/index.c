@@ -936,7 +936,6 @@ LOCAL void outputProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   if (estimatedRestTime < (99999*60*60))
   {
     stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),

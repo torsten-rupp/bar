@@ -5503,6 +5503,7 @@ test_index_operations_tool: \
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c $(BAR_STORAGE)/test0.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(call functionExec,$(TEST_BAR_DEBUG)) -c $(BAR_STORAGE)/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
+	$(SQLITE3) $(BAR_STORAGE)/import.db < $(TEST_INDEX_DATABASE_IMPORT)
 	@#
 	# options
 	$(TEST_BAR_INDEX) -h 1>/dev/null $(LOG)
@@ -5518,13 +5519,12 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-indizes $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-aggregates $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --check $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
 	@#
-	# operations with database
-	$(SQLITE3) $(BAR_STORAGE)/import.db < $(TEST_INDEX_DATABASE_IMPORT)
+	# operations with non-empty database
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-triggers $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-newest $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-indizes $(LOG)
