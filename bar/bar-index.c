@@ -5912,14 +5912,15 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
-  const uint INCREMENT_SIZE = 4096;
+// TODO:  const uint INCREMENT_SIZE = 4096;
+  const uint INCREMENT_SIZE = 16;
 
-  String storageName;
-  Errors error;
-  ulong  total;
-  ulong  i;
-  ulong  n;
-  Array  ids;
+  String               storageName;
+  Errors               error;
+  ulong                total;
+  ulong                n;
+  Array                ids;
+  ArraySegmentIterator arraySegmentIterator;
 
   // initialize variables
   storageName = String_new();
@@ -5948,15 +5949,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteArray(databaseHandle,
+      (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "entryFragments",
                                  DATABASE_FLAG_NONE,
-                                 "id=?",
-                                 DATABASE_DATATYPE_KEY,
                                  Array_cArray(&ids),
-                                 Array_length(&ids),
-                                 DATABASE_UNLIMITED
+                                 Array_length(&ids)
                                 );
     }
     (void)Database_flush(databaseHandle);
@@ -5980,15 +5978,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteArray(databaseHandle,
+      (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "directoryEntries",
                                  DATABASE_FLAG_NONE,
-                                 "id=?",
-                                 DATABASE_DATATYPE_KEY,
                                  Array_cArray(&ids),
-                                 Array_length(&ids),
-                                 DATABASE_UNLIMITED
+                                 Array_length(&ids)
                                 );
     }
     (void)Database_flush(databaseHandle);
@@ -6012,15 +6007,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteArray(databaseHandle,
+      (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "linkEntries",
                                  DATABASE_FLAG_NONE,
-                                 "id=?",
-                                 DATABASE_DATATYPE_KEY,
                                  Array_cArray(&ids),
-                                 Array_length(&ids),
-                                 DATABASE_UNLIMITED
+                                 Array_length(&ids)
                                 );
     }
     (void)Database_flush(databaseHandle);
@@ -6044,15 +6036,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteArray(databaseHandle,
+      (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "specialEntries",
                                  DATABASE_FLAG_NONE,
-                                 "id=?",
-                                 DATABASE_DATATYPE_KEY,
                                  Array_cArray(&ids),
-                                 Array_length(&ids),
-                                 DATABASE_UNLIMITED
+                                 Array_length(&ids)
                                 );
     }
     (void)Database_flush(databaseHandle);
@@ -6139,27 +6128,24 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printProgress(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
+    ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteArray(databaseHandle,
+        (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
                                    DATABASE_FLAG_NONE,
-                                   "id=?",
-                                   DATABASE_DATATYPE_KEY,
-                                   &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
-                                   DATABASE_UNLIMITED
+                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                   Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(n,Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
     clearProgress();
   }
-  printInfo("%lu\n",n);
+  printInfo("\n");
   total += n;
 
   printInfo("  entries without image entry...");
@@ -6181,22 +6167,19 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printProgress(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
+    ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteArray(databaseHandle,
+        (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
                                    DATABASE_FLAG_NONE,
-                                   "id=?",
-                                   DATABASE_DATATYPE_KEY,
-                                   &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
-                                   DATABASE_UNLIMITED
+                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                   Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(n,Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
     clearProgress();
@@ -6223,22 +6206,19 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printProgress(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
+    ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteArray(databaseHandle,
+        (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
                                    DATABASE_FLAG_NONE,
-                                   "id=?",
-                                   DATABASE_DATATYPE_KEY,
-                                   &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
-                                   DATABASE_UNLIMITED
+                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                   Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(n,Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
     clearProgress();
@@ -6265,22 +6245,19 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printProgress(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
+    ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteArray(databaseHandle,
+        (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
                                    DATABASE_FLAG_NONE,
-                                   "id=?",
-                                   DATABASE_DATATYPE_KEY,
-                                   &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
-                                   DATABASE_UNLIMITED
+                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                   Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(n,Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
     clearProgress();
@@ -6307,22 +6284,19 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printProgress(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
+    ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteArray(databaseHandle,
+        (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
                                    DATABASE_FLAG_NONE,
-                                   "id=?",
-                                   DATABASE_DATATYPE_KEY,
-                                   &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
-                                   DATABASE_UNLIMITED
+                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                   Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(n,Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
     clearProgress();
@@ -6349,22 +6323,19 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printProgress(0,Array_length(&ids));
     n = 0L;
-    for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
+    ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteArray(databaseHandle,
+        (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
                                    DATABASE_FLAG_NONE,
-                                   "id=?",
-                                   DATABASE_DATATYPE_KEY,
-                                   &((DatabaseId*)Array_cArray(&ids))[i],
-                                   MIN(Array_length(&ids)-i,INCREMENT_SIZE),
-                                   DATABASE_UNLIMITED
+                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                   Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(n,Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
     clearProgress();

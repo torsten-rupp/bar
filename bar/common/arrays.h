@@ -242,6 +242,10 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
        (arrayIterator)++, Array_get(array,(arraySegmentIterator).offset+(arrayIterator),&(data)) \
       )
 
+#define ARRAY_SEGMENT_GET(array,arraySegmentIterator) \
+
+#define ARRAY_SEGMENT_LENGTH(array,arraySegmentIterator) \
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -548,7 +552,7 @@ void Array_sort(Array                *array,
 * Purpose: get C-array data pointer
 * Input  : array - array
 * Output : -
-* Return : C-array with data pointers
+* Return : C data array
 * Notes  : -
 \***********************************************************************/
 
@@ -557,6 +561,77 @@ INLINE const void *Array_cArray(const Array *array);
 INLINE const void *Array_cArray(const Array *array)
 {
   return (array != NULL) ? array->data : NULL;
+}
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
+
+/***********************************************************************\
+* Name   : Array_cArraySegment
+* Purpose: get C-array segment data pointer
+* Input  : array                - array
+*          arraySegmentIterator - array segment iterator
+* Output : -
+* Return : C segment data array
+* Notes  : -
+\***********************************************************************/
+
+INLINE const void *Array_cArraySegment(const Array *array, const ArraySegmentIterator *arraySegmentIterator);
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
+INLINE const void *Array_cArraySegment(const Array *array, const ArraySegmentIterator *arraySegmentIterator)
+{
+  assert(array != NULL);
+  assert(arraySegmentIterator != NULL);
+
+  return (arraySegmentIterator->offset < array->length)
+           ? (byte*)Array_cArray(array)+(arraySegmentIterator->offset*array->elementSize)
+           : NULL;
+}
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
+
+/***********************************************************************\
+* Name   : Array_segmentOffset
+* Purpose: get segment offset
+* Input  : array                - array
+*          arraySegmentIterator - array segment iterator
+* Output : -
+* Return : segment length
+* Notes  : -
+\***********************************************************************/
+
+INLINE ulong Array_segmentOffset(const Array *array, const ArraySegmentIterator *arraySegmentIterator);
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
+INLINE ulong Array_segmentOffset(const Array *array, const ArraySegmentIterator *arraySegmentIterator)
+{
+  assert(array != NULL);
+  assert(arraySegmentIterator != NULL);
+  assert(arraySegmentIterator->offset < Array_length(array));
+  
+  UNUSED_VARIABLE(array);
+
+  return arraySegmentIterator->offset;
+}
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
+
+/***********************************************************************\
+* Name   : Array_segmentLength
+* Purpose: get segment length
+* Input  : array                - array
+*          arraySegmentIterator - array segment iterator
+* Output : -
+* Return : segment length
+* Notes  : -
+\***********************************************************************/
+
+INLINE ulong Array_segmentLength(const Array *array, const ArraySegmentIterator *arraySegmentIterator);
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
+INLINE ulong Array_segmentLength(const Array *array, const ArraySegmentIterator *arraySegmentIterator)
+{
+  assert(array != NULL);
+  assert(arraySegmentIterator != NULL);
+  assert(arraySegmentIterator->offset < Array_length(array));
+
+  return (arraySegmentIterator->offset < array->length)
+           ? MIN(Array_length(array)-arraySegmentIterator->offset,arraySegmentIterator->size)
+           : 0L;
 }
 #endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 
