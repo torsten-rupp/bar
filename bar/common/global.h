@@ -2454,7 +2454,7 @@ static inline double normDegree360(double n)
 static inline void initSimpleHash(uint32 *hash)
 {
   assert(hash != NULL);
-  
+
   (*hash) = 0L;
 }
 

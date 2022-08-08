@@ -3158,7 +3158,6 @@ for (int i =0; i < parameterCount; i++) {
     {
       statement->result = postgresqlResult;
       stringToUInt64(PQcmdTuples(postgresqlResult),&statement->rowCount,NULL);
-fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,statement->rowCount);
       error = ERROR_NONE;
     }
     else
@@ -5377,7 +5376,7 @@ LOCAL int busyHandler(void *userData, int n)
 * Input  : sqlString      - SQL string variable
 *          databaseHandle - database handle
 *          s              - parameter with optional ? and quote '
-*          parameterCount - parameter count variable (can be NULL)
+*          parameterCount - parameter count variable
 * Output : sqlString      - formatd SQL string
 *          parameterCount - new parameter count
 * Return : -
@@ -8610,7 +8609,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
+              (*changedRowCount) += (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
             }
           }
         #else /* HAVE_MARIADB */
@@ -8633,7 +8632,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) = databaseStatementHandle->postgresql.rowCount;
+              (*changedRowCount) += databaseStatementHandle->postgresql.rowCount;
             }
           }
         #else /* HAVE_POSTGRESQL */
@@ -9134,11 +9133,25 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                                     }
                                     else if (String_startsWithCString(type,"tinyint"))
                                     {
-                                      columns[i].type = DATABASE_DATATYPE_INT;
+                                      if (isPrimaryKey)
+                                      {
+                                        columns[i].type = DATABASE_DATATYPE_PRIMARY_KEY;
+                                      }
+                                      else
+                                      {
+                                        columns[i].type = DATABASE_DATATYPE_INT;
+                                      }
                                     }
                                     else if (String_startsWithCString(type,"bigint"))
                                     {
-                                      columns[i].type = DATABASE_DATATYPE_INT64;
+                                      if (isPrimaryKey)
+                                      {
+                                        columns[i].type = DATABASE_DATATYPE_PRIMARY_KEY;
+                                      }
+                                      else
+                                      {
+                                        columns[i].type = DATABASE_DATATYPE_INT64;
+                                      }
                                     }
                                     else if (String_startsWithCString(type,"double"))
                                     {
@@ -12639,7 +12652,7 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
   uint                    i,j;
   uint                    n;
   String                  sqlSelectString,sqlInsertString;
-  uint                    selectParameterCount;
+  uint                    selectParameterCount,insertParameterCount;
 
   DatabaseColumnInfo      fromColumnInfo,toColumnInfo;
 
@@ -12718,14 +12731,14 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
     else
     {
-      fromColumnMap[i] = -1;
+      fromColumnMap[i] = UNUSED;
     }
   }
   #ifdef DEBUG_COPY_TABLE
-    fprintf(stderr,"mapping:\n");
+    fprintf(stderr,"mapping: %u\n",toColumnCount);
     for (uint i = 0; i < toColumnCount; i++)
     {
-      if (fromColumnMap[i] != -1)
+      if (fromColumnMap[i] != UNUSED)
       {
         fprintf(stderr,
                 "  from %2u:%-30s -> to %2u:%-30s\n",
@@ -12745,7 +12758,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   {
     if (toColumns[i].type != DATABASE_DATATYPE_PRIMARY_KEY)
     {
-      if (fromColumnMap[i] != -1)
+      if (fromColumnMap[i] != UNUSED)
       {
         parameterMap[parameterMapCount] = i;
         parameterMapCount++;
@@ -12771,7 +12784,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
     for (uint i = 0; i < parameterMapCount; i++)
     {
-      if (fromColumnMap[parameterMap[i]] != -1)
+      if (fromColumnMap[parameterMap[i]] != UNUSED)
       {
         assert(stringEqualsIgnoreCase(fromColumns[fromColumnMap[parameterMap[i]]].name,toColumns[parameterMap[i]].name));
       }
@@ -12827,7 +12840,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     fprintf(stderr,"SQL select: %s\n",String_cString(sqlSelectString));
   #endif /* DEBUG_COPY_TABLE */
 
-  sqlInsertString = String_format(String_new(),"INSERT INTO %s (",toTableName);
+  sqlInsertString      = String_format(String_new(),"INSERT INTO %s (",toTableName);
+  insertParameterCount = 0;
   for (i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
@@ -12837,7 +12851,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   for (i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
-    String_appendFormat(sqlInsertString,"$%u",1+i);
+    formatParameters(sqlInsertString,toDatabaseHandle,"?",&insertParameterCount);
   }
   String_formatAppend(sqlInsertString,")");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlInsertString);
@@ -12953,11 +12967,16 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                                        // set to-values
                                        for (i = 0; i < parameterMapCount; i++)
                                        {
+                                         assert(i < parameterValueCount);
+                                         assert(parameterMap[i] < toColumnCount);
+                                         assert(fromColumnMap[parameterMap[i]] != UNUSED);
+
                                          memCopyFast(&parameterValues[i].data,
                                                      sizeof(parameterValues[i].data),
-                                                     &values[parameterMap[fromColumnMap[i]]].data,
-                                                     sizeof(values[parameterMap[fromColumnMap[i]]].data)
+                                                     &values[fromColumnMap[parameterMap[i]]].data,
+                                                     sizeof(values[fromColumnMap[parameterMap[i]]].data)
                                                     );
+
 #if 0
 fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
 (i < parameterMapCount) ? fromColumnMap[parameterMap[i]] : -1,
@@ -12975,14 +12994,16 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 
                                        for (i = 0; i < toColumnCount; i++)
                                        {
-                                         if (fromColumnMap[i] != -1)
+                                         if (fromColumnMap[i] != UNUSED)
                                          {
-                                         memCopyFast(&toValues[i].data,
-                                                     sizeof(toValues[i].data),
-                                                     &fromDatabaseStatementHandle.results[fromColumnMap[i]].data,
-                                                     sizeof(fromDatabaseStatementHandle.results[fromColumnMap[i]].data)
-                                                    );
-                                                  }
+                                           assert(i < toValueCount);
+
+                                           memCopyFast(&toValues[i].data,
+                                                       sizeof(toValues[i].data),
+                                                       &fromDatabaseStatementHandle.results[fromColumnMap[i]].data,
+                                                       sizeof(fromDatabaseStatementHandle.results[fromColumnMap[i]].data)
+                                                      );
+                                         }
                                        }
 
                                        // mark to index-id with 'any'
@@ -13012,6 +13033,9 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                        // copy parameter data
                                        for (i = 0; i < parameterMapCount; i++)
                                        {
+                                         assert(i < parameterValueCount);
+                                         assert(fromColumnMap[i] < toColumnInfo.count);
+
 //fprintf(stderr,"%s:%d: copy %d -> %d\n",__FILE__,__LINE__,parameterMap[i],i);
                                          memCopyFast(&parameterValues[i].data,
                                                      sizeof(parameterValues[i].data),
@@ -15733,7 +15757,6 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
       printf("DEBUG: %s\n",String_cString(sqlString));
     }
   #endif
-printf("DEBUG: %s\n",String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,
@@ -16363,8 +16386,6 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
   assert(ids != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  Array_clear(ids);
 
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),

@@ -585,6 +585,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
   switch (type)
   {
     case INDEX_TYPE_FILE:
+      DIMPORT("import file entry %ld -> %ld",fromEntryId,toEntryId);
       error = upgradeFromVersion7_importFileEntry(oldDatabaseHandle,
                                                   newDatabaseHandle,
                                                   storageIdDictionary,
@@ -593,6 +594,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                                  );
       break;
     case INDEX_TYPE_IMAGE:
+      DIMPORT("import image entry %ld -> %ld",fromEntryId,toEntryId);
       error = upgradeFromVersion7_importImageEntry(oldDatabaseHandle,
                                                    newDatabaseHandle,
                                                    storageIdDictionary,
@@ -601,7 +603,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                                   );
       break;
     case INDEX_TYPE_DIRECTORY:
-      DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
+      DIMPORT("import directory entry %ld -> %ld",fromEntryId,toEntryId);
       error = Database_copyTable(oldDatabaseHandle,
                                  newDatabaseHandle,
                                  "directoryEntries",
@@ -661,7 +663,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                 );
       break;
     case INDEX_TYPE_LINK:
-      DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
+      DIMPORT("import link entry %ld -> %ld",fromEntryId,toEntryId);
       error = Database_copyTable(oldDatabaseHandle,
                                  newDatabaseHandle,
                                  "linkEntries",
@@ -720,6 +722,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                 );
       break;
     case INDEX_TYPE_HARDLINK:
+      DIMPORT("import hardlink entry %ld -> %ld",fromEntryId,toEntryId);
       error = upgradeFromVersion7_importHardlinkEntry(oldDatabaseHandle,
                                                       newDatabaseHandle,
                                                       storageIdDictionary,
@@ -728,7 +731,7 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                                      );
       break;
     case INDEX_TYPE_SPECIAL:
-      DIMPORT("import entry %ld -> %ld",fromEntryId,toEntryId);
+      DIMPORT("import special entry %ld -> %ld",fromEntryId,toEntryId);
       error = Database_copyTable(oldDatabaseHandle,
                                  newDatabaseHandle,
                                  "specialEntries",

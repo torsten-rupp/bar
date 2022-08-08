@@ -3857,7 +3857,7 @@ LOCAL Errors runDebug(void)
       {
         // Note: cannot use Index_newEntity(); specific id is required
         error = Database_insert(&indexHandle->databaseHandle,
-                                &entityId,
+                                NULL,  // insertRowId
                                 "entities",
                                 DATABASE_FLAG_NONE,
                                 DATABASE_VALUES
@@ -3881,7 +3881,6 @@ LOCAL Errors runDebug(void)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        assert(entityId != DATABASE_ID_NONE);
       }
       else if (error != ERROR_NONE)
       {

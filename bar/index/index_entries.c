@@ -775,6 +775,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
   #ifdef INDEX_DEBUG_PURGE
     dt[1] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -799,6 +800,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
   #ifdef INDEX_DEBUG_PURGE
     dt[2] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -823,6 +825,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
   #ifdef INDEX_DEBUG_PURGE
     dt[3] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     fprintf(stderr,"%s, %d: error: %s, %lu entries to purge: fragment %"PRIu64"ms, directory %"PRIu64"ms, link %"PRIu64"ms, special %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
@@ -857,7 +860,7 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   error = Database_getIds(&indexHandle->databaseHandle,
                           &databaseIds,
                           "fileEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
                           ",
                           "fileEntries.id",
                           "entryFragments.id IS NULL",
@@ -897,7 +900,7 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   error = Database_getIds(&indexHandle->databaseHandle,
                           &databaseIds,
                           "imageEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
                           ",
                           "imageEntries.id",
                           "entryFragments.id IS NULL",
@@ -937,7 +940,7 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   error = Database_getIds(&indexHandle->databaseHandle,
                           &databaseIds,
                           "hardlinkEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
                           ",
                           "hardlinkEntries.id",
                           "entryFragments.id IS NULL",

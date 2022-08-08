@@ -466,7 +466,7 @@ LOCAL const char *getByteUnitShort(uint64 n)
 }
 
 /***********************************************************************\
-* Name   : printPercentage
+* Name   : printProgress
 * Purpose: print percentage value (if verbose)
 * Input  : n     - value
 *          count - max. value
@@ -475,7 +475,7 @@ LOCAL const char *getByteUnitShort(uint64 n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printPercentage(ulong n, ulong count)
+LOCAL void printProgress(ulong n, ulong count)
 {
   double percentage;
   double d;
@@ -499,7 +499,7 @@ LOCAL void printPercentage(ulong n, ulong count)
 }
 
 /***********************************************************************\
-* Name   : clearPercentage
+* Name   : clearProgress
 * Purpose: clear percentage value (if verbose)
 * Input  : -
 * Output : -
@@ -507,7 +507,7 @@ LOCAL void printPercentage(ulong n, ulong count)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void clearPercentage(void)
+LOCAL void clearProgress(void)
 {
   if (verboseFlag)
   {
@@ -1324,6 +1324,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   if (error != ERROR_NONE)
   {
     printError("import database fail: %s!\n",Error_getText(error));
+    exit(EXITCODE_FAIL);
   }
 
   // free resources
@@ -1340,11 +1341,11 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
 * Purpose: check database integrity
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : TRUE iff integrity OK
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkIntegrity(DatabaseHandle *databaseHandle)
+LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
@@ -1360,6 +1361,7 @@ LOCAL void checkIntegrity(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError("quick integrity check fail (error: %s)!\n",Error_getText(error));
+    return FALSE;
   }
 
   printInfo("  foreign key...");
@@ -1372,6 +1374,7 @@ LOCAL void checkIntegrity(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError("foreign key check fail (error: %s)!\n",Error_getText(error));
+    return FALSE;
   }
 
   printInfo("  full...");
@@ -1384,7 +1387,10 @@ LOCAL void checkIntegrity(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    return FALSE;
   }
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -1392,11 +1398,11 @@ LOCAL void checkIntegrity(DatabaseHandle *databaseHandle)
 * Purpose: check database orphaned entries
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : number of orphaned entries
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
+LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
 {
   Errors error;
   ulong  totalCount;
@@ -1737,6 +1743,52 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
       totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_POSTGRESQL:
+      // check FTS entries without entry
+      printInfo("  FTS entries without entry...");
+      error = Database_getUInt(databaseHandle,
+                               &n,
+                               "FTS_entries",
+                               "COUNT(entryId)",
+                               "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
+                               DATABASE_FILTERS
+                               (
+                               ),
+                               NULL  // group
+                              );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%u\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
+
+      // check FTS storages without storage
+      printInfo("  FTS storages without storage...");
+      error = Database_getUInt(databaseHandle,
+                               &n,
+                               "FTS_storages",
+                               "COUNT(storageId)",
+                               "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
+                               DATABASE_FILTERS
+                               (
+                               ),
+                               NULL  // group
+                              );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%u\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
+
       // check newest entries without entry
       printInfo("  newest entries without entry...");
       error = Database_getUInt(databaseHandle,
@@ -1794,6 +1846,8 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
 
   // free resources
+
+  return totalCount;
 }
 
 /***********************************************************************\
@@ -1801,11 +1855,11 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 * Purpose: check database duplicates
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : number of duplicates
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
+LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
 {
   String name;
   Errors error;
@@ -1874,6 +1928,8 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
 
   // free resources
   String_delete(name);
+
+  return totalCount;
 }
 
 /***********************************************************************\
@@ -1942,9 +1998,9 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     }
 
     n++;
-    printPercentage(n,StringList_count(&tableNameList));
+    printProgress(n,StringList_count(&tableNameList));
   }
-  clearPercentage();
+  clearProgress();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -1999,9 +2055,9 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     }
 
     n++;
-    printPercentage(n,StringList_count(&tableNameList));
+    printProgress(n,StringList_count(&tableNameList));
   }
-  clearPercentage();
+  clearProgress();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -3463,7 +3519,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       printError("collect newest fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printPercentage(1,2);
+    printProgress(1,2);
 
     // get total counts
     totalEntriesNewestCount = 0L;
@@ -3480,8 +3536,8 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       printError("collect newest fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printPercentage(2,2);
-    clearPercentage();
+    printProgress(2,2);
+    clearProgress();
     printInfo("OK  \n");
 
 
@@ -3501,11 +3557,11 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                                 1000
                                );
         n += m;
-        printPercentage(n,totalEntriesNewestCount);
+        printProgress(n,totalEntriesNewestCount);
       }
       while ((error == ERROR_NONE) && (m > 0));
     }
-    clearPercentage();
+    clearProgress();
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
@@ -3522,9 +3578,9 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     {
       error = addToNewest(databaseHandle,storageId);
       n++;
-      printPercentage(n,Array_length(&storageIds));
+      printProgress(n,Array_length(&storageIds));
     }
-    clearPercentage();
+    clearProgress();
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
@@ -3555,7 +3611,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       }
       printInfo("OK\n");
     }
-    clearPercentage();
+    clearProgress();
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
@@ -3770,7 +3826,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -3855,7 +3911,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -3891,7 +3947,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     printInfo("FAIL!\n");
@@ -3949,7 +4005,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4027,7 +4083,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4059,7 +4115,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     printInfo("FAIL!\n");
@@ -4118,7 +4174,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4196,7 +4252,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4228,7 +4284,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     printInfo("FAIL!\n");
@@ -4289,7 +4345,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4374,7 +4430,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4410,7 +4466,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     printInfo("FAIL!\n");
@@ -4468,7 +4524,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4546,7 +4602,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4578,7 +4634,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
   {
     printInfo("FAIL\n");
@@ -5062,7 +5118,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                            }
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -5097,7 +5153,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
@@ -5794,7 +5850,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            }
 
                            n++;
-                           printPercentage(n,totalCount);
+                           printProgress(n,totalCount);
 
                            return ERROR_NONE;
                          },NULL),
@@ -5829,7 +5885,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
       break;
     }
   }
-  clearPercentage();
+  clearProgress();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
@@ -6081,7 +6137,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printPercentage(0,Array_length(&ids));
+    printProgress(0,Array_length(&ids));
     n = 0L;
     for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
@@ -6098,10 +6154,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    DATABASE_UNLIMITED
                                   );
       }
-      printPercentage(n,Array_length(&ids));
+      printProgress(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
-    clearPercentage();
+    clearProgress();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6123,7 +6179,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printPercentage(0,Array_length(&ids));
+    printProgress(0,Array_length(&ids));
     n = 0L;
     for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
@@ -6140,10 +6196,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    DATABASE_UNLIMITED
                                   );
       }
-      printPercentage(n,Array_length(&ids));
+      printProgress(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
-    clearPercentage();
+    clearProgress();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6165,7 +6221,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printPercentage(0,Array_length(&ids));
+    printProgress(0,Array_length(&ids));
     n = 0L;
     for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
@@ -6182,10 +6238,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    DATABASE_UNLIMITED
                                   );
       }
-      printPercentage(n,Array_length(&ids));
+      printProgress(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
-    clearPercentage();
+    clearProgress();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6207,7 +6263,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printPercentage(0,Array_length(&ids));
+    printProgress(0,Array_length(&ids));
     n = 0L;
     for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
@@ -6224,10 +6280,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    DATABASE_UNLIMITED
                                   );
       }
-      printPercentage(n,Array_length(&ids));
+      printProgress(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
-    clearPercentage();
+    clearProgress();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6249,7 +6305,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printPercentage(0,Array_length(&ids));
+    printProgress(0,Array_length(&ids));
     n = 0L;
     for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
@@ -6266,10 +6322,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    DATABASE_UNLIMITED
                                   );
       }
-      printPercentage(n,Array_length(&ids));
+      printProgress(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
-    clearPercentage();
+    clearProgress();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6291,7 +6347,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printPercentage(0,Array_length(&ids));
+    printProgress(0,Array_length(&ids));
     n = 0L;
     for (i = 0; i < Array_length(&ids); i += INCREMENT_SIZE)
     {
@@ -6308,10 +6364,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    DATABASE_UNLIMITED
                                   );
       }
-      printPercentage(n,Array_length(&ids));
+      printProgress(n,Array_length(&ids));
     }
     (void)Database_flush(databaseHandle);
-    clearPercentage();
+    clearProgress();
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6448,7 +6504,65 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       // nothing to do (use views)
       break;
     case DATABASE_TYPE_POSTGRESQL:
-      // nothing to do (use views)
+      // clean FTS entries without entry
+      printInfo("  FTS entries without entry...");
+      n = 0L;
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "FTS_entries",
+                              DATABASE_FLAG_NONE,
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      }
+      (void)Database_flush(databaseHandle);
+      printInfo("%lu\n",n);
+      total += n;
+
+      // clean FTS storages without entry
+      printInfo("  FTS storages without storage...");
+      n = 0L;
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "FTS_storages",
+                              DATABASE_FLAG_NONE,
+                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      }
+      (void)Database_flush(databaseHandle);
+      printInfo("%lu\n",n);
+      total += n;
+
+      // clean newest entries without entry
+      printInfo("  FTS entries without entry...");
+      n = 0L;
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entriesNewest",
+                              DATABASE_FLAG_NONE,
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      }
+      (void)Database_flush(databaseHandle);
+      printInfo("%lu\n",n);
+      total += n;
       break;
   }
 
@@ -6996,7 +7110,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                   );
         }
 
-        printPercentage(0,2*Array_length(&entryIds));
+        printProgress(0,2*Array_length(&entryIds));
 
         // purge fragments
         if (error == ERROR_NONE)
@@ -7020,7 +7134,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             // purge FTS entries
             if (error == ERROR_NONE)
             {
-              printPercentage(0*Array_length(&entryIds),2*Array_length(&entryIds));
+              printProgress(0*Array_length(&entryIds),2*Array_length(&entryIds));
               ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
               {
                 if (!Database_existsValue(databaseHandle,
@@ -7047,9 +7161,9 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                           0
                                          );
                 }
-                printPercentage(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+                printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
               }
-              printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
+              printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
             }
             break;
           case DATABASE_TYPE_MARIADB:
@@ -7150,7 +7264,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
         // purge entries
         if (error == ERROR_NONE)
         {
-          printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
+          printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
           ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
           {
             if (!Database_existsValue(databaseHandle,
@@ -7177,12 +7291,12 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                       0
                                      );
             }
-            printPercentage(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+            printProgress(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
           }
-          printPercentage(2*Array_length(&entryIds),2*Array_length(&entryIds));
+          printProgress(2*Array_length(&entryIds),2*Array_length(&entryIds));
         }
 
-        clearPercentage();
+        clearProgress();
 
         if (error == ERROR_NONE)
         {
@@ -7223,11 +7337,10 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
   Errors     error;
   FileHandle handle;
 
+  printInfo("Vacuum...");
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      printInfo("Vacuum...");
-
       if (toFileName != NULL)
       {
         // check if file exists
@@ -7287,14 +7400,10 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
           exit(EXITCODE_FAIL);
         }
       }
-
-      printInfo("OK\n");
       break;
     case DATABASE_TYPE_MARIADB:
       {
         char sqlString[256];
-
-        printInfo("Vacuum...");
 
         error = ERROR_NONE;
         for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_MARIADB; i++)
@@ -7317,14 +7426,37 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
             exit(EXITCODE_FAIL);
           }
         }
-
-        printInfo("OK\n");
       }
       break;
     case DATABASE_TYPE_POSTGRESQL:
-      // nothing to do
+      {
+        char sqlString[256];
+
+        error = ERROR_NONE;
+        for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_POSTGRESQL; i++)
+        {
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "VACUUM %s",
+                                                INDEX_DEFINITION_TABLE_NAMES_POSTGRESQL[i]
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
+                                  );
+          if (error != ERROR_NONE)
+          {
+            printInfo("FAIL!\n");
+            printError("vacuum fail (error: %s)!",Error_getText(error));
+            exit(EXITCODE_FAIL);
+          }
+        }
+      }
       break;
   }
+  printInfo("OK\n");
 }
 
 /***********************************************************************\
@@ -7385,7 +7517,10 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
   if (printRowData->widths == NULL)
   {
     printRowData->widths = (size_t*)calloc(valueCount,sizeof(size_t));
-    assert(printRowData->widths != NULL);
+    if (printRowData->widths == NULL)
+    {
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
   }
   assert(printRowData->widths != NULL);
 
@@ -7404,14 +7539,14 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
       case DATABASE_DATATYPE_PRIMARY_KEY:
       case DATABASE_DATATYPE_KEY:         n = stringFormatLengthCodepointsUTF8("%"PRIi64,values[i].id); break;
 
-      case DATABASE_DATATYPE_BOOL:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%s",values[i].b ? "TRUE" : "FALSE"); break;
-      case DATABASE_DATATYPE_INT:         n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%d",values[i].i); break;
-      case DATABASE_DATATYPE_INT64:       n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%"PRIi64,values[i].i64); break;
-      case DATABASE_DATATYPE_UINT:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%u",values[i].u); break;
-      case DATABASE_DATATYPE_UINT64:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
-      case DATABASE_DATATYPE_DOUBLE:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%lf",values[i].d); break;
-      case DATABASE_DATATYPE_ENUM:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%u",values[i].u); break;
-      case DATABASE_DATATYPE_DATETIME:    n = stringFormatLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL)); break;
+      case DATABASE_DATATYPE_BOOL:        n = stringFormatLengthCodepointsUTF8("%s",values[i].b ? "TRUE" : "FALSE"); break;
+      case DATABASE_DATATYPE_INT:         n = stringFormatLengthCodepointsUTF8("%d",values[i].i); break;
+      case DATABASE_DATATYPE_INT64:       n = stringFormatLengthCodepointsUTF8("%"PRIi64,values[i].i64); break;
+      case DATABASE_DATATYPE_UINT:        n = stringFormatLengthCodepointsUTF8("%u",values[i].u); break;
+      case DATABASE_DATATYPE_UINT64:      n = stringFormatLengthCodepointsUTF8("%"PRIu64,values[i].u64); break;
+      case DATABASE_DATATYPE_DOUBLE:      n = stringFormatLengthCodepointsUTF8("%lf",values[i].d); break;
+      case DATABASE_DATATYPE_ENUM:        n = stringFormatLengthCodepointsUTF8("%u",values[i].u); break;
+      case DATABASE_DATATYPE_DATETIME:    n = stringLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL)); break;
       case DATABASE_DATATYPE_STRING:      n = String_lengthCodepointsUTF8(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     n = stringLengthCodepointsUTF8(values[i].s); break;
       case DATABASE_DATATYPE_BLOB:        break;
@@ -9881,6 +10016,8 @@ int main(int argc, const char *argv[])
   char             line[MAX_LINE_LENGTH];
   Errors           error;
   DatabaseHandle   databaseHandle;
+  bool             integrityFlag;
+  ulong            orphanedEntriesCount,duplicatesCount;
   uint64           t0,t1,dt;
   PrintRowData     printRowData;
   String           s;
@@ -10712,15 +10849,15 @@ else if (stringEquals(argv[i],"--xxx"))
   // check
   if (checkIntegrityFlag)
   {
-    checkIntegrity(&databaseHandle);
+    integrityFlag = checkIntegrity(&databaseHandle);
   }
   if (checkOrphanedFlag)
   {
-    checkOrphanedEntries(&databaseHandle);
+    orphanedEntriesCount = checkOrphanedEntries(&databaseHandle);
   }
   if (checkDuplicatesFlag)
   {
-    checkDuplicates(&databaseHandle);
+    duplicatesCount = checkDuplicates(&databaseHandle);
   }
 
   // recreate triggeres
@@ -10802,8 +10939,7 @@ if (xxxId != DATABASE_ID_NONE)
 //TODO: remove? use storages-info?
   if (showStoragesFlag)
   {
-    uint64 maxIdLength,maxStorageNameLength;
-    char   format[256];
+    uint maxIdLength,maxStorageNameLength;
 
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -10847,8 +10983,6 @@ if (xxxId != DATABASE_ID_NONE)
                  1LL
                 );
 
-    stringFormat(format,sizeof(format),"%%-%dlld %%-%ds %%-%ds %%-10s\n",maxIdLength,maxStorageNameLength,MISC_UUID_STRING_LENGTH);
-
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -10869,7 +11003,7 @@ if (xxxId != DATABASE_ID_NONE)
                      if (i == archiveType) s = ARCHIVE_TYPES[i];
                    }
 
-                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string),s);
+                   printf("%-*"PRIi64" %-*s %-*s %-s\n",maxIdLength,values[0].id,maxStorageNameLength,String_cString(values[1].string),MISC_UUID_STRING_LENGTH,String_cString(values[2].string),s);
 
                    return ERROR_NONE;
                  },NULL),
@@ -10903,8 +11037,7 @@ if (xxxId != DATABASE_ID_NONE)
 
   if (showEntriesFlag)
   {
-    uint64 maxIdLength,maxEntryNameLength,maxStorageNameLength;
-    char   format[256];
+    uint maxIdLength,maxEntryNameLength,maxStorageNameLength;
 
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -10967,7 +11100,6 @@ if (xxxId != DATABASE_ID_NONE)
                  1LL
                 );
 
-    stringFormat(format,sizeof(format),"%%%dlld %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -10978,7 +11110,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string));
+                   printf("%*"PRIi64" %-*s %-s\n",maxIdLength,values[0].id,maxEntryNameLength,String_cString(values[1].string),String_cString(values[2].string));
 
                    return ERROR_NONE;
                  },NULL),
@@ -11028,8 +11160,7 @@ if (xxxId != DATABASE_ID_NONE)
 
   if (showEntriesNewestFlag)
   {
-    uint64 maxIdLength,maxEntryNameLength,maxStorageNameLength;
-    char   format[256];
+    uint maxIdLength,maxEntryNameLength,maxStorageNameLength;
 
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -11092,7 +11223,6 @@ if (xxxId != DATABASE_ID_NONE)
                  1LL
                 );
 
-    stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_get(&databaseHandle,
                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -11103,7 +11233,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,String_cString(values[1].string),String_cString(values[2].string));
+                   printf("%*"PRIi64" %-*s %-s\n",maxIdLength,values[0].id,maxEntryNameLength,String_cString(values[1].string),String_cString(values[2].string));
 
                    return ERROR_NONE;
                  },NULL),
@@ -11279,7 +11409,6 @@ if (xxxId != DATABASE_ID_NONE)
       error = Database_get(&databaseHandle,
                            CALLBACK_(printRow,NULL),
                            NULL,  // changedRowCount,
-//                           DATABASE_FLAG_COLUMN_NAMES,
                            DATABASE_PLAIN(l),
                            DATABASE_COLUMNS
                            (
@@ -11344,7 +11473,11 @@ if (xxxId != DATABASE_ID_NONE)
 
   doneAll();
 
-  return 0;
+  return    (!checkIntegrityFlag  || integrityFlag)
+         && (!checkOrphanedFlag   || (orphanedEntriesCount == 0L))
+         && (!checkDuplicatesFlag || (duplicatesCount == 0L))
+           ? EXITCODE_OK
+           : EXITCODE_FAIL;
 }
 
 #ifdef __cplusplus
