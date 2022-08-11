@@ -1346,12 +1346,23 @@ LOCAL int progressHandler(void *userData)
 
 LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
+  #ifdef HAVE_STRPTIME
+    const char *DATE_TIME_FORMATS[] = 
+    {
+      "%Y-%m-%d %H:%M:%S",
+      "%Y-%m-%d"
+    };
+  #endif
+
   const char *text,*format;
   const char *s;
   uint64     timestamp;
-  #ifdef HAVE_GETDATE_R
+  #ifdef HAVE_STRPTIME
+    uint i;
+  #endif
+  #if defined(HAVE_GETDATE_R) || defined(HAVE_STRPTIME)
     struct tm tmBuffer;
-  #endif /* HAVE_GETDATE_R */
+  #endif
   struct tm  *tm;
 
   assert(context != NULL);
@@ -1363,6 +1374,8 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
   // get text to convert, optional date/time format
   text   = (const char*)sqlite3_value_text(argv[0]);
   format = (argc >= 2) ? (const char *)argv[1] : NULL;
+
+  timestamp = 0LL;
 
   // convert to Unix timestamp
   if (text != NULL)
@@ -1398,15 +1411,29 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
       }
       else
       {
+        s = NULL;
         #ifdef HAVE_STRPTIME
-          s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
+          memClear(&tmBuffer,sizeof(tmBuffer));
+          if (format != NULL)
+          {
+            s = strptime(text,format,&tmBuffer);
+          }
+          else
+          {
+            i = 0;
+            do
+            {
+              s = strptime(text,DATE_TIME_FORMATS[i],&tmBuffer);
+              i++;
+            }
+            while ((s == NULL) && (i < SIZE_OF_ARRAY(DATE_TIME_FORMATS)));
+          }
         #else
 UNUSED_VARIABLE(format);
 #ifndef WERROR
 #warning implement strptime
 #endif
 //TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
-          s = NULL;
         #endif
         if ((s != NULL) && stringIsEmpty(s))
         {
@@ -1418,16 +1445,8 @@ UNUSED_VARIABLE(format);
 #endif
           #endif
         }
-        else
-        {
-          timestamp = 0LL;
-        }
       }
     }
-  }
-  else
-  {
-    timestamp = 0LL;
   }
 
   sqlite3_result_int64(context,(int64)timestamp);
@@ -14670,7 +14689,7 @@ char *Database_filterDateString(const DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      return stringFormat(buffer,sizeof(buffer),"UNIXEPOCH(DATE(DATETIME(%s,'unixepoch')))",columnName);
+      return stringFormat(buffer,sizeof(buffer),"UNIX_TIMESTAMP(DATE(DATETIME(%s,'unixepoch')))",columnName);
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         return stringFormat(buffer,sizeof(buffer),"(UNIX_TIMESTAMP(DATE(%s))+(UNIX_TIMESTAMP(TIME(NOW()))-UNIX_TIMESTAMP(UTC_TIME())))",columnName);
