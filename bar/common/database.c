@@ -13053,7 +13053,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                        for (i = 0; i < parameterMapCount; i++)
                                        {
                                          assert(i < parameterValueCount);
-                                         assert(fromColumnMap[i] < toColumnInfo.count);
+                                         assert(fromColumnMap[i] != UNUSED);
+                                         assert((uint)fromColumnMap[i] < toColumnInfo.count);
 
 //fprintf(stderr,"%s:%d: copy %d -> %d\n",__FILE__,__LINE__,parameterMap[i],i);
                                          memCopyFast(&parameterValues[i].data,
