@@ -3515,7 +3515,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
     // find next storage to move
     now = Misc_getCurrentDateTime();
-    ARRAY_ITERATEX(&moveToArray,moveToArrayIterator,moveToInfo,TRUE)
+    ARRAY_ITERATE(&moveToArray,moveToArrayIterator,moveToInfo)
     {
       // parse move-to name
       error = Storage_parseName(&moveToStorageSpecifier,moveToInfo.moveTo);
