@@ -15833,6 +15833,84 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   return ERROR_NONE;
 }
 
+Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
+                            ulong            *changedRowCount,
+                            const char       *tableName,
+                            uint             flags,
+                            const DatabaseId ids[],
+                            ulong            length
+                           )
+{
+  String                  sqlString;
+  ulong                   i;
+  DatabaseStatementHandle databaseStatementHandle;
+  TimeoutInfo             timeoutInfo;
+  Errors                  error;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(ids != NULL);
+
+// TODO:
+(void)flags;
+  // create SQL string
+  sqlString = String_format(String_new(),"DELETE FROM %s WHERE id IN (",tableName);
+  for (i = 0; i < length; i++)
+  {
+    if (i > 0) String_appendChar(sqlString,',');
+    String_formatAppend(sqlString,"%"PRIi64,ids[i]);
+  }
+  String_appendChar(sqlString,')');
+  #ifndef NDEBUG
+    if (IS_SET(flags,DATABASE_FLAG_DEBUG))
+    {
+      printf("DEBUG: %s\n",String_cString(sqlString));
+    }
+  #endif
+
+  // prepare statement
+  error = prepareStatement(&databaseStatementHandle,
+                           databaseHandle,
+                           String_cString(sqlString),
+                           0
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
+  {
+    // execute statement
+    return executePreparedQuery(&databaseStatementHandle,
+                                changedRowCount,
+                                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
+                                );
+  });
+  Misc_doneTimeout(&timeoutInfo);
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  // finalize statementHandle
+  finalizeStatement(&databaseStatementHandle);
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+
 #ifdef NDEBUG
   void Database_finalize(DatabaseStatementHandle *databaseStatementHandle)
 #else /* not NDEBUG */
