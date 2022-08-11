@@ -819,7 +819,7 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo   *connectorInfo,
   // check if storage initialized
   if (!connectorInfo->storageInitFlag)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"create storage");
     String_delete(archiveName);
     return;
   }
@@ -968,7 +968,7 @@ LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHand
   // check if storage initialized
   if (!connectorInfo->storageInitFlag)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"storage close");
     return;
   }
 
@@ -1027,7 +1027,7 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
   // check if storage initialized
   if (!connectorInfo->storageInitFlag)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"storage exists");
     return;
   }
 

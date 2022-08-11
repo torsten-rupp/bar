@@ -188,7 +188,14 @@ ERROR RENAME_JOB
   }
 
 // --- storage ----------------------------------------------------------
-ERROR INIT_STORAGE                     TR("initialize storage fail")
+//ERROR INIT_STORAGE                     TR("initialize storage fail")
+ERROR INIT_STORAGE
+  stringSet(errorText,sizeof(errorText),TR("initialize storage fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR NO_STORAGE_NAME                  TR("no storage name given")
 ERROR INVALID_STORAGE                  TR("invalid storage")
 
