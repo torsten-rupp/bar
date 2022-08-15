@@ -351,51 +351,102 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
 #endif /* not NDEBUG */
 
 /***********************************************************************\
-* Name   : __printErrorConstString
-* Purpose: print error for modified constant string
-* Input  : string - string
+* Name   : __extendStringSize
+* Purpose: extend size of string
+* Input  : string  - string
+*          newSize - new size of string
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void __printErrorConstString(const struct __String *string)
+void __extendStringSize(struct __String *string, ulong newSize)
 {
-  #ifndef NDEBUG
-    #ifdef TRACE_STRING_ALLOCATIONS
-      DebugStringNode *debugStringNode;
-    #endif /* TRACE_STRING_ALLOCATIONS */
+  char  *newData;
+  ulong newMaxLength;
 
-    pthread_once(&debugStringInitFlag,debugStringInit);
+  assert(string != NULL);
+  assert(newSize > string->maxLength);
 
-    pthread_mutex_lock(&debugStringLock);
-    {
-      #ifdef TRACE_STRING_ALLOCATIONS
-        debugStringNode = debugFindString(&debugStringAllocList,string);
-        if (debugStringNode != NULL)
-        {
-          fprintf(stderr,
-                  "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %lu!\n",
-                  string->data,
-                  debugStringNode->allocFileName,
-                  debugStringNode->allocLineNb
-                 );
-        }
-        else
-        {
-          fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list\n",string->data);
-        }
-      #else /* TRACE_STRING_ALLOCATIONS */
-        fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
-      #endif /* TRACE_STRING_ALLOCATIONS */
-      #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
-      #endif /* HAVE_BACKTRACE */
-    }
-    pthread_mutex_unlock(&debugStringLock);
-  #else /* NDEBUG */
-    fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
-  #endif /* not NDEBUG */
+  switch (string->type)
+  {
+    case STRING_TYPE_DYNAMIC:
+      newMaxLength = ALIGN(newSize,__STRING_DELTA_LENGTH);
+      assert(newMaxLength >= newSize);
+      newData = realloc(string->data,newMaxLength*sizeof(char));
+      if (newData == NULL)
+      {
+        fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newSize*sizeof(char),strerror(errno));
+        abort();
+      }
+      #ifndef NDEBUG
+        #ifdef TRACE_STRING_ALLOCATIONS
+          pthread_once(&debugStringInitFlag,debugStringInit);
+
+          pthread_mutex_lock(&debugStringLock);
+          {
+            debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
+          }
+          pthread_mutex_unlock(&debugStringLock);
+        #endif /* TRACE_STRING_ALLOCATIONS */
+        #ifdef FILL_MEMORY
+          memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
+        #endif /* FILL_MEMORY */
+      #endif /* not NDEBUG */
+
+      string->data      = newData;
+      string->maxLength = newMaxLength;
+      break;
+    case STRING_TYPE_STATIC:
+      HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",newSize*sizeof(char),(ulong)string->maxLength);
+      break;
+    case STRING_TYPE_CONST:
+      {
+        #ifndef NDEBUG
+          #ifdef TRACE_STRING_ALLOCATIONS
+            DebugStringNode *debugStringNode;
+          #endif /* TRACE_STRING_ALLOCATIONS */
+
+          pthread_once(&debugStringInitFlag,debugStringInit);
+
+          pthread_mutex_lock(&debugStringLock);
+          {
+            #ifdef TRACE_STRING_ALLOCATIONS
+              debugStringNode = debugFindString(&debugStringAllocList,string);
+              if (debugStringNode != NULL)
+              {
+                fprintf(stderr,
+                        "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %lu!\n",
+                        string->data,
+                        debugStringNode->allocFileName,
+                        debugStringNode->allocLineNb
+                       );
+              }
+              else
+              {
+                fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list\n",string->data);
+              }
+            #else /* TRACE_STRING_ALLOCATIONS */
+              fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
+            #endif /* TRACE_STRING_ALLOCATIONS */
+            #ifdef HAVE_BACKTRACE
+              debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
+            #endif /* HAVE_BACKTRACE */
+          }
+          pthread_mutex_unlock(&debugStringLock);
+        #else /* NDEBUG */
+          fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
+        #endif /* not NDEBUG */
+
+        HALT_INTERNAL_ERROR("modify const string");
+      }
+      break; // not reached
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
 }
 
 /***********************************************************************\
@@ -477,16 +528,15 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
 
       pthread_mutex_lock(&debugStringLock);
       {
-        // update allocation info
-        debugStringAllocList.memorySize += sizeof(struct __String)+tmpString->maxLength;
-
         // allocate new debug node
         debugStringNode = (DebugStringNode*)__List_newNode(__fileName__,__lineNb__,sizeof(DebugStringNode));
         if (debugStringNode == NULL)
         {
           HALT_INSUFFICIENT_MEMORY();
         }
-        debugStringAllocList.memorySize += sizeof(DebugStringNode);
+
+        // update allocation info
+        debugStringAllocList.memorySize += sizeof(DebugStringNode)+sizeof(struct __String)+tmpString->maxLength;
 
         // init string node
         debugStringNode->allocFileName  = __fileName__;
@@ -562,8 +612,11 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
           HALT_INTERNAL_ERROR("Temporary string not found in allocated string list!");
         }
         debugRemoveString(&debugStringAllocList,debugStringNode);
+
+        // update allocation info
         assert(debugStringAllocList.memorySize >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
         debugStringAllocList.memorySize -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+
         LIST_DELETE_NODE(debugStringNode);
       }
       pthread_mutex_unlock(&debugStringLock);
@@ -2582,9 +2635,6 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
     pthread_mutex_lock(&debugStringLock);
     {
       #ifdef TRACE_STRING_ALLOCATIONS
-        // update allocation info
-        debugStringAllocList.memorySize += sizeof(struct __String)+string->maxLength;
-
         // find string in free-list; reuse or allocate new debug node
         debugStringNode = debugFindString(&debugStringFreeList,string);
         if (debugStringNode != NULL)
@@ -2601,7 +2651,9 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
             HALT_INSUFFICIENT_MEMORY();
           }
         }
-        debugStringAllocList.memorySize += sizeof(DebugStringNode);
+
+        // update allocation info
+        debugStringAllocList.memorySize += sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
 
         // init string node
         debugStringNode->allocFileName  = __fileName__;
@@ -2857,6 +2909,8 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
           {
             // remove from allocated list
             debugRemoveString(&debugStringAllocList,debugStringNode);
+
+            // update allocation info
             assert(debugStringAllocList.memorySize >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
             debugStringAllocList.memorySize -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
 
