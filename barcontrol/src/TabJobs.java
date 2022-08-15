@@ -14640,11 +14640,14 @@ throw new Error("NYI");
           {
             if (selectedJobData != null)
             {
-              String directory = Dialogs.directory(shell,
-                                                   BARControl.tr("Select storage directory"),
-                                                   BARControl.tr("Move to"),
-                                                   widgetMoveToDirectory.getText()
-                                                  );
+              String directory = Dialogs.file(shell,
+                                              Dialogs.FileDialogTypes.DIRECTORY,
+                                              BARControl.tr("Select storage directory"),
+                                              widgetMoveToDirectory.getText(),
+                                              ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                                ? BARServer.remoteListDirectory(selectedJobData.uuid)
+                                                : BARControl.listDirectory
+                                             );
               if (directory != null)
               {
                 widgetMoveToDirectory.setText(directory);
