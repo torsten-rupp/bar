@@ -109,7 +109,7 @@ typedef struct
 *          errorMessageSize - max. size of error message
 * Output : symbols      - array with symbols
 *          symbolCount  - number of entries in array
-*          errorMessage - error mesreadSymbolTablesage
+*          errorMessage - error message
 * Return : TRUE iff symbol table read
 * Notes  : -
 \***********************************************************************/
@@ -147,7 +147,7 @@ LOCAL bool readSymbolTable(bfd           *abfd,
 
     (*symbols) = NULL;
     n = bfd_read_minisymbols(abfd,
-                             TRUE /* dynamic */ ,
+                             TRUE,  // dynamic
                              (void**)symbols,
                              &size
                             );
@@ -733,6 +733,172 @@ void Stacktrace_done(void)
     sigaltstack(&oldSignalHandlerStackInfo, NULL);
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
+}
+
+void Stacktrace_getSymbols(const char         *executableFileName,
+                           const void * const addresses[],
+                           uint               addressCount,
+                           SymbolInfo         *symbolInfo
+                          )
+{
+  #if   defined(PLATFORM_LINUX)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+      uint          i;
+      FileMatchInfo fileMatchInfo;
+      char          errorMessage[128];
+      bool          symbolFound;
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  assert(executableFileName != NULL);
+  assert(addresses != NULL);
+  assert(symbolInfo != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+      for (i = 0; i < addressCount; i++)
+      {
+        fileMatchInfo.found   = FALSE;
+        fileMatchInfo.address = addresses[i];
+        dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
+        if (fileMatchInfo.found)
+        {
+          symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
+                                              (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
+                                              CALLBACK_INLINE(void,(const void *address,
+                                                                    const char *fileName,
+                                                                    const char *symbolName,
+                                                                    ulong      lineNb,
+                                                                    void       *userData),
+                                              {
+                                                SymbolInfo *symbolInfo = (SymbolInfo*)userData;
+                                                assert(symbolInfo != NULL);
+
+                                                symbolInfo->symbolName = stringDuplicate(symbolName);
+                                                symbolInfo->fileName   = stringDuplicate(fileName);
+                                                symbolInfo->lineNb     = lineNb;
+                                              },&symbolInfo[i]),
+                                              errorMessage,
+                                              sizeof(errorMessage)
+                                             );
+          if (!symbolFound)
+          {
+            symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
+                                                (bfd_vma)addresses[i],
+                                                CALLBACK_INLINE(void,(const void *address,
+                                                                      const char *fileName,
+                                                                      const char *symbolName,
+                                                                      ulong      lineNb,
+                                                                      void       *userData),
+                                                {
+                                                  SymbolInfo *symbolInfo = (SymbolInfo*)userData;
+                                                  assert(symbolInfo != NULL);
+
+                                                  symbolInfo->symbolName = stringDuplicate(symbolName);
+                                                  symbolInfo->fileName   = stringDuplicate(fileName);
+                                                  symbolInfo->lineNb     = lineNb;
+                                                },&symbolInfo[i]),
+                                                errorMessage,
+                                                sizeof(errorMessage)
+                                               );
+          }
+//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,fileMatchInfo.fileName,symbolFound);
+        }
+        else
+        {
+          symbolFound = getSymbolInfoFromFile(executableFileName,
+                                              (bfd_vma)addresses[i],
+                                              CALLBACK_INLINE(void,(const void *address,
+                                                                    const char *fileName,
+                                                                    const char *symbolName,
+                                                                    ulong      lineNb,
+                                                                    void       *userData),
+                                              {
+                                                SymbolInfo *symbolInfo = (SymbolInfo*)userData;
+                                                assert(symbolInfo != NULL);
+
+                                                symbolInfo->symbolName = stringDuplicate(symbolName);
+                                                symbolInfo->fileName   = stringDuplicate(fileName);
+                                                symbolInfo->lineNb     = lineNb;
+                                              },&symbolInfo[i]),
+                                              errorMessage,
+                                              sizeof(errorMessage)
+                                             );
+//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,executableFileName,symbolFound);
+        }
+
+        if (!symbolFound)
+        {
+          // use dladdr() as fallback
+          Dl_info    info;
+          char       buffer[256];
+          const char *symbolName;
+          const char *fileName;
+
+          if (dladdr(addresses[i],&info))
+          {
+            if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))
+            {
+              if (!demangleSymbolName(info.dli_sname,buffer,sizeof(buffer)))
+              {
+                symbolName = buffer;
+              }
+              else
+              {
+                symbolName = info.dli_sname;
+              }
+            }
+            else
+            {
+              symbolName = NULL;
+            }
+            fileName = info.dli_fname;
+
+            symbolFound = TRUE;
+//fprintf(stderr,"%s, %d: load via dladdr from %s\n",__FILE__,__LINE__,executableFileName);
+          }
+          else
+          {
+            symbolName = NULL;
+            fileName   = NULL;
+//fprintf(stderr,"%s, %d: not found %s\n",__FILE__,__LINE__,executableFileName);
+          }
+
+          symbolInfo[i].symbolName = stringDuplicate(symbolName);
+          symbolInfo[i].fileName   = stringDuplicate(fileName);
+          symbolInfo[i].lineNb     = 0; //  lineNb
+        }
+      }
+    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+      UNUSED_VARIABLE(executableFileName);
+      UNUSED_VARIABLE(addresses);
+      UNUSED_VARIABLE(addressCount);
+      UNUSED_VARIABLE(symbolInfo);
+      UNUSED_VARIABLE(symbolInfoCount);
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+  #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(executableFileName);
+    UNUSED_VARIABLE(addresses);
+    UNUSED_VARIABLE(addressCount);
+    UNUSED_VARIABLE(symbolInfo);
+    UNUSED_VARIABLE(symbolInfoCount);
+  #endif /* PLATFORM_... */
+}
+
+void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
+                            uint       symbolInfoCount
+                           )
+{
+  uint i;
+
+  assert(symbolInfo != NULL);
+
+  for (i = 0; i < symbolInfoCount; i++)
+  {
+    stringDelete((char*)symbolInfo[i].fileName);
+    stringDelete((char*)symbolInfo[i].symbolName);
+  }
 }
 
 void Stacktrace_getSymbolInfo(const char         *executableFileName,

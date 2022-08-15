@@ -363,7 +363,6 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
-void __printErrorConstString(const struct __String *string);
 INLINE void __ensureStringLength(struct __String *string, ulong newLength);
 
 /***************************** Functions *******************************/
@@ -1550,12 +1549,24 @@ StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint
 char* String_toCString(ConstString string);
 
 /***********************************************************************\
+* Name   : __extendStringSize
+* Purpose: extend size of string
+* Input  : string  - string
+*          newSize - new size of string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void __extendStringSize(struct __String *string, ulong newSize);
+
+/***********************************************************************\
 * Name   : __ensureStringLength
 * Purpose: ensure min. length of string
 * Input  : string    - string
 *          newLength - new min. length of string
 * Output : -
-* Return : TRUE if string length is ok, FALSE on insufficient memory
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -1563,54 +1574,11 @@ INLINE void __ensureStringLength(struct __String *string, ulong newLength);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE void __ensureStringLength(struct __String *string, ulong newLength)
 {
-  char  *newData;
-  ulong newMaxLength;
+  assert(string != NULL);
 
-  switch (string->type)
+  if ((newLength + 1) > string->maxLength)
   {
-    case STRING_TYPE_DYNAMIC:
-      if ((newLength + 1) > string->maxLength)
-      {
-        newMaxLength = ((newLength + 1) + __STRING_DELTA_LENGTH - 1) & ~(__STRING_DELTA_LENGTH - 1);
-        assert(newMaxLength >= (newLength + 1));
-        newData = realloc(string->data,newMaxLength*sizeof(char));
-        if (newData == NULL)
-        {
-          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength*sizeof(char),strerror(errno));
-          abort();
-        }
-        #ifndef NDEBUG
-          #ifdef TRACE_STRING_ALLOCATIONS
-            pthread_once(&debugStringInitFlag,debugStringInit);
-
-            pthread_mutex_lock(&debugStringLock);
-            {
-              debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
-            }
-            pthread_mutex_unlock(&debugStringLock);
-          #endif /* TRACE_STRING_ALLOCATIONS */
-          #ifdef FILL_MEMORY
-            memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
-          #endif /* FILL_MEMORY */
-        #endif /* not NDEBUG */
-
-        string->data      = newData;
-        string->maxLength = newMaxLength;
-      }
-      break;
-    case STRING_TYPE_STATIC:
-      if ((newLength + 1) > string->maxLength)
-      {
-        HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength);
-      }
-      break;
-    case STRING_TYPE_CONST:
-      __printErrorConstString(string);
-      HALT_INTERNAL_ERROR("modify const string");
-      break; // not reached
-    default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      break; // not reached
+    __extendStringSize(string,newLength + 1);
   }
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */

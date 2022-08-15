@@ -184,8 +184,6 @@ LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *nam
 
   pthread_mutex_lock(&debugThreadStackTraceThreadLock);
   {
-    assert(debugThreadStackTraceThreadCount > 0);
-
     i = 0;
     while ((i < debugThreadStackTraceThreadCount) && pthread_equal(debugThreadStackTraceThreads[i].id,threadId) == 0)
     {
