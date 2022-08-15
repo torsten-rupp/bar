@@ -186,6 +186,7 @@ rest time
   https://en.wikipedia.org/wiki/Ptrace
 - BARControl device list: file system type
 - entity UUID in archives
+- bar-index: password option
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
