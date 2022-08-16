@@ -882,7 +882,6 @@ void Stacktrace_getSymbols(const char         *executableFileName,
     UNUSED_VARIABLE(addresses);
     UNUSED_VARIABLE(addressCount);
     UNUSED_VARIABLE(symbolInfo);
-    UNUSED_VARIABLE(symbolInfoCount);
   #endif /* PLATFORM_... */
 }
 
