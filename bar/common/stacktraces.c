@@ -775,6 +775,8 @@ void Stacktrace_getSymbols(const char         *executableFileName,
                                                 SymbolInfo *symbolInfo = (SymbolInfo*)userData;
                                                 assert(symbolInfo != NULL);
 
+                                                UNUSED_VARIABLE(address);
+
                                                 symbolInfo->symbolName = stringDuplicate(symbolName);
                                                 symbolInfo->fileName   = stringDuplicate(fileName);
                                                 symbolInfo->lineNb     = lineNb;
@@ -794,6 +796,8 @@ void Stacktrace_getSymbols(const char         *executableFileName,
                                                 {
                                                   SymbolInfo *symbolInfo = (SymbolInfo*)userData;
                                                   assert(symbolInfo != NULL);
+
+                                                  UNUSED_VARIABLE(address);
 
                                                   symbolInfo->symbolName = stringDuplicate(symbolName);
                                                   symbolInfo->fileName   = stringDuplicate(fileName);
@@ -817,6 +821,8 @@ void Stacktrace_getSymbols(const char         *executableFileName,
                                               {
                                                 SymbolInfo *symbolInfo = (SymbolInfo*)userData;
                                                 assert(symbolInfo != NULL);
+
+                                                UNUSED_VARIABLE(address);
 
                                                 symbolInfo->symbolName = stringDuplicate(symbolName);
                                                 symbolInfo->fileName   = stringDuplicate(fileName);
