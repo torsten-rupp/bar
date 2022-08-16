@@ -936,7 +936,6 @@ LOCAL void outputProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   if (estimatedRestTime < (99999*60*60))
   {
     stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
@@ -1739,6 +1738,280 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : clearStorage
+* Purpose: clear index storage content
+* Input  : indexHandle  - index handle
+*          storageId    - database id of storage
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpOrphanedStorages(IndexHandle *indexHandle)
+{
+  Array                entryIds;
+  //bool                 transactionFlag;
+  Errors               error;
+  //bool                 doneFlag;
+  //ArraySegmentIterator arraySegmentIterator;
+  //ArrayIterator        arrayIterator;
+//  DatabaseId           entryId;
+  //DatabaseId           entityId;
+  #ifndef NDEBUG
+    //ulong              deletedCounter;
+  #endif
+  #ifdef INDEX_DEBUG_PURGE
+    uint64             t0,dt[10];
+  #endif
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&entryIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  error = ERROR_NONE;
+
+//TODO: do regulary in index thread?
+#if 0
+  /* get entries to purge without associated file/image/directory/link/hardlink/special entry
+     Note: may be left from interrupted purge of previous run
+  */
+//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%lld\n",__FILE__,__LINE__,l);
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  Array_clear(&entryIds);
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getIds(&indexHandle->databaseHandle,
+                             &entryIds,
+                             "entries \
+                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                             ",
+                             "entries.id",
+                             "entries.type=? AND fileEntries.id IS NULL",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
+                             ),
+                             DATABASE_UNLIMITED
+                            );
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    dt[0] = Misc_getTimestamp()-t0;
+  #endif
+
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getIds(&indexHandle->databaseHandle,
+                             &entryIds,
+                             "entries \
+                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                             ",
+                             "entries.id",
+                             "entries.type=? AND imageEntries.id IS NULL",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
+                             ),
+                             DATABASE_UNLIMITED
+                            );
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    dt[1] = Misc_getTimestamp()-t0;
+  #endif
+
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getIds(&indexHandle->databaseHandle,
+                             &entryIds,
+                             "entries \
+                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                             ",
+                             "entries.id",
+                             "entries.type=? AND directoryEntries.id IS NULL",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY)
+                             ),
+                             DATABASE_UNLIMITED
+                            );
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    dt[2] = Misc_getTimestamp()-t0;
+  #endif
+
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getIds(&indexHandle->databaseHandle,
+                             &entryIds,
+                             "entries \
+                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                             ",
+                             "entries.id",
+                             "entries.type=? AND linkEntries.id IS NULL",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_TYPE_LINK)
+                             ),
+                             DATABASE_UNLIMITED
+                            );
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    dt[3] = Misc_getTimestamp()-t0;
+  #endif
+
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getIds(&indexHandle->databaseHandle,
+                             &entryIds,
+                             "entries \
+                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                             ",
+                             "entries.id",
+                             "entries.type=? AND hardlinkEntries.id IS NULL",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
+                             ),
+                             DATABASE_UNLIMITED
+                            );
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    dt[4] = Misc_getTimestamp()-t0;
+  #endif
+
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getIds(&indexHandle->databaseHandle,
+                             &entryIds,
+                             "entries \
+                                LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                             ",
+                             "entries.id",
+                             "entries.type=? AND specialEntries.id IS NULL",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL)
+                             ),
+                             DATABASE_UNLIMITED
+                            );
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    dt[5] = Misc_getTimestamp()-t0;
+  #endif
+  #ifdef INDEX_DEBUG_PURGE
+    fprintf(stderr,"%s, %d: error: %s, %lu entries without associated entry to purge: file %"PRIu64"ms, image %"PRIu64"ms, directory %"PRIu64"ms, link %"PRIu64"ms, hardlink %"PRIu64"ms, special %"PRIu64"ms\n",__FILE__,__LINE__,
+            Error_getText(error),
+            Array_length(&entryIds),
+            dt[0]/US_PER_MS,
+            dt[1]/US_PER_MS,
+            dt[2]/US_PER_MS,
+            dt[3]/US_PER_MS,
+            dt[4]/US_PER_MS,
+            dt[5]/US_PER_MS
+           );
+  #endif
+
+  /* purge entries without associated file/image/directory/link/hardlink/special entry
+  */
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
+    {
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
+      {
+        String_clear(entryIdsString);
+        ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
+        {
+          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
+        }
+
+        do
+        {
+          doneFlag = TRUE;
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "entries",
+                        "id IN (%S)",
+                        entryIdsString
+                       );
+          if (error == ERROR_NONE)
+          {
+            error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+          }
+        }
+        while ((error == ERROR_NONE) && !doneFlag);
+      }
+
+      return ERROR_NONE;
+    });
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    fprintf(stderr,"%s, %d: error: %s, purged orphaned entries: %"PRIu64"ms\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
+  #endif
+#endif
+
+  // free resources
+  Array_done(&entryIds);
+
+  return error;
+}
+
 // ---------------------------------------------------------------------
 
 /***********************************************************************\
@@ -2237,6 +2510,10 @@ LOCAL void indexThreadCode(void)
           {
             break;
           }
+          
+          // clean-up
+// TODO: activate
+//          (void)cleanUpOrphanedStorages(&indexHandle);
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
           storageId = DATABASE_ID_NONE;

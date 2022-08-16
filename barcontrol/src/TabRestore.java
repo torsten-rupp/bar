@@ -8448,23 +8448,14 @@ Dprintf.dprintf("");
         {
           Button widget   = (Button)selectionEvent.widget;
 
-          String pathName;
-          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-          {
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.DIRECTORY,
-                                    BARControl.tr("Select storage directory"),
-                                    widgetStoragePath.getText(),
-                                    BARServer.remoteListDirectory
-                                   );
-          }
-          else
-          {
-            pathName = Dialogs.directory(shell,
-                                         BARControl.tr("Select local storage directory"),
-                                         widgetStoragePath.getText()
+          String pathName = Dialogs.file(shell,
+                                         Dialogs.FileDialogTypes.ENTRY,
+                                         BARControl.tr("Select storage"),
+                                         widgetStoragePath.getText(),
+                                         ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                           ? BARServer.remoteListDirectory(widgetStoragePath.getText())
+                                           : BARControl.listDirectory
                                         );
-          }
           if (pathName != null)
           {
             if (!widgetStoragePath.isDisposed())
@@ -8556,7 +8547,7 @@ Dprintf.dprintf("");
           try
           {
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB progressSteps=1000",
-                                                         new File(storagePath,"*").getPath()
+                                                         new File("dvd://"+storagePath,"*").getPath()
                                                         ),
                                      0,  // debugLevel
                                      new Command.ResultHandler()

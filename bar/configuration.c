@@ -8323,6 +8323,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
   ),
 
+  CONFIG_VALUE_SPACE(),
+
   CONFIG_VALUE_SEPARATOR("persistence"),
   CONFIG_STRUCT_VALUE_SECTION_ARRAY("persistence",JobNode,job.options.persistenceList,configValuePersistenceSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
@@ -8330,6 +8332,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
     CONFIG_STRUCT_VALUE_STRING    ("move-to",                   PersistenceNode,moveTo                           ,"<URI>"),
   ),
+
+  CONFIG_VALUE_SPACE(),
 
   // deprecated
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueDeprecatedRemoteHostParse,NULL,"slave-host-name",TRUE),

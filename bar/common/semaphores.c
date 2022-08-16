@@ -800,11 +800,11 @@ LOCAL_INLINE void debugRemoveThreadInfo(__SemaphoreThreadInfo threadInfos[],
   }
 
   threadInfos[i] = threadInfos[(*threadInfoCount)-1];
-  threadInfos[(*threadInfoCount)-1].threadId   = THREAD_ID_NONE;
-  threadInfos[(*threadInfoCount)-1].lockType   = SEMAPHORE_LOCK_TYPE_NONE;
-  threadInfos[(*threadInfoCount)-1].fileName   = NULL;
-  threadInfos[(*threadInfoCount)-1].lineNb     = 0;
-  threadInfos[(*threadInfoCount)].cycleCounter = 0LL;
+  threadInfos[(*threadInfoCount)-1].threadId     = THREAD_ID_NONE;
+  threadInfos[(*threadInfoCount)-1].lockType     = SEMAPHORE_LOCK_TYPE_NONE;
+  threadInfos[(*threadInfoCount)-1].fileName     = NULL;
+  threadInfos[(*threadInfoCount)-1].lineNb       = 0;
+  threadInfos[(*threadInfoCount)-1].cycleCounter = 0LL;
   (*threadInfoCount)--;
 
   for (uint i = 0; i < (*threadInfoCount); i++)
@@ -813,7 +813,6 @@ LOCAL_INLINE void debugRemoveThreadInfo(__SemaphoreThreadInfo threadInfos[],
     assert(threadInfos[i].lockType != SEMAPHORE_LOCK_TYPE_NONE);
     assert(threadInfos[i].fileName != NULL);
     assert(threadInfos[i].lineNb != 0);
-    assert(threadInfos[i].cycleCounter != 0LL);
   }
 }
 

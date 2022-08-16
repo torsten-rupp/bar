@@ -934,7 +934,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : clearStorageFragm ents
+* Name   : purgeStorageFragments
 * Purpose: purge storage fra gments
 * Input  : indexHandle  - in dex handle
 *          storageId    - st orage id
@@ -944,7 +944,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
 * Notes  : -
 \*************************** ********************************************/
 
-LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
+LOCAL Errors purgeStorageFragments(IndexHandle  *indexHandle,
                                    DatabaseId   storageId,
                                    ProgressInfo *progressInfo
                                   )
@@ -1017,559 +1017,222 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : clearStorageFTSEntries
-* Purpose: purge storage FTS entries
+* Name   : purgeFTSEntry
+* Purpose: purge FTS entry
 * Input  : indexHandle  - index handle
 *          progressInfo - progress info
-*          entryIds     - entry ids
+*          entryId      - entry id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
-                                    ProgressInfo *progressInfo,
-                                    Array        *entryIds
-                                   )
+LOCAL Errors purgeFTSEntry(IndexHandle  *indexHandle,
+                           ProgressInfo *progressInfo,
+                           DatabaseId   entryId
+                          )
 {
-  String               entryIdsString;
-  String               filterString;
-  bool                 transactionFlag;
-  Errors               error;
-  bool                 doneFlag;
-  ArraySegmentIterator arraySegmentIterator;
-  ArrayIterator        arrayIterator;
-  DatabaseId           entryId;
+  Errors error;
   #ifndef NDEBUG
-    ulong              deletedCounter;
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    uint64             t0,dt[10];
+    ulong changedRowCount;
   #endif
 
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  entryIdsString = String_new();
-  filterString   = Database_newFilter();
-  error          = ERROR_NONE;
+  error = ERROR_NONE;
 
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
   if (error == ERROR_NONE)
   {
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      ARRAY_SEGMENTX(entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
-      {
-        String_clear(entryIdsString);
-        ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
-        {
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
-        }
-
-        Database_filter(filterString,
-                        "entryId IN (%S)",
-                        entryIdsString
-                       );
-        do
-        {
-          doneFlag = TRUE;
-          error = IndexCommon_purge(indexHandle,
-                                    &doneFlag,
-                                    #ifndef NDEBUG
-                                      &deletedCounter,
-                                    #else
-                                      NULL,  // deletedCounter
-                                    #endif
-                                    "FTS_entries",
-                                    String_cString(filterString),
-                                    DATABASE_FILTERS
-                                    (
-                                    )
-                                   );
-          if (error == ERROR_NONE)
-          {
-            error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-          }
-        }
-        while ((error == ERROR_NONE) && !doneFlag);
-      }
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "FTS_entries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged FTS entries: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
 
   // free resources
-  Database_deleteFilter(filterString);
-  String_delete(entryIdsString);
 
   return error;
 }
 
 /***********************************************************************\
-* Name   : clearStorageSubEntries
-* Purpose: purge storage file/image/directory/link/hardlink/special sub
-*          entries
+* Name   : purgeSubEntry
+* Purpose: purge file/image/directory/link/hardlink/special sub entry
 * Input  : indexHandle  - index handle
 *          storageId    - storage id
 *          progressInfo - progress info
-*          entryIds     - entry ids
+*          entryId      - entry id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
-                                    DatabaseId   storageId,
-                                    ProgressInfo *progressInfo,
-                                    Array        *entryIds
-                                   )
+LOCAL Errors purgeSubEntry(IndexHandle  *indexHandle,
+                           DatabaseId   storageId,
+                           ProgressInfo *progressInfo,
+                           DatabaseId   entryId
+                          )
 {
-  String               entryIdsString;
-  String               filterString;
-  bool                 transactionFlag;
-  Errors               error;
-  bool                 doneFlag;
-  ArraySegmentIterator arraySegmentIterator;
-  ArrayIterator        arrayIterator;
-  DatabaseId           entryId;
+  Errors error;
   #ifndef NDEBUG
-    ulong              deletedCounter;
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    uint64             t0,dt[10];
+    ulong changedRowCount;
   #endif
 
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  entryIdsString  = String_new();
-  filterString    = Database_newFilter();
-  error           = ERROR_NONE;
+  error = ERROR_NONE;
 
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
   if (error == ERROR_NONE)
   {
     // purge file entries without fragments
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      ARRAY_SEGMENTX(entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
-      {
-        String_clear(entryIdsString);
-        ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
-        {
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
-        }
-
-        Database_filter(filterString,
-                        "    entryId IN (%S) \
-                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1) \
-                        ",
-                        entryIdsString
-                       );
-        do
-        {
-          doneFlag = TRUE;
-          error = IndexCommon_purge(indexHandle,
-                                    &doneFlag,
-                                    #ifndef NDEBUG
-                                      &deletedCounter,
-                                    #else
-                                      NULL,  // deletedCounter
-                                    #endif
-                                    "fileEntries",
-                                    String_cString(filterString),
-                                    DATABASE_FILTERS
-                                    (
-                                    )
-                                   );
-          if (error == ERROR_NONE)
-          {
-            error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-          }
-        }
-        while ((error == ERROR_NONE) && !doneFlag);
-      }
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "fileEntries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged file entries without fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
+
   if (error == ERROR_NONE)
   {
     // purge image entries without fragments
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      ARRAY_SEGMENTX(entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
-      {
-        String_clear(entryIdsString);
-        ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
-        {
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
-        }
-
-        Database_filter(filterString,
-                        "    entryId IN (%S) \
-                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1) \
-                        ",
-                        entryIdsString
-                       );
-        do
-        {
-          doneFlag = TRUE;
-          error = IndexCommon_purge(indexHandle,
-                                    &doneFlag,
-                                    #ifndef NDEBUG
-                                      &deletedCounter,
-                                    #else
-                                      NULL,  // deletedCounter
-                                    #endif
-                                    "imageEntries",
-                                    String_cString(filterString),
-                                    DATABASE_FILTERS
-                                    (
-                                    )
-                                   );
-          if (error == ERROR_NONE)
-          {
-            error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-          }
-        }
-        while ((error == ERROR_NONE) && !doneFlag);
-      }
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "imageEntries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged image entries without fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
+
   if (error == ERROR_NONE)
   {
     // purge directory entries
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      do
-      {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: directoryEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
-        doneFlag = TRUE;
-        error = IndexCommon_purge(indexHandle,
-                                  &doneFlag,
-                                  #ifndef NDEBUG
-                                    &deletedCounter,
-                                  #else
-                                    NULL,  // deletedCounter
-                                  #endif
-                                  "directoryEntries",
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  )
-                                 );
-        if (error == ERROR_NONE)
-        {
-          error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-        }
-      }
-      while ((error == ERROR_NONE) && !doneFlag);
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "directoryEntries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged directory entries: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
+
   if (error == ERROR_NONE)
   {
     // purge link entries
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      do
-      {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: linkEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
-        doneFlag = TRUE;
-        error = IndexCommon_purge(indexHandle,
-                                  &doneFlag,
-                                  #ifndef NDEBUG
-                                    &deletedCounter,
-                                  #else
-                                    NULL,  // deletedCounter
-                                  #endif
-                                  "linkEntries",
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  )
-                                 );
-        if (error == ERROR_NONE)
-        {
-          error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-        }
-      }
-      while ((error == ERROR_NONE) && !doneFlag);
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "linkEntries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged link entries: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
+
   if (error == ERROR_NONE)
   {
     // purge hardlink entries without fragments
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      ARRAY_SEGMENTX(entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
-      {
-        String_clear(entryIdsString);
-        ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
-        {
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
-        }
-
-        Database_filter(filterString,
-                        "    entryId IN (%S) \
-                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1) \
-                        ",
-                        entryIdsString
-                       );
-        do
-        {
-          doneFlag = TRUE;
-          error = IndexCommon_purge(indexHandle,
-                                    &doneFlag,
-                                    #ifndef NDEBUG
-                                      &deletedCounter,
-                                    #else
-                                      NULL,  // deletedCounter
-                                    #endif
-                                    "hardlinkEntries",
-                                    String_cString(filterString),
-                                    DATABASE_FILTERS
-                                    (
-                                    )
-                                   );
-          if (error == ERROR_NONE)
-          {
-            error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-          }
-        }
-        while ((error == ERROR_NONE) && !doneFlag);
-      }
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "hardlinkEntries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged hardlink entries without fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
+
   if (error == ERROR_NONE)
   {
     // purge special entries
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      do
-      {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"specialEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: specialEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
-        doneFlag = TRUE;
-        error = IndexCommon_purge(indexHandle,
-                                  &doneFlag,
-                                  #ifndef NDEBUG
-                                    &deletedCounter,
-                                  #else
-                                    NULL,  // deletedCounter
-                                  #endif
-                                  "specialEntries",
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  )
-                                 );
-        if (error == ERROR_NONE)
-        {
-          error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-        }
-      }
-      while ((error == ERROR_NONE) && !doneFlag);
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "specialEntries",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged special entries: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
 
   // free resources
-  Database_deleteFilter(filterString);
-  String_delete(entryIdsString);
 
   return error;
 }
 
 /***********************************************************************\
-* Name   : clearStorageEntries
-* Purpose: purge storage  entries
+* Name   : purgeEntry
+* Purpose: purge entry
 * Input  : indexHandle  - index handle
 *          progressInfo - progress info
-*          entryIds     - entry ids
+*          entryId      - entry id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
-                                 ProgressInfo *progressInfo,
-                                 Array        *entryIds
-                                )
+LOCAL Errors purgeEntry(IndexHandle  *indexHandle,
+                        ProgressInfo *progressInfo,
+                        DatabaseId   entryId
+                       )
 {
-  String               entryIdsString;
-  String               filterString;
-  bool                 transactionFlag;
-  Errors               error;
-  bool                 doneFlag;
-  ArraySegmentIterator arraySegmentIterator;
-  ArrayIterator        arrayIterator;
-  DatabaseId           entryId;
+  Errors error;
   #ifndef NDEBUG
-    ulong              deletedCounter;
-  #endif
-  #ifdef INDEX_DEBUG_PURGE
-    uint64             t0,dt[10];
+    ulong changedRowCount;
   #endif
 
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  entryIdsString = String_new();
-  filterString   = Database_newFilter();
   error          = ERROR_NONE;
 
-  #ifdef INDEX_DEBUG_PURGE
-    t0 = Misc_getTimestamp();
-  #endif
   if (error == ERROR_NONE)
   {
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      ARRAY_SEGMENTX(entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
-      {
-        String_clear(entryIdsString);
-        ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
-        {
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
-        }
-
-        Database_filter(filterString,
-                        "id IN (%S) \
-                        ",
-                        entryIdsString
-                       );
-        do
-        {
-          doneFlag = TRUE;
-          error = IndexCommon_purge(indexHandle,
-                                    &doneFlag,
-                                    #ifndef NDEBUG
-                                      &deletedCounter,
-                                    #else
-                                      NULL,  // deletedCounter
-                                    #endif
-                                    "entries",
-                                    String_cString(filterString),
-                                    DATABASE_FILTERS
-                                    (
-                                    )
-                                   );
-          if (error == ERROR_NONE)
-          {
-            error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
-          }
-        }
-        while ((error == ERROR_NONE) && !doneFlag);
-      }
-
-      return error;
-    });
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount,
+                            "entries",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged entries: %"PRIu64"ms\n",__FILE__,__LINE__,
-            Error_getText(error),
-            (Misc_getTimestamp()-t0)/US_PER_MS
-           );
-  #endif
 
   // free resources
-  Database_deleteFilter(filterString);
-  String_delete(entryIdsString);
 
   return error;
 }
@@ -1591,10 +1254,10 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
                                     ProgressInfo *progressInfo
                                    )
 {
-  Errors               error;
-  DatabaseId           entityId;
+  Errors     error;
+  DatabaseId entityId;
   #ifdef INDEX_DEBUG_PURGE
-    uint64             t0,dt[10];
+    uint64 t0,dt[10];
   #endif
 
   UNUSED_VARIABLE(progressInfo);
@@ -1694,6 +1357,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                          )
 {
   Array                entryIds;
+  ArrayIterator        arrayIterator;
+  DatabaseId           entryId;
   //bool                 transactionFlag;
   Errors               error;
   //bool                 doneFlag;
@@ -1727,8 +1392,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
 
   // init variables
   Array_init(&entryIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  error           = ERROR_NONE;
+  error = ERROR_NONE;
 
 //TODO: do regulary in index thread?
 #if 0
@@ -1751,18 +1415,19 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                              ",
                              "entries.id",
-                             "    entries.type=? \
-                              AND fileEntries.id IS NULL",
+                             "entries.type=? AND fileEntries.id IS NULL",
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
   #ifdef INDEX_DEBUG_PURGE
     dt[0] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -1781,13 +1446,15 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
   #ifdef INDEX_DEBUG_PURGE
     dt[1] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -1806,13 +1473,15 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
   #ifdef INDEX_DEBUG_PURGE
     dt[2] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -1831,13 +1500,15 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_LINK)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
   #ifdef INDEX_DEBUG_PURGE
     dt[3] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -1856,13 +1527,15 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
   #ifdef INDEX_DEBUG_PURGE
     dt[4] = Misc_getTimestamp()-t0;
   #endif
+
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -1881,7 +1554,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL)
-                             )
+                             ),
+                             DATABASE_UNLIMITED
                             );
     });
   }
@@ -1958,57 +1632,81 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
   if (error == ERROR_NONE)
   {
     error = IndexEntry_collectIds(&entryIds,
-                                       indexHandle,
-                                       storageId,
-                                       progressInfo
-                                      );
-  }
-
-  // purge entry fragments
-  if (error == ERROR_NONE)
-  {
-    error = clearStorageFragments(indexHandle,
+                                  indexHandle,
                                   storageId,
                                   progressInfo
                                  );
   }
 
-  // purge FTS entries
-// TODO: do this wiht a trigger?
-  switch (Database_getType(&indexHandle->databaseHandle))
+  // purge storage fragments
+  if (error == ERROR_NONE)
   {
-    case DATABASE_TYPE_SQLITE3:
+    error = purgeStorageFragments(indexHandle,
+                                  storageId,
+                                  progressInfo
+                                 );
+  }
+
+  ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+  {
+    // purge entry if there exists no other fragments
+    if (!Database_existsValue(&indexHandle->databaseHandle,
+                              "entryFragments",
+                              DATABASE_FLAG_NONE,
+                              "id",
+                              "entryId=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entryId)
+                              )
+                             )
+       )
+    {
+      // purge FTS entry
+      switch (Database_getType(&indexHandle->databaseHandle))
+      {
+        case DATABASE_TYPE_SQLITE3:
+          if (error == ERROR_NONE)
+          {
+            error = purgeFTSEntry(indexHandle,
+                                  progressInfo,
+                                  entryId
+                                 );
+          }
+          break;
+        case DATABASE_TYPE_MARIADB:
+          // nothing to do (using a view)
+          break;
+        case DATABASE_TYPE_POSTGRESQL:
+          if (error == ERROR_NONE)
+          {
+            error = purgeFTSEntry(indexHandle,
+                                  progressInfo,
+                                  entryId
+                                 );
+          }
+          break;
+      }
+
+      // purge file/image/directory/link/hardlink/special entry
       if (error == ERROR_NONE)
       {
-        error = clearStorageFTSEntries(indexHandle,
-                                       progressInfo,
-                                       &entryIds
-                                      );
+        error = purgeSubEntry(indexHandle,
+                              storageId,
+                              progressInfo,
+                              entryId
+                             );
       }
-      break;
-    case DATABASE_TYPE_MARIADB:
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      break;
-  }
 
-  // purge file/image/directory/link/hardlink/special entries
-  if (error == ERROR_NONE)
-  {
-    error = clearStorageSubEntries(indexHandle,
-                                   storageId,
-                                   progressInfo,
-                                   &entryIds
-                                  );
-  }
-
-  // purge entries
-  if (error == ERROR_NONE)
-  {
-    error = clearStorageEntries(indexHandle,
-                                progressInfo,
-                                &entryIds
-                               );
+      // purge entry
+      if (error == ERROR_NONE)
+      {
+        error = purgeEntry(indexHandle,
+                           progressInfo,
+                           entryId
+                          );
+      }
+    }
   }
 
   // remove from newest entries
@@ -2166,8 +1864,8 @@ Errors IndexStorage_cleanUp(IndexHandle *indexHandle)
 }
 
 bool IndexStorage_isEmpty(IndexHandle *indexHandle,
-                                 DatabaseId  storageId
-                                )
+                          DatabaseId  storageId
+                         )
 {
   assert(indexHandle != NULL);
 
@@ -2298,7 +1996,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
           do
           {
             doneFlag = TRUE;
-    // TODO:
+// TODO:
             error = IndexCommon_purge(indexHandle,
                                       &doneFlag,
                                       #ifndef NDEBUG
@@ -2337,7 +2035,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
           do
           {
             doneFlag = TRUE;
-    // TODO:
+// TODO:
             error = IndexCommon_purge(indexHandle,
                                       &doneFlag,
                                       #ifndef NDEBUG
@@ -2694,7 +2392,8 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
                           (
                             DATABASE_FILTER_UINT(INDEX_STATE_OK),
                             DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
-                          )
+                          ),
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {

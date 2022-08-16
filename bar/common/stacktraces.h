@@ -34,6 +34,13 @@ typedef struct
   const char *signalName;
 } SignalHandlerInfo;
 
+typedef struct
+{
+  const char *symbolName;
+  const char *fileName;
+  ulong      lineNb;
+} SymbolInfo;
+
 /***********************************************************************\
 * Name   : SignalHandlerFunction
 * Purpose: signal handler function
@@ -113,6 +120,39 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
 \***********************************************************************/
 
 void Stacktrace_done(void);
+
+/***********************************************************************\
+* Name   : Stacktrace_getSymbols
+* Purpose: get symbol information
+* Input  : executableFileName - executable name
+*          addresses          - addresses
+*          addressCount       - number of addresses
+* Output : symbolInfo         - symbol info array
+*          symbolInfoCount    - length of symbol info array
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Stacktrace_getSymbols(const char         *executableFileName,
+                           const void * const addresses[],
+                           uint               addressCount,
+                           SymbolInfo         *symbolInfo
+                          );
+
+/***********************************************************************\
+* Name   : Stacktrace_freeSymbols
+* Purpose: free symbol information
+* Input  : symbolInfo      - symbol info array
+*          symbolInfoCount - length of symbol info array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
+                            uint       symbolInfoCount
+                           );
+
 
 /***********************************************************************\
 * Name   : Stacktrace_getSymbolInfo

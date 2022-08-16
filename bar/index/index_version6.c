@@ -131,11 +131,10 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                             &fragmentSize
        )
     {
-      DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-
       switch (type)
       {
         case INDEX_TYPE_FILE:
+          DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
           error = upgradeFromVersion7_importFileEntry(oldIndexHandle,
                                                       newIndexHandle,
                                                       &storageIdDictionary,
@@ -144,6 +143,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                                      );
           break;
         case INDEX_TYPE_IMAGE:
+          DIMPORT("import image entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
           error = upgradeFromVersion7_importImageEntry(oldIndexHandle,
                                                        newIndexHandle,
                                                        &storageIdDictionary,
@@ -152,6 +152,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                                       );
           break;
         case INDEX_TYPE_DIRECTORY:
+          DIMPORT("import directory %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                      &newIndexHandle->databaseHandle,
                                      "directoryEntries",
@@ -207,138 +208,140 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                  0L,
                                  1L
                                 );
-      break;
-      case INDEX_TYPE_LINK:
-        error = Database_copyTable(oldDatabaseHandle,
-                                   newDatabaseHandle,
-                                   "linkEntries",
-                                   "linkEntries",
-                                   FALSE,  // transaction flag
-                                   NULL,  // duration
-                                   CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                           DatabaseColumnInfo *toColumnInfo,
-                                                           void               *userData
-                                                          ),
-                                   {
-                                     DatabaseId fromStorageId;
-                                     ValueData  valueData;
-                                     DatabaseId toStorageId;
-
-                                     assert(fromColumnInfo != NULL);
-                                     assert(toColumnInfo != NULL);
-
-                                     UNUSED_VARIABLE(toColumnInfo);
-                                     UNUSED_VARIABLE(userData);
-
-                                     fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
-                                     assert(fromStorageId != DATABASE_ID_NONE);
-                                     if (Dictionary_find(storageIdDictionary,
-                                                         &fromStorageId,
-                                                         sizeof(DatabaseId),
-                                                         &valueData.value,
-                                                         NULL
-                                                        )
-                                        )
+          break;
+        case INDEX_TYPE_LINK:
+          DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+          error = Database_copyTable(oldDatabaseHandle,
+                                     newDatabaseHandle,
+                                     "linkEntries",
+                                     "linkEntries",
+                                     FALSE,  // transaction flag
+                                     NULL,  // duration
+                                     CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                             DatabaseColumnInfo *toColumnInfo,
+                                                             void               *userData
+                                                            ),
                                      {
-                                       toStorageId = *valueData.id;
-                                     }
-                                     else
+                                       DatabaseId fromStorageId;
+                                       ValueData  valueData;
+                                       DatabaseId toStorageId;
+
+                                       assert(fromColumnInfo != NULL);
+                                       assert(toColumnInfo != NULL);
+
+                                       UNUSED_VARIABLE(toColumnInfo);
+                                       UNUSED_VARIABLE(userData);
+
+                                       fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
+                                       assert(fromStorageId != DATABASE_ID_NONE);
+                                       if (Dictionary_find(storageIdDictionary,
+                                                           &fromStorageId,
+                                                           sizeof(DatabaseId),
+                                                           &valueData.value,
+                                                           NULL
+                                                          )
+                                          )
+                                       {
+                                         toStorageId = *valueData.id;
+                                       }
+                                       else
+                                       {
+                                         toStorageId = DATABASE_ID_NONE;
+                                       }
+
+                                       (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                       (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL),  // post-copy
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     "entryId=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_KEY(fromEntryId)
+                                     ),
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
+                                     0L,
+                                     1L
+                                    );
+          break;
+        case INDEX_TYPE_HARDLINK:
+          DIMPORT("import hardlink %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+          error = upgradeFromVersion7_importHardlinkEntry(oldDatabaseHandle,
+                                                          newDatabaseHandle,
+                                                          storageIdDictionary,
+                                                          fromEntryId,
+                                                          toEntryId
+                                                         );
+          break;
+        case INDEX_TYPE_SPECIAL:
+          DIMPORT("import special entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
+          error = Database_copyTable(oldDatabaseHandle,
+                                     newDatabaseHandle,
+                                     "specialEntries",
+                                     "specialEntries",
+                                     FALSE,  // transaction flag
+                                     NULL,  // duration
+                                     CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                             DatabaseColumnInfo *toColumnInfo,
+                                                             void               *userData
+                                                            ),
                                      {
-                                       toStorageId = DATABASE_ID_NONE;
-                                     }
+                                       DatabaseId fromStorageId;
+                                       ValueData  valueData;
+                                       DatabaseId toStorageId;
 
-                                     (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                     (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                       assert(fromColumnInfo != NULL);
+                                       assert(toColumnInfo != NULL);
 
-                                     return ERROR_NONE;
-                                   },NULL),
-                                   CALLBACK_(NULL,NULL),  // post-copy
-                                   CALLBACK_(NULL,NULL),  // pause
-                                   CALLBACK_(NULL,NULL),  // pause
-                                   "entryId=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(fromEntryId)
-                                   ),
-                                   NULL,  // groupBy
-                                   NULL,  // orderby
-                                   0L,
-                                   1L
-                                  );
-        break;
-      case INDEX_TYPE_HARDLINK:
-        error = upgradeFromVersion7_importHardlinkEntry(oldDatabaseHandle,
-                                                        newDatabaseHandle,
-                                                        storageIdDictionary,
-                                                        fromEntryId,
-                                                        toEntryId
-                                                       );
-        break;
-      case INDEX_TYPE_SPECIAL:
-        DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
-        error = Database_copyTable(oldDatabaseHandle,
-                                   newDatabaseHandle,
-                                   "specialEntries",
-                                   "specialEntries",
-                                   FALSE,  // transaction flag
-                                   NULL,  // duration
-                                   CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
-                                                           DatabaseColumnInfo *toColumnInfo,
-                                                           void               *userData
-                                                          ),
-                                   {
-                                     DatabaseId fromStorageId;
-                                     ValueData  valueData;
-                                     DatabaseId toStorageId;
+                                       UNUSED_VARIABLE(fromColumnInfo);
+                                       UNUSED_VARIABLE(toColumnInfo);
+                                       UNUSED_VARIABLE(userData);
 
-                                     assert(fromColumnInfo != NULL);
-                                     assert(toColumnInfo != NULL);
+                                       fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
+                                       assert(fromStorageId != DATABASE_ID_NONE);
+                                       if (Dictionary_find(storageIdDictionary,
+                                                           &fromStorageId,
+                                                           sizeof(DatabaseId),
+                                                           &valueData.value,
+                                                           NULL
+                                                          )
+                                          )
+                                       {
+                                         toStorageId = *valueData.id;
+                                       }
+                                       else
+                                       {
+                                         toStorageId = DATABASE_ID_NONE;
+                                       }
 
-                                     UNUSED_VARIABLE(fromColumnInfo);
-                                     UNUSED_VARIABLE(toColumnInfo);
-                                     UNUSED_VARIABLE(userData);
+                                       (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                       (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
-                                     fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
-                                     assert(fromStorageId != DATABASE_ID_NONE);
-                                     if (Dictionary_find(storageIdDictionary,
-                                                         &fromStorageId,
-                                                         sizeof(DatabaseId),
-                                                         &valueData.value,
-                                                         NULL
-                                                        )
-                                        )
-                                     {
-                                       toStorageId = *valueData.id;
-                                     }
-                                     else
-                                     {
-                                       toStorageId = DATABASE_ID_NONE;
-                                     }
-
-                                     (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                     (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
-
-                                     return ERROR_NONE;
-                                   },NULL),
-                                   CALLBACK_(NULL,NULL),  // post-copy
-                                   CALLBACK_(NULL,NULL),  // pause
-                                   CALLBACK_(NULL,NULL),  // pause
-                                   "entryId=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(fromEntryId)
-                                   ),
-                                   NULL,  // groupBy
-                                   NULL,  // orderby
-                                   0L,
-                                   1L
-                                  );
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* not NDEBUG */
-        break;
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL),  // post-copy
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     "entryId=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_KEY(fromEntryId)
+                                     ),
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
+                                     0L,
+                                     1L
+                                    );
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* not NDEBUG */
+          break;
     }
   }
   assert(error != ERROR_UNKNOWN);

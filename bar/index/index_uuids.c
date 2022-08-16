@@ -1721,7 +1721,8 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
                           &uuidIds,
                           "uuids",
                           "id",
-                          DATABASE_FILTERS_NONE
+                          DATABASE_FILTERS_NONE,
+                          DATABASE_UNLIMITED
                          );
   if (error != ERROR_NONE)
   {
