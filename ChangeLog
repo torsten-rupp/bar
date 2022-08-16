@@ -13,16 +13,15 @@
   * added option --clean-configuration-comments
   * added begin/end time for continous schedules
   * place pid file into /run by default
-  * fixed reading cryption keys via config file
-  * fixed CD/DVD/BD blank command: use
-    "dvd+rw-format -force" to create medium in
-    restricted overwrite mode
   * implemented parallel restore
   * execute pre/post command for BAR in non-server mode,
     too
   * create log file in non-server mode if command line
     option --log-file is specified
   * rename archives: use an increasing number suffix
+  * renamed bar-sqlite3 to bar-index and support MariaDB
+    and PostgreSQL
+  * added option --import to bar-index
   * support ssh password login
   * support webdavs
   * upgrade zlib 1.2.12
@@ -44,11 +43,12 @@
   * upgrade pcre 8.44
   * upgrade SQLite 3.38
   * upgrade binutils 2.35
+  * fixed reading cryption keys via config file
+  * fixed CD/DVD/BD blank command: use
+    "dvd+rw-format -force" to create medium in
+    restricted overwrite mode
   * fixed possible dead-lock on timeout
   * fixed abort restore job if client connection is lost
-  * renamed bar-sqlite3 to bar-index and support MariaDB
-    and PostgreSQL
-  * added option --import to bar-index
   * fixed parsing permissions, fixed set permissions on
     restore
   * fixed band width calculation: use last specified
@@ -56,6 +56,8 @@
   * fixed concurrent network connections handling
   * fixed pattern type for archive names
   * fixed purge entities
+  * fixed clean orphaned. Note: run bar-index
+    --clean-oprhaned once.
   * improved tests
   * removed support for EPM (not needed anymore)
   * BARControl: added create directory/delete file in

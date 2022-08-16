@@ -5912,8 +5912,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
-// TODO:  const uint INCREMENT_SIZE = 4096;
-  const uint INCREMENT_SIZE = 16;
+  const uint INCREMENT_SIZE = 4096;
 
   String               storageName;
   Errors               error;
@@ -7099,13 +7098,13 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                  );
         }
 
+        // purge entries FTS
+        printProgress(0*Array_length(&entryIds),2*Array_length(&entryIds));
         switch (Database_getType(databaseHandle))
         {
           case DATABASE_TYPE_SQLITE3:
-            // purge FTS entries
             if (error == ERROR_NONE)
             {
-              printProgress(0*Array_length(&entryIds),2*Array_length(&entryIds));
               ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
               {
                 if (!Database_existsValue(databaseHandle,
@@ -7134,16 +7133,46 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                 }
                 printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
               }
-              printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
             }
             break;
           case DATABASE_TYPE_MARIADB:
             // nothing to do (use views)
             break;
           case DATABASE_TYPE_POSTGRESQL:
-            // nothing to do (use views)
+            if (error == ERROR_NONE)
+            {
+              ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+              {
+                if (!Database_existsValue(databaseHandle,
+                                          "entryFragments",
+                                          DATABASE_FLAG_NONE,
+                                          "id",
+                                          "entryId=?",
+                                          DATABASE_FILTERS
+                                          (
+                                            DATABASE_FILTER_KEY(entryId)
+                                          )
+                                         )
+                   )
+                {
+                  error = Database_delete(databaseHandle,
+                                          &n,
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          "entryId=?",
+                                          DATABASE_FILTERS
+                                          (
+                                            DATABASE_FILTER_KEY(entryId)
+                                          ),
+                                          0
+                                         );
+                }
+                printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+              }
+            }
             break;
         }
+        printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
 
         // purge directory/link/special entries
         if (error == ERROR_NONE)
@@ -7189,6 +7218,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                  );
         }
 
+        // purge storage FTS
         switch (Database_getType(databaseHandle))
         {
           case DATABASE_TYPE_SQLITE3:
@@ -7212,7 +7242,21 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             // nothing to do (use views)
             break;
           case DATABASE_TYPE_POSTGRESQL:
-            // nothing to do (use views)
+            // purge FTS storages
+            if (error == ERROR_NONE)
+            {
+              error = Database_delete(databaseHandle,
+                                      &n,
+                                      "FTS_storages",
+                                      DATABASE_FLAG_NONE,
+                                      "storageId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(storageId)
+                                      ),
+                                      0
+                                     );
+            }
             break;
         }
 
