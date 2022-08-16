@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-08-14 19:25+0200\n"
+"POT-Creation-Date: 2022-08-16 02:17+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -367,8 +367,8 @@ msgstr "再試行"
 #: src/ServerSettings.java:3230 src/ServerSettings.java:3842
 #: src/ServerSettings.java:4224 src/TabJobs.java:8993 src/TabJobs.java:9135
 #: src/TabJobs.java:9291 src/TabJobs.java:10470 src/TabJobs.java:10899
-#: src/TabJobs.java:11392 src/TabJobs.java:12037 src/TabJobs.java:13395
-#: src/TabJobs.java:13949 src/TabJobs.java:14775 src/TabRestore.java:8479
+#: src/TabJobs.java:11392 src/TabJobs.java:12037 src/TabJobs.java:13424
+#: src/TabJobs.java:13978 src/TabJobs.java:14804 src/TabRestore.java:8479
 #: src/TabRestore.java:9736 src/TabStatus.java:2856 src/TabStatus.java:3028
 msgid "Cancel"
 msgstr "キャンセル"
@@ -566,7 +566,7 @@ msgstr "ホスト"
 
 #: src/BARControl.java:5222 src/BARControl.java:5457 src/BARControl.java:5580
 #: src/BARControl.java:5748 src/ServerSettings.java:1770 src/TabJobs.java:10408
-#: src/TabJobs.java:13717 src/TabJobs.java:14475 src/TabRestore.java:4922
+#: src/TabJobs.java:13746 src/TabJobs.java:14504 src/TabRestore.java:4922
 #: src/TabRestore.java:4966 src/TabRestore.java:6567 src/TabRestore.java:9546
 #: src/TabStatus.java:705 src/TabStatus.java:794 src/TabStatus.java:3246
 msgid "Type"
@@ -2820,8 +2820,8 @@ msgstr "クリックしてファイル名順に並べ替え。"
 #: src/TabJobs.java:8149 src/TabJobs.java:8389 src/TabJobs.java:8550
 #: src/TabJobs.java:8989 src/TabJobs.java:10667 src/TabJobs.java:10711
 #: src/TabJobs.java:11067 src/TabJobs.java:11109 src/TabJobs.java:11620
-#: src/TabJobs.java:11666 src/TabJobs.java:12201 src/TabJobs.java:14057
-#: src/TabJobs.java:14191 src/TabJobs.java:14984 src/TabJobs.java:15025
+#: src/TabJobs.java:11666 src/TabJobs.java:12201 src/TabJobs.java:14086
+#: src/TabJobs.java:14220 src/TabJobs.java:15013 src/TabJobs.java:15054
 #: src/TabRestore.java:8475
 msgid "Add"
 msgstr "追加"
@@ -2854,8 +2854,8 @@ msgstr "予想時間"
 
 #: src/ServerSettings.java:1574 src/ServerSettings.java:1854
 #: src/ServerSettings.java:3227 src/TabJobs.java:10686 src/TabJobs.java:11085
-#: src/TabJobs.java:11647 src/TabJobs.java:12220 src/TabJobs.java:13392
-#: src/TabJobs.java:14128 src/TabJobs.java:15004
+#: src/TabJobs.java:11647 src/TabJobs.java:12220 src/TabJobs.java:13421
+#: src/TabJobs.java:14157 src/TabJobs.java:15033
 msgid "Save"
 msgstr "保存"
 
@@ -4206,7 +4206,7 @@ msgstr "インクリメンタルファイル選択"
 msgid "BAR incremental data"
 msgstr "BARインクリメンタルデータ"
 
-#: src/TabJobs.java:6641 src/TabJobs.java:14661
+#: src/TabJobs.java:6641 src/TabJobs.java:14690
 msgid "Destination"
 msgstr "保存先"
 
@@ -4225,7 +4225,7 @@ msgid ""
 "  on generic device\n"
 msgstr ""
 
-#: src/TabJobs.java:6662 src/TabJobs.java:14677
+#: src/TabJobs.java:6662 src/TabJobs.java:14706
 msgid "file system"
 msgstr "ファイルシステム"
 
@@ -4428,12 +4428,12 @@ msgstr "最新作成"
 msgid "Total entities"
 msgstr "エンティティ合計"
 
-#: src/TabJobs.java:8018 src/TabJobs.java:15132 src/TabRestore.java:4450
+#: src/TabJobs.java:8018 src/TabJobs.java:15161 src/TabRestore.java:4450
 #: src/TabRestore.java:4564
 msgid "Total entries"
 msgstr "エントリ合計"
 
-#: src/TabJobs.java:8028 src/TabJobs.java:8229 src/TabJobs.java:15122
+#: src/TabJobs.java:8028 src/TabJobs.java:8229 src/TabJobs.java:15151
 #: src/TabRestore.java:4440 src/TabRestore.java:4554
 msgid "Total size"
 msgstr "サイズ合計"
@@ -4483,7 +4483,7 @@ msgstr "最大"
 msgid "max. age"
 msgstr "最小"
 
-#: src/TabJobs.java:8227 src/TabJobs.java:15112 src/TabRestore.java:4533
+#: src/TabJobs.java:8227 src/TabJobs.java:15141 src/TabRestore.java:4533
 #: src/TabRestore.java:4942 src/TabRestore.java:5241
 msgid "Created"
 msgstr "作成された"
@@ -5397,7 +5397,7 @@ msgstr ""
 msgid "5 years"
 msgstr ""
 
-#: src/TabJobs.java:14588
+#: src/TabJobs.java:14617
 msgid "Move to"
 msgstr ""
 
@@ -5414,12 +5414,12 @@ msgstr ""
 msgid "Select remote directory. CTRL+click to select local directory."
 msgstr ""
 
-#: src/TabJobs.java:14645
+#: src/TabJobs.java:14674
 #, fuzzy
 msgid "Select storage directory"
 msgstr "保存ファイル名選択"
 
-#: src/TabJobs.java:14667
+#: src/TabJobs.java:14696
 msgid ""
 "Storage destination type:\n"
 "  into file system\n"
@@ -5430,7 +5430,7 @@ msgid ""
 "  on WebDAV secure server\n"
 msgstr ""
 
-#: src/TabJobs.java:14892
+#: src/TabJobs.java:14921
 #, fuzzy, java-format
 msgid ""
 "Cannot add persistence entry:\n"
@@ -5441,7 +5441,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:14929
+#: src/TabJobs.java:14958
 #, fuzzy, java-format
 msgid ""
 "Cannot update persistence data:\n"
@@ -5452,7 +5452,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:14965
+#: src/TabJobs.java:14994
 #, fuzzy, java-format
 msgid ""
 "Cannot remove persistence data:\n"
@@ -5463,37 +5463,37 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:14984
+#: src/TabJobs.java:15013
 #, fuzzy
 msgid "Add new persistence"
 msgstr "新しいスケジュールエントリ追加。"
 
-#: src/TabJobs.java:15004
+#: src/TabJobs.java:15033
 msgid "Edit persistence"
 msgstr ""
 
-#: src/TabJobs.java:15025
+#: src/TabJobs.java:15054
 #, fuzzy
 msgid "Clone persistence"
 msgstr "スケジュールエントリをクローン。"
 
-#: src/TabJobs.java:15042
+#: src/TabJobs.java:15071
 #, fuzzy, java-format
 msgid "Remove {0} persistence {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 "{0}選択スケジュール{0,choice,0#entries|1#entry|1<entries}を削除しますか？"
 
-#: src/TabJobs.java:15091 src/TabRestore.java:4502 src/TabRestore.java:4675
+#: src/TabJobs.java:15120 src/TabRestore.java:4502 src/TabRestore.java:4675
 #, fuzzy
 msgid "Entity id"
 msgstr "エンティティ合計"
 
-#: src/TabJobs.java:15101 src/TabRestore.java:4522
+#: src/TabJobs.java:15130 src/TabRestore.java:4522
 #, fuzzy
 msgid "Schedule UUID"
 msgstr "スケジュール"
 
-#: src/TabJobs.java:15126 src/TabJobs.java:15146 src/TabRestore.java:4444
+#: src/TabJobs.java:15155 src/TabJobs.java:15175 src/TabRestore.java:4444
 #: src/TabRestore.java:4464 src/TabRestore.java:4558 src/TabRestore.java:4578
 #: src/TabRestore.java:4735 src/TabRestore.java:4980
 #, fuzzy, java-format
@@ -5501,19 +5501,19 @@ msgid "{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})"
 msgstr ""
 "{0}{0,choice,0#entries|1#entry|1<entries}のインデックスを更新しますか？"
 
-#: src/TabJobs.java:15136 src/TabRestore.java:4454 src/TabRestore.java:4568
+#: src/TabJobs.java:15165 src/TabRestore.java:4454 src/TabRestore.java:4568
 #: src/TabRestore.java:4725 src/TabStatus.java:3189 src/TabStatus.java:3199
 #: src/TabStatus.java:3215
 #, java-format
 msgid "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15142 src/TabRestore.java:4460 src/TabRestore.java:4574
+#: src/TabJobs.java:15171 src/TabRestore.java:4460 src/TabRestore.java:4574
 #, fuzzy
 msgid "Total entries size"
 msgstr "エントリ合計"
 
-#: src/TabJobs.java:15229
+#: src/TabJobs.java:15258
 #, fuzzy, java-format
 msgid ""
 "Cannot refresh entity index data:\n"
@@ -5524,7 +5524,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:15261
+#: src/TabJobs.java:15290
 #, fuzzy, java-format
 msgid ""
 "Cannot remove entity index data:\n"
@@ -5535,7 +5535,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:15297
+#: src/TabJobs.java:15326
 #, fuzzy, java-format
 msgid ""
 "Cannot delete entity:\n"
