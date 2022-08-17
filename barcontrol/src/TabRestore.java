@@ -8427,9 +8427,7 @@ Dprintf.dprintf("");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
-
-
-
+/* TODO
       // destination
       label = Widgets.newLabel(composite,BARControl.tr("Destination")+":");
       Widgets.layout(label,10,0,TableLayoutData.W);
@@ -8532,8 +8530,7 @@ Dprintf.dprintf("");
           });
         }
       }
-
-
+*/
 
       label = Widgets.newLabel(composite,BARControl.tr("Storage path")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
