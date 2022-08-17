@@ -487,8 +487,8 @@ LOCAL void printProgress(ulong n, ulong count)
     percentage = (count > 0) ? ((double)n*1000.0)/((double)count*10.0) : 0.0;
     if (percentage > 100.0) percentage = 100.0;
 
-    d = (count > 0) ? floor(log10((double)count)) : 0;
-    stringFormat(buffer,sizeof(buffer),"%5.1lf%% (%*"PRIu64"/%*"PRIu64")",percentage,1+(int)d,n,1+(int)d,count);
+    d = (count > 0) ? ceil(log10((double)count)) : 1.0;
+    stringFormat(buffer,sizeof(buffer),"%5.1lf%% (%*"PRIu64"/%*"PRIu64")",percentage,1+(int)d,n,(int)d,count);
     bufferLength = stringLength(buffer);
 
     fwrite(buffer,bufferLength,1,stdout);
@@ -3539,7 +3539,6 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     printProgress(2,2);
     clearProgress();
     printInfo("OK  \n");
-
 
     // delete all newest entries
     printInfo("Purge newest entries...");
@@ -6987,346 +6986,352 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
 
 LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 {
+  Array         storageIds;
+  Array         entryIds;
   ulong         n;
   Errors        error;
   DatabaseId    storageId;
-  Array         entryIds;
-  ArrayIterator arrayIterator;
+  ArrayIterator storageArrayIterator,entryArrayIterator;
   DatabaseId    entryId;
 
   // init variables
 
   printInfo("Purge deleted storages:\n");
 
+  Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   n     = 0L;
   error = ERROR_UNKNOWN;
-  do
+
+  error = Database_getIds(databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "deletedFlag=TRUE",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+  if (error != ERROR_NONE)
+  {
+    printError("purge deleted fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
+  ARRAY_ITERATEX(&storageIds,storageArrayIterator,storageId,error == ERROR_NONE)
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      // get storage to purge
-      error = Database_getId(databaseHandle,
-                             &storageId,
-                             "storages",
-                             "id",
-                             "deletedFlag=1",
-                             DATABASE_FILTERS
-                             (
-                             )
-                            );
-      if ((error == ERROR_NONE) && (storageId != DATABASE_ID_NONE))
+      printInfo("  %10"PRIi64"...",storageId);
+
+      // collect file/image/hardlink entries to purge
+      Array_clear(&entryIds);
+      if (error == ERROR_NONE)
       {
-        printInfo("  %10"PRIi64"...",storageId);
-
-        // collect file/image/hardlink entries to purge
-        Array_clear(&entryIds);
-        if (error == ERROR_NONE)
-        {
-           error = Database_getIds(databaseHandle,
-                                   &entryIds,
-                                   "entryFragments",
-                                   "entryId",
-                                   "storageId=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(storageId)
-                                   ),
-                                   DATABASE_UNLIMITED
-                                  );
-        }
-
-        // collect directory/link/special entries to purge
-        if (error == ERROR_NONE)
-        {
-           error = Database_getIds(databaseHandle,
-                                   &entryIds,
-                                   "directoryEntries",
-                                   "entryId",
-                                   "storageId=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(storageId)
-                                   ),
-                                   DATABASE_UNLIMITED
-                                  );
-        }
-        if (error == ERROR_NONE)
-        {
-           error = Database_getIds(databaseHandle,
-                                   &entryIds,
-                                   "linkEntries",
-                                   "entryId",
-                                   "storageId=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(storageId)
-                                   ),
-                                   DATABASE_UNLIMITED
-                                  );
-        }
-        if (error == ERROR_NONE)
-        {
-           error = Database_getIds(databaseHandle,
-                                   &entryIds,
-                                   "specialEntries",
-                                   "entryId",
-                                   "storageId=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(storageId)
-                                   ),
-                                  DATABASE_UNLIMITED
-                                  );
-        }
-
-        printProgress(0,2*Array_length(&entryIds));
-
-        // purge fragments
-        if (error == ERROR_NONE)
-        {
-          error = Database_delete(databaseHandle,
-                                  NULL,  // changedRowCount,
-                                  "entryFragments",
-                                  DATABASE_FLAG_NONE,
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  ),
-                                  0
-                                 );
-        }
-
-        // purge entries FTS
-        printProgress(0*Array_length(&entryIds),2*Array_length(&entryIds));
-        switch (Database_getType(databaseHandle))
-        {
-          case DATABASE_TYPE_SQLITE3:
-            if (error == ERROR_NONE)
-            {
-              ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
-              {
-                if (!Database_existsValue(databaseHandle,
-                                          "entryFragments",
-                                          DATABASE_FLAG_NONE,
-                                          "id",
-                                          "entryId=?",
-                                          DATABASE_FILTERS
-                                          (
-                                            DATABASE_FILTER_KEY(entryId)
-                                          )
-                                         )
-                   )
-                {
-                  error = Database_delete(databaseHandle,
-                                          &n,
-                                          "FTS_entries",
-                                          DATABASE_FLAG_NONE,
-                                          "entryId MATCH ?",
-                                          DATABASE_FILTERS
-                                          (
-                                            DATABASE_FILTER_KEY(entryId)
-                                          ),
-                                          0
-                                         );
-                }
-                printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
-              }
-            }
-            break;
-          case DATABASE_TYPE_MARIADB:
-            // nothing to do (use views)
-            break;
-          case DATABASE_TYPE_POSTGRESQL:
-            if (error == ERROR_NONE)
-            {
-              ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
-              {
-                if (!Database_existsValue(databaseHandle,
-                                          "entryFragments",
-                                          DATABASE_FLAG_NONE,
-                                          "id",
-                                          "entryId=?",
-                                          DATABASE_FILTERS
-                                          (
-                                            DATABASE_FILTER_KEY(entryId)
-                                          )
-                                         )
-                   )
-                {
-                  error = Database_delete(databaseHandle,
-                                          &n,
-                                          "FTS_entries",
-                                          DATABASE_FLAG_NONE,
-                                          "entryId=?",
-                                          DATABASE_FILTERS
-                                          (
-                                            DATABASE_FILTER_KEY(entryId)
-                                          ),
-                                          0
-                                         );
-                }
-                printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
-              }
-            }
-            break;
-        }
-        printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
-
-        // purge directory/link/special entries
-        if (error == ERROR_NONE)
-        {
-          error = Database_delete(databaseHandle,
-                                  NULL,  // changedRowCount,
-                                  "directoryEntries",
-                                  DATABASE_FLAG_NONE,
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  ),
-                                  0
-                                 );
-        }
-        if (error == ERROR_NONE)
-        {
-          error = Database_delete(databaseHandle,
-                                  NULL,  // changedRowCount,
-                                  "linkEntries",
-                                  DATABASE_FLAG_NONE,
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  ),
-                                  0
-                                 );
-        }
-        if (error == ERROR_NONE)
-        {
-          error = Database_delete(databaseHandle,
-                                  NULL,  // changedRowCount,
-                                  "specialEntries",
-                                  DATABASE_FLAG_NONE,
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  ),
-                                  0
-                                 );
-        }
-
-        // purge storage FTS
-        switch (Database_getType(databaseHandle))
-        {
-          case DATABASE_TYPE_SQLITE3:
-            // purge FTS storages
-            if (error == ERROR_NONE)
-            {
-              error = Database_delete(databaseHandle,
-                                      &n,
-                                      "FTS_storages",
-                                      DATABASE_FLAG_NONE,
-                                      "storageId MATCH ?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(storageId)
-                                      ),
-                                      0
-                                     );
-            }
-            break;
-          case DATABASE_TYPE_MARIADB:
-            // nothing to do (use views)
-            break;
-          case DATABASE_TYPE_POSTGRESQL:
-            // purge FTS storages
-            if (error == ERROR_NONE)
-            {
-              error = Database_delete(databaseHandle,
-                                      &n,
-                                      "FTS_storages",
-                                      DATABASE_FLAG_NONE,
-                                      "storageId=?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(storageId)
-                                      ),
-                                      0
-                                     );
-            }
-            break;
-        }
-
-        // purge storage
-        if (error == ERROR_NONE)
-        {
-          error = Database_delete(databaseHandle,
-                                  NULL,  // changedRowCount,
-                                  "storages",
-                                  DATABASE_FLAG_NONE,
-                                  "id=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  ),
-                                  0
-                                 );
-        }
-
-        // purge entries
-        if (error == ERROR_NONE)
-        {
-          printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
-          ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
-          {
-            if (!Database_existsValue(databaseHandle,
-                                      "entryFragments",
-                                      DATABASE_FLAG_NONE,
-                                      "id",
-                                      "entryId=?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(entryId)
-                                      )
-                                     )
-               )
-            {
-              error = Database_delete(databaseHandle,
-                                      &n,
-                                      "entries",
-                                      DATABASE_FLAG_NONE,
-                                      "id=?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(entryId)
-                                      ),
-                                      0
-                                     );
-            }
-            printProgress(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
-          }
-          printProgress(2*Array_length(&entryIds),2*Array_length(&entryIds));
-        }
-
-        clearProgress();
-
-        if (error == ERROR_NONE)
-        {
-          printInfo("OK\n");
-          n++;
-        }
-        else
-        {
-          printInfo("FAIL!\n");
-          DATABASE_TRANSACTION_ABORT(databaseHandle);
-        }
+         error = Database_getIds(databaseHandle,
+                                 &entryIds,
+                                 "entryFragments",
+                                 "entryId",
+                                 "storageId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(storageId)
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
       }
+
+      // collect directory/link/special entries to purge
+      if (error == ERROR_NONE)
+      {
+         error = Database_getIds(databaseHandle,
+                                 &entryIds,
+                                 "directoryEntries",
+                                 "entryId",
+                                 "storageId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(storageId)
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
+      }
+      if (error == ERROR_NONE)
+      {
+         error = Database_getIds(databaseHandle,
+                                 &entryIds,
+                                 "linkEntries",
+                                 "entryId",
+                                 "storageId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(storageId)
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
+      }
+      if (error == ERROR_NONE)
+      {
+         error = Database_getIds(databaseHandle,
+                                 &entryIds,
+                                 "specialEntries",
+                                 "entryId",
+                                 "storageId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(storageId)
+                                 ),
+                                DATABASE_UNLIMITED
+                                );
+      }
+
+      printProgress(0,3*Array_length(&entryIds));
+
+      // purge fragments
+      if (error == ERROR_NONE)
+      {
+        error = Database_delete(databaseHandle,
+                                NULL,  // changedRowCount,
+                                "entryFragments",
+                                DATABASE_FLAG_NONE,
+                                "storageId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(storageId)
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+      }
+
+      // purge entries FTS
+      printProgress(0*Array_length(&entryIds),2*Array_length(&entryIds));
+      n = 0L;
+      switch (Database_getType(databaseHandle))
+      {
+        case DATABASE_TYPE_SQLITE3:
+          if (error == ERROR_NONE)
+          {
+            ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
+            {
+              if (!Database_existsValue(databaseHandle,
+                                        "entryFragments",
+                                        DATABASE_FLAG_NONE,
+                                        "id",
+                                        "entryId=?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(entryId)
+                                        )
+                                       )
+                 )
+              {
+                error = Database_delete(databaseHandle,
+                                        &n,
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        "entryId MATCH ?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(entryId)
+                                        ),
+                                        DATABASE_UNLIMITED
+                                       );
+              }
+              printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+            }
+          }
+          break;
+        case DATABASE_TYPE_MARIADB:
+          // nothing to do (use views)
+          break;
+        case DATABASE_TYPE_POSTGRESQL:
+          if (error == ERROR_NONE)
+          {
+            ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
+            {
+              if (!Database_existsValue(databaseHandle,
+                                        "entryFragments",
+                                        DATABASE_FLAG_NONE,
+                                        "id",
+                                        "entryId=?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(entryId)
+                                        )
+                                       )
+                 )
+              {
+                error = Database_delete(databaseHandle,
+                                        &n,
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        "entryId=?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(entryId)
+                                        ),
+                                        DATABASE_UNLIMITED
+                                       );
+              }
+              printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+            }
+          }
+          break;
+      }
+      printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
+
+      // purge directory/link/special entries
+      if (error == ERROR_NONE)
+      {
+        error = Database_delete(databaseHandle,
+                                NULL,  // changedRowCount,
+                                "directoryEntries",
+                                DATABASE_FLAG_NONE,
+                                "storageId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(storageId)
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_delete(databaseHandle,
+                                NULL,  // changedRowCount,
+                                "linkEntries",
+                                DATABASE_FLAG_NONE,
+                                "storageId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(storageId)
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_delete(databaseHandle,
+                                NULL,  // changedRowCount,
+                                "specialEntries",
+                                DATABASE_FLAG_NONE,
+                                "storageId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(storageId)
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+      }
+
+      // purge storage FTS
+      switch (Database_getType(databaseHandle))
+      {
+        case DATABASE_TYPE_SQLITE3:
+          // purge FTS storages
+          if (error == ERROR_NONE)
+          {
+            error = Database_delete(databaseHandle,
+                                    NULL,  // changedRowCount,
+                                    "FTS_storages",
+                                    DATABASE_FLAG_NONE,
+                                    "storageId MATCH ?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(storageId)
+                                    ),
+                                    DATABASE_UNLIMITED
+                                   );
+          }
+          break;
+        case DATABASE_TYPE_MARIADB:
+          // nothing to do (use views)
+          break;
+        case DATABASE_TYPE_POSTGRESQL:
+          // purge FTS storages
+          if (error == ERROR_NONE)
+          {
+            error = Database_delete(databaseHandle,
+                                    NULL,  // changedRowCount,
+                                    "FTS_storages",
+                                    DATABASE_FLAG_NONE,
+                                    "storageId=?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(storageId)
+                                    ),
+                                    DATABASE_UNLIMITED
+                                   );
+          }
+          break;
+      }
+
+      // purge storage
+      if (error == ERROR_NONE)
+      {
+        error = Database_delete(databaseHandle,
+                                NULL,  // changedRowCount,
+                                "storages",
+                                DATABASE_FLAG_NONE,
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(storageId)
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+      }
+
+      // purge entries
+      if (error == ERROR_NONE)
+      {
+        printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
+        n = 0L;
+        ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
+        {
+          if (!Database_existsValue(databaseHandle,
+                                    "entryFragments",
+                                    DATABASE_FLAG_NONE,
+                                    "id",
+                                    "entryId=?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(entryId)
+                                    )
+                                   )
+             )
+          {
+            error = Database_delete(databaseHandle,
+                                    &n,
+                                    "entries",
+                                    DATABASE_FLAG_NONE,
+                                    "id=?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(entryId)
+                                    ),
+                                    DATABASE_UNLIMITED
+                                   );
+          }
+          printProgress(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+        }
+        printProgress(2*Array_length(&entryIds),2*Array_length(&entryIds));
+      }
+
+      clearProgress();
+
+      if (error != ERROR_NONE)
+      {
+        printInfo("FAIL!\n");
+        DATABASE_TRANSACTION_ABORT(databaseHandle);
+        break;
+      }
+
+      printInfo("OK\n");
+      n++;
     }
   }
-  while ((storageId != DATABASE_ID_NONE) && (error == ERROR_NONE));
   if (error != ERROR_NONE)
   {
     printError("purge deleted fail (error: %s)!",Error_getText(error));
@@ -7912,7 +7917,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            &n,
                            "storages",
                            "COUNT(id)",
-                           "deletedFlag!=TRUE",
+                           "deletedFlag=TRUE",
                            DATABASE_FILTERS
                            (
                            ),
@@ -10967,8 +10972,8 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
-                   maxIdLength          = 1+(uint)d;
+                   d = (values[0].id > 0LL) ? ceil(log10((double)values[0].id)) : 1.0;
+                   maxIdLength          = (uint)d;
                    maxStorageNameLength = (uint)values[1].u;
 
                    return ERROR_NONE;
@@ -11065,8 +11070,8 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
-                   maxIdLength          = 1+(uint)d;
+                   d = (values[0].id > 0LL) ? ceil(log10((double)values[0].id)) : 1.0;
+                   maxIdLength          = (uint)d;
                    maxEntryNameLength   = values[1].u;
                    maxStorageNameLength = values[2].u;
 
@@ -11188,8 +11193,8 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
-                   maxIdLength          = 1+(uint)d;
+                   d = (values[0].id > 0LL) ? ceil(log10((double)values[0].id)) : 1.0;
+                   maxIdLength          = (uint)d;
                    maxEntryNameLength   = values[1].u;
                    maxStorageNameLength = values[2].u;
 

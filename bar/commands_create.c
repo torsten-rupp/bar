@@ -5605,8 +5605,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   uint64                    archiveSize;
   uint                      percentageDone;
   double                    compressionRatio;
-  char                      t1[16],t2[16];
-  char                      s1[256],s2[256];
+  double                    d;
+  char                      fragmentInfoString[256],compressionRatioString[256];
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -5937,47 +5937,50 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
 
     // get fragment info
-    stringClear(s1);
+    stringClear(fragmentInfoString);
     if (fragmentSize < fileInfo->size)
     {
-      stringFormat(t1,sizeof(t1),"%u",fragmentCount);
-      stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
-      stringAppend(s1,sizeof(s1),", fragment #");
-      stringFillAppend(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
-      stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
+      d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.00;
+      stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
+      stringFormatAppend(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // ratio info
-    stringClear(s2);
+    stringClear(compressionRatioString);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
        )
     {
-      stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
+      stringFormat(compressionRatioString,sizeof(compressionRatioString),", ratio %5.1f%%",compressionRatio);
     }
 
     if (!createInfo->jobOptions->dryRun)
     {
-      printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
+      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+      printInfo(1,"OK (%*"PRIu64" bytes%s%s)\n",
+                (int)d,
                 fragmentSize,
-                s1,
-                s2
+                fragmentInfoString,
+                compressionRatioString
                );
+
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
                  "Added file '%s' (%"PRIu64" bytes%s%s)",
                  String_cString(fileName),
                  fragmentSize,
-                 s1,
-                 s2
+                 fragmentInfoString,
+                 compressionRatioString
                 );
     }
     else
     {
-      printInfo(1,"OK (%"PRIu64" bytes%s%s, dry-run)\n",
+      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+      printInfo(1,"OK (%*"PRIu64" bytes%s%s, dry-run)\n",
+                (int)d,
                 fragmentSize,
-                s1,
-                s2
+                fragmentInfoString,
+                compressionRatioString
                );
     }
   }
@@ -5992,7 +5995,9 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       }
     }
 
-    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
+    d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+    printInfo(1,"OK (%*"PRIu64" bytes, not stored)\n",
+              (int)d,
               fragmentSize
              );
   }
@@ -6073,8 +6078,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   uint64           archiveSize;
   uint             percentageDone;
   double           compressionRatio;
-  char             t1[16],t2[16];
-  char             s1[256],s2[256];
+  double           d;
+  char             fragmentInfoString[256],compressionRatioString[256];
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -6396,33 +6401,33 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // get fragment info
-    stringClear(s1);
+    stringClear(fragmentInfoString);
     if (fragmentSize < deviceInfo->size)
     {
-      stringFormat(t1,sizeof(t1),"%u",fragmentCount);
-      stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
-      stringAppend(s1,sizeof(s1),", fragment #");
-      stringFillAppend(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
-      stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
+      d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
+      stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
+      stringFormatAppend(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // get ratio info
-    stringClear(s2);
+    stringClear(compressionRatioString);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
        )
     {
-      stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
+      stringFormat(compressionRatioString,sizeof(compressionRatioString),", ratio %5.1f%%",compressionRatio);
     }
 
     // output result
     if (!createInfo->jobOptions->dryRun)
     {
-      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s)\n",
+      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+      printInfo(1,"OK (%s, %*"PRIu64" bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                (int)d,
                 fragmentSize,
-                s1,
-                s2
+                fragmentInfoString,
+                compressionRatioString
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
@@ -6430,17 +6435,19 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  String_cString(deviceName),
                  (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
-                 s1,
-                 s2
+                 fragmentInfoString,
+                 compressionRatioString
                 );
     }
     else
     {
-      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s, dry-run)\n",
+      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+      printInfo(1,"OK (%s, %*"PRIu64" bytes%s%s, dry-run)\n",
                 fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                (int)d,
                 fragmentSize,
-                s1,
-                s2
+                fragmentInfoString,
+                compressionRatioString
                );
     }
   }
@@ -6455,8 +6462,10 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
     }
 
-    printInfo(1,"OK (%s, %"PRIu64" bytes, not stored)\n",
+    d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+    printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
               fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+              (int)d,
               fragmentSize
              );
   }
@@ -6894,8 +6903,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   uint64                    archiveSize;
   uint                      percentageDone;
   double                    compressionRatio;
-  char                      t1[16],t2[16];
-  char                      s1[256],s2[256];
+  double                    d;
+  char                      fragmentInfoString[256],compressionRatioString[256];
   const StringNode          *stringNode;
   String                    fileName;
 
@@ -7231,48 +7240,50 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // get fragment info
-    stringClear(s1);
+    stringClear(fragmentInfoString);
     if (fragmentSize < fileInfo->size)
     {
-      stringFormat(t1,sizeof(t1),"%u",fragmentCount);
-      stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
-      stringAppend(s1,sizeof(s1),", fragment #");
-      stringFillAppend(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
-      stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
+      d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
+      stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
+      stringFormatAppend(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // get ratio info
-    stringClear(s2);
+    stringClear(compressionRatioString);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
        )
     {
-      stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
+      stringFormat(compressionRatioString,sizeof(compressionRatioString),", ratio %5.1f%%",compressionRatio);
     }
 
     // output result
     if (!createInfo->jobOptions->dryRun)
     {
-      printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
+      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+      printInfo(1,"OK (%*"PRIu64" bytes%s%s)\n",
+                (int)d,
                 fragmentSize,
-                s1,
-                s2
+                fragmentInfoString,
+                compressionRatioString
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
                  "Added hardlink '%s' (%"PRIu64" bytes%s%s)",
                  String_cString(StringList_first(fileNameList,NULL)),
                  fragmentSize,
-                 s1,
-                 s2
+                 fragmentInfoString,
+                 compressionRatioString
                 );
     }
     else
     {
-      printInfo(1,"OK (%"PRIu64" bytes%s%s, dry-run)\n",
+      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+      printInfo(1,"OK (%*"PRIu64" bytes%s%s, dry-run)\n",
+                (int)d,
                 fragmentSize,
-                s1,
-                s2
+                fragmentInfoString,
+                compressionRatioString
                );
     }
   }
@@ -7287,7 +7298,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       }
     }
 
-    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
+    d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+    printInfo(1,"OK (%*"PRIu64" bytes, not stored)\n",
+              (int)d,
               fragmentSize
              );
   }
