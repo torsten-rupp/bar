@@ -1419,12 +1419,39 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("Check orphaned:\n");
 
   // check entries without fragments
+  printInfo("  entries without storage name...      ");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entryFragments \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                           ",
+                           "COUNT(entryFragments.id)",
+                           "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL  // group
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
+  // check entries without fragments
   printInfo("  file entries without fragments...    ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "fileEntries",
-                           "COUNT(id)",
-                           "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1)",
+                           "fileEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
+                           ",
+                           "COUNT(fileEntries.id)",
+                           "entryFragments.id IS NULL",
                            DATABASE_FILTERS
                            (
                            ),
@@ -1443,9 +1470,11 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  image entries without fragments...   ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "imageEntries",
-                           "COUNT(id)",
-                           "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1)",
+                           "imageEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
+                           ",
+                           "COUNT(imageEntries.id)",
+                           "entryFragments.id IS NULL",
                            DATABASE_FILTERS
                            (
                            ),
@@ -1464,9 +1493,11 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  hardlink entries without fragments...");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "hardlinkEntries",
-                           "COUNT(id)",
-                           "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1)",
+                           "hardlinkEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
+                           ",
+                           "COUNT(hardlinkEntries.id)",
+                           "entryFragments.id IS NULL",
                            DATABASE_FILTERS
                            (
                            ),
@@ -1487,10 +1518,12 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  entries without file entry...        ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entries",
-                           "COUNT(id)",
+                           "entries \
+                              LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                           ",
+                           "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 1) \
+                            AND fileEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -1511,10 +1544,12 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  entries without image entry...       ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entries",
-                           "COUNT(id)",
+                           "entries \
+                              LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                           ",
+                           "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 1) \
+                            AND imageEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -1535,10 +1570,12 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  entries without directory entry...   ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entries",
-                           "COUNT(id)",
+                           "entries \
+                              LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                           ",
+                           "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 1) \
+                            AND directoryEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -1559,10 +1596,12 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  entries without link entry...        ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entries",
-                           "COUNT(id)",
+                           "entries \
+                              LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                           ",
+                           "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 1) \
+                            AND linkEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -1583,10 +1622,12 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  entries without hardlink entry...    ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entries",
-                           "COUNT(id)",
+                           "entries \
+                              LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                           ",
+                           "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 1) \
+                            AND hardlinkEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -1607,10 +1648,12 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("  entries without special entry...     ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entries",
-                           "COUNT(id)",
+                           "entries \
+                              LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                           ",
+                           "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 1) \
+                            AND specialEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -1652,6 +1695,59 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
 
+  // check storages with invalid state
+  printInfo("  storages with invalid state...       ");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "storages",
+                           "COUNT(id)",
+                           "(state<?) OR (state>?)",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
+                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR)
+                           ),
+                           NULL  // group
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
+  // check entities withoout storages
+  printInfo("  entities without storages...         ");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities \
+                              LEFT JOIN storages ON storages.entityId=entities.id \
+                           ",
+                           "COUNT(entities.id)",
+                           "    entities.id!=? \
+                            AND storages.id IS NULL \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                           ),
+                           NULL  // group
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -1659,9 +1755,11 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       printInfo("  FTS entries without entry...         ");
       error = Database_getUInt(databaseHandle,
                                &n,
-                               "FTS_entries",
+                               "FTS_entries \
+                                  LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                               ",
                                "COUNT(entryId)",
-                               "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
+                               "entries.id IS NULL",
                                DATABASE_FILTERS
                                (
                                ),
@@ -1682,32 +1780,11 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       printInfo("  FTS storages without storage...      ");
       error = Database_getUInt(databaseHandle,
                                &n,
-                               "FTS_storages",
+                               "FTS_storages \
+                                  LEFT JOIN storages ON storages.id=FTS_storages.storageId \
+                               ",
                                "COUNT(storageId)",
-                               "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
-                               DATABASE_FILTERS
-                               (
-                               ),
-                               NULL  // group
-                              );
-      if (error == ERROR_NONE)
-      {
-        printInfo("%u\n",n);
-      }
-      else
-      {
-        printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-      }
-      totalCount += (ulong)n;
-
-      // check newest entries without entry
-      printInfo("  newest entries without entry...      ");
-      error = Database_getUInt(databaseHandle,
-                               &n,
-                               "entriesNewest",
-                               "COUNT(id)",
-                               "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                               "storages.id IS NULL",
                                DATABASE_FILTERS
                                (
                                ),
@@ -1725,37 +1802,17 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_MARIADB:
-      // check newest entries without entry
-      printInfo("  newest entries without entry...      ");
-      error = Database_getUInt(databaseHandle,
-                               &n,
-                               "entriesNewest",
-                               "COUNT(id)",
-                               "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
-                               DATABASE_FILTERS
-                               (
-                               ),
-                               NULL  // group
-                              );
-      if (error == ERROR_NONE)
-      {
-        printInfo("%u\n",n);
-      }
-      else
-      {
-        printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-      }
-      totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_POSTGRESQL:
       // check FTS entries without entry
       printInfo("  FTS entries without entry...         ");
       error = Database_getUInt(databaseHandle,
                                &n,
-                               "FTS_entries",
+                               "FTS_entries \
+                                  LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                               ",
                                "COUNT(entryId)",
-                               "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
+                               "entries.id IS NULL",
                                DATABASE_FILTERS
                                (
                                ),
@@ -1776,32 +1833,11 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       printInfo("  FTS storages without storage...      ");
       error = Database_getUInt(databaseHandle,
                                &n,
-                               "FTS_storages",
+                               "FTS_storages \
+                                  LEFT JOIN storages ON storages.id=FTS_storages.storageId \
+                               ",
                                "COUNT(storageId)",
-                               "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
-                               DATABASE_FILTERS
-                               (
-                               ),
-                               NULL  // group
-                              );
-      if (error == ERROR_NONE)
-      {
-        printInfo("%u\n",n);
-      }
-      else
-      {
-        printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-      }
-      totalCount += (ulong)n;
-
-      // check newest entries without entry
-      printInfo("  newest entries without entry...      ");
-      error = Database_getUInt(databaseHandle,
-                               &n,
-                               "entriesNewest",
-                               "COUNT(id)",
-                               "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
+                               "storages.id IS NULL",
                                DATABASE_FILTERS
                                (
                                ),
@@ -1820,14 +1856,41 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       break;
   }
 
+  // check newest entries without entry
+  printInfo("  newest entries without entry...      ");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entriesNewest \
+                              LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                           ",
+                           "COUNT(entriesNewest.id)",
+                           "entries.id IS NULL",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL  // group
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
   // check entities without storages
   printInfo("  entities without storages...         ");
   error = Database_getUInt(databaseHandle,
                            &n,
-                           "entities",
-                           "COUNT(id)",
-                           "    id!=? \
-                            AND NOT EXISTS(SELECT id FROM storages WHERE storages.entityId=entities.id LIMIT 1) \
+                           "entities \
+                              LEFT JOIN storages ON storages.entityId=entities.id \
+                           ",
+                           "COUNT(entities.id)",
+                           "    entities.id!=? \
+                            AND storages.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -2895,20 +2958,20 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                        DATABASE_TABLES
                        (
                          "entryFragments \
-                           LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                           LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                            LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                            LEFT JOIN entries ON entries.id=entryFragments.entryId \
                          ",
                          "directoryEntries \
-                           LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                           LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                            LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                            LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                          ",
                          "linkEntries \
-                           LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                           LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                            LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                            LEFT JOIN entries ON entries.id=linkEntries.entryId \
                          ",
                          "specialEntries \
-                           LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                           LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                            LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                            LEFT JOIN entries ON entries.id=specialEntries.entryId \
                          "
                        ),
                        DATABASE_FLAG_NONE,
@@ -2963,20 +3026,20 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                          DATABASE_TABLES
                          (
                            "entryFragments \
-                             LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
                            ",
                            "directoryEntries \
-                             LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
+                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
                            ",
                            "linkEntries \
-                             LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
+                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
                            ",
                            "specialEntries \
-                             LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
+                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
                            "
                          ),
                          DATABASE_FLAG_NONE,
@@ -3277,7 +3340,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                          DATABASE_TABLES
                          (
                            "linkEntries \
-                               LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                              LEFT JOIN entries ON entries.id=linkEntries.entryId \
                            "
                          ),
                          DATABASE_FLAG_NONE,
@@ -6037,9 +6100,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                 );
     }
     (void)Database_flush(databaseHandle);
-    printInfo("%lu\n",n);
   }
   while (!Array_isEmpty(&ids));
+  printInfo("%lu\n",n);
   total += n;
 
   // clean entries without fragments
@@ -6047,16 +6110,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_delete(databaseHandle,
-                          &n,
-                          "fileEntries",
-                          DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1)",
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "fileEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
+                          ",
+                          "fileEntries.id",
+                          "entryFragments.id IS NULL",
                           DATABASE_FILTERS
                           (
                           ),
                           DATABASE_UNLIMITED
                          );
+    (void)Database_deleteByIds(databaseHandle,
+                               &n,
+                               "fileEntries",
+                               DATABASE_FLAG_NONE,
+                               Array_cArray(&ids),
+                               Array_length(&ids)
+                              );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -6066,16 +6139,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_delete(databaseHandle,
-                          &n,
-                          "imageEntries",
-                          DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1)",
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "imageEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
+                          ",
+                          "imageEntries.id",
+                          "entryFragments.id IS NULL",
                           DATABASE_FILTERS
                           (
                           ),
                           DATABASE_UNLIMITED
                          );
+    (void)Database_deleteByIds(databaseHandle,
+                               &n,
+                               "imageEntries",
+                               DATABASE_FLAG_NONE,
+                               Array_cArray(&ids),
+                               Array_length(&ids)
+                              );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -6085,16 +6168,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_delete(databaseHandle,
-                          &n,
-                          "hardlinkEntries",
-                          DATABASE_FLAG_NONE,
-                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1)",
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "hardlinkEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
+                          ",
+                          "hardlinkEntries.id",
+                          "entryFragments.id IS NULL",
                           DATABASE_FILTERS
                           (
                           ),
                           DATABASE_UNLIMITED
                          );
+    (void)Database_deleteByIds(databaseHandle,
+                               &n,
+                               "hardlinkEntries",
+                               DATABASE_FLAG_NONE,
+                               Array_cArray(&ids),
+                               Array_length(&ids)
+                              );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -6105,10 +6198,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Array_clear(&ids);
   error = Database_getIds(databaseHandle,
                           &ids,
-                          "entries",
+                          "entries \
+                              LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                          ",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 1) \
+                           AND fileEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -6145,10 +6240,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Array_clear(&ids);
   error = Database_getIds(databaseHandle,
                           &ids,
-                          "entries",
+                          "entries \
+                             LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                          ",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 1) \
+                           AND imageEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -6185,10 +6282,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Array_clear(&ids);
   error = Database_getIds(databaseHandle,
                           &ids,
-                          "entries",
+                          "entries \
+                             LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                          ",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 1) \
+                           AND directoryEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -6225,10 +6324,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Array_clear(&ids);
   error = Database_getIds(databaseHandle,
                           &ids,
-                          "entries",
+                          "entries \
+                             LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                          ",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 1) \
+                           AND linkEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -6265,10 +6366,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Array_clear(&ids);
   error = Database_getIds(databaseHandle,
                           &ids,
-                          "entries",
+                          "entries \
+                             LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                          ",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 1) \
+                           AND hardlinkEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -6305,10 +6408,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Array_clear(&ids);
   error = Database_getIds(databaseHandle,
                           &ids,
-                          "entries",
+                          "entries \
+                             LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                          ",
                           "id",
                           "    entries.type=? \
-                           AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 1) \
+                           AND specialEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -6383,24 +6488,33 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("%lu\n",n);
   total += n;
 
-  // clean entities without storages
+  // clean entities withoout storages
   printInfo("  entities without storages...         ");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_delete(databaseHandle,
-                          &n,
-                          "entities",
-                          DATABASE_FLAG_NONE,
-                          "    id!=? \
-                           AND NOT EXISTS(SELECT id FROM storages WHERE storages.entityId=entities.id LIMIT 1) \
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "entities \
+                             LEFT JOIN storages ON storages.entityId=entities.id \
+                          ",
+                          "entities.id",
+                          "    entities.id!=? \
+                           AND storages.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
-                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
                           ),
                           DATABASE_UNLIMITED
                          );
+    (void)Database_deleteByIds(databaseHandle,
+                               &n,
+                               "entities",
+                               DATABASE_FLAG_NONE,
+                               Array_cArray(&ids),
+                               Array_length(&ids)
+                              );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -6414,16 +6528,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       n = 0L;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "FTS_entries",
-                              DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
+        Array_clear(&ids);
+        (void)Database_getIds(databaseHandle,
+                              &ids,
+                              "FTS_entries \
+                                 LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                              ",
+                              "FTS_entries.id",
+                              "entries.id IS NULL",
                               DATABASE_FILTERS
                               (
                               ),
                               DATABASE_UNLIMITED
                              );
+        (void)Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "FTS_entries",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
@@ -6434,36 +6558,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       n = 0L;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "FTS_storages",
-                              DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
+        Array_clear(&ids);
+        (void)Database_getIds(databaseHandle,
+                              &ids,
+                              "FTS_storages \
+                                LEFT JOIN storages ON storages.id=FTS_storages.storageId \
+                              ",
+                              "FTS_storages.id",
+                              "storages.id IS NULL",
                               DATABASE_FILTERS
                               (
                               ),
                               DATABASE_UNLIMITED
                              );
-      }
-      (void)Database_flush(databaseHandle);
-      printInfo("%lu\n",n);
-      total += n;
-
-      // clean newest entries without entry
-      printInfo("  FTS entries without entry...         ");
-      n = 0L;
-      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-      {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entriesNewest",
-                              DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
-                              DATABASE_FILTERS
-                              (
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "FTS_storages",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
@@ -6478,16 +6592,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       n = 0L;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "FTS_entries",
-                              DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 1)",
+        Array_clear(&ids);
+        (void)Database_getIds(databaseHandle,
+                              &ids,
+                              "FTS_entries \
+                                 LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                              ",
+                              "FTS_entries.id",
+                              "entries.id IS NULL",
                               DATABASE_FILTERS
                               (
                               ),
                               DATABASE_UNLIMITED
                              );
+        (void)Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "FTS_entries",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
@@ -6498,42 +6622,93 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       n = 0L;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "FTS_storages",
-                              DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 1)",
+        Array_clear(&ids);
+        (void)Database_getIds(databaseHandle,
+                              &ids,
+                              "FTS_storages \
+                                 LEFT JOIN storages ON storages.id=FTS_storages.storageId \
+                              ",
+                              "FTS_storages.id",
+                              "storages.id IS NULL",
                               DATABASE_FILTERS
                               (
                               ),
                               DATABASE_UNLIMITED
                              );
-      }
-      (void)Database_flush(databaseHandle);
-      printInfo("%lu\n",n);
-      total += n;
-
-      // clean newest entries without entry
-      printInfo("  FTS entries without entry...         ");
-      n = 0L;
-      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-      {
-        (void)Database_delete(databaseHandle,
-                              &n,
-                              "entriesNewest",
-                              DATABASE_FLAG_NONE,
-                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 1)",
-                              DATABASE_FILTERS
-                              (
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+        (void)Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "FTS_storages",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
       total += n;
       break;
   }
+
+  // clean newest entries without entry
+  printInfo("  newest entries without entry...      ");
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "entriesNewest \
+                             LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                          ",
+                          "entriesNewest.id",
+                          "entries.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+    (void)Database_deleteByIds(databaseHandle,
+                               &n,
+                               "entriesNewest",
+                               DATABASE_FLAG_NONE,
+                               Array_cArray(&ids),
+                               Array_length(&ids)
+                              );
+  }
+  (void)Database_flush(databaseHandle);
+  printInfo("%lu\n",n);
+  total += n;
+
+  // clean entities without storages
+  printInfo("  entities without storages...         ");
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "entities \
+                             LEFT JOIN storages ON storages.entityId=entities.id \
+                          ",
+                          "entities.id",
+                          "    entities.id!=? \
+                           AND storages.id IS NULL \
+                          ",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+    (void)Database_deleteByIds(databaseHandle,
+                               &n,
+                               "entities",
+                               DATABASE_FLAG_NONE,
+                               Array_cArray(&ids),
+                               Array_length(&ids)
+                              );
+  }
+  (void)Database_flush(databaseHandle);
+  printInfo("%lu\n",n);
+  total += n;
 
 //TODO: obsolete, remove
 #if 0
@@ -9642,10 +9817,10 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
                                 DATABASE_TABLES
                                 (
                                   "entryFragments \
-                                    LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                     LEFT JOIN entries ON entries.id=entryFragments.entryId \
                                   ",
                                   "directoryEntries \
-                                    LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                     LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                                   ",
                                   "linkEntries \
                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
