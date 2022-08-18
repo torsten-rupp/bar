@@ -10971,8 +10971,8 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
-                   maxIdLength          = 1+(uint)d;
+                   d = (values[0].id > 0LL) ? ceil(log10((double)values[0].id)) : 1.0;
+                   maxIdLength          = (uint)d;
                    maxStorageNameLength = (uint)values[1].u;
 
                    return ERROR_NONE;
@@ -11069,8 +11069,8 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
-                   maxIdLength          = 1+(uint)d;
+                   d = (values[0].id > 0LL) ? ceil(log10((double)values[0].id)) : 1.0;
+                   maxIdLength          = (uint)d;
                    maxEntryNameLength   = values[1].u;
                    maxStorageNameLength = values[2].u;
 
@@ -11192,8 +11192,8 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   d = (values[0].id > 0LL) ? log10((double)values[0].id) : 0;
-                   maxIdLength          = 1+(uint)d;
+                   d = (values[0].id > 0LL) ? ceil(log10((double)values[0].id)) : 1.0;
+                   maxIdLength          = (uint)d;
                    maxEntryNameLength   = values[1].u;
                    maxStorageNameLength = values[2].u;
 
