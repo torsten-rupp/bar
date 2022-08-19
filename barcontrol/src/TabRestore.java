@@ -8414,7 +8414,7 @@ Dprintf.dprintf("");
   private void addStoragesToIndex()
   {
     Label     label;
-    Composite composite;
+    Composite composite,subComposite;
     Button    button;
 
     // create dialog
@@ -8427,6 +8427,111 @@ Dprintf.dprintf("");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
+/* TODO
+      // destination
+      label = Widgets.newLabel(composite,BARControl.tr("Destination")+":");
+      Widgets.layout(label,10,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+      Widgets.layout(subComposite,10,1,TableLayoutData.W);
+      {
+        Combo combo = Widgets.newOptionMenu(subComposite);
+        combo.setToolTipText(BARControl.tr("Storage type:\n"+
+                                           "  into file system\n"+
+                                           "  on FTP server\n"+
+                                           "  on SSH server with scp (secure copy)\n"+
+                                           "  on SSH server with sftp (secure FTP)\n"+
+                                           "  on WebDAV server\n"+
+                                           "  on WebDAV secure server\n"+
+                                           "  on CD\n"+
+                                           "  on DVD\n"+
+                                           "  on BD\n"+
+                                           "  on generic device\n"
+                                          )
+                            );
+        Widgets.setComboItems(combo,
+                              new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
+                                                         "ftp",         StorageTypes.FTP,
+                                                         "scp",         StorageTypes.SCP,
+                                                         "sftp",        StorageTypes.SFTP,
+                                                         "webdav",      StorageTypes.WEBDAV,
+                                                         "webdavs",     StorageTypes.WEBDAVS,
+                                                         "CD",          StorageTypes.CD,
+                                                         "DVD",         StorageTypes.DVD,
+                                                         "BD",          StorageTypes.BD,
+                                           BARControl.tr("device"),     StorageTypes.DEVICE
+                                          }
+                        );
+        Widgets.layout(combo,0,0,TableLayoutData.W);
+        combo.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Combo        widget = (Combo)selectionEvent.widget;
+            StorageTypes type   = Widgets.getSelectedComboItem(widget);
+          }
+        });
+//        Widgets.addModifyListener(new WidgetModifyListener(combo,storageType));
+
+        // destination file system
+        BARWidgets.File file = new BARWidgets.File(composite,
+                                                   EnumSet.allOf(BARWidgets.WidgetTypes.class)
+                                                  );
+        Widgets.layout(file,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(file.maxStorageSize,maxStorageSize)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,maxStorageSize);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+
+            @Override
+            public String getString(WidgetVariable variable)
+            {
+              return (variable.getLong() > 0) ? Units.formatByteSize(variable.getLong()) : "";
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(file.archiveFileMode,archiveFileMode)
+          {
+            @Override
+            public void modified(Combo combo, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(file,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,variable.getEnum() == StorageTypes.FILESYSTEM);
+            }
+          });
+        }
+      }
+*/
+
       label = Widgets.newLabel(composite,BARControl.tr("Storage path")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
@@ -8547,7 +8652,7 @@ Dprintf.dprintf("");
           try
           {
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB progressSteps=1000",
-                                                         new File("dvd://"+storagePath,"*").getPath()
+                                                         new File(storagePath,"*").getPath()
                                                         ),
                                      0,  // debugLevel
                                      new Command.ResultHandler()
