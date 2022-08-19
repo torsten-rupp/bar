@@ -2455,6 +2455,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 * Input  : databaseHandle    - database handle
 *          changedRowCount   - row count variable (can be NULL)
 *          tableName         - table name,
+*          columnName        - column name,
 *          flags             - insert flags; see DATABASE_FLAG__...
 *          ids               - ids array
 *          length            - length of array
@@ -2466,6 +2467,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                             ulong            *changedRowCount,
                             const char       *tableName,
+                            const char       *columnName,
                             uint             flags,
                             const DatabaseId ids[],
                             ulong            length
