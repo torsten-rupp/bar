@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-08-18 13:25+0200\n"
+"POT-Creation-Date: 2022-08-19 17:40+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,26 +17,26 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/rupp/tools/bar/bar/archive.c:6351
+#: /home/torsten/projects/bar/bar/archive.c:6351
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_compare.c:2378
+#: /home/torsten/projects/bar/bar/commands_compare.c:2378
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_convert.c:2564
+#: /home/torsten/projects/bar/bar/commands_convert.c:2564
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_restore.c:4116
+#: /home/torsten/projects/bar/bar/commands_restore.c:4116
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_test.c:1750
+#: /home/torsten/projects/bar/bar/commands_test.c:1750
 #, c-format
 msgid "Test fail: %s\n"
 msgstr ""

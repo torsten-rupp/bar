@@ -1720,7 +1720,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
 
-  // check entities withoout storages
+  // check entities without storages
   printInfo("  entities without storages...         ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1869,34 +1869,6 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            (
                            ),
                            NULL  // group
-                          );
-  if (error == ERROR_NONE)
-  {
-    printInfo("%u\n",n);
-  }
-  else
-  {
-    printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-  }
-  totalCount += (ulong)n;
-
-  // check entities without storages
-  printInfo("  entities without storages...         ");
-  error = Database_getUInt(databaseHandle,
-                           &n,
-                           "entities \
-                              LEFT JOIN storages ON storages.entityId=entities.id \
-                           ",
-                           "COUNT(entities.id)",
-                           "    entities.id!=? \
-                            AND storages.id IS NULL \
-                           ",
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
-                           ),
-                           NULL//"entities.id"
                           );
   if (error == ERROR_NONE)
   {
@@ -6007,6 +5979,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "entryFragments",
+                                 "id",
                                  DATABASE_FLAG_NONE,
                                  Array_cArray(&ids),
                                  Array_length(&ids)
@@ -6036,6 +6009,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "directoryEntries",
+                                 "id",
                                  DATABASE_FLAG_NONE,
                                  Array_cArray(&ids),
                                  Array_length(&ids)
@@ -6065,6 +6039,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "linkEntries",
+                                 "id",
                                  DATABASE_FLAG_NONE,
                                  Array_cArray(&ids),
                                  Array_length(&ids)
@@ -6094,6 +6069,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       (void)Database_deleteByIds(databaseHandle,
                                  &n,
                                  "specialEntries",
+                                 "id",
                                  DATABASE_FLAG_NONE,
                                  Array_cArray(&ids),
                                  Array_length(&ids)
@@ -6126,6 +6102,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_deleteByIds(databaseHandle,
                                &n,
                                "fileEntries",
+                               "id",
                                DATABASE_FLAG_NONE,
                                Array_cArray(&ids),
                                Array_length(&ids)
@@ -6155,6 +6132,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_deleteByIds(databaseHandle,
                                &n,
                                "imageEntries",
+                               "id",
                                DATABASE_FLAG_NONE,
                                Array_cArray(&ids),
                                Array_length(&ids)
@@ -6184,6 +6162,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_deleteByIds(databaseHandle,
                                &n,
                                "hardlinkEntries",
+                               "id",
                                DATABASE_FLAG_NONE,
                                Array_cArray(&ids),
                                Array_length(&ids)
@@ -6222,6 +6201,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
                                    Array_segmentLength(&ids,&arraySegmentIterator)
@@ -6264,6 +6244,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
                                    Array_segmentLength(&ids,&arraySegmentIterator)
@@ -6306,6 +6287,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
                                    Array_segmentLength(&ids,&arraySegmentIterator)
@@ -6348,6 +6330,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
                                    Array_segmentLength(&ids,&arraySegmentIterator)
@@ -6390,6 +6373,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
                                    Array_segmentLength(&ids,&arraySegmentIterator)
@@ -6432,6 +6416,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
                                    Array_segmentLength(&ids,&arraySegmentIterator)
@@ -6505,12 +6490,14 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           DATABASE_FILTERS
                           (
+                            DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
                           ),
                           DATABASE_UNLIMITED
                          );
     (void)Database_deleteByIds(databaseHandle,
                                &n,
                                "entities",
+                               "id",
                                DATABASE_FLAG_NONE,
                                Array_cArray(&ids),
                                Array_length(&ids)
@@ -6523,6 +6510,20 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
+#if 0
+      error = Database_getUInt(databaseHandle,
+                               &n,
+                               "FTS_entries \
+                                  LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                               ",
+                               "COUNT(entryId)",
+                               "entries.id IS NULL",
+                               DATABASE_FILTERS
+                               (
+                               ),
+                               NULL  // group
+                              );
+#endif
       // clean FTS entries without entry
       printInfo("  FTS entries without entry...         ");
       n = 0L;
@@ -6534,7 +6535,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               "FTS_entries \
                                  LEFT JOIN entries ON entries.id=FTS_entries.entryId \
                               ",
-                              "FTS_entries.id",
+                              "FTS_entries.rowid",
                               "entries.id IS NULL",
                               DATABASE_FILTERS
                               (
@@ -6544,6 +6545,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "FTS_entries",
+                                   "rowid",
                                    DATABASE_FLAG_NONE,
                                    Array_cArray(&ids),
                                    Array_length(&ids)
@@ -6564,7 +6566,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               "FTS_storages \
                                 LEFT JOIN storages ON storages.id=FTS_storages.storageId \
                               ",
-                              "FTS_storages.id",
+                              "FTS_storages.rowid",
                               "storages.id IS NULL",
                               DATABASE_FILTERS
                               (
@@ -6574,6 +6576,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "FTS_storages",
+                                   "rowid",
                                    DATABASE_FLAG_NONE,
                                    Array_cArray(&ids),
                                    Array_length(&ids)
@@ -6608,6 +6611,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "FTS_entries",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    Array_cArray(&ids),
                                    Array_length(&ids)
@@ -6638,6 +6642,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
         (void)Database_deleteByIds(databaseHandle,
                                    &n,
                                    "FTS_storages",
+                                   "id",
                                    DATABASE_FLAG_NONE,
                                    Array_cArray(&ids),
                                    Array_length(&ids)
@@ -6669,38 +6674,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_deleteByIds(databaseHandle,
                                &n,
                                "entriesNewest",
-                               DATABASE_FLAG_NONE,
-                               Array_cArray(&ids),
-                               Array_length(&ids)
-                              );
-  }
-  (void)Database_flush(databaseHandle);
-  printInfo("%lu\n",n);
-  total += n;
-
-  // clean entities without storages
-  printInfo("  entities without storages...         ");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-  {
-    Array_clear(&ids);
-    (void)Database_getIds(databaseHandle,
-                          &ids,
-                          "entities \
-                             LEFT JOIN storages ON storages.entityId=entities.id \
-                          ",
-                          "entities.id",
-                          "    entities.id!=? \
-                           AND storages.id IS NULL \
-                          ",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-    (void)Database_deleteByIds(databaseHandle,
-                               &n,
-                               "entities",
+                               "id",
                                DATABASE_FLAG_NONE,
                                Array_cArray(&ids),
                                Array_length(&ids)
@@ -7261,8 +7235,6 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                 );
       }
 
-      printProgress(0,3*Array_length(&entryIds));
-
       // purge fragments
       if (error == ERROR_NONE)
       {
@@ -7354,7 +7326,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           }
           break;
       }
-      printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
+      clearProgress();
 
       // purge directory/link/special entries
       if (error == ERROR_NONE)
@@ -7493,7 +7465,6 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
         }
         clearProgress();
       }
-
 
       if (error != ERROR_NONE)
       {
