@@ -29,7 +29,7 @@ ERROR ABORTED                          TR("aborted")
 ERROR INTERRUPTED                      TR("interrupted")
 ERROR FUNCTION_NOT_SUPPORTED           TR("function not supported")
 ERROR STILL_NOT_IMPLEMENTED            TR("function still not implemented")
-ERROR DAEMON_FAIL                      TR("run as daemon fail")
+ERROR RUN_DAEMON                       TR("run as daemon fail")
 ERROR IPC                              TR("inter-process communication fail")
 ERROR INIT_PASSWORD                    TR("initialize password fail")
 ERROR NO_PASSWORD                      TR("no password given")
@@ -928,7 +928,9 @@ ERROR DATABASE_NOT_SUPPORTED           TR("database type not supported")
 
 ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_NOT_FOUND               TR("database not found")
+ERROR DATABASE_CONNECT                 TR("connect to database fail")
 ERROR DATABASE_CONNECTION_LOST         TR("database connection lost")
+ERROR DATABASE_AUTHORIZATION           TR("database authorization fail")
 
 ERROR DATABASE_VERSION
   stringSet(errorText,sizeof(errorText),TR("insufficient database version"));

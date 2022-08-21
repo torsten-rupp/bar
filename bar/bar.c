@@ -3605,7 +3605,7 @@ LOCAL Errors runDebug(void)
   Errors            error;
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;
-  IndexHandle       *indexHandle;
+  IndexHandle       indexHandle;
   uint              deletedStorageCount;
   JobOptions        jobOptions;
   StorageSpecifier  storageSpecifier;
@@ -3616,7 +3616,6 @@ LOCAL Errors runDebug(void)
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  indexHandle = NULL;
 
   // init index database
   if (stringIsEmpty(globalOptions.indexDatabaseURI))
@@ -3658,12 +3657,17 @@ LOCAL Errors runDebug(void)
   AUTOFREE_ADD(&autoFreeList,globalOptions.continuousDatabaseFileName,{ Continuous_done(); });
 
   // open index
-  indexHandle = NULL;
-  while (indexHandle == NULL)
+  error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
+  if (error != ERROR_NONE)
   {
-    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+    printError("cannot open index database '%s' (error: %s)!",
+               String_cString(printableDatabaseURI),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
   }
-  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+  AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
 
   #ifndef NDEBUG
   if (globalOptions.debug.indexWaitOperationsFlag)
@@ -3681,7 +3685,7 @@ LOCAL Errors runDebug(void)
   {
     // wait until all deleted storages are purged
     printInfo(1,"Wait purge deleted storages...");
-    while (Index_hasDeletedStorages(indexHandle,&deletedStorageCount))
+    while (Index_hasDeletedStorages(&indexHandle,&deletedStorageCount))
     {
       printInfo(1,"%5lu\b\b\b\b\b",deletedStorageCount);
       Misc_udelay(60*US_PER_SECOND);
@@ -3708,7 +3712,7 @@ LOCAL Errors runDebug(void)
     }
 
     // find storage
-    error = Index_findStorageByName(indexHandle,
+    error = Index_findStorageByName(&indexHandle,
                                     &storageSpecifier,
                                     NULL,  // findArchiveName
                                     NULL,  // uuidId
@@ -3736,7 +3740,7 @@ LOCAL Errors runDebug(void)
     }
 
     // delete storage
-    error = Index_deleteStorage(indexHandle,
+    error = Index_deleteStorage(&indexHandle,
                                 storageId
                                );
     if (error != ERROR_NONE)
@@ -3799,7 +3803,7 @@ LOCAL Errors runDebug(void)
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
     // delete storage if it exists
-    if (   (Index_findStorageByName(indexHandle,
+    if (   (Index_findStorageByName(&indexHandle,
                                     &storageSpecifier,
                                     globalOptions.debug.indexAddStorage,
                                     NULL,  // uuidId,
@@ -3820,7 +3824,7 @@ LOCAL Errors runDebug(void)
         && (entityId == INDEX_ID_ENTITY(globalOptions.debug.indexEntityId))
        )
     {
-      error = Index_deleteStorage(indexHandle,storageId);
+      error = Index_deleteStorage(&indexHandle,storageId);
       if (error != ERROR_NONE)
       {
         printError("cannot delete storage '%s' (error: %s)!",
@@ -3835,7 +3839,7 @@ LOCAL Errors runDebug(void)
     // create entity
     if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
     {
-      error = Index_findEntity(indexHandle,
+      error = Index_findEntity(&indexHandle,
                                INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                                NULL,  // findJobUUID
                                NULL,  // findScheduleUUID
@@ -3856,7 +3860,7 @@ LOCAL Errors runDebug(void)
       if      (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
       {
         // Note: cannot use Index_newEntity(); specific id is required
-        error = Database_insert(&indexHandle->databaseHandle,
+        error = Database_insert(&indexHandle.databaseHandle,
                                 NULL,  // insertRowId
                                 "entities",
                                 DATABASE_FLAG_NONE,
@@ -3894,7 +3898,7 @@ LOCAL Errors runDebug(void)
     }
 
     // create storage
-    error = Index_newStorage(indexHandle,
+    error = Index_newStorage(&indexHandle,
                              INDEX_ID_NONE, // uuidId
                              INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                              NULL,  // hostName
@@ -3917,7 +3921,7 @@ LOCAL Errors runDebug(void)
     }
 
     // set state 'update'
-    Index_setStorageState(indexHandle,
+    Index_setStorageState(&indexHandle,
                           storageId,
                           INDEX_STATE_UPDATE,
                           0LL,  // lastCheckedDateTime
@@ -3925,7 +3929,7 @@ LOCAL Errors runDebug(void)
                          );
 
     // index update
-    error = Archive_updateIndex(indexHandle,
+    error = Archive_updateIndex(&indexHandle,
                                 INDEX_ID_NONE,
                                 INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                                 storageId,
@@ -3941,7 +3945,7 @@ LOCAL Errors runDebug(void)
     if      (error == ERROR_NONE)
     {
       // done
-      error = Index_setStorageState(indexHandle,
+      error = Index_setStorageState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_OK,
                                     Misc_getCurrentDateTime(),
@@ -3951,7 +3955,7 @@ LOCAL Errors runDebug(void)
     else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
     {
       // interrupt
-      error = Index_setStorageState(indexHandle,
+      error = Index_setStorageState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_UPDATE_REQUESTED,
                                     0LL,  // lastCheckedTimestamp
@@ -3961,7 +3965,7 @@ LOCAL Errors runDebug(void)
     else
     {
       // error
-      error = Index_setStorageState(indexHandle,
+      error = Index_setStorageState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_ERROR,
                                     0LL,  // lastCheckedDateTime
@@ -4009,7 +4013,7 @@ LOCAL Errors runDebug(void)
     }
 
     // find storage
-    error = Index_findStorageByName(indexHandle,
+    error = Index_findStorageByName(&indexHandle,
                                     &storageSpecifier,
                                     NULL,  // findArchiveName
                                     NULL,  // uuidId
@@ -4062,7 +4066,7 @@ LOCAL Errors runDebug(void)
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
     // set state 'update'
-    Index_setStorageState(indexHandle,
+    Index_setStorageState(&indexHandle,
                           storageId,
                           INDEX_STATE_UPDATE,
                           0LL,  // lastCheckedDateTime
@@ -4070,7 +4074,7 @@ LOCAL Errors runDebug(void)
                          );
 
     // index update
-    error = Archive_updateIndex(indexHandle,
+    error = Archive_updateIndex(&indexHandle,
                                 INDEX_ID_NONE,
                                 INDEX_ID_NONE,
                                 storageId,
@@ -4086,7 +4090,7 @@ LOCAL Errors runDebug(void)
     if      (error == ERROR_NONE)
     {
       // done
-      (void)Index_setStorageState(indexHandle,
+      (void)Index_setStorageState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_OK,
                                   Misc_getCurrentDateTime(),
@@ -4096,7 +4100,7 @@ LOCAL Errors runDebug(void)
     else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
     {
       // interrupt
-      (void)Index_setStorageState(indexHandle,
+      (void)Index_setStorageState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_UPDATE_REQUESTED,
                                   0LL,  // lastCheckedTimestamp
@@ -4106,7 +4110,7 @@ LOCAL Errors runDebug(void)
     else
     {
       // error
-      (void)Index_setStorageState(indexHandle,
+      (void)Index_setStorageState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_ERROR,
                                   0LL,  // lastCheckedDateTime
@@ -4135,10 +4139,7 @@ LOCAL Errors runDebug(void)
   #endif /* NDEBUG */
 
   // done index
-  if (Index_isAvailable())
-  {
-    Index_close(indexHandle);
-  }
+  Index_close(&indexHandle);
 
   // free resources
   Continuous_done();
@@ -4554,7 +4555,7 @@ int main(int argc, const char *argv[])
         }
         else
         {
-          error = ERROR_DAEMON_FAIL;
+          error = ERROR_RUN_DAEMON;
         }
       #elif defined(PLATFORM_WINDOWS)
 // NYI ???

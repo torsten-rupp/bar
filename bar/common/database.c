@@ -2844,13 +2844,12 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
     values[connectParameterCount]   = value; \
     connectParameterCount++
 
-  String         string;
-  uint           connectParameterCount;
-  const char     *keywords[6+1],*values[6+1];
-  bool                      connectedFlag,authorizationFlag;
+  String                    string;
+  uint                      connectParameterCount;
+  const char                *keywords[6+1],*values[6+1];
   PostgresPollingStatusType postgresPollingStatusType;
-  ConnStatusType postgreConnectionSQLStatus;
-  Errors         error;
+  ConnStatusType            postgreConnectionSQLStatus;
+  Errors                    error;
 
   assert(handle != NULL);
   assert(serverName != NULL);
@@ -2873,16 +2872,8 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
     (*handle) = PQconnectStartParams(keywords,values,0);
     if ((*handle) != NULL)
     {
-      connectedFlag     = FALSE;
-      authorizationFlag = FALSE;
       do
       {
-        switch (PQstatus(*handle))
-        {
-          case CONNECTION_MADE:    connectedFlag     = TRUE; break;
-          case CONNECTION_AUTH_OK: authorizationFlag = TRUE; break;
-          default:                                           break;
-        }
         postgresPollingStatusType = PQconnectPoll(*handle);
         if (   (postgresPollingStatusType == PGRES_POLLING_READING)
             || (postgresPollingStatusType == PGRES_POLLING_READING)
@@ -2894,33 +2885,27 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
       while (   (postgresPollingStatusType != PGRES_POLLING_OK)
              && (postgresPollingStatusType != PGRES_POLLING_FAILED)
             );
-      if (postgresPollingStatusType == PGRES_POLLING_OK)
+      switch (PQstatus(*handle))
       {
-        error = ERROR_NONE;
-      }
-      else if (!authorizationFlag)
-      {
-        error = ERRORX_(INVALID_PASSWORD_,
-                        0,
-                        "connect"
-                       );
-        PQfinish(*handle);
-      }
-      else if (!connectedFlag)
-      {
-        error = ERRORX_(CONNECT_FAIL,
-                        0,
-                        "connect"
-                       );
-        PQfinish(*handle);
-      }
-      else
-      {
-        error = ERRORX_(DATABASE,
-                        0,
-                        "connect"
-                       );
-        PQfinish(*handle);
+        case CONNECTION_OK:
+          error = ERROR_NONE;
+          break;
+        case CONNECTION_MADE:
+          // connected, but not authorization
+          error = ERRORX_(DATABASE_AUTHORIZATION,
+                          0,
+                          "connect"
+                         );
+          PQfinish(*handle);
+          break;
+        default:
+          // something went wrong with the connection
+          error = ERRORX_(DATABASE_CONNECT,
+                          0,
+                          "connect"
+                         );
+          PQfinish(*handle);
+          break;
       }
     }
     else
@@ -3105,11 +3090,11 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
     if (postgresqlResult == NULL)
     {
       return ERRORX_(DATABASE,
-                      0,
-                      "%s: %s",
-                      postgresqlErrorMessage(databaseHandle->postgresql.handle),
-                      sqlString
-                     );
+                     0,
+                     "%s: %s",
+                     postgresqlErrorMessage(databaseHandle->postgresql.handle),
+                     sqlString
+                    );
     }
 
     postgreSQLExecStatus = PQresultStatus(postgresqlResult);
@@ -5716,6 +5701,18 @@ LOCAL void formatParameters(String               sqlString,
           postgresqlResult = PQdescribePrepared(databaseHandle->postgresql.handle,
                                                 databaseStatementHandle->postgresql.name
                                                );
+          if (PQresultStatus(postgresqlResult) != PGRES_COMMAND_OK)
+          {
+            #ifndef NDEBUG
+              String_delete(databaseStatementHandle->debug.sqlString);
+            #endif /* not NDEBUG */
+            return ERRORX_(DATABASE,
+                           PQresultStatus(postgresqlResult),
+                           "%s: %s",
+                           PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
+                           sqlString
+                         );
+          }
           databaseStatementHandle->parameterCount = parameterCount;
           databaseStatementHandle->resultCount    = PQnfields(postgresqlResult);
           PQclear(postgresqlResult);
@@ -9500,7 +9497,14 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
           postgresqlResult = PQdescribePrepared(databaseStatementHandle->databaseHandle->postgresql.handle,
                                                 databaseStatementHandle->postgresql.name
                                                );
-
+          if (PQresultStatus(postgresqlResult) != PGRES_COMMAND_OK)
+          {
+            return ERRORX_(DATABASE,
+                           PQresultStatus(postgresqlResult),
+                           "%s",
+                           PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
+                         );
+          }
           (*columnCount) = PQnfields(postgresqlResult);
 
           for (i = 0; i < (*columnCount); i++)

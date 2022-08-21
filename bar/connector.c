@@ -3498,7 +3498,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 
   String                   name;
   StringMap                argumentMap;
-  IndexHandle              *indexHandle;
+  IndexHandle              indexHandle;
   SignalMask               signalMask;
   uint                     events;
   uint                     id;
@@ -3517,18 +3517,17 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 
-  // init index
-  do
+  // open index
+  while (   !Thread_isQuit(&connectorInfo->thread)
+         && (Index_open(&indexHandle,NULL,10*MS_PER_SECOND) != ERROR_NONE)
+        )
   {
-    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+    // nothing to do
   }
-  while (   (indexHandle == NULL)
-         && !Thread_isQuit(&connectorInfo->thread)
-        );
 
   // process client requests
-  while (   Connector_isConnected(connectorInfo)
-         && !Thread_isQuit(&connectorInfo->thread)
+  while (   !Thread_isQuit(&connectorInfo->thread)
+         && Connector_isConnected(connectorInfo)
         )
   {
     // process server i/o commands
@@ -3560,7 +3559,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
       assert(connectorCommandFunction != NULL);
 
       // process command
-      connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
+      connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
     }
 
     // wait for disconnect, data, or result
@@ -3604,7 +3603,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
             assert(connectorCommandFunction != NULL);
 
             // process command
-            connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
+            connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
           }
         }
         else
@@ -3628,7 +3627,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   }
 
   // done index
-  Index_close(indexHandle);
+  Index_close(&indexHandle);
 
   // free resources
   StringMap_delete(argumentMap);

@@ -1457,7 +1457,7 @@ bool String_scanCString(const char *s, const char *format, ...);
 *                      STRING_END if string completely parsed (can be
 *                      NULL)
 * Return : TRUE is fully parsed or nextIndex != NULL , FALSE on error
-* Notes  : extended scan-function:
+* Notes  : extended parse-function:
 *            - match also specified text
 *            - %<n>s will return max. <n-1> characters and always add
 *              a \0 at the end of the string
@@ -1467,6 +1467,7 @@ bool String_scanCString(const char *s, const char *format, ...);
 *            - % [<c>]s and % [<c>]S are parse rest of string as
 *              string which could be enclosed in "..." or '...'
 *            - %y boolean
+*            - %* value is skipped
 *            - if a value is NULL, skip value
 \***********************************************************************/
 

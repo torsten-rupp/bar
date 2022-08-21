@@ -353,7 +353,7 @@ LOCAL struct
   String       name;                                     // new master name
   CryptHash    uuidHash;                                 // new master UUID hash
 } newMaster;
-LOCAL IndexHandle           *indexHandle;                // index handle
+LOCAL IndexHandle           indexHandle;                 // index handle
 LOCAL uint64                intermediateMaintenanceDateTime;  // intermediate maintenance date/time
 LOCAL bool                  quitFlag;                    // TRUE iff quit requested
 
@@ -1161,9 +1161,9 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   aggregateInfo->totalEntrySize               = 0LL;
 
   // get job info (if possible)
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
-    (void)Index_findUUID(indexHandle,
+    (void)Index_findUUID(&indexHandle,
                          String_cString(jobUUID),
                          String_cString(scheduleUUID),
                          NULL,  // uuidId
@@ -1593,7 +1593,6 @@ LOCAL void schedulerThreadCode(void)
   }
 
   DatabaseHandle  continuousDatabaseHandle;
-  IndexHandle     *indexHandle;
   TimeoutInfo     rereadJobTimeout;
   JobScheduleList jobScheduleList;
   JobNode         *jobNode;
@@ -1619,16 +1618,6 @@ LOCAL void schedulerThreadCode(void)
                  Error_getText(error)
                 );
       return;
-    }
-  }
-
-  // open index
-  indexHandle = NULL;
-  if (Index_isAvailable())
-  {
-    while (!isQuit() && (indexHandle == NULL))
-    {
-      indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
   }
 
@@ -1892,12 +1881,6 @@ Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
   }
   List_done(&jobScheduleList);
   Misc_doneTimeout(&rereadJobTimeout);
-
-  // done index
-  if (Index_isAvailable())
-  {
-    Index_close(indexHandle);
-  }
 
   // close continuous database
   if (Continuous_isAvailable()) Continuous_close(&continuousDatabaseHandle);
@@ -3766,21 +3749,29 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
 LOCAL void persistenceThreadCode(void)
 {
-  IndexHandle *indexHandle;
   Errors      error;
+  IndexHandle indexHandle;
 
-  // open index
-  indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!isQuit() && (indexHandle == NULL))
+    // open index
+    do
     {
-      indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+      error = Index_open(&indexHandle,NULL,10*MS_PER_SECOND);
     }
-  }
+    while (!isQuit() && (error != ERROR_NONE));
+    if (error != ERROR_NONE)
+    {
+      plogMessage(NULL,  // logHandle,
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Cannot open index database (error: %s)",
+                  Error_getText(error)
+                 );
+      return;
+    }
 
-  if (indexHandle != NULL)
-  {
+    // run persistence thread
     while (!isQuit())
     {
       if (Index_isInitialized())
@@ -3790,7 +3781,7 @@ LOCAL void persistenceThreadCode(void)
         // purge expired entities
         if (error == ERROR_NONE)
         {
-          error = purgeExpiredEntities(indexHandle,
+          error = purgeExpiredEntities(&indexHandle,
                                        NULL,  // jobUUID
                                        ARCHIVE_TYPE_NONE
                                       );
@@ -3802,7 +3793,7 @@ LOCAL void persistenceThreadCode(void)
         // move all entities to destination
         if (error == ERROR_NONE)
         {
-          error = moveAllEntities(indexHandle);
+          error = moveAllEntities(&indexHandle);
         }
 
         // sleep
@@ -3824,11 +3815,8 @@ LOCAL void persistenceThreadCode(void)
       }
     }
 
-    // done index
-    if (Index_isAvailable())
-    {
-      Index_close(indexHandle);
-    }
+    // close index
+    Index_close(&indexHandle);
   }
   else
   {
@@ -3959,7 +3947,7 @@ LOCAL void pauseIndexUpdate(void)
 
 LOCAL void updateIndexThreadCode(void)
 {
-  IndexHandle            *indexHandle;
+  IndexHandle            indexHandle;
   IndexId                uuidId,entityId,storageId;
   StorageSpecifier       storageSpecifier;
   String                 storageName,printableStorageName;
@@ -3979,18 +3967,29 @@ LOCAL void updateIndexThreadCode(void)
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
 
-  // open index
-  indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!isQuit() && (indexHandle == NULL))
+    // open index
+    do
     {
-      indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+      error = Index_open(&indexHandle,NULL,10*MS_PER_SECOND);
     }
-  }
+    while (!isQuit() && (error != ERROR_NONE));
+    if (error != ERROR_NONE)
+    {
+      plogMessage(NULL,  // logHandle,
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Cannot open index database (error: %s)",
+                  Error_getText(error)
+                 );
+      List_done(&indexCryptPasswordList);
+      String_delete(printableStorageName);
+      String_delete(storageName);
+      Storage_doneSpecifier(&storageSpecifier);
+      return;
+    }
 
-  if (indexHandle != NULL)
-  {
     // add/update index database
     while (!isQuit())
     {
@@ -4019,7 +4018,7 @@ LOCAL void updateIndexThreadCode(void)
 
         // update index entries
         storageId = INDEX_ID_NONE;
-        if (Index_findStorageByState(indexHandle,
+        if (Index_findStorageByState(&indexHandle,
                                      INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                      &uuidId,
                                      NULL,  // jobUUID
@@ -4084,11 +4083,11 @@ LOCAL void updateIndexThreadCode(void)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // lock
-              Index_lockEntity(indexHandle,entityId);
+              Index_lockEntity(&indexHandle,entityId);
             }
 
             // set state 'update'
-            Index_setStorageState(indexHandle,
+            Index_setStorageState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_UPDATE,
                                   0LL,  // lastCheckedDateTime
@@ -4104,7 +4103,7 @@ LOCAL void updateIndexThreadCode(void)
 
               // index update
               startTimestamp = Misc_getTimestamp();
-              error = Archive_updateIndex(indexHandle,
+              error = Archive_updateIndex(&indexHandle,
                                           uuidId,
                                           entityId,
                                           storageId,
@@ -4132,7 +4131,7 @@ LOCAL void updateIndexThreadCode(void)
             {
               // done
               printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
-              (void)Index_setStorageState(indexHandle,
+              (void)Index_setStorageState(&indexHandle,
                                           storageId,
                                           INDEX_STATE_OK,
                                           Misc_getCurrentDateTime(),
@@ -4154,7 +4153,7 @@ LOCAL void updateIndexThreadCode(void)
             else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
             {
               // interrupt
-              (void)Index_setStorageState(indexHandle,
+              (void)Index_setStorageState(&indexHandle,
                                           storageId,
                                           INDEX_STATE_UPDATE_REQUESTED,
                                           0LL,  // lastCheckedTimestamp
@@ -4165,7 +4164,7 @@ LOCAL void updateIndexThreadCode(void)
             {
               // error
               printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
-              (void)Index_setStorageState(indexHandle,
+              (void)Index_setStorageState(&indexHandle,
                                           storageId,
                                           INDEX_STATE_ERROR,
                                           0LL,  // lastCheckedDateTime
@@ -4186,7 +4185,7 @@ LOCAL void updateIndexThreadCode(void)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // unlock
-              Index_unlockEntity(indexHandle,entityId);
+              Index_unlockEntity(&indexHandle,entityId);
             }
 
             // done storage
@@ -4194,7 +4193,7 @@ LOCAL void updateIndexThreadCode(void)
           }
           else
           {
-            Index_setStorageState(indexHandle,
+            Index_setStorageState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_ERROR,
                                   0LL,
@@ -4217,11 +4216,8 @@ LOCAL void updateIndexThreadCode(void)
       }
     }
 
-    // done index
-    if (Index_isAvailable())
-    {
-      Index_close(indexHandle);
-    }
+    // close index
+    Index_close(&indexHandle);
   }
   else
   {
@@ -4293,7 +4289,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void autoIndexThreadCode(void)
 {
-  IndexHandle                *indexHandle;
+  IndexHandle                indexHandle;
   StringList                 storageDirectoryList;
   StorageSpecifier           storageSpecifier;
   String                     baseName;
@@ -4321,18 +4317,31 @@ LOCAL void autoIndexThreadCode(void)
   printableStorageName = String_new();
   storageName          = String_new();
 
-  // open index (Note: timeout is not important; auto-index should not block)
-  indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!isQuit() && (indexHandle == NULL))
+    // open index
+    do
     {
-      indexHandle = Index_open(NULL,30*MS_PER_SECOND);
+      error = Index_open(&indexHandle,NULL,10*MS_PER_SECOND);
     }
-  }
+    while (!isQuit() && (error != ERROR_NONE));
+    if (error != ERROR_NONE)
+    {
+      plogMessage(NULL,  // logHandle,
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Cannot open index database (error: %s)",
+                  Error_getText(error)
+                 );
+      String_delete(storageName);
+      String_delete(printableStorageName);
+      String_delete(pattern);
+      String_delete(baseName);
+      Storage_doneSpecifier(&storageSpecifier);
+      StringList_done(&storageDirectoryList);
+      return;
+    }
 
-  if (indexHandle != NULL)
-  {
     // run continuous check for auto index
     while (!isQuit())
     {
@@ -4429,7 +4438,7 @@ LOCAL void autoIndexThreadCode(void)
                                                Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
                                                // get index id, request index update
-                                               error = Index_findStorageByName(indexHandle,
+                                               error = Index_findStorageByName(&indexHandle,
                                                                                &storageSpecifier,
                                                                                NULL,  // archiveName
                                                                                NULL,  // uuidId
@@ -4453,7 +4462,7 @@ LOCAL void autoIndexThreadCode(void)
                                                  if      (fileInfo->timeModified > lastCheckedDateTime)
                                                  {
                                                    // modified -> request update index
-                                                   error = Index_setStorageState(indexHandle,
+                                                   error = Index_setStorageState(&indexHandle,
                                                                                  storageId,
                                                                                  INDEX_STATE_UPDATE_REQUESTED,
                                                                                  now,
@@ -4472,7 +4481,7 @@ LOCAL void autoIndexThreadCode(void)
                                                  else if (indexState == INDEX_STATE_OK)
                                                  {
                                                    // set last checked date/time
-                                                   error = Index_setStorageState(indexHandle,
+                                                   error = Index_setStorageState(&indexHandle,
                                                                                  storageId,
                                                                                  INDEX_STATE_OK,
                                                                                  now,
@@ -4483,7 +4492,7 @@ LOCAL void autoIndexThreadCode(void)
                                                else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
                                                {
                                                  // add to index
-                                                 error = Index_newStorage(indexHandle,
+                                                 error = Index_newStorage(&indexHandle,
                                                                           INDEX_ID_NONE, // uuidId
                                                                           INDEX_ID_NONE, // entityId
                                                                           NULL,  // hostName
@@ -4531,7 +4540,7 @@ LOCAL void autoIndexThreadCode(void)
 
         // delete not existing and expired indizes
         error = Index_initListStorages(&indexQueryHandle,
-                                       indexHandle,
+                                       &indexHandle,
                                        INDEX_ID_ANY,  // uuidId
                                        INDEX_ID_ANY,  // entity id
                                        NULL,  // jobUUID
@@ -4595,7 +4604,7 @@ LOCAL void autoIndexThreadCode(void)
                 && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
                )
             {
-              Index_deleteStorage(indexHandle,storageId);
+              Index_deleteStorage(&indexHandle,storageId);
 
               plogMessage(NULL,  // logHandle,
                           LOG_TYPE_INDEX,
@@ -4618,10 +4627,7 @@ LOCAL void autoIndexThreadCode(void)
     }
 
     // done index
-    if (Index_isAvailable())
-    {
-      Index_close(indexHandle);
-    }
+    Index_close(&indexHandle);
   }
   else
   {
@@ -4887,7 +4893,8 @@ LOCAL void jobThreadCode(void)
   StringList       storageNameList;
   TextMacros       (textMacros,9);
   StaticString     (s,64);
-  IndexHandle      *indexHandle;
+  IndexHandle      indexHandle;
+  bool             isIndexOpened;
   uint             n;
   Errors           error;
   ScheduleNode     *scheduleNode;
@@ -5046,13 +5053,19 @@ LOCAL void jobThreadCode(void)
     }
 
     // open index (depending on local/remote job)
-    indexHandle = NULL;
     if (Index_isAvailable())
     {
-      while (!isQuit() && (indexHandle == NULL))
+      do
       {
-        indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
+        error = Index_open(&indexHandle,jobNode->masterIO,INDEX_TIMEOUT);
       }
+      while (isQuit() && (error != ERROR_NONE));
+
+      isIndexOpened = (error == ERROR_NONE);
+    }
+    else
+    {
+      isIndexOpened = FALSE;
     }
 
     // parse storage name
@@ -5384,7 +5397,6 @@ NULL,//                                                        scheduleTitle,
     jobNode->runningInfo.lastErrorCode        = Error_getCode(jobNode->runningInfo.error);
     jobNode->runningInfo.lastErrorNumber      = Error_getErrno(jobNode->runningInfo.error);
     String_setCString(jobNode->runningInfo.lastErrorData,Error_getData(jobNode->runningInfo.error));
-//    String_setCString(jobNode->runningInfo.lastErrorText,Error_getText(jobNode->runningInfo.error));
 
     // log job result
     switch (jobNode->jobType)
@@ -5458,9 +5470,9 @@ NULL,//                                                        scheduleTitle,
       case JOB_TYPE_CREATE:
         if (jobNode->requestedAbortFlag)
         {
-          if (indexHandle != NULL)
+          if (isIndexOpened)
           {
-            error = Index_newHistory(indexHandle,
+            error = Index_newHistory(&indexHandle,
                                      jobUUID,
                                      scheduleUUID,
                                      hostName,
@@ -5490,9 +5502,9 @@ NULL,//                                                        scheduleTitle,
         }
         else if (jobNode->runningInfo.error != ERROR_NONE)
         {
-          if (indexHandle != NULL)
+          if (isIndexOpened)
           {
-            error = Index_newHistory(indexHandle,
+            error = Index_newHistory(&indexHandle,
                                      jobUUID,
                                      scheduleUUID,
                                      hostName,
@@ -5522,9 +5534,9 @@ NULL,//                                                        scheduleTitle,
         }
         else
         {
-          if (indexHandle != NULL)
+          if (isIndexOpened)
           {
-            error = Index_newHistory(indexHandle,
+            error = Index_newHistory(&indexHandle,
                                      jobUUID,
                                      scheduleUUID,
                                      hostName,
@@ -5563,9 +5575,9 @@ NULL,//                                                        scheduleTitle,
     }
 
     // close index
-    if (Index_isAvailable())
+    if (isIndexOpened)
     {
-      Index_close(indexHandle);
+      Index_close(&indexHandle);
     }
 
     // done log
@@ -20301,7 +20313,8 @@ LOCAL bool getCommand(ClientInfo            *clientInfo,
 
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
-  IndexHandle     *indexHandle;
+  IndexHandle     indexHandle;
+  bool            isIndexOpen;
   CommandInfoNode *commandInfoNode;
   String          result;
   Command         command;
@@ -20314,16 +20327,17 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   // init variables
   result = String_new();
 
-  // open index
-  indexHandle = NULL;
+  // try to open index
   if (Index_isAvailable())
   {
-    while (!clientInfo->quitFlag && (indexHandle == NULL))
-    {
-      indexHandle = Index_open(NULL,CLIENT_TIMEOUT);
-    }
+    isIndexOpen = (Index_open(&indexHandle,NULL,CLIENT_TIMEOUT) == ERROR_NONE);
+  }
+  else
+  {
+    isIndexOpen = FALSE;
   }
 
+  // run client thread
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
         )
@@ -20335,62 +20349,75 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       if (IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
     #endif
     {
-      // add command info
-      commandInfoNode = NULL;
-      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      // try to open index if not already oppend
+      if (Index_isAvailable() && !isIndexOpen)
       {
-        commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
-        if (commandInfoNode == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-        commandInfoNode->id          = command.id;
-        commandInfoNode->indexHandle = indexHandle;
-        List_append(&clientInfo->commandInfoList,commandInfoNode);
+        isIndexOpen = (Index_open(&indexHandle,NULL,10*MS_PER_SECOND) == ERROR_NONE);
       }
 
-      // execute command
-      #ifndef NDEBUG
-        t0 = 0LL;
-        if (globalOptions.debug.serverLevel >= 1)
-        {
-          t0 = Misc_getTimestamp();
-        }
-      #endif /* not NDEBUG */
-      command.serverCommandFunction(clientInfo,
-                                    indexHandle,
-                                    command.id,
-                                    command.argumentMap
-                                   );
-      #ifndef NDEBUG
-        if (globalOptions.debug.serverLevel >= 2)
-        {
-          t1 = Misc_getTimestamp();
-          fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
-        }
-      #endif /* not DEBUG */
-
-      // remove command info
-      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      if      (Index_isAvailable() && isIndexOpen)
       {
-        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
+        // add command info
+        commandInfoNode = NULL;
+        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        {
+          commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
+          if (commandInfoNode == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+          commandInfoNode->id          = command.id;
+          commandInfoNode->indexHandle = Index_isAvailable() ? &indexHandle : NULL;
+          List_append(&clientInfo->commandInfoList,commandInfoNode);
+        }
+
+        // execute command
+        #ifndef NDEBUG
+          t0 = 0LL;
+          if (globalOptions.debug.serverLevel >= 1)
+          {
+            t0 = Misc_getTimestamp();
+          }
+        #endif /* not NDEBUG */
+        command.serverCommandFunction(clientInfo,
+                                      &indexHandle,
+                                      command.id,
+                                      command.argumentMap
+                                     );
+        #ifndef NDEBUG
+          if (globalOptions.debug.serverLevel >= 2)
+          {
+            t1 = Misc_getTimestamp();
+            fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
+          }
+        #endif /* not DEBUG */
+
+        // remove command info
+        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        {
+          List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
+        }
+      }
+      else if (Index_isAvailable())
+      {
+        ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_DATABASE_CONNECT,"");
       }
     }
     else
     {
       // authorization failure -> mark for disconnect
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-      ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_DATABASE_AUTHORIZATION,"authorization failure");
     }
 
     // free resources
     freeCommand(&command,NULL);
   }
 
-  // done index
-  if (Index_isAvailable())
+  // close index
+  if (Index_isAvailable() && isIndexOpen)
   {
-    Index_close(indexHandle);
+    Index_close(&indexHandle);
   }
 
   // free resources
@@ -21041,7 +21068,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       {
         // execute
         serverCommandFunction(clientInfo,
-                              indexHandle,
+                              Index_isAvailable() ? &indexHandle : NULL,
                               id,
                               argumentMap
                              );
@@ -21066,7 +21093,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
           {
             // execute command
             serverCommandFunction(clientInfo,
-                                  indexHandle,
+                                  Index_isAvailable() ? &indexHandle : NULL,
                                   id,
                                   argumentMap
                                  );
@@ -21180,7 +21207,6 @@ Errors Server_socket(void)
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
   newMaster.name                  = String_new();
   Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
-  indexHandle                     = NULL;
   intermediateMaintenanceDateTime = 0LL;
   quitFlag                        = FALSE;
   AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
@@ -21275,11 +21301,18 @@ Errors Server_socket(void)
   }
 
   // open index
-  indexHandle = NULL;
   if (Index_isAvailable())
   {
-    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+    error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      printError("cannot open index database (error: %s)!",
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
     printInfo(1,"Index database opened\n");
   }
 
@@ -21650,13 +21683,13 @@ Errors Server_socket(void)
               // start SSL
               #ifdef HAVE_GNU_TLS
                 error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
-                                       globalOptions.serverCA.data,
-                                       globalOptions.serverCA.length,
-                                       globalOptions.serverCert.data,
-                                       globalOptions.serverCert.length,
-                                       globalOptions.serverKey.data,
-                                       globalOptions.serverKey.length
-                                      );
+                                         globalOptions.serverCA.data,
+                                         globalOptions.serverCA.length,
+                                         globalOptions.serverCert.data,
+                                         globalOptions.serverCert.length,
+                                         globalOptions.serverKey.data,
+                                         globalOptions.serverKey.length
+                                        );
               if (error != ERROR_NONE)
               {
                 printError("cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
@@ -22019,7 +22052,7 @@ Errors Server_socket(void)
   // done index
   if (Index_isAvailable())
   {
-    Index_close(indexHandle);
+    Index_close(&indexHandle);
   }
 
   // free resources
@@ -22080,7 +22113,6 @@ Errors Server_batch(int inputDescriptor,
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
   newMaster.name                  = String_new();
   Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
-  indexHandle                     = NULL;
   intermediateMaintenanceDateTime = 0LL;
   quitFlag                        = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
@@ -22127,12 +22159,17 @@ Errors Server_batch(int inputDescriptor,
   // open index
   if (Index_isAvailable())
   {
-    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
-  }
-  else
-  {
-    indexHandle = NULL;
+    error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      printError("cannot open index database (error: %s)!",
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
+    printInfo(1,"Index database opened\n");
   }
 
   // start threads
@@ -22199,29 +22236,6 @@ Errors Server_batch(int inputDescriptor,
   name        = String_new();
   argumentMap = StringMap_new();
 #if 1
-#if 0
-  while (   1//!isQuit()
-         && !File_eof(&clientInfo.io.file.inputHandle)
-         && 1
-        )
-  {
-    if (ServerIO_getCommand(&clientInfo.io,
-                            &id,
-                            name,
-                            argumentMap
-                           )
-       )
-    {
-      #ifndef NDEBUG
-        if (globalOptions.debug.serverLevel >= 1)
-        {
-          fprintf(stderr,"DEBUG: received command #%u %s: %s\n",*id,String_cString(name),String_cString(data));
-        }
-      #endif /* not DEBUG */
-      processCommand(&clientInfo,id,name,argumentMap);
-    }
-  }
-#else
   while (!isQuit())
   {
     if      (ServerIO_getCommand(&clientInfo.io,
@@ -22248,7 +22262,6 @@ Errors Server_batch(int inputDescriptor,
       setQuit();
     }
   }
-#endif
   StringMap_delete(argumentMap);
   String_delete(name);
 #else /* 0 */
@@ -22291,7 +22304,7 @@ processCommand(&clientInfo,commandString);
   // done index
   if (Index_isAvailable())
   {
-    Index_close(indexHandle);
+    Index_close(&indexHandle);
   }
 
   // free resources

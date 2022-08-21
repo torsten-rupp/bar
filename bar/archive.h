@@ -320,7 +320,7 @@ typedef struct
   void                     *chunkIOUserData;                           // chunk i/o functions data
 
   Semaphore                indexLock;
-  IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
+  IndexHandle              indexHandle;
   IndexId                  storageId;                                  // storage index id
   ArchiveIndexList         archiveIndexList;
 

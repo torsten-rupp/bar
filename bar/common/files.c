@@ -638,7 +638,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       debugFileNode->fileName              = __fileName__;
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+        debugFileNode->stackTraceSize      = getStackTrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
@@ -723,7 +723,7 @@ LOCAL Errors doneFileHandle(const char  *__fileName__,
         debugFileNode->closeFileName         = __fileName__;
         debugFileNode->closeLineNb           = __lineNb__;
         #ifdef HAVE_BACKTRACE
-          debugFileNode->closeStackTraceSize = backtrace((void*)debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
+          debugFileNode->closeStackTraceSize = getStackTrace(debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
         #endif /* HAVE_BACKTRACE */
         List_append(&debugClosedFileList,debugFileNode);
 
@@ -1577,7 +1577,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       debugFileNode->fileName              = __fileName__;
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+        debugFileNode->stackTraceSize      = getStackTrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
