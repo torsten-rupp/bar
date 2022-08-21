@@ -1653,7 +1653,7 @@ typedef byte* BitSet;
   #define BACKTRACE(stackTrace,stackTraceSize) \
     do \
     { \
-      (stackTraceSize) = backtrace((void*)(stackTrace),SIZE_OF_ARRAY(stackTrace)); \
+      (stackTraceSize) = getStackTrace(stackTrace,SIZE_OF_ARRAY(stackTrace)); \
     } \
     while (0)
 #else /* not HAVE_BACKTRACE */
@@ -1921,6 +1921,34 @@ static inline uint64 getCycleCounter(void)
   #else
     return 0LL;
   #endif /* PLATFORM_... */
+}
+
+/***********************************************************************\
+* Name   : getStackTrace
+* Purpose: get stack trace
+* Input  : stackTrace        - stack trace variable
+*          maxStackTraceSize - max. stack trace size
+* Output : stackTrace - stack trace
+* Return : stack trace size
+* Notes  : -
+\***********************************************************************/
+
+static inline uint getStackTrace(const void **stackTrace, uint maxStackTraceSize)
+{
+  uint stackTraceSize;
+  uint i;
+
+  #ifdef HAVE_BACKTRACE
+    stackTraceSize = (uint)backtrace((void*)stackTrace,maxStackTraceSize);
+    for (i = 0; i < stackTraceSize; i++)
+    {
+      stackTrace[i] = (const void **)((const byte*)stackTrace[i]-1);
+    }
+  #else
+    stackTraceSize = 0;
+  #endif
+
+  return stackTraceSize;
 }
 
 /***********************************************************************\
@@ -2808,6 +2836,7 @@ static inline char* stringFormat(char *string, ulong stringSize, const char *for
   assert(stringSize > 0);
   assert(format != NULL);
 
+  va_start(arguments,format);
   va_start(arguments,format);
   string = stringVFormat(string,stringSize,format,arguments);
   va_end(arguments);

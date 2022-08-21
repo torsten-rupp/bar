@@ -542,7 +542,7 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
         debugStringNode->allocFileName  = __fileName__;
         debugStringNode->allocLineNb    = __lineNb__;
         #ifdef HAVE_BACKTRACE
-          debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
+          debugStringNode->stackTraceSize = getStackTrace(debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
         #endif /* HAVE_BACKTRACE */
         debugStringNode->deleteFileName = NULL;
         debugStringNode->deleteLineNb   = 0L;
@@ -1578,15 +1578,6 @@ LOCAL const char *getNextParseToken(const char *format, FormatToken *formatToken
   #endif /* PLATFORM_... */
 
   // width, precision
-  if (   ((*nextFormat) != NUL)
-      && ((*nextFormat) == '*')
-     )
-  {
-    ADD_CHAR(formatToken,(*nextFormat));
-
-    formatToken->widthArguments++;
-    nextFormat++;
-  }
   while (   ((*nextFormat) != NUL)
          && isdigit((int)(*nextFormat))
         )
@@ -1613,15 +1604,6 @@ LOCAL const char *getNextParseToken(const char *format, FormatToken *formatToken
     }
   }
 
-  if (   ((*nextFormat) != NUL)
-      && ((*nextFormat) == '*')
-     )
-  {
-    ADD_CHAR(formatToken,(*nextFormat));
-
-    formatToken->widthArguments++;
-    nextFormat++;
-  }
   while (   ((*nextFormat) != NUL)
          && isdigit((int)(*nextFormat))
         )
@@ -2750,7 +2732,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
         debugStringNode->allocFileName  = __fileName__;
         debugStringNode->allocLineNb    = __lineNb__;
         #ifdef HAVE_BACKTRACE
-          debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
+          debugStringNode->stackTraceSize = getStackTrace(debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
         #endif /* HAVE_BACKTRACE */
         debugStringNode->deleteFileName = NULL;
         debugStringNode->deleteLineNb   = 0L;
@@ -3009,7 +2991,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
             debugStringNode->deleteFileName = __fileName__;
             debugStringNode->deleteLineNb   = __lineNb__;
             #ifdef HAVE_BACKTRACE
-              debugStringNode->deleteStackTraceSize = backtrace((void*)debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
+              debugStringNode->deleteStackTraceSize = getStackTrace(debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
             #endif /* HAVE_BACKTRACE */
             debugAddString(&debugStringFreeList,debugStringNode);
             debugStringFreeList.memorySize += sizeof(DebugStringNode);

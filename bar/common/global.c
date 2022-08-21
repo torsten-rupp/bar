@@ -1044,7 +1044,7 @@ void debugAddResourceTrace(const char *__fileName__,
     debugResourceNode->allocFileName = __fileName__;
     debugResourceNode->allocLineNb   = __lineNb__;
     #ifdef HAVE_BACKTRACE
-      debugResourceNode->stackTraceSize = backtrace((void*)debugResourceNode->stackTrace,SIZE_OF_ARRAY(debugResourceNode->stackTrace));
+      debugResourceNode->stackTraceSize = getStackTrace(debugResourceNode->stackTrace,SIZE_OF_ARRAY(debugResourceNode->stackTrace));
     #endif /* HAVE_BACKTRACE */
     debugResourceNode->freeFileName  = NULL;
     debugResourceNode->freeLineNb    = 0L;
@@ -1117,7 +1117,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
       debugResourceNode->freeFileName = __fileName__;
       debugResourceNode->freeLineNb   = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugResourceNode->deleteStackTraceSize = backtrace((void*)debugResourceNode->deleteStackTrace,SIZE_OF_ARRAY(debugResourceNode->deleteStackTrace));
+        debugResourceNode->deleteStackTraceSize = getStackTrace(debugResourceNode->deleteStackTrace,SIZE_OF_ARRAY(debugResourceNode->deleteStackTrace));
       #endif /* HAVE_BACKTRACE */
       List_append(&debugResourceFreeList,debugResourceNode);
 
@@ -1624,7 +1624,7 @@ void debugDumpCurrentStackTrace(FILE                           *handle,
     currentStackTrace = (void const**)malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
     if (currentStackTrace == NULL) return;
 
-    currentStackTraceSize = backtrace((void*)currentStackTrace,MAX_STACK_TRACE_SIZE);
+    currentStackTraceSize = getStackTrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
     debugDumpStackTrace(handle,indent,type,currentStackTrace,currentStackTraceSize,1+skipFrameCount);
 
     free(currentStackTrace);

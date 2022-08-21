@@ -1644,7 +1644,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
 
   error = ERROR_NONE;
 
-  if (archiveHandle->indexHandle != NULL)
+  if (Index_isAvailable())
   {
     // init variables
     List_init(&archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
@@ -1673,7 +1673,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
           retryCount++;
 
           // start transaction
-          error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
+          error = Index_beginTransaction(&archiveHandle->indexHandle,INDEX_TIMEOUT);
           if (error == ERROR_NONE)
           {
             // add to index
@@ -1684,7 +1684,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
               switch (archiveIndexNode->type)
               {
                 case ARCHIVE_ENTRY_TYPE_FILE:
-                  error = Index_addFile(archiveHandle->indexHandle,
+                  error = Index_addFile(&archiveHandle->indexHandle,
                                         uuidId,
                                         entityId,
                                         storageId,
@@ -1701,7 +1701,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                        );
                   break;
                 case ARCHIVE_ENTRY_TYPE_IMAGE:
-                  error = Index_addImage(archiveHandle->indexHandle,
+                  error = Index_addImage(&archiveHandle->indexHandle,
                                          uuidId,
                                          entityId,
                                          storageId,
@@ -1714,7 +1714,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                         );
                   break;
                 case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-                  error = Index_addDirectory(archiveHandle->indexHandle,
+                  error = Index_addDirectory(&archiveHandle->indexHandle,
                                              uuidId,
                                              entityId,
                                              storageId,
@@ -1728,7 +1728,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                             );
                   break;
                 case ARCHIVE_ENTRY_TYPE_LINK:
-                  error = Index_addLink(archiveHandle->indexHandle,
+                  error = Index_addLink(&archiveHandle->indexHandle,
                                         uuidId,
                                         entityId,
                                         storageId,
@@ -1743,7 +1743,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                        );
                   break;
                 case ARCHIVE_ENTRY_TYPE_HARDLINK:
-                  error = Index_addHardlink(archiveHandle->indexHandle,
+                  error = Index_addHardlink(&archiveHandle->indexHandle,
                                             uuidId,
                                             entityId,
                                             storageId,
@@ -1760,7 +1760,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                            );
                   break;
                 case ARCHIVE_ENTRY_TYPE_SPECIAL:
-                  error = Index_addSpecial(archiveHandle->indexHandle,
+                  error = Index_addSpecial(&archiveHandle->indexHandle,
                                            uuidId,
                                            entityId,
                                            storageId,
@@ -1789,11 +1789,11 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             // end/abort transaction
             if (error == ERROR_NONE)
             {
-              (void)Index_endTransaction(archiveHandle->indexHandle);
+              (void)Index_endTransaction(&archiveHandle->indexHandle);
             }
             else
             {
-              (void)Index_rollbackTransaction(archiveHandle->indexHandle);
+              (void)Index_rollbackTransaction(&archiveHandle->indexHandle);
             }
           }
         }
@@ -3048,7 +3048,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
-      if (   (archiveHandle->indexHandle != NULL)
+      if (   Index_isAvailable()
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
           && !archiveHandle->storageInfo->jobOptions->noStorage
           && !archiveHandle->storageInfo->jobOptions->dryRun
@@ -3057,7 +3057,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         // create storage index
         SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          error = Index_newStorage(archiveHandle->indexHandle,
+          error = Index_newStorage(&archiveHandle->indexHandle,
                                    archiveHandle->uuidId,
                                    archiveHandle->entityId,
                                    archiveHandle->hostName,
@@ -3080,7 +3080,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         {
           SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            Index_deleteStorage(archiveHandle->indexHandle,archiveHandle->storageId);
+            Index_deleteStorage(&archiveHandle->indexHandle,archiveHandle->storageId);
           }
         });
       }
@@ -3901,7 +3901,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // add to index database
-        if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+        if (Index_isAvailable())
         {
           // add file entry
           error = indexAddFile(archiveEntryInfo->archiveHandle,
@@ -4537,7 +4537,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // store in index database
-        if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+        if (Index_isAvailable())
         {
           // add image entry
           error = indexAddImage(archiveEntryInfo->archiveHandle,
@@ -5214,7 +5214,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // store in index database
-        if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+        if (Index_isAvailable())
         {
           // add hardlink entry
           STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
@@ -6019,7 +6019,6 @@ UNUSED_VARIABLE(storageInfo);
 
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
-  archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList); });
@@ -6037,10 +6036,15 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open(storageInfo->masterIO,INDEX_TIMEOUT);
-  if (archiveHandle->indexHandle != NULL)
+  if (Index_isAvailable())
   {
-    AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
+    error = Index_open(&archiveHandle->indexHandle,storageInfo->masterIO,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexHandle,{ Index_close(&archiveHandle->indexHandle); });
   }
 
   // create new crypt info
@@ -6243,7 +6247,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->hostName                = NULL;
   archiveHandle->userName                = NULL;
   archiveHandle->storageInfo             = storageInfo;
-  archiveHandle->indexHandle             = NULL;
   archiveHandle->uuidId                  = INDEX_ID_NONE;
   archiveHandle->entityId                = INDEX_ID_NONE;
 
@@ -6294,7 +6297,6 @@ UNUSED_VARIABLE(storageInfo);
 
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
-  archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList); });
@@ -6312,10 +6314,15 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open(storageInfo->masterIO,INDEX_TIMEOUT);
-  if (archiveHandle->indexHandle != NULL)
+  if (Index_isAvailable())
   {
-    AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
+    error = Index_open(&archiveHandle->indexHandle,storageInfo->masterIO,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexHandle,{ Index_close(&archiveHandle->indexHandle); });
   }
 
   // open storage
@@ -6392,7 +6399,6 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->hostName                = NULL;
   archiveHandle->userName                = NULL;
   archiveHandle->storageInfo             = fromArchiveHandle->storageInfo;
-  archiveHandle->indexHandle             = NULL;
   archiveHandle->uuidId                  = INDEX_ID_NONE;
   archiveHandle->entityId                = INDEX_ID_NONE;
 
@@ -6457,10 +6463,15 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open(fromArchiveHandle->storageInfo->masterIO,INDEX_TIMEOUT);
-  if (archiveHandle->indexHandle != NULL)
+  if (Index_isAvailable())
   {
-    AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
+    error = Index_open(&archiveHandle->indexHandle,fromArchiveHandle->storageInfo->masterIO,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexHandle,{ Index_close(&archiveHandle->indexHandle); });
   }
 
   // open storage
@@ -6534,11 +6545,11 @@ UNUSED_VARIABLE(storageInfo);
           }
 
           // update index aggregates
-          if (   (archiveHandle->indexHandle != NULL)
+          if (   Index_isAvailable()
               && !INDEX_ID_IS_NONE(storageId)
              )
           {
-            error = Index_updateStorageInfos(archiveHandle->indexHandle,
+            error = Index_updateStorageInfos(&archiveHandle->indexHandle,
                                              storageId
                                             );
             if (error != ERROR_NONE)
@@ -6599,14 +6610,11 @@ UNUSED_VARIABLE(storageInfo);
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,ArchiveHandle);
   #endif /* NDEBUG */
 
-  if (archiveHandle->indexHandle != NULL)
+  if (Index_isAvailable())
   {
     // clear index busy handler, close index
-    Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK_(NULL,NULL));
-    if (archiveHandle->indexHandle != NULL)
-    {
-      Index_close(archiveHandle->indexHandle);
-   }
+    Index_setBusyHandler(&archiveHandle->indexHandle,CALLBACK_(NULL,NULL));
+    Index_close(&archiveHandle->indexHandle);
  }
 
   // free resources
@@ -13241,7 +13249,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               if (error == ERROR_NONE)
               {
                 // add file entry
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                if (Index_isAvailable())
                 {
                   error = indexAddFile(archiveEntryInfo->archiveHandle,
                                        archiveEntryInfo->file.chunkFileEntry.name,
@@ -13389,7 +13397,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               if (error == ERROR_NONE)
               {
                 // add image entry
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                if (Index_isAvailable())
                 {
                   error = indexAddImage(archiveEntryInfo->archiveHandle,
                                         archiveEntryInfo->image.chunkImageEntry.name,
@@ -13452,7 +13460,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               if (error == ERROR_NONE)
               {
                 // add directory entry
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                if (Index_isAvailable())
                 {
                   error = indexAddDirectory(archiveEntryInfo->archiveHandle,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.name,
@@ -13493,7 +13501,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // store in index database
               if (error == ERROR_NONE)
               {
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                if (Index_isAvailable())
                 {
                   error = indexAddLink(archiveEntryInfo->archiveHandle,
                                        archiveEntryInfo->link.chunkLinkEntry.name,
@@ -13618,7 +13626,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // store in index database
               if (error == ERROR_NONE)
               {
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                if (Index_isAvailable())
                 {
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
@@ -13687,7 +13695,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // store in index database
               if (error == ERROR_NONE)
               {
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
+                if (Index_isAvailable())
                 {
                   error = indexAddSpecial(archiveEntryInfo->archiveHandle,
                                           archiveEntryInfo->special.chunkSpecialEntry.name,
@@ -15748,7 +15756,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                      NULL,  // totalEntryCount,
                                      NULL  // totalEntrySize
                                     );
-                                    
+
             if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             {
               // create new entity

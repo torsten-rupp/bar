@@ -629,8 +629,8 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
    // done signal handlers
    Stacktrace_done();
 
-   // get backtrace
-   stackTraceSize = backtrace(stackTrace, MAX_STACKTRACE_SIZE);
+   // get stacktrace
+   stackTraceSize = getStackTrace(stackTrace, MAX_STACKTRACE_SIZE);
 
    // get signal name
    signalName = NULL;

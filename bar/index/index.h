@@ -597,15 +597,17 @@ bool Index_isIndexInUse(void);
 \***********************************************************************/
 
 #ifdef NDEBUG
-IndexHandle *Index_open(ServerIO *masterIO,
-                        long     timeout
-                       );
+Errors Index_open(IndexHandle *indexHandle,
+                  ServerIO    *masterIO,
+                  long        timeout
+                 );
 #else /* not NDEBUG */
-IndexHandle *__Index_open(const char *__fileName__,
-                          ulong      __lineNb__,
-                          ServerIO   *masterIO,
-                          long       timeout
-                         );
+Errors __Index_open(const char  *__fileName__,
+                    ulong       __lineNb__,
+                    IndexHandle *indexHandle,
+                    ServerIO    *masterIO,
+                    long        timeout
+                   );
 #endif /* NDEBUG */
 
 /***********************************************************************\

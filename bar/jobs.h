@@ -797,7 +797,7 @@ INLINE bool __Job_listLock(const char         *__fileName__,
     {
       jobList.lockTimestamp = Misc_getTimestamp();
       #ifdef HAVE_BACKTRACE
-        jobList.lockStackTraceSize = backtrace((void*)jobList.lockStackTrace,SIZE_OF_ARRAY(jobList.lockStackTrace));
+        jobList.lockStackTraceSize = getStackTrace(jobList.lockStackTrace,SIZE_OF_ARRAY(jobList.lockStackTrace));
       #endif /* HAVE_BACKTRACE */
     }
   #endif /* NDEBUG */

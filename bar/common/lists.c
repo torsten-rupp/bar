@@ -498,7 +498,7 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
       debugListNode->list     = NULL;
       debugListNode->node     = node;
       #ifdef HAVE_BACKTRACE
-        debugListNode->stackTraceSize       = backtrace((void*)debugListNode->stackTrace,SIZE_OF_ARRAY(debugListNode->stackTrace));
+        debugListNode->stackTraceSize       = getStackTrace(debugListNode->stackTrace,SIZE_OF_ARRAY(debugListNode->stackTrace));
         debugListNode->deleteStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
       debugAddNode(&debugListAllocNodeList,debugListNode);
@@ -580,7 +580,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         debugListNode->deleteFileName = __fileName__;
         debugListNode->deleteLineNb   = __lineNb__;
         #ifdef HAVE_BACKTRACE
-          debugListNode->deleteStackTraceSize = backtrace((void*)debugListNode->deleteStackTrace,SIZE_OF_ARRAY(debugListNode->deleteStackTrace));
+          debugListNode->deleteStackTraceSize = getStackTrace(debugListNode->deleteStackTrace,SIZE_OF_ARRAY(debugListNode->deleteStackTrace));
         #endif /* HAVE_BACKTRACE */
         debugAddNode(&debugListFreeNodeList,debugListNode);
 

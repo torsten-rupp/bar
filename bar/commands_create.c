@@ -7749,7 +7749,7 @@ Errors Command_create(ServerIO                     *masterIO,
   String           incrementalListFileName;
   bool             useIncrementalFileInfoFlag;
   bool             incrementalFileInfoExistFlag;
-  IndexHandle      *indexHandle;
+  IndexHandle      indexHandle;
   CreateInfo       createInfo;
   Errors           error;
   StorageSpecifier storageSpecifier;
@@ -7804,12 +7804,23 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // open index
 //TODO: each thread need his own handle!
-  indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
-  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+  if (Index_isAvailable())
+  {
+    error = Index_open(&indexHandle,masterIO,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      printError("cannot open index (error: %s)",
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
+  }
 
   // init create info
   initCreateInfo(&createInfo,
-                 indexHandle,
+                 Index_isAvailable() ? &indexHandle : NULL,
                  jobUUID,
                  scheduleUUID,
                  scheduleTitle,
@@ -7954,10 +7965,10 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   entityId = INDEX_ID_NONE;
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
     // get/create index job UUID
-    error = Index_findUUID(indexHandle,
+    error = Index_findUUID(&indexHandle,
                            jobUUID,
                            NULL,  // scheduleUUID
                            &uuidId,
@@ -7979,7 +7990,7 @@ Errors Command_create(ServerIO                     *masterIO,
                           );
     if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
     {
-      error = Index_newUUID(indexHandle,jobUUID,&uuidId);
+      error = Index_newUUID(&indexHandle,jobUUID,&uuidId);
     }
     if (error != ERROR_NONE)
     {
@@ -7992,7 +8003,7 @@ Errors Command_create(ServerIO                     *masterIO,
     }
 
     // create new index entity
-    error = Index_newEntity(indexHandle,
+    error = Index_newEntity(&indexHandle,
                             jobUUID,
                             scheduleUUID,
                             String_cString(hostName),
@@ -8012,12 +8023,11 @@ Errors Command_create(ServerIO                     *masterIO,
       return error;
     }
     assert(!INDEX_ID_IS_NONE(entityId));
-    DEBUG_TESTCODE() { (void)Index_purgeEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)Index_purgeEntity(indexHandle,entityId); });
+    DEBUG_TESTCODE() { (void)Index_purgeEntity(&indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)Index_purgeEntity(&indexHandle,entityId); });
 
 //TODO
     // purge expired entities
-
   }
 
   // create new archive
@@ -8087,8 +8097,8 @@ Errors Command_create(ServerIO                     *masterIO,
   // wait for and done create threads
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   ThreadPool_joinSet(&createThreadSet);
-  ThreadPool_doneSet(&createThreadSet);
   AUTOFREE_REMOVE(&autoFreeList,&createThreadSet);
+  ThreadPool_doneSet(&createThreadSet);
 
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
@@ -8107,6 +8117,7 @@ Errors Command_create(ServerIO                     *masterIO,
   // wait for storage thread
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
   ThreadPool_join(&workerThreadPool,collectorStorageThreadNode);
+  AUTOFREE_REMOVE(&autoFreeList,collectorStorageThreadNode);
 
   // final update of status info
   SEMAPHORE_LOCKED_DO(&createInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
@@ -8115,12 +8126,12 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // update index
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
     assert(!INDEX_ID_IS_NONE(entityId));
 
     // update entity, uuid info (aggregated values)
-    error = Index_updateEntityInfos(indexHandle,
+    error = Index_updateEntityInfos(&indexHandle,
                                     entityId
                                    );
     if (error != ERROR_NONE)
@@ -8132,7 +8143,7 @@ Errors Command_create(ServerIO                     *masterIO,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    error = Index_updateUUIDInfos(indexHandle,
+    error = Index_updateUUIDInfos(&indexHandle,
                                   uuidId
                                  );
     if (error != ERROR_NONE)
@@ -8146,7 +8157,7 @@ Errors Command_create(ServerIO                     *masterIO,
     }
 
     // unlock entity
-    (void)Index_unlockEntity(indexHandle,entityId);
+    (void)Index_unlockEntity(&indexHandle,entityId);
 
     if (   (createInfo.failError == ERROR_NONE)
         && !createInfo.jobOptions->dryRun
@@ -8154,7 +8165,7 @@ Errors Command_create(ServerIO                     *masterIO,
        )
     {
       // delete entity if nothing created
-      error = Index_pruneEntity(indexHandle,entityId);
+      error = Index_pruneEntity(&indexHandle,entityId);
       if (error != ERROR_NONE)
       {
         printError("cannot create index for '%s' (error: %s)!",
@@ -8168,7 +8179,7 @@ Errors Command_create(ServerIO                     *masterIO,
     else
     {
       // purge entity on error/abort
-      (void)Index_purgeEntity(indexHandle,entityId);
+      (void)Index_purgeEntity(&indexHandle,entityId);
     }
 
     AUTOFREE_REMOVE(&autoFreeList,&entityId);
@@ -8299,7 +8310,10 @@ Errors Command_create(ServerIO                     *masterIO,
     String_delete(incrementalListFileName);
   }
   doneCreateInfo(&createInfo);
-  Index_close(indexHandle);
+  if (Index_isAvailable())
+  {
+    Index_close(&indexHandle);
+  }
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(userName);
   String_delete(hostName);

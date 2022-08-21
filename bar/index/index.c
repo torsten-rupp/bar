@@ -578,20 +578,20 @@ LOCAL void busyHandler(void *userData)
 {
   assert(indexHandle != NULL);
 
-if (indexHandle->masterIO == NULL)
-{
-  // remove busy handler
-  Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
-
-  INDEX_DO(indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    #ifdef NDEBUG
-      Database_close(&indexHandle->databaseHandle);
-    #else /* not NDEBUG */
-      __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
-    #endif /* NDEBUG */
-  });
-}
+    // remove busy handler
+    Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
+
+    INDEX_DO(indexHandle,
+    {
+      #ifdef NDEBUG
+        Database_close(&indexHandle->databaseHandle);
+      #else /* not NDEBUG */
+        __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+      #endif /* NDEBUG */
+    });
+  }
 
   return ERROR_NONE;
 }
@@ -2510,56 +2510,62 @@ LOCAL void indexThreadCode(void)
           {
             break;
           }
-          
+
           // clean-up
 // TODO: activate
 //          (void)cleanUpOrphanedStorages(&indexHandle);
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
           storageId = DATABASE_ID_NONE;
-          INDEX_DO(&indexHandle,
+          INDEX_DOX(error,
+                    &indexHandle,
           {
-            error = Database_get(&indexHandle.databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 3);
+            return Database_get(&indexHandle.databaseHandle,
+                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                {
+                                  assert(values != NULL);
+                                  assert(valueCount == 3);
 
-                                   UNUSED_VARIABLE(userData);
-                                   UNUSED_VARIABLE(valueCount);
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(valueCount);
 
-                                   storageId = values[0].id;
-                                   entityId  = values[1].id;
-                                   String_set(storageName,values[2].string);
+                                  storageId = values[0].id;
+                                  entityId  = values[1].id;
+                                  String_set(storageName,values[2].string);
 
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_TABLES
-                                 (
-                                   "storages"
-                                 ),
-                                 DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMNS
-                                 (
-                                   DATABASE_COLUMN_KEY   ("id"),
-                                   DATABASE_COLUMN_KEY   ("entityId"),
-                                   DATABASE_COLUMN_STRING("name")
-                                 ),
-                                 "    state!=? \
-                                  AND deletedFlag=TRUE \
-                                 ",
-                                 DATABASE_FILTERS
-                                 (
-                                   DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
-                                 ),
-                                 NULL,  // groupBy
-                                 NULL,  // orderBy
-                                 0LL,
-                                 1LL
-                                );
-            assert((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND));
+                                  return ERROR_NONE;
+                                },NULL),
+                                NULL,  // changedRowCount
+                                DATABASE_TABLES
+                                (
+                                  "storages"
+                                ),
+                                DATABASE_FLAG_NONE,
+                                DATABASE_COLUMNS
+                                (
+                                  DATABASE_COLUMN_KEY   ("id"),
+                                  DATABASE_COLUMN_KEY   ("entityId"),
+                                  DATABASE_COLUMN_STRING("name")
+                                ),
+                                "    state!=? \
+                                 AND deletedFlag=TRUE \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
+                                ),
+                                NULL,  // groupBy
+                                NULL,  // orderBy
+                                0LL,
+                                1LL
+                               );
           });
+          if (   (error != ERROR_NONE)
+              && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+             )
+          {
+            break;
+          }
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
               || indexQuitFlag
              )
@@ -3309,30 +3315,25 @@ bool Index_isIndexInUse(void)
 }
 
 #ifdef NDEBUG
-IndexHandle *Index_open(ServerIO *masterIO,
-                        long     timeout
-                       )
+Errors Index_open(IndexHandle *indexHandle,
+                  ServerIO    *masterIO,
+                  long        timeout
+                 )
 #else /* not NDEBUG */
-IndexHandle *__Index_open(const char *__fileName__,
-                          ulong      __lineNb__,
-                          ServerIO   *masterIO,
-                          long       timeout
-                         )
+Errors __Index_open(const char   *__fileName__,
+                    ulong        __lineNb__,
+                    IndexHandle *indexHandle,
+                    ServerIO     *masterIO,
+                    long         timeout
+                   )
 #endif /* NDEBUG */
 {
-  IndexHandle *indexHandle;
-  Errors      error;
+  Errors error;
 
-  indexHandle = NULL;
+  assert(indexHandle != NULL);
 
   if ((indexDatabaseSpecifier != NULL) || (masterIO != NULL))
   {
-    indexHandle = (IndexHandle*)malloc(sizeof(IndexHandle));
-    if (indexHandle == NULL)
-    {
-      return NULL;
-    }
-
     #ifdef NDEBUG
       error = openIndex(indexHandle,
                         indexDatabaseSpecifier,
@@ -3352,8 +3353,7 @@ IndexHandle *__Index_open(const char *__fileName__,
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
-      free(indexHandle);
-      return NULL;
+      return error;
     }
 
     #ifdef NDEBUG
@@ -3362,19 +3362,21 @@ IndexHandle *__Index_open(const char *__fileName__,
       DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,indexHandle,IndexHandle);
     #endif /* NDEBUG */
   }
+  else
+  {
+    error = ERROR_DATABASE_NOT_FOUND;
+  }
 
-  return indexHandle;
+  return error;
 }
 
 void Index_close(IndexHandle *indexHandle)
 {
-  if (indexHandle != NULL)
-  {
-    DEBUG_REMOVE_RESOURCE_TRACE(indexHandle,IndexHandle);
+  assert(indexHandle != NULL);
 
-    closeIndex(indexHandle);
-    free(indexHandle);
-  }
+  DEBUG_REMOVE_RESOURCE_TRACE(indexHandle,IndexHandle);
+
+  closeIndex(indexHandle);
 }
 
 void Index_setBusyHandler(IndexHandle              *indexHandle,
