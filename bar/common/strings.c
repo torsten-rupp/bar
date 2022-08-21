@@ -1184,6 +1184,7 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_LONG:
               {
                 data.d = va_arg(arguments,double);
+                length = 0;
                 switch (formatToken.widthArguments)
                 {
                   case 0: length = snprintf(buffer,sizeof(buffer),formatToken.token,data.d);       break;

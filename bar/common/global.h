@@ -2837,7 +2837,6 @@ static inline char* stringFormat(char *string, ulong stringSize, const char *for
   assert(format != NULL);
 
   va_start(arguments,format);
-  va_start(arguments,format);
   string = stringVFormat(string,stringSize,format,arguments);
   va_end(arguments);
 
