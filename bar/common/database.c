@@ -2890,6 +2890,7 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
         case CONNECTION_OK:
           error = ERROR_NONE;
           break;
+        case CONNECTION_BAD:
         case CONNECTION_MADE:
           // connected, but not authorization
           error = ERRORX_(DATABASE_AUTHORIZATION,
