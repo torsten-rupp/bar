@@ -200,8 +200,8 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("Usage %s: [<options>] <URI> [<SQL command>...|-]\n",programName);
   printf("\n");
   printf("URI: [sqlite:]<file name>\n");
-  printf("     mariadb:<server>:<user>:<password>\n");
-  printf("     postgresql:<server>:<user>:<password>\n");
+  printf("     mariadb:<server>:<user>[:<password>]\n");
+  printf("     postgresql:<server>:<user>[:<password>]\n");
   printf("\n");
   printf("Options:  -C|--directory=<name>                        - change to directory\n");
   printf("          --info                                       - output index database infos\n");
@@ -582,7 +582,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
                         openMode,
                         WAIT_FOREVER
                        );
-  if (Error_getCode(error) == ERROR_CODE_INVALID_PASSWORD_)
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_AUTHORIZATION)
   {
     switch (databaseSpecifier.type)
     {
