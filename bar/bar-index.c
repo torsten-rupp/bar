@@ -1951,7 +1951,8 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+  if (error == ERROR_NONE)
   {
     printInfo("%u\n",n);
   }
@@ -2697,8 +2698,10 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                  0LL,
                                  DATABASE_UNLIMITED
                                 );
+            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
           }
-          if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+
+          if (error == ERROR_NONE)
           {
             error = Database_get(databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -2970,14 +2973,14 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+  if (error != ERROR_NONE)
   {
     List_done(&entryList);
     return error;
   }
 
   // find newest entries for entries to add
-  error = ERROR_NONE;
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
     error = Database_get(databaseHandle,
@@ -3034,14 +3037,14 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                          1LL
                         );
   }
-  if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+  if (error != ERROR_NONE)
   {
     List_done(&entryList);
     return error;
   }
 
   // update/add entries to newest entries
-  error = ERROR_NONE;
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
     if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
@@ -3104,7 +3107,8 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
       }
     }
   }
-  if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+  if (error != ERROR_NONE)
   {
     List_done(&entryList);
     return error;
@@ -3891,7 +3895,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
@@ -3976,13 +3981,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
     }
   }
-  if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
@@ -4065,7 +4071,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
@@ -4143,13 +4150,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
     }
   }
-  if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
@@ -4233,7 +4241,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
@@ -4311,13 +4320,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;
     }
   }
-  if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
@@ -4407,7 +4417,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+    if (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
       break;

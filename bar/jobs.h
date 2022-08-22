@@ -278,8 +278,8 @@ typedef struct
   #ifndef NDEBUG
     uint64 lockTimestamp;
     #ifdef HAVE_BACKTRACE
-      void const *lockStackTrace[16];
-      int        lockStackTraceSize;
+      const void * lockStackTrace[16];
+      int          lockStackTraceSize;
     #endif /* HAVE_BACKTRACE */
   #endif /* NDEBUG */
 } JobList;

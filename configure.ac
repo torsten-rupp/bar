@@ -4268,6 +4268,7 @@ AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
                  demangle.h \
+                 elf.h \
                  execinfo.h \
                  grp.h \
                  icu.h \

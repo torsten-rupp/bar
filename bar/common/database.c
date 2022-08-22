@@ -16583,11 +16583,7 @@ Errors Database_getIds(DatabaseHandle       *databaseHandle,
                        0,
                        limit
                       );
-// TODO: work-around: if not found set newest entry to NONE
-if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-{
-  error = ERROR_NONE;
-}
+  if (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   return error;
 }
