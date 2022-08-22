@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-08-21 15:30+0200\n"
+"POT-Creation-Date: 2022-08-21 17:03+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -39,4 +39,946 @@ msgstr ""
 #: /home/torsten/projects/bar/bar/commands_test.c:1750
 #, c-format
 msgid "Test fail: %s\n"
+msgstr ""
+
+#: errors.def:23
+msgid "insufficient memory"
+msgstr ""
+
+#: errors.def:24
+msgid "initialize fail"
+msgstr ""
+
+#: errors.def:25
+msgid "invalid argument"
+msgstr ""
+
+#: errors.def:26
+msgid "configuration error"
+msgstr ""
+
+#: errors.def:27
+msgid "no writable configuration file"
+msgstr ""
+
+#: errors.def:28
+msgid "aborted"
+msgstr ""
+
+#: errors.def:29
+msgid "interrupted"
+msgstr ""
+
+#: errors.def:30
+msgid "function not supported"
+msgstr ""
+
+#: errors.def:31
+msgid "function still not implemented"
+msgstr ""
+
+#: errors.def:32
+msgid "run as daemon fail"
+msgstr ""
+
+#: errors.def:33
+msgid "inter-process communication fail"
+msgstr ""
+
+#: errors.def:34
+msgid "initialize password fail"
+msgstr ""
+
+#: errors.def:35 errors.def:80
+msgid "no password given"
+msgstr ""
+
+#: errors.def:37
+msgid "invalid password"
+msgstr ""
+
+#: errors.def:38
+msgid "process data fail"
+msgstr ""
+
+#: errors.def:39 errors.def:338
+msgid "invalid encoding"
+msgstr ""
+
+#: errors.def:46
+msgid "invalid pattern"
+msgstr ""
+
+#: errors.def:51
+msgid "no host name given"
+msgstr ""
+
+#: errors.def:61
+msgid "host not found"
+msgstr ""
+
+#: errors.def:65
+msgid "bind fail"
+msgstr ""
+
+#: errors.def:72
+msgid "connect fail"
+msgstr ""
+
+#: errors.def:76
+msgid "disconnected"
+msgstr ""
+
+#: errors.def:78
+msgid "too many concurrent connections"
+msgstr ""
+
+#: errors.def:79
+msgid "no login name given"
+msgstr ""
+
+#: errors.def:84
+msgid "sending data fail"
+msgstr ""
+
+#: errors.def:88
+msgid "receiving data fail"
+msgstr ""
+
+#: errors.def:89
+msgid "execute command fail"
+msgstr ""
+
+#: errors.def:90
+msgid "timeout send data"
+msgstr ""
+
+#: errors.def:91
+msgid "timeout receive data"
+msgstr ""
+
+#: errors.def:92
+msgid "no response from remote program"
+msgstr ""
+
+#: errors.def:93
+msgid "invalid response from remote program"
+msgstr ""
+
+#: errors.def:96
+msgid "initialize TLS (SSL) fail"
+msgstr ""
+
+#: errors.def:97
+msgid "no TLS (SSL) certificate authority file"
+msgstr ""
+
+#: errors.def:98
+msgid "no TLS (SSL) certificate file"
+msgstr ""
+
+#: errors.def:99
+msgid "no or unreadable TLS (SSL) key file"
+msgstr ""
+
+#: errors.def:100
+msgid "invalid TLS (SSL) certificate authority"
+msgstr ""
+
+#: errors.def:101
+msgid "invalid TLS (SSL) certificate"
+msgstr ""
+
+#: errors.def:105
+msgid "TLS (SSL) certificate expired"
+msgstr ""
+
+#: errors.def:112
+msgid "TLS (SSL) certificate is still not active"
+msgstr ""
+
+#: errors.def:119
+msgid "TLS (SSL) handshake failure"
+msgstr ""
+
+#: errors.def:123
+msgid "invalid SSH specifier"
+msgstr ""
+
+#: errors.def:124
+msgid "no SSH public key"
+msgstr ""
+
+#: errors.def:125
+msgid "no SSH private key"
+msgstr ""
+
+#: errors.def:129
+msgid "no SSH password given"
+msgstr ""
+
+#: errors.def:132 errors.def:139 errors.def:146 errors.def:154 errors.def:235
+#: errors.def:640
+msgid " for '{0}'"
+msgstr ""
+
+#: errors.def:136
+msgid "invalid SSH password"
+msgstr ""
+
+#: errors.def:143
+msgid "invalid SSH private key"
+msgstr ""
+
+#: errors.def:147
+msgid "initialize SSH session fail"
+msgstr ""
+
+#: errors.def:151
+msgid "SSH authentication fail"
+msgstr ""
+
+#: errors.def:158
+msgid "ssh protocol error"
+msgstr ""
+
+#: errors.def:166
+msgid "job '{0}' already exists"
+msgstr ""
+
+#: errors.def:169
+msgid "job '{0}' running"
+msgstr ""
+
+#: errors.def:172
+msgid "create job fail"
+msgstr ""
+
+#: errors.def:179
+msgid "delete job fail"
+msgstr ""
+
+#: errors.def:186
+msgid "rename job fail"
+msgstr ""
+
+#: errors.def:195
+msgid "initialize storage fail"
+msgstr ""
+
+#: errors.def:199
+msgid "no storage name given"
+msgstr ""
+
+#: errors.def:200
+msgid "invalid storage"
+msgstr ""
+
+#: errors.def:203
+msgid "invalid FTP specifier"
+msgstr ""
+
+#: errors.def:207
+msgid "initialize FTP session fail"
+msgstr ""
+
+#: errors.def:211
+msgid "no FTP password given"
+msgstr ""
+
+#: errors.def:212
+msgid "invalid FTP password"
+msgstr ""
+
+#: errors.def:216
+msgid "invalid FTP user/password"
+msgstr ""
+
+#: errors.def:220
+msgid "get FTP file size fail"
+msgstr ""
+
+#: errors.def:227
+msgid "invalid WebDAV specifier"
+msgstr ""
+
+#: errors.def:228
+msgid "initialize WebDAV session fail"
+msgstr ""
+
+#: errors.def:232
+msgid "no WebDAV password given"
+msgstr ""
+
+#: errors.def:236
+msgid "invalid WebDAV password"
+msgstr ""
+
+#: errors.def:237
+msgid "invalid WebDAV user/password"
+msgstr ""
+
+#: errors.def:238
+msgid "WebDAV bad request"
+msgstr ""
+
+#: errors.def:242
+msgid "get WebDAV file size"
+msgstr ""
+
+#: errors.def:248
+msgid "fail"
+msgstr ""
+
+#: errors.def:251
+msgid "WebDAV upload fail"
+msgstr ""
+
+#: errors.def:258
+msgid "WebDAV download fail"
+msgstr ""
+
+#: errors.def:265
+msgid "WebDAV fail"
+msgstr ""
+
+#: errors.def:273
+msgid "initialize compress fail"
+msgstr ""
+
+#: errors.def:280
+msgid "initialize decompress fail"
+msgstr ""
+
+#: errors.def:284
+msgid "end of compressed file"
+msgstr ""
+
+#: errors.def:288 errors.def:911
+msgid "delta source not found"
+msgstr ""
+
+#: errors.def:292
+msgid "invalid compress algorithm"
+msgstr ""
+
+#: errors.def:293
+msgid "unknown compress algorithm"
+msgstr ""
+
+#: errors.def:294
+msgid "compress algorithm not supported"
+msgstr ""
+
+#: errors.def:299
+msgid "compress fail"
+msgstr ""
+
+#: errors.def:306
+msgid "decompress fail"
+msgstr ""
+
+#: errors.def:311
+msgid "unsupported block length"
+msgstr ""
+
+#: errors.def:315
+msgid "initialize crypt fail"
+msgstr ""
+
+#: errors.def:319
+msgid "no decrypt key for cipher"
+msgstr ""
+
+#: errors.def:320
+msgid "no password given for cipher"
+msgstr ""
+
+#: errors.def:321
+msgid "invalid decryption password"
+msgstr ""
+
+#: errors.def:322
+msgid "encryption passwords mismatch"
+msgstr ""
+
+#: errors.def:327
+msgid "initialize cipher fail"
+msgstr ""
+
+#: errors.def:334
+msgid "create public/private key fail"
+msgstr ""
+
+#: errors.def:343
+msgid "initialize key fail"
+msgstr ""
+
+#: errors.def:350
+msgid "public/private key not found"
+msgstr ""
+
+#: errors.def:357
+msgid "read public/private key fail"
+msgstr ""
+
+#: errors.def:364
+msgid "invalid key"
+msgstr ""
+
+#: errors.def:368
+msgid "invalid key length"
+msgstr ""
+
+#: errors.def:370
+msgid "invalid block length"
+msgstr ""
+
+#: errors.def:371
+msgid "invalid salt length"
+msgstr ""
+
+#: errors.def:372
+msgid "no public encryption key"
+msgstr ""
+
+#: errors.def:373
+msgid "no private encryption key"
+msgstr ""
+
+#: errors.def:377
+msgid "key is not a public encryption key"
+msgstr ""
+
+#: errors.def:384
+msgid "key is not a private encryption key"
+msgstr ""
+
+#: errors.def:388
+msgid "no public signature key"
+msgstr ""
+
+#: errors.def:389
+msgid "no private signature key"
+msgstr ""
+
+#: errors.def:393
+msgid "key is not a public signature key"
+msgstr ""
+
+#: errors.def:400
+msgid "key is not a private signature key"
+msgstr ""
+
+#: errors.def:407
+msgid "key encryption fail"
+msgstr ""
+
+#: errors.def:414
+msgid "key decryption fail"
+msgstr ""
+
+#: errors.def:418
+msgid "wrong private decryption key"
+msgstr ""
+
+#: errors.def:420
+msgid "invalid encryption algorithm"
+msgstr ""
+
+#: errors.def:421
+msgid "unknown encryption algorithm"
+msgstr ""
+
+#: errors.def:426
+msgid "encrypt fail"
+msgstr ""
+
+#: errors.def:433
+msgid "decrypt fail"
+msgstr ""
+
+#: errors.def:438
+msgid "initialize hash fail"
+msgstr ""
+
+#: errors.def:439
+msgid "invalid hash algorithm"
+msgstr ""
+
+#: errors.def:440
+msgid "unknown hash algorithm"
+msgstr ""
+
+#: errors.def:442
+msgid "initialize message authentication code fail"
+msgstr ""
+
+#: errors.def:443
+msgid "invalid message authentication code algorithm"
+msgstr ""
+
+#: errors.def:444
+msgid "unknown message authentication code algorithm"
+msgstr ""
+
+#: errors.def:450
+msgid "directory not found"
+msgstr ""
+
+#: errors.def:454
+msgid "no file name given"
+msgstr ""
+
+#: errors.def:459
+msgid "create file fail"
+msgstr ""
+
+#: errors.def:472
+msgid "open file fail"
+msgstr ""
+
+#: errors.def:476
+msgid "create directory fail"
+msgstr ""
+
+#: errors.def:483
+msgid "read file fail"
+msgstr ""
+
+#: errors.def:490
+msgid "end of file"
+msgstr ""
+
+#: errors.def:497
+msgid "write file fail"
+msgstr ""
+
+#: errors.def:504
+msgid "delete file fail"
+msgstr ""
+
+#: errors.def:511
+msgid "open directory"
+msgstr ""
+
+#: errors.def:515
+msgid "read directory fail"
+msgstr ""
+
+#: errors.def:523
+#, c-format
+msgid "file '%s' already exists"
+msgstr ""
+
+#: errors.def:527
+msgid "file already exists"
+msgstr ""
+
+#: errors.def:532
+msgid "file not found"
+msgstr ""
+
+#: errors.def:536
+msgid "access denied"
+msgstr ""
+
+#: errors.def:541
+msgid "not a directory"
+msgstr ""
+
+#: errors.def:545
+msgid "end of directory list"
+msgstr ""
+
+#: errors.def:550
+msgid "init file notify fail"
+msgstr ""
+
+#: errors.def:554
+msgid "insufficient file notify entries"
+msgstr ""
+
+#: errors.def:559
+msgid "i/o error"
+msgstr ""
+
+#: errors.def:567
+msgid "CD/DVD/BD device not found"
+msgstr ""
+
+#: errors.def:574
+msgid "open CD/DVD/BD disk fail"
+msgstr ""
+
+#: errors.def:581
+msgid "open ISO 9660 image fail"
+msgstr ""
+
+#: errors.def:586
+msgid "no device name given"
+msgstr ""
+
+#: errors.def:591
+msgid "open device fail"
+msgstr ""
+
+#: errors.def:595
+msgid "invalid device block size"
+msgstr ""
+
+#: errors.def:596
+msgid "read device fail"
+msgstr ""
+
+#: errors.def:597
+msgid "write device fail"
+msgstr ""
+
+#: errors.def:598
+msgid "error parsing device list"
+msgstr ""
+
+#: errors.def:603
+msgid "mount fail"
+msgstr ""
+
+#: errors.def:610
+msgid "unmount fail"
+msgstr ""
+
+#: errors.def:615
+msgid "no archive file name given"
+msgstr ""
+
+#: errors.def:620
+msgid "not an archive file"
+msgstr ""
+
+#: errors.def:627
+msgid "archive not found"
+msgstr ""
+
+#: errors.def:631
+msgid "end of archive"
+msgstr ""
+
+#: errors.def:632
+msgid "no meta entry"
+msgstr ""
+
+#: errors.def:633
+msgid "no file entry"
+msgstr ""
+
+#: errors.def:637
+msgid "no file data entry"
+msgstr ""
+
+#: errors.def:641
+msgid "no directory entry"
+msgstr ""
+
+#: errors.def:642
+msgid "no link entry"
+msgstr ""
+
+#: errors.def:643
+msgid "no hard link entry"
+msgstr ""
+
+#: errors.def:644
+msgid "no special entry"
+msgstr ""
+
+#: errors.def:645
+msgid "no image entry"
+msgstr ""
+
+#: errors.def:646
+msgid "no image data entry"
+msgstr ""
+
+#: errors.def:647
+msgid "end of data"
+msgstr ""
+
+#: errors.def:648
+msgid "incomplete archive"
+msgstr ""
+
+#: errors.def:649
+msgid "insufficient split number digits in name"
+msgstr ""
+
+#: errors.def:655
+msgid "wrong CRC"
+msgstr ""
+
+#: errors.def:659
+msgid "at offset"
+msgstr ""
+
+#: errors.def:672
+msgid "entry is incomplete"
+msgstr ""
+
+#: errors.def:679
+msgid "wrong entry type"
+msgstr ""
+
+#: errors.def:686
+msgid "entries differ"
+msgstr ""
+
+#: errors.def:693
+msgid "corrupt data or invalid password"
+msgstr ""
+
+#: errors.def:697
+msgid "invalid chunk size"
+msgstr ""
+
+#: errors.def:701
+msgid "unknown chunk"
+msgstr ""
+
+#: errors.def:705
+msgid "invalid signature"
+msgstr ""
+
+#: errors.def:708
+msgid "invalid incremental file"
+msgstr ""
+
+#: errors.def:709
+msgid "wrong incremental file version"
+msgstr ""
+
+#: errors.def:710
+msgid "corrupt incremental file"
+msgstr ""
+
+#: errors.def:713
+msgid "invalid device specifier"
+msgstr ""
+
+#: errors.def:714
+msgid "load volume fail"
+msgstr ""
+
+#: errors.def:720
+msgid "parse command fail"
+msgstr ""
+
+#: errors.def:724
+msgid "expand command template fail"
+msgstr ""
+
+#: errors.def:728
+msgid "i/o redirect fail"
+msgstr ""
+
+#: errors.def:735
+msgid "execute external program fail"
+msgstr ""
+
+#: errors.def:742
+msgid "terminated external program"
+msgstr ""
+
+#: errors.def:750
+msgid "parsing data fail"
+msgstr ""
+
+#: errors.def:757
+msgid "parsing date fail"
+msgstr ""
+
+#: errors.def:764
+msgid "parsing time fail"
+msgstr ""
+
+#: errors.def:771
+msgid "parsing weekdays fail"
+msgstr ""
+
+#: errors.def:778
+msgid "parsing maintenance fail"
+msgstr ""
+
+#: errors.def:785
+msgid "parsing schedule fail"
+msgstr ""
+
+#: errors.def:792
+msgid "unknown command"
+msgstr ""
+
+#: errors.def:799
+msgid "expected parameter"
+msgstr ""
+
+#: errors.def:812
+msgid "unknown value"
+msgstr ""
+
+#: errors.def:816
+msgid "invalid value"
+msgstr ""
+
+#: errors.def:823
+msgid "deprecated or ignored value"
+msgstr ""
+
+#: errors.def:827
+msgid "authorization fail"
+msgstr ""
+
+#: errors.def:831
+msgid "job not found"
+msgstr ""
+
+#: errors.def:838
+msgid "schedule not found"
+msgstr ""
+
+#: errors.def:851
+msgid "persistence not found"
+msgstr ""
+
+#: errors.def:861
+msgid "maintenance not found"
+msgstr ""
+
+#: errors.def:871
+msgid "server not found"
+msgstr ""
+
+#: errors.def:881
+msgid "entry not found"
+msgstr ""
+
+#: errors.def:891
+msgid "pattern not found"
+msgstr ""
+
+#: errors.def:901
+msgid "mount not found"
+msgstr ""
+
+#: errors.def:916
+msgid "database"
+msgstr ""
+
+#: errors.def:923
+msgid "invalid database URI"
+msgstr ""
+
+#: errors.def:927
+msgid "database type not supported"
+msgstr ""
+
+#: errors.def:929
+msgid "database already exists"
+msgstr ""
+
+#: errors.def:930
+msgid "database not found"
+msgstr ""
+
+#: errors.def:931
+msgid "connect to database fail"
+msgstr ""
+
+#: errors.def:932
+msgid "database connection lost"
+msgstr ""
+
+#: errors.def:933
+msgid "database authorization fail"
+msgstr ""
+
+#: errors.def:938
+msgid "insufficient database version"
+msgstr ""
+
+#: errors.def:942
+msgid "unknown version of index"
+msgstr ""
+
+#: errors.def:946
+msgid "missing table"
+msgstr ""
+
+#: errors.def:953
+msgid "missing column"
+msgstr ""
+
+#: errors.def:960
+msgid "obsolete table"
+msgstr ""
+
+#: errors.def:967
+msgid "obsolete column"
+msgstr ""
+
+#: errors.def:974
+msgid "database bind fail"
+msgstr ""
+
+#: errors.def:981
+msgid "type mismatch"
+msgstr ""
+
+#: errors.def:985
+msgid "error creating index"
+msgstr ""
+
+#: errors.def:986
+msgid "index not found"
+msgstr ""
+
+#: errors.def:987
+msgid "index still not initialized"
+msgstr ""
+
+#: errors.def:991
+msgid "invalid index"
+msgstr ""
+
+#: errors.def:998
+msgid "parse index id fail"
+msgstr ""
+
+#: errors.def:1002
+msgid "database busy"
+msgstr ""
+
+#: errors.def:1003
+msgid "database operation interupted"
+msgstr ""
+
+#: errors.def:1007
+msgid "timeout accessing index"
+msgstr ""
+
+#: errors.def:1011
+msgid "database entry not found"
+msgstr ""
+
+#: errors.def:1014
+msgid "master disconnected"
+msgstr ""
+
+#: errors.def:1015
+msgid "slave disconnected"
+msgstr ""
+
+#: errors.def:1016
+msgid "slave is not paired"
+msgstr ""
+
+#: errors.def:1017
+msgid "instance is not a slave"
 msgstr ""

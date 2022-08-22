@@ -302,7 +302,8 @@ TEST_SERVER_DIRECTORY            = $(INTERMEDIATE_DIR)/master
 TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
 TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/bar.pid
 TEST_SERVER_JOBS_DIRECTORY       = $(TEST_SERVER_DIRECTORY)/jobs
-TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
+TEST_SERVER_INDEX_DATABASE       = $(TEST_SERVER_DIRECTORY)/index.db
+TEST_SERVER_CONTINUOUS_DATABASE  = $(TEST_SERVER_DIRECTORY)/continuous.db
 TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
 
 
@@ -312,7 +313,7 @@ TEST_MASTER_DIRECTORY            = $(INTERMEDIATE_DIR)/master
 TEST_MASTER_CONFIG               = $(TEST_MASTER_DIRECTORY)/bar.cfg
 TEST_MASTER_PID_FILE             = $(TEST_MASTER_DIRECTORY)/bar.pid
 TEST_MASTER_JOBS_DIRECTORY       = $(TEST_MASTER_DIRECTORY)/jobs
-TEST_MASTER_DATABASE             = $(TEST_MASTER_DIRECTORY)/index.db
+TEST_MASTER_INDEX_DATABASE       = $(TEST_MASTER_DIRECTORY)/index.db
 TEST_MASTER_LOG_FILE             = $(TEST_MASTER_DIRECTORY)/bar.log
 
 TEST_SLAVE_HOST                  =
@@ -323,7 +324,7 @@ TEST_SLAVE_DIRECTORY             = $(INTERMEDIATE_DIR)/slave
 TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
 TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.pid
 TEST_SLAVE_JOBS_DIRECTORY        = $(TEST_SLAVE_DIRECTORY)/jobs
-TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
+TEST_SLAVE_INDEX_DATABASE        = $(TEST_SLAVE_DIRECTORY)/index.db
 TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
 
 TEST_CONFIGS                     = $(TEST_CONFIG) \
@@ -698,7 +699,7 @@ functionCleanTestFiles = \
 functionCleanTestDatabase = \
   case $1 in \
     $(TEST_INDEX_DATABASE_SQLITE)) \
-      $(RMF) $(TEST_SERVER_DATABASE) $(TEST_MASTER_DATABASE) $(TEST_SLAVE_DATABASE); \
+      $(RMF) $(TEST_SERVER_INDEX_DATABASE) $(TEST_SERVER_CONTINUOUS_DATABASE) $(TEST_MASTER_INDEX_DATABASE) $(TEST_SLAVE_INDEX_DATABASE); \
       ;; \
     $(TEST_INDEX_DATABASE_MARIADB)) \
       MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
@@ -1169,13 +1170,14 @@ test_data_clean:
 	$(RMF)  $(TEST_CONFIGS)
 	$(RMRF) $(TEST_JOBS_DIRECTORY)
 	$(RMRF) $(TEST_SERVER_JOBS_DIRECTORY)
-	$(RMF)  $(TEST_SERVER_DATABASE)
+	$(RMF)  $(TEST_SERVER_INDEX_DATABASE)
+	$(RMF)  $(TEST_SERVER_CONTINUOUS_DATABASE)
 	$(RMF)  $(TEST_SERVER_LOG_FILE)
 	$(RMRF) $(TEST_MASTER_JOBS_DIRECTORY)
-	$(RMF)  $(TEST_MASTER_DATABASE)
+	$(RMF)  $(TEST_MASTER_INDEX_DATABASE)
 	$(RMF)  $(TEST_MASTER_LOG_FILE)
 	$(RMRF) $(TEST_SLAVE_JOBS_DIRECTORY)
-	$(RMF)  $(TEST_SLAVE_DATABASE)
+	$(RMF)  $(TEST_SLAVE_INDEX_DATABASE)
 	$(RMF)  $(TEST_SLAVE_LOG_FILE)
 
 test_data_distclean: \
@@ -3774,7 +3776,7 @@ $(TEST_SLAVE_JOBS_DIRECTORY):
           $(ECHO) "[end]"; \
         ) >$@/$(TEST_JOB_NAME1)
 
-$(TEST_SERVER_DATABASE): \
+$(TEST_SERVER_INDEX_DATABASE): \
   $(TEST_BAR_INDEX)
 	@
 	$(INSTALL) -d $(@D)
@@ -5889,16 +5891,83 @@ functionSlaveCommandSocket = \
 
 .PHONY: test_server_operations test_server_operations_batch test_server_operations_socket test_master_slave_operations
 test_server_operations: \
+  test_server_operations_basic \
   test_server_operations_batch \
   test_server_operations_socket \
   test_master_slave_operations
+
+test_server_operations_basic: \
+  $(TEST_BAR) \
+  $(TEST_CONFIGS) \
+  $(TEST_FILES) \
+  $(TEST_SERVER_INDEX_DATABASE)
+	@$(call functionVerifyParameter,BAR_STORAGE)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@#
+	@$(call functionCleanTestFiles)
+	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
+	# create test archive
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
+	@#
+	# test continuous database
+	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
+          if test $$? -eq 0; then \
+          ( \
+            $(INSTALL) -d $(TEST_SERVER_JOBS_DIRECTORY); \
+            ( \
+              $(ECHO) "include-file = data"; \
+              $(ECHO) "[schedule]"; \
+              $(ECHO) "  archive-type = continuous"; \
+              $(ECHO) "  date = *-*-*"; \
+              $(ECHO) "  weekdays = *"; \
+              $(ECHO) "  time = *:*"; \
+              $(ECHO) "  interval = 30"; \
+              $(ECHO) "  enabled = yes"; \
+              $(ECHO) "[end]"; \
+            ) >$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME1); \
+            \
+            $(CD) $(UP_DIR); \
+            $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+            \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+              -C $(SUB_DIR) \
+              --config=$(TEST_SERVER_CONFIG) \
+              --index-database=sqlite:$(TEST_SERVER_INDEX_DATABASE) \
+              --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
+              --debug-server \
+              --debug-index-wait-operations \
+              $(ADDITIONAL_OPTIONS); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+              -C $(SUB_DIR) \
+              --config=$(TEST_SERVER_CONFIG) \
+              --index-database=sqlite:$(TEST_SERVER_INDEX_DATABASE) \
+              --continuous-database=sqlite:$(TEST_SERVER_CONTINUOUS_DATABASE) \
+              --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
+              --debug-server \
+              --debug-index-wait-operations \
+              $(ADDITIONAL_OPTIONS); \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+              -C $(SUB_DIR) \
+              --config=$(TEST_SERVER_CONFIG) \
+              --index-database=sqlite:$(TEST_SERVER_INDEX_DATABASE) \
+              --continuous-database=sqlite:$(TEST_SERVER_CONTINUOUS_DATABASE) \
+              --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
+              --debug-server \
+              --debug-index-wait-operations \
+              $(ADDITIONAL_OPTIONS); \
+          ) $(LOG); \
+        else \
+          $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
+        fi
+	$(RMF) $(BAR_STORAGE)/$(BAR_FILE).bar
+	@$(call functionDoneTestFiles)
 
 test_server_operations_batch: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
   $(TEST_FILES) \
-  $(TEST_SERVER_DATABASE)
+  $(TEST_SERVER_INDEX_DATABASE)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_JOBS_DIRECTORY)
@@ -6090,7 +6159,8 @@ endif
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
               -C $(SUB_DIR) \
               --config=$(TEST_SERVER_CONFIG) \
-              --index-database=sqlite:$(TEST_SERVER_DATABASE) \
+              --index-database=sqlite:$(TEST_SERVER_INDEX_DATABASE) \
+              --continuous-database=sqlite:$(TEST_SERVER_CONTINUOUS_DATABASE) \
               --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
               --log-file=$(TEST_SERVER_LOG_FILE) \
               --log-post-command="cat %file" \
@@ -6116,7 +6186,7 @@ test_server_operations_socket_server: \
   $(TEST_CONFIGS) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
   $(TEST_FILES) \
-  $(TEST_SERVER_DATABASE)
+  $(TEST_SERVER_INDEX_DATABASE)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_JOBS_DIRECTORY)
@@ -6140,7 +6210,8 @@ test_server_operations_socket_server: \
               --pid-file=$(TEST_SERVER_PID_FILE) \
               --server \
               --server-port=$(TEST_SERVER_PORT) \
-              --index-database=sqlite:$(TEST_SERVER_DATABASE) \
+              --index-database=sqlite:$(TEST_SERVER_INDEX_DATABASE) \
+              --continuous-database=sqlite:$(TEST_SERVER_CONTINUOUS_DATABASE) \
               --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
               --log-file=$(TEST_SERVER_LOG_FILE) \
               --log-post-command="cat %file" \
@@ -6400,7 +6471,7 @@ test_master_slave_operations_master: \
 	@$(call functionVerifyParameter,TEST_JOB_NAME2)
 	@$(call functionVerifyParameter,TEST_MASTER_CONFIG)
 	@$(call functionVerifyParameter,TEST_MASTER_PID_FILE)
-	@$(call functionVerifyParameter,TEST_MASTER_DATABASE)
+	@$(call functionVerifyParameter,TEST_MASTER_INDEX_DATABASE)
 	@$(call functionVerifyParameter,TEST_MASTER_LOG_FILE)
 	@#
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
@@ -6421,7 +6492,7 @@ test_master_slave_operations_master: \
               --pid-file=$(TEST_MASTER_PID_FILE) \
               --server-mode=master \
               --server-port=$(TEST_MASTER_PORT) \
-              --index-database=sqlite:$(TEST_MASTER_DATABASE) \
+              --index-database=sqlite:$(TEST_MASTER_INDEX_DATABASE) \
               --jobs-directory=$(TEST_MASTER_JOBS_DIRECTORY) \
               --log-file=$(TEST_MASTER_LOG_FILE) \
               --log=all \
@@ -6474,7 +6545,7 @@ test_master_slave_operations_slave: \
                 --pid-file=$(TEST_SLAVE_PID_FILE) \
                 --server-mode=slave \
                 --server-port=$(TEST_SLAVE_PORT) \
-                --index-database=sqlite:$(TEST_SLAVE_DATABASE) \
+                --index-database=sqlite:$(TEST_SLAVE_INDEX_DATABASE) \
                 --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
                 --log-file=$(TEST_SLAVE_LOG_FILE) \
                 --log-post-command="cat %file" \
@@ -6497,7 +6568,7 @@ test_master_slave_operations_slave: \
                 --pid-file=$(TEST_SLAVE_PID_FILE) \
                 --server-mode=slave \
                 --server-port=$(TEST_SLAVE_PORT) \
-                --index-database=sqlite:$(TEST_SLAVE_DATABASE) \
+                --index-database=sqlite:$(TEST_SLAVE_INDEX_DATABASE) \
                 --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
                 --log-file=$(TEST_SLAVE_LOG_FILE) \
                 --log-post-command="cat %file" \
