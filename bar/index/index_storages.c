@@ -566,12 +566,13 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                       DATABASE_UNLIMITED
                      );
   });
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   // free resources
   String_delete(name2);
   String_delete(name1);
 
-  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (error == ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -655,10 +656,11 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
 
     return error;
   });
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   // free resource
 
-  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (error == ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -844,12 +846,13 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                         DATABASE_UNLIMITED
                       );
   });
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   // free resources
   String_delete(name2);
   String_delete(name1);
 
-  if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+  if (error == ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -1033,9 +1036,6 @@ LOCAL Errors purgeFTSEntry(IndexHandle  *indexHandle,
                           )
 {
   Errors error;
-  #ifndef NDEBUG
-    ulong changedRowCount;
-  #endif
 
   UNUSED_VARIABLE(progressInfo);
 
@@ -1066,7 +1066,6 @@ LOCAL Errors purgeFTSEntry(IndexHandle  *indexHandle,
 * Name   : purgeSubEntry
 * Purpose: purge file/image/directory/link/hardlink/special sub entry
 * Input  : indexHandle  - index handle
-*          storageId    - storage id
 *          progressInfo - progress info
 *          entryId      - entry id
 * Output : -
@@ -1075,15 +1074,11 @@ LOCAL Errors purgeFTSEntry(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 LOCAL Errors purgeSubEntry(IndexHandle  *indexHandle,
-                           DatabaseId   storageId,
                            ProgressInfo *progressInfo,
                            DatabaseId   entryId
                           )
 {
   Errors error;
-  #ifndef NDEBUG
-    ulong changedRowCount;
-  #endif
 
   UNUSED_VARIABLE(progressInfo);
 
@@ -1208,14 +1203,11 @@ LOCAL Errors purgeEntry(IndexHandle  *indexHandle,
                        )
 {
   Errors error;
-  #ifndef NDEBUG
-    ulong changedRowCount;
-  #endif
 
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  error          = ERROR_NONE;
+  error = ERROR_NONE;
 
   if (error == ERROR_NONE)
   {
@@ -1692,7 +1684,6 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
       if (error == ERROR_NONE)
       {
         error = purgeSubEntry(indexHandle,
-                              storageId,
                               progressInfo,
                               entryId
                              );
@@ -4503,57 +4494,63 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     // get storage count, storage size, entry count, entry size
-    error = Database_get(&indexHandle->databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 4);
-
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
-
-                           if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
-                           if (totalStorageSize  != NULL) (*totalStorageSize)  = values[1].u64;
-                           if (totalEntryCount   != NULL) (*totalEntryCount)   = values[2].u;
-                           if (totalEntrySize    != NULL) (*totalEntrySize)    = values[3].u64;
-
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_TABLES
-                         (
-                           "storages \
-                              LEFT JOIN entities ON entities.id=storages.entityId \
-                              LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                           "
-                         ),
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           DATABASE_COLUMN_UINT  ("COUNT(storages.id)"),
-                           DATABASE_COLUMN_UINT64("SUM(storages.size)"),
-                           DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
-                           DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
-                         ),
-                         stringFormat(sqlString,sizeof(sqlString),
-                                      "    storages.deletedFlag!=TRUE \
-                                       AND %s \
-                                      ",
-                                      String_cString(filterString)
-                                     ),
-                         DATABASE_FILTERS
-                         (
-                         ),
-                         NULL,  // groupBy
-                         NULL,  // orderBy
-                         0LL,
-                         1LL
-                        );
-    if (   (error != ERROR_NONE)
-        && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+    if (   (totalStorageCount != NULL)
+        || (totalStorageSize  != NULL)
+        || (totalEntryCount   != NULL)
+        || (totalEntrySize    != NULL)
        )
     {
-      return error;
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 4);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                             if (totalStorageSize  != NULL) (*totalStorageSize)  = values[1].u64;
+                             if (totalEntryCount   != NULL) (*totalEntryCount)   = values[2].u;
+                             if (totalEntrySize    != NULL) (*totalEntrySize)    = values[3].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "storages \
+                                LEFT JOIN entities ON entities.id=storages.entityId \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(storages.id)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.size)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
+                           ),
+                           stringFormat(sqlString,sizeof(sqlString),
+                                        "    storages.deletedFlag!=TRUE \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderBy
+                           0LL,
+                           1LL
+                          );
+      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
     }
 
     if (totalEntryContentSize != NULL)
@@ -4578,12 +4575,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-        if (   (error != ERROR_NONE)
-            && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           )
-        {
-          return error;
-        }
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       }
       else if (   !String_isEmpty(entityIdsString)
                || !INDEX_ID_IS_ANY(uuidId)
@@ -4608,12 +4600,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-        if (   (error != ERROR_NONE)
-            && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           )
-        {
-          return error;
-        }
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       }
       else
       {
@@ -4632,12 +4619,11 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-        if (   (error != ERROR_NONE)
-            && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           )
-        {
-          return error;
-        }
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+      }
+      if (error != ERROR_NONE)
+      {
+        return error;
       }
     }
 
@@ -5585,7 +5571,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              0LL,
                              DATABASE_UNLIMITED
                             );
-        if ((error != ERROR_NONE) && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND))
+        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+        if (error != ERROR_NONE)
         {
           DATABASE_TRANSACTION_ABORT(databaseHandle);
           return error;

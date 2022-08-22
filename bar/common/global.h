@@ -1933,16 +1933,18 @@ static inline uint64 getCycleCounter(void)
 * Notes  : -
 \***********************************************************************/
 
-static inline uint getStackTrace(const void **stackTrace, uint maxStackTraceSize)
+static inline uint getStackTrace(void const * stackTrace[], uint maxStackTraceSize)
 {
   uint stackTraceSize;
-  uint i;
+  #ifdef HAVE_BACKTRACE
+    uint i;
+  #endif
 
   #ifdef HAVE_BACKTRACE
     stackTraceSize = (uint)backtrace((void*)stackTrace,maxStackTraceSize);
     for (i = 0; i < stackTraceSize; i++)
     {
-      stackTrace[i] = (const void **)((const byte*)stackTrace[i]-1);
+      stackTrace[i] = (void const **)((const byte*)stackTrace[i]-1);
     }
   #else
     stackTraceSize = 0;

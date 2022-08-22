@@ -5361,7 +5361,9 @@ LOCAL void updateSHA256Section(SHA256_           sha256,
 
 void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferSize)
 {
-  SHA256_ sha256;
+  #if defined(HAVE_OPENSSL) || defined(HAVE_GCRYPT)
+    SHA256_ sha256;
+  #endif
 
   #if   defined(HAVE_OPENSSL)
     if (SHA256_Init(&sha256) != 1)

@@ -1772,6 +1772,7 @@ LOCAL Errors cleanUpOrphanedStorages(IndexHandle *indexHandle)
   Array_init(&entryIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   error = ERROR_NONE;
 
+UNUSED_VARIABLE(indexHandle);
 //TODO: do regulary in index thread?
 #if 0
   /* get entries to purge without associated file/image/directory/link/hardlink/special entry

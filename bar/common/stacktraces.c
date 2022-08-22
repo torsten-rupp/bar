@@ -36,8 +36,11 @@
 #ifdef HAVE_LINK_H
   #include <link.h>
 #endif
+#ifdef HAVE_ELF_H
+  #include <elf.h>
+#endif
 #ifdef HAVE_DL_H
-  #include <dl.h>
+  #include <dlfcn.h>
 #endif
 #include <unistd.h>
 #include <signal.h>
@@ -91,7 +94,7 @@ typedef struct
   LOCAL uint                    signalHandlerInfoCount;
   LOCAL SignalHandlerFunction   signalHandlerFunction;
   LOCAL void                    *signalHandlerUserData;
-  LOCAL void                    *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_COUNT];
+  LOCAL void const              *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_COUNT];
 #elif defined(PLATFORM_WINDOWS)
 #endif /* PLATFORM_... */
 
@@ -100,7 +103,7 @@ typedef struct
 /**************************** Functions ********************************/
 
 #if   defined(PLATFORM_LINUX)
-#ifdef HAVE_BFD_INIT
+#if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
 /***********************************************************************\
 * Name   : readSymbolTable
 * Purpose: read symbol table from BFD
@@ -210,6 +213,7 @@ LOCAL bool demangleSymbolName(const char *symbolName,
   assert(symbolName != NULL);
   assert(demangledSymbolName != NULL);
 
+#if defined(HAVE_LIBIBERTY_DEMANGLE_H)
   s = bfd_demangle(NULL,symbolName,DMGL_ANSI|DMGL_PARAMS);
   if (s != NULL)
   {
@@ -224,6 +228,9 @@ LOCAL bool demangleSymbolName(const char *symbolName,
 
     return FALSE;
   }
+#else
+  return FALSE;
+#endif
 }
 
 /***********************************************************************\
@@ -507,6 +514,8 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
   bool          result;
 
   assert(fileName != NULL);
+//TODO: open once
+//fprintf(stderr,"%s, %d: %s %p\n",__FILE__,__LINE__,fileName,address);
 
   // open file.<debug symbol extension> or file
   abfd = NULL;
@@ -915,12 +924,12 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                              )
 {
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
       uint          i;
       FileMatchInfo fileMatchInfo;
       char          errorMessage[128];
       bool          symbolFound;
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -929,7 +938,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
   assert(symbolFunction != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
       for (i = 0; i < addressCount; i++)
       {
         fileMatchInfo.found   = FALSE;
@@ -1014,14 +1023,14 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
           fprintf(stderr,"ERROR: %s\n",errorMessage);
         }
       }
-    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
       UNUSED_VARIABLE(executableFileName);
       UNUSED_VARIABLE(addresses);
       UNUSED_VARIABLE(addressCount);
       UNUSED_VARIABLE(symbolFunction);
       UNUSED_VARIABLE(symbolUserData);
       UNUSED_VARIABLE(printErrorMessagesFlag);
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(executableFileName);
     UNUSED_VARIABLE(addresses);

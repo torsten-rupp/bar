@@ -18792,6 +18792,7 @@ for ac_header in \
                  arpa/inet.h \
                  bfd.h \
                  demangle.h \
+                 elf.h \
                  execinfo.h \
                  grp.h \
                  icu.h \

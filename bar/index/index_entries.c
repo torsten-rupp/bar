@@ -621,6 +621,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   assert(fileName != NULL);
 
   // get newest id
+  databaseId = DATABASE_ID_NONE;
   error = Database_getId(&indexHandle->databaseHandle,
                          &databaseId,
                          "entriesNewest",
@@ -631,19 +632,13 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                            DATABASE_FILTER_KEY(entryId)
                          )
                         );
-// TODO: work-around: ignore not existing
-//  if (error != ERROR_NONE)
-if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-{
-  return ERROR_NONE;
-}
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     return error;
   }
 
   directoryName = File_getDirectoryName(String_new(),fileName);
-  error = ERROR_NONE;
   while (!String_isEmpty(directoryName) && (error == ERROR_NONE))
   {
     // update directory entry
@@ -1872,13 +1867,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                               );
         }
       }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
 
-      return ERROR_NONE;
+      return error;
     });
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    if (error != ERROR_NONE)
+    {
+    }
     assert(   (error == ERROR_NONE)
            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)

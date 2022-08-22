@@ -558,67 +558,68 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
   Database_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID='%S'",scheduleUUID);
   Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
 
-  INDEX_DO(indexHandle,
+  INDEX_DOX(error,
+            indexHandle,
   {
     char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     // get last executed, total entities count, total entry count, total entry size
-    error = Database_get(&indexHandle->databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 4);
+    return Database_get(&indexHandle->databaseHandle,
+                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                        {
+                          assert(values != NULL);
+                          assert(valueCount == 4);
 
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
+                          UNUSED_VARIABLE(userData);
+                          UNUSED_VARIABLE(valueCount);
 
-                           if (lastExecutedDateTime != NULL) (*lastExecutedDateTime) = values[0].u64;
-                           if (totalEntityCount     != NULL) (*totalEntityCount)     = values[1].u;
-                           if (totalEntryCount      != NULL) (*totalEntryCount)      = values[2].u;
-                           if (totalEntrySize       != NULL) (*totalEntrySize)       = values[3].u64;
+                          if (lastExecutedDateTime != NULL) (*lastExecutedDateTime) = values[0].u64;
+                          if (totalEntityCount     != NULL) (*totalEntityCount)     = values[1].u;
+                          if (totalEntryCount      != NULL) (*totalEntryCount)      = values[2].u;
+                          if (totalEntrySize       != NULL) (*totalEntrySize)       = values[3].u64;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
+                          return ERROR_NONE;
+                        },NULL),
+                        NULL,  // changedRowCount
 //TODO newest
-                         DATABASE_TABLES
-                         (
-                           "uuids \
-                             LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                             LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                           "
-                         ),
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           DATABASE_COLUMN_DATETIME("MAX(entities.created)"),
-                           DATABASE_COLUMN_UINT    ("COUNT(entities.id)"),
-                           DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
-                           DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
-                         ),
-                         stringFormat(sqlString,sizeof(sqlString),
-                                      "%s",
-                                      String_cString(filterString)
-                                     ),
-                         DATABASE_FILTERS
-                         (
-                         ),
-                         NULL,  // groupBy
-                         NULL,  // orderBy
-                         0LL,
-                         1LL
-                        );
-    assert(   (error == ERROR_NONE)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-          );
+                        DATABASE_TABLES
+                        (
+                          "uuids \
+                            LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                            LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                          "
+                        ),
+                        DATABASE_FLAG_NONE,
+                        DATABASE_COLUMNS
+                        (
+                          DATABASE_COLUMN_DATETIME("MAX(entities.created)"),
+                          DATABASE_COLUMN_UINT    ("COUNT(entities.id)"),
+                          DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
+                          DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
+                        ),
+                        stringFormat(sqlString,sizeof(sqlString),
+                                     "%s",
+                                     String_cString(filterString)
+                                    ),
+                        DATABASE_FILTERS
+                        (
+                        ),
+                        NULL,  // groupBy
+                        NULL,  // orderBy
+                        0LL,
+                        1LL
+                       );
   });
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+  {
+    error = ERROR_NONE;
+  }
 
   // free resources
   Database_deleteFilter(filterString);
   String_delete(ftsMatchString);
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
