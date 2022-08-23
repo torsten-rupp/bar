@@ -1721,15 +1721,19 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   totalCount += (ulong)n;
 
   // check entities without storages
-  printInfo("  entities without storages...         ");
+  printInfo("  entities without storages/entries... ");
   error = Database_getUInt(databaseHandle,
                            &n,
                            "entities \
                               LEFT JOIN storages ON storages.entityId=entities.id \
+                              LEFT JOIN entries ON entries.entityId=entities.id \
+                              LEFT JOIN entriesNewest ON entriesNewest.entityId=entities.id \
                            ",
                            "COUNT(entities.id)",
                            "    entities.id!=? \
                             AND storages.id IS NULL \
+                            AND entries.id IS NULL \
+                            AND entriesNewest.id IS NULL \
                            ",
                            DATABASE_FILTERS
                            (
@@ -6490,7 +6494,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 
   // clean entities withoout storages
-  printInfo("  entities without storages...         ");
+  printInfo("  entities without storages/entries... ");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
@@ -6499,10 +6503,14 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &ids,
                           "entities \
                              LEFT JOIN storages ON storages.entityId=entities.id \
+                             LEFT JOIN entries ON entries.entityId=entities.id \
+                             LEFT JOIN entriesNewest ON entriesNewest.entityId=entities.id \
                           ",
                           "entities.id",
                           "    entities.id!=? \
                            AND storages.id IS NULL \
+                           AND entries.id IS NULL \
+                           AND entriesNewest.id IS NULL \
                           ",
                           DATABASE_FILTERS
                           (
