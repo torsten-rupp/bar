@@ -2105,7 +2105,7 @@ Errors IndexStorage_purge(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
-    // purge storage
+    // purge storage (mark as "deleted")
     error = Database_update(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "storages",

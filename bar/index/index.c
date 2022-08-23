@@ -2603,6 +2603,12 @@ LOCAL void indexThreadCode(void)
                    && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
                    && !indexQuitFlag
                   );
+            if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
+                || indexQuitFlag
+               )
+            {
+              break;
+            }
 
             // prune entity
             if (   (entityId != DATABASE_ID_NONE)
@@ -2626,6 +2632,24 @@ LOCAL void indexThreadCode(void)
                      && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
                      && !indexQuitFlag
                     );
+              if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
+                  || indexQuitFlag
+                 )
+              {
+                break;
+              }
+            }
+
+            // prune UUID
+// TODO:
+            if (FALSE)
+            {
+              if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
+                  || indexQuitFlag
+                 )
+              {
+                break;
+              }
             }
           }
         }
@@ -2635,10 +2659,13 @@ LOCAL void indexThreadCode(void)
               );
       #endif /* INDEX_SUPPORT_DELETE */
 
-      (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
-      (void)IndexEntry_pruneAll(&indexHandle,NULL,NULL);
-      (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
-      (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
+      if (!indexQuitFlag)
+      {
+        (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
+        (void)IndexEntry_pruneAll(&indexHandle,NULL,NULL);
+        (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
+        (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
+      }
     }
 
     // sleep and check quit flag/trigger

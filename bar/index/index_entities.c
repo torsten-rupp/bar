@@ -896,7 +896,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Purged entity #%"PRIu64", job %s, type '%s' created at %s: no archives",
+                  "Purged entity #%"PRIu64", job %s, type '%s' created at %s",
                   entityId,
                   String_cString(jobUUID),
                   Archive_archiveTypeToString(archiveType),
@@ -979,13 +979,6 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       {
         return error;
       }
-
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Purged entity #%"PRIu64": empty",
-                  entityId
-                 );
     }
   }
 
