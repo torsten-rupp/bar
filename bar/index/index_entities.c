@@ -896,7 +896,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Purged entity #%"PRIu64", job %s, type '%s' created at %s",
+                  "Purged entity #%"PRIu64": job %s, type '%s', created at %s",
                   entityId,
                   String_cString(jobUUID),
                   Archive_archiveTypeToString(archiveType),
