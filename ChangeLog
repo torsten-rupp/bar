@@ -1,6 +1,4 @@
-2022-08-21 0.22
-  * added option --save-configuration: format and
-    save configuration file
+2022-08-30 0.22
   * added support for external index database engines
     MariaDB, PostgreSQL
   * added optional move-to in persistence
@@ -10,8 +8,10 @@
   * added option --sparse-files
   * added option --no-stop-on-owner-error
   * added option --server
+  * added option --save-configuration: format and
+    save configuration file
   * added option --clean-configuration-comments
-  * added begin/end time for continous schedules
+  * added begin/end time for continuous schedules
   * place pid file into /run by default
   * implemented parallel restore
   * execute pre/post command for BAR in non-server mode,
@@ -70,7 +70,6 @@
     requester
   * BARControl: fixed storage of table columns width
   * extended documentation by "term of use"
-  * support Yubikey
 
 2020-09-27 0.21f
   * fixed auto-index of new archives
