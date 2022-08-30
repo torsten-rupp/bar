@@ -71,6 +71,73 @@
   * BARControl: fixed storage of table columns width
   * extended documentation by "term of use"
 
+2022-03-28 0.21m
+  * fixed auto-rename archive when in slave mode
+  * BARControl: fixed show and hide tooltips
+
+2022-01-15 0.21l
+  * backport option --transform
+  * fixed missing unmount in non-server mode
+  * fixed add schedule when GUI run with a different
+    locale
+  * fixed some German translations
+  * fixed sorting job list in tab 'Jobs'
+  * stopped supporting CentOS 32bit
+
+2021-08-28 0.21k
+  * backport added archive file mode 'rename': rename
+    destination archive if exists
+  * BARControl: fixed infinte loop when reading
+    settings (server name history)
+
+2021-06-27 0.21j
+  * fixed dead-lock in database transaction
+  * fixed burn DVD/BD: avoid error "already
+    carrying iso"
+  * improved logging burning CD/DVD/BD
+
+2021-04-27 0.21i
+  * fixed stored master UUID hash: use machine
+    dependent hashing. Note: you have to re-pair
+    master and slaves once again
+  * fixed disconnect in slave mode on
+    transport of large data blocks
+  * fixed protocol error when starting job
+    on slave
+  * fixed timeout if slave job is slow
+  * fixed lost resource if server cannot be
+    started
+  * extend default pairing time window to
+    10min
+  * fixed install RPM /etc/init.d/barserver
+  * install do not start barserver automatically
+  * fixed final compress ratio: show saved space
+    from total file size/total compressed file
+    size
+  * BARControl: fixed list remote file list
+    on slave
+  * BARControl: fixed update job list on rename
+    job
+
+2021-02-16 0.21h
+  * fixed lost socket handle on disconnect
+
+2021-02-09 0.21g
+  * fixed restore single directory/link/special
+    file
+  * fixed reading cryption keys via config file
+  * fixed possible wrong base64 encoding
+  * fixed not starting BAR if SSL certificate is
+    expired
+  * fixed possible hanging network connections
+    which caused impossiblity to connect to server
+    anymore
+  * fixed wrong shutdown network connections
+  * fixed clean index database
+  * bar-sqlite3: fixed clean
+  * bar-sqlite3: fixed full integrity check
+  * BARControl: fixed connect menu item
+
 2020-09-27 0.21f
   * fixed auto-index of new archives
   * BARControl: synchonous update of job data
