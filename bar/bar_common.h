@@ -9,7 +9,9 @@
 \***********************************************************************/
 
 #ifndef __BAR_COMMON__
-#define __BAR_COMMON__/****************************** Includes *******************************/
+#define __BAR_COMMON__
+
+/****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
