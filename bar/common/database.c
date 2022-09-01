@@ -15940,59 +15940,63 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 
 // TODO:
 (void)flags;
-  // create SQL string
-  sqlString = String_format(String_new(),"DELETE FROM %s WHERE %s IN (",tableName,columnName);
-  for (i = 0; i < length; i++)
+
+  if (length > 0L)
   {
-    if (i > 0) String_appendChar(sqlString,',');
-    String_appendFormat(sqlString,"%"PRIi64,ids[i]);
-  }
-  String_appendChar(sqlString,')');
-  #ifndef NDEBUG
-    if (IS_SET(flags,DATABASE_FLAG_DEBUG))
+    // create SQL string
+    sqlString = String_format(String_new(),"DELETE FROM %s WHERE %s IN (",tableName,columnName);
+    for (i = 0; i < length; i++)
     {
-      printf("DEBUG: %s\n",String_cString(sqlString));
+      if (i > 0) String_appendChar(sqlString,',');
+      String_appendFormat(sqlString,"%"PRIi64,ids[i]);
     }
-  #endif
+    String_appendChar(sqlString,')');
+    #ifndef NDEBUG
+      if (IS_SET(flags,DATABASE_FLAG_DEBUG))
+      {
+        printf("DEBUG: %s\n",String_cString(sqlString));
+      }
+    #endif
 
-  // prepare statement
-  error = prepareStatement(&databaseStatementHandle,
-                           databaseHandle,
-                           String_cString(sqlString),
-                           0
-                          );
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
+    // prepare statement
+    error = prepareStatement(&databaseStatementHandle,
+                             databaseHandle,
+                             String_cString(sqlString),
+                             0
+                            );
+    if (error != ERROR_NONE)
+    {
+      String_delete(sqlString);
+      return error;
+    }
 
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    // execute statement
-    return executePreparedQuery(&databaseStatementHandle,
-                                changedRowCount,
-                                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
-                                );
-  });
-  Misc_doneTimeout(&timeoutInfo);
-  if (error != ERROR_NONE)
-  {
+    Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+    DATABASE_DOX(error,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+                 databaseHandle,
+                 DATABASE_LOCK_TYPE_READ_WRITE,
+                 databaseHandle->timeout,
+    {
+      // execute statement
+      return executePreparedQuery(&databaseStatementHandle,
+                                  changedRowCount,
+                                  Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
+                                  );
+    });
+    Misc_doneTimeout(&timeoutInfo);
+    if (error != ERROR_NONE)
+    {
+      finalizeStatement(&databaseStatementHandle);
+      String_delete(sqlString);
+      return error;
+    }
+
+    // finalize statementHandle
     finalizeStatement(&databaseStatementHandle);
+
+    // free resources
     String_delete(sqlString);
-    return error;
   }
-
-  // finalize statementHandle
-  finalizeStatement(&databaseStatementHandle);
-
-  // free resources
-  String_delete(sqlString);
 
   return ERROR_NONE;
 }
