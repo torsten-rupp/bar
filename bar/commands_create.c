@@ -2499,7 +2499,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
-            printInfo(2,"Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+            printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
             logMessage(createInfo->logHandle,
                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                        "Access denied '%s' (error: %s)",
@@ -2840,7 +2840,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
-            printInfo(2,"Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+            printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
             logMessage(createInfo->logHandle,
                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                        "Access denied '%s' (error: %s)",
@@ -2851,7 +2851,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           else
           {
             printError("cannot get info for '%s' (error: %s)",
-                       String_cString(fileName),
+                       String_cString(name),
                        Error_getText(error)
                       );
           }
@@ -2902,7 +2902,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         }
                         break;
                       case ENTRY_TYPE_IMAGE:
-                        // nothing to do
+                        printWarning("'%s' is not a device",String_cString(name));
                         break;
                       default:
                         #ifndef NDEBUG
@@ -2954,7 +2954,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         }
                         break;
                       case ENTRY_TYPE_IMAGE:
-                        // nothing to do
+                        printWarning("'%s' is not a device",String_cString(name));
                         break;
                       default:
                         #ifndef NDEBUG
@@ -2992,7 +2992,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     error = File_readDirectoryList(&directoryListHandle,fileName);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                      printError("Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                       logMessage(createInfo->logHandle,
                                  LOG_TYPE_ENTRY_ACCESS_DENIED,
                                  "Access denied '%s' (error: %s)",
@@ -3013,7 +3013,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     error = File_getInfo(&fileInfo,fileName);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
+                      printError("Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
                       logMessage(createInfo->logHandle,
                                  LOG_TYPE_ENTRY_ACCESS_DENIED,
                                  "Access denied '%s' (error: %s)",
@@ -3064,7 +3064,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     }
                                     break;
                                   case ENTRY_TYPE_IMAGE:
-                                    // nothing to do
+                                    printWarning("'%s' is not a device",String_cString(fileName));
                                     break;
                                   default:
                                     #ifndef NDEBUG
@@ -3113,13 +3113,23 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         error = Device_getInfo(&deviceInfo,fileName,TRUE);
                                         if (error != ERROR_NONE)
                                         {
-                                          printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                                          logMessage(createInfo->logHandle,
-                                                     LOG_TYPE_ENTRY_ACCESS_DENIED,
-                                                     "Access denied '%s' (error: %s)",
-                                                     String_cString(name),
-                                                     Error_getText(error)
-                                                    );
+                                          if (createInfo->jobOptions->skipUnreadableFlag)
+                                          {
+                                            printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
+                                            logMessage(createInfo->logHandle,
+                                                       LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                                       "Access denied '%s' (error: %s)",
+                                                       String_cString(fileName),
+                                                       Error_getText(error)
+                                                      );
+                                          }
+                                          else
+                                          {
+                                            printError("cannot get info for '%s' (error: %s)",
+                                                       String_cString(fileName),
+                                                       Error_getText(error)
+                                                      );
+                                          }
 
                                           STATUS_INFO_UPDATE(createInfo,name,NULL)
                                           {
@@ -3268,7 +3278,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       error = Device_getInfo(&deviceInfo,fileName,TRUE);
                                       if (error != ERROR_NONE)
                                       {
-                                        printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                                        printError("Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                                         logMessage(createInfo->logHandle,
                                                    LOG_TYPE_ENTRY_ACCESS_DENIED,
                                                    "Access denied '%s' (error: %s)",
@@ -3586,13 +3596,23 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             error = Device_getInfo(&deviceInfo,name,TRUE);
                             if (error != ERROR_NONE)
                             {
-                              printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                              logMessage(createInfo->logHandle,
-                                         LOG_TYPE_ENTRY_ACCESS_DENIED,
-                                         "Access denied '%s' (error: %s)",
-                                         String_cString(name),
-                                         Error_getText(error)
-                                        );
+                              if (createInfo->jobOptions->skipUnreadableFlag)
+                              {
+                                printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                                logMessage(createInfo->logHandle,
+                                           LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                           "Access denied '%s' (error: %s)",
+                                           String_cString(name),
+                                           Error_getText(error)
+                                          );
+                              }
+                              else
+                              {
+                                printError("cannot get info for '%s' (error: %s)",
+                                           String_cString(name),
+                                           Error_getText(error)
+                                          );
+                              }
 
                               STATUS_INFO_UPDATE(createInfo,name,NULL)
                               {
@@ -4693,7 +4713,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-        printError("cannot get information for file '%s' (error: %s)",
+        printError("cannot get info for file '%s' (error: %s)",
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
