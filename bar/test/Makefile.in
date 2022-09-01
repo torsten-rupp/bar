@@ -1611,6 +1611,7 @@ test7-valgrind test_convert-valgrind:
 test8 test_image: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 8: image)
+ifeq (@HAVE_SUDO_COMMANDS@,1)
 	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1635,10 +1636,10 @@ test8 test_image: \
               exit $$rc; \
             fi; \
           done; \
-          $(call functionInfoEnd,OK); \
-        else \
-          $(call functionInfoEnd,FAIL (error: no sudo-commands)); \
-        fi
+          $(call functionInfoEnd,OK)
+else
+	@$(ECHO) "ERROR: no sudo-commands"
+endif
 
 test8-debug test_image-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_image
