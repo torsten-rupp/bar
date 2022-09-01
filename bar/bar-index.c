@@ -6200,7 +6200,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries \
                               LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                           ",
-                          "id",
+                          "entries.id",
                           "    entries.type=? \
                            AND fileEntries.id IS NULL \
                           ",
@@ -6243,7 +6243,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries \
                              LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
                           ",
-                          "id",
+                          "entries.id",
                           "    entries.type=? \
                            AND imageEntries.id IS NULL \
                           ",
@@ -6286,7 +6286,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries \
                              LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                           ",
-                          "id",
+                          "entries.id",
                           "    entries.type=? \
                            AND directoryEntries.id IS NULL \
                           ",
@@ -6329,7 +6329,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries \
                              LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                           ",
-                          "id",
+                          "entries.id",
                           "    entries.type=? \
                            AND linkEntries.id IS NULL \
                           ",
@@ -6372,7 +6372,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries \
                              LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                           ",
-                          "id",
+                          "entries.id",
                           "    entries.type=? \
                            AND hardlinkEntries.id IS NULL \
                           ",
@@ -6415,7 +6415,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "entries \
                              LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
                           ",
-                          "id",
+                          "entries.id",
                           "    entries.type=? \
                            AND specialEntries.id IS NULL \
                           ",
@@ -7555,7 +7555,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         }
 
         // vacuum into file
-    // TODO: move to databaes.c
+// TODO: move to databaes.c
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
