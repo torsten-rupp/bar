@@ -1815,7 +1815,7 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.testCreatedArchivesFlag                         = FALSE;
 
-  globalOptions.skipUnreadableFlag                              = FALSE;
+  globalOptions.skipUnreadableFlag                              = TRUE;
   globalOptions.errorCorrectionCodesFlag                        = FALSE;
   globalOptions.waitFirstVolumeFlag                             = FALSE;
 
