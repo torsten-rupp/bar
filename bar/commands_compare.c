@@ -654,6 +654,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         String_delete(deviceName);
+        return ERROR_NONE;
       }
       else
       {
