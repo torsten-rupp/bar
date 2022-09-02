@@ -1473,6 +1473,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
         type = DEVICE;
         AUTOFREE_ADD(&autoFreeList,&deviceHandle,{ (void)Device_close(&deviceHandle); });
@@ -1494,6 +1496,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
         type = FILE;
         AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
