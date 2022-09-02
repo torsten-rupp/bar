@@ -1464,6 +1464,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     {
       if (File_isDevice(destinationDeviceName))
       {
+fprintf(stderr,"%s:%d: xxxxxxxxxxxxx\n",__FILE__,__LINE__);
         // open device
         error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPEN_WRITE);
         if (error != ERROR_NONE)
@@ -1473,6 +1474,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
         type = DEVICE;
         AUTOFREE_ADD(&autoFreeList,&deviceHandle,{ (void)Device_close(&deviceHandle); });
@@ -1494,6 +1497,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
         type = FILE;
         AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
