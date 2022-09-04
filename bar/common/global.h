@@ -2666,6 +2666,48 @@ static inline bool stringStartsWithIgnoreCase(const char *s, const char *prefix)
 }
 
 /***********************************************************************\
+* Name   : stringEndsWith
+* Purpose: check if string ends with suffix
+* Input  : s      - string
+*          suffix - suffix
+* Output : -
+* Return : TRUE iff s start with suffix
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringEndsWith(const char *s, const char *suffix)
+{
+  size_t n,m;
+  
+  n = strlen(s);
+  m = strlen(suffix);
+
+  return    (n >= m)
+         && strncmp(s+n-m,suffix,m) == 0;
+}
+
+/***********************************************************************\
+* Name   : stringEndsWithIgnoreCase
+* Purpose: check if string ends with suffix
+* Input  : s      - string
+*          suffix - suffix
+* Output : -
+* Return : TRUE iff s start with suffix
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringEndsWithIgnoreCase(const char *s, const char *suffix)
+{
+  size_t n,m;
+  
+  n = strlen(s);
+  m = strlen(suffix);
+
+  return    (n >= m)
+         && strncasecmp(s+n-m,suffix,m) == 0;
+}
+
+/***********************************************************************\
 * Name   : stringIsEmpty
 * Purpose: check if string is NULL or empty
 * Input  : s - string
