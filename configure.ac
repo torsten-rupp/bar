@@ -1617,8 +1617,6 @@ AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [los
 AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,[HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                          [dd if=/dev/loop[[01]] of=-],                          ,[HAVE_SUDO_COMMAND_DD=0;           HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                          [mkfs -t \* /dev/loop[[01]]],                          ,[HAVE_SUDO_COMMAND_MKFS=0;         HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,[HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,[HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0])
