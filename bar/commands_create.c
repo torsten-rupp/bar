@@ -4753,7 +4753,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         n = 0;
         do
         {
-          String_set(storageMsg.archiveName,directoryName);
+          File_setFileName(storageMsg.archiveName,directoryName);
           File_appendFileName(storageMsg.archiveName,prefixFileName);
           String_appendFormat(storageMsg.archiveName,"-%u",n);
           String_append(storageMsg.archiveName,postfixFileName);
