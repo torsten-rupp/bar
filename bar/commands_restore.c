@@ -618,6 +618,61 @@ LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
 }
 
 /***********************************************************************\
+* Name   : getUniqDestinationName
+* Purpose: get unique destination file name
+* Input  : destinationFileName - destination file name
+* Output : -
+* Return : unique destination file name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getUniqName(String destinationFileName)
+{
+  String pathName,baseName;
+  String prefixFileName,postfixFileName;
+  long   index;
+  uint   n;
+  
+  assert(destinationFileName != NULL);
+
+  File_splitFileName(destinationFileName,&pathName,&baseName);
+  prefixFileName  = String_new();
+  postfixFileName = String_new();
+  index = String_findLastChar(baseName,STRING_END,'.');
+  if (index >= 0)
+  {
+    String_sub(prefixFileName,baseName,STRING_BEGIN,index);
+    String_sub(postfixFileName,baseName,index,STRING_END);
+  }
+  else
+  {
+    String_set(prefixFileName,baseName);
+  }
+  File_setFileName(destinationFileName,pathName);
+  File_appendFileName(destinationFileName,prefixFileName);
+  String_append(destinationFileName,postfixFileName);
+  if (File_exists(destinationFileName))
+  {
+    n = 0;
+    do
+    {
+      File_setFileName(destinationFileName,pathName);
+      File_appendFileName(destinationFileName,prefixFileName);
+      String_appendFormat(destinationFileName,"-%u",n);
+      String_append(destinationFileName,postfixFileName);
+      n++;
+    }
+    while (File_exists(destinationFileName));
+  }
+  String_delete(postfixFileName);
+  String_delete(prefixFileName);
+  String_delete(baseName);
+  String_delete(pathName);
+
+  return destinationFileName;
+}
+
+/***********************************************************************\
 * Name   : restoreFileEntry
 * Purpose: restore file entry
 * Input  : restoreInfo          - restore info
@@ -645,9 +700,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   FileInfo                  fileInfo;
   uint64                    fragmentOffset,fragmentSize;
   String                    destinationFileName;
-  long                      index;
-  String                    prefixFileName,postfixFileName;
-  uint                      n;
 //            FileInfo                      localFileInfo;
   FileModes                 fileMode;
   FileHandle                fileHandle;
@@ -742,34 +794,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               return error;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
-              prefixFileName  = String_new();
-              postfixFileName = String_new();
-              index = String_findLastChar(destinationFileName,STRING_END,'.');
-              if (index >= 0)
-              {
-                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                String_sub(postfixFileName,destinationFileName,index,STRING_END);
-              }
-              else
-              {
-                String_set(prefixFileName,destinationFileName);
-              }
-              String_set(destinationFileName,prefixFileName);
-              String_append(destinationFileName,postfixFileName);
-              if (File_exists(destinationFileName))
-              {
-                n = 0;
-                do
-                {
-                  String_set(destinationFileName,prefixFileName);
-                  String_appendFormat(destinationFileName,"-%u",n);
-                  String_append(destinationFileName,postfixFileName);
-                  n++;
-                }
-                while (File_exists(destinationFileName));
-              }
-              String_delete(postfixFileName);
-              String_delete(prefixFileName);
+              getUniqName(destinationFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // truncate to 0-file
@@ -827,34 +852,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
-                prefixFileName  = String_new();
-                postfixFileName = String_new();
-                index = String_findLastChar(destinationFileName,STRING_END,'.');
-                if (index >= 0)
-                {
-                  String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                  String_sub(postfixFileName,destinationFileName,index,STRING_END);
-                }
-                else
-                {
-                  String_set(prefixFileName,destinationFileName);
-                }
-                String_set(destinationFileName,prefixFileName);
-                String_append(destinationFileName,postfixFileName);
-                if (File_exists(destinationFileName))
-                {
-                  n = 0;
-                  do
-                  {
-                    String_set(destinationFileName,prefixFileName);
-                    String_appendFormat(destinationFileName,"-%u",n);
-                    String_append(destinationFileName,postfixFileName);
-                    n++;
-                  }
-                  while (File_exists(destinationFileName));
-                }
-                String_delete(postfixFileName);
-                String_delete(prefixFileName);
+                getUniqName(destinationFileName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
                 // nothing to do
@@ -1257,9 +1255,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   DeviceInfo       deviceInfo;
   uint64           blockOffset,blockCount;
   String           destinationDeviceName;
-  long             index;
-  String           prefixFileName,postfixFileName;
-  uint             n;
   enum
   {
     DEVICE,
@@ -1366,29 +1361,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                 return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
-                prefixFileName  = String_new();
-                postfixFileName = String_new();
-                index = String_findLastChar(destinationDeviceName,STRING_END,'.');
-                if (index >= 0)
-                {
-                  String_sub(prefixFileName,destinationDeviceName,STRING_BEGIN,index);
-                  String_sub(postfixFileName,destinationDeviceName,index,STRING_END);
-                }
-                else
-                {
-                  String_set(prefixFileName,destinationDeviceName);
-                }
-                n = 0;
-                do
-                {
-                  String_set(destinationDeviceName,prefixFileName);
-                  String_appendFormat(destinationDeviceName,"-%04u",n);
-                  String_append(destinationDeviceName,postfixFileName);
-                  n++;
-                }
-                while (File_exists(destinationDeviceName));
-                String_delete(postfixFileName);
-                String_delete(prefixFileName);
+                getUniqName(destinationDeviceName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
                 if (!File_isDevice(destinationDeviceName))
@@ -1778,9 +1751,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
-  long                      index;
-  String                    prefixFileName,postfixFileName;
-  uint                      n;
 //            FileInfo localFileInfo;
 
   // init variables
@@ -1859,34 +1829,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
               break;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
-              prefixFileName  = String_new();
-              postfixFileName = String_new();
-              index = String_findLastChar(destinationFileName,STRING_END,'.');
-              if (index >= 0)
-              {
-                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                String_sub(postfixFileName,destinationFileName,index,STRING_END);
-              }
-              else
-              {
-                String_set(prefixFileName,destinationFileName);
-              }
-              String_set(destinationFileName,prefixFileName);
-              String_append(destinationFileName,postfixFileName);
-              if (File_exists(destinationFileName))
-              {
-                n = 0;
-                do
-                {
-                  String_set(destinationFileName,prefixFileName);
-                  String_appendFormat(destinationFileName,"-%u",n);
-                  String_append(destinationFileName,postfixFileName);
-                  n++;
-                }
-                while (File_exists(destinationFileName));
-              }
-              String_delete(postfixFileName);
-              String_delete(prefixFileName);
+              getUniqName(destinationFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // nothing to do
@@ -2110,9 +2053,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
-  long                      index;
-  String                    prefixFileName,postfixFileName;
-  uint                      n;
 //            FileInfo localFileInfo;
 
   // init variables
@@ -2196,34 +2136,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
               return error;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
-              prefixFileName  = String_new();
-              postfixFileName = String_new();
-              index = String_findLastChar(destinationFileName,STRING_END,'.');
-              if (index >= 0)
-              {
-                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                String_sub(postfixFileName,destinationFileName,index,STRING_END);
-              }
-              else
-              {
-                String_set(prefixFileName,destinationFileName);
-              }
-              String_set(destinationFileName,prefixFileName);
-              String_append(destinationFileName,postfixFileName);
-              if (File_exists(destinationFileName))
-              {
-                n = 0;
-                do
-                {
-                  String_set(destinationFileName,prefixFileName);
-                  String_appendFormat(destinationFileName,"-%u",n);
-                  String_append(destinationFileName,postfixFileName);
-                  n++;
-                }
-                while (File_exists(destinationFileName));
-              }
-              String_delete(postfixFileName);
-              String_delete(prefixFileName);
+              getUniqName(destinationFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // nothing to do
@@ -2424,9 +2337,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   String                    destinationFileName;
   bool                      restoredDataFlag;
   void                      *autoFreeSavePoint;
-  long                      index;
-  String                    prefixFileName,postfixFileName;
-  uint                      n;
   const StringNode          *stringNode;
   String                    fileName;
   FileModes                 fileMode;
@@ -2524,34 +2434,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 return error;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
-                prefixFileName  = String_new();
-                postfixFileName = String_new();
-                index = String_findLastChar(destinationFileName,STRING_END,'.');
-                if (index >= 0)
-                {
-                  String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                  String_sub(postfixFileName,destinationFileName,index,STRING_END);
-                }
-                else
-                {
-                  String_set(prefixFileName,destinationFileName);
-                }
-                String_set(destinationFileName,prefixFileName);
-                String_append(destinationFileName,postfixFileName);
-                if (File_exists(destinationFileName))
-                {
-                  n = 0;
-                  do
-                  {
-                    String_set(destinationFileName,prefixFileName);
-                    String_appendFormat(destinationFileName,"-%u",n);
-                    String_append(destinationFileName,postfixFileName);
-                    n++;
-                  }
-                  while (File_exists(destinationFileName));
-                }
-                String_delete(postfixFileName);
-                String_delete(prefixFileName);
+                getUniqName(destinationFileName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
                 // truncate to 0-file
@@ -2610,34 +2493,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                   return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
                 case RESTORE_ENTRY_MODE_RENAME:
                   // rename new entry
-                  prefixFileName  = String_new();
-                  postfixFileName = String_new();
-                  index = String_findLastChar(destinationFileName,STRING_END,'.');
-                  if (index >= 0)
-                  {
-                    String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                    String_sub(postfixFileName,destinationFileName,index,STRING_END);
-                  }
-                  else
-                  {
-                    String_set(prefixFileName,destinationFileName);
-                  }
-                  String_set(destinationFileName,prefixFileName);
-                  String_append(destinationFileName,postfixFileName);
-                  if (File_exists(destinationFileName))
-                  {
-                    n = 0;
-                    do
-                    {
-                      String_set(destinationFileName,prefixFileName);
-                      String_appendFormat(destinationFileName,"-%u",n);
-                      String_append(destinationFileName,postfixFileName);
-                      n++;
-                    }
-                    while (File_exists(destinationFileName));
-                  }
-                  String_delete(postfixFileName);
-                  String_delete(prefixFileName);
+                  getUniqName(destinationFileName);
                   break;
                 case RESTORE_ENTRY_MODE_OVERWRITE:
                   // nothing to do
@@ -3072,9 +2928,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
-  long                      index;
-  String                    prefixFileName,postfixFileName;
-  uint                      n;
 //            FileInfo localFileInfo;
 
   // init variables
@@ -3147,34 +3000,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
             break;
           case RESTORE_ENTRY_MODE_RENAME:
             // rename new entry
-            prefixFileName  = String_new();
-            postfixFileName = String_new();
-            index = String_findLastChar(destinationFileName,STRING_END,'.');
-            if (index >= 0)
-            {
-              String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-              String_sub(postfixFileName,destinationFileName,index,STRING_END);
-            }
-            else
-            {
-              String_set(prefixFileName,destinationFileName);
-            }
-            String_set(destinationFileName,prefixFileName);
-            String_append(destinationFileName,postfixFileName);
-            if (File_exists(destinationFileName))
-            {
-              n = 0;
-              do
-              {
-                String_set(destinationFileName,prefixFileName);
-                String_appendFormat(destinationFileName,"-%u",n);
-                String_append(destinationFileName,postfixFileName);
-                n++;
-              }
-              while (File_exists(destinationFileName));
-            }
-            String_delete(postfixFileName);
-            String_delete(prefixFileName);
+            getUniqName(destinationFileName);
             break;
           case RESTORE_ENTRY_MODE_OVERWRITE:
             // nothing to do
