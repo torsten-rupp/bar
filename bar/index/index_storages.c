@@ -2620,85 +2620,77 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                           1LL
                          );
     });
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     ProgressInfo_step(progressInfo);
   }
 
   // update/add entries to newest entries
-  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
-    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
     {
-      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
+      INDEX_DOX(error,
+                indexHandle,
       {
-        INDEX_DOX(error,
-                  indexHandle,
+        if (entryNode->newest.entryId != DATABASE_ID_NONE)
         {
-          if (entryNode->newest.entryId != DATABASE_ID_NONE)
-          {
-            return Database_update(&indexHandle->databaseHandle,
-                                   NULL,  // changedRowCount
-                                   "entriesNewest",
-                                   DATABASE_FLAG_REPLACE,
-                                   DATABASE_VALUES
-                                   (
-                                     DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
-                                     DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
-                                     DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
-                                     DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
-                                     DATABASE_VALUE_STRING  ("name",            entryNode->name),
-                                     DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
-                                     DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
-                                     DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
-                                     DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
-                                     DATABASE_VALUE_UINT64  ("size",            entryNode->size)
-                                   ),
-                                   "id=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(entryNode->newest.entryId)
-                                   )
-                                  );
-          }
-          else
-          {
-            return Database_insert(&indexHandle->databaseHandle,
-                                   NULL,  // insertRowId
-                                   "entriesNewest",
-                                   DATABASE_FLAG_REPLACE,
-                                   DATABASE_VALUES
-                                   (
-                                     DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
-                                     DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
-                                     DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
-                                     DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
-                                     DATABASE_VALUE_STRING  ("name",            entryNode->name),
-                                     DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
-                                     DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
-                                     DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
-                                     DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
-                                     DATABASE_VALUE_UINT64  ("size",            entryNode->size)
-                                   ),
-                                   DATABASE_COLUMNS
-                                   (
-                                     DATABASE_COLUMN_STRING("name")
-                                   ),
-                                   "EXCLUDED.name=?",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_STRING(entryNode->name)
-                                   )
-                                  );
-          }
-        });
-      }
-      if (error == ERROR_NONE)
-      {
-        error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
-      }
+          return Database_update(&indexHandle->databaseHandle,
+                                 NULL,  // changedRowCount
+                                 "entriesNewest",
+                                 DATABASE_FLAG_REPLACE,
+                                 DATABASE_VALUES
+                                 (
+                                   DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
+                                   DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
+                                   DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
+                                   DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
+                                   DATABASE_VALUE_STRING  ("name",            entryNode->name),
+                                   DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
+                                   DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
+                                   DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
+                                   DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
+                                   DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                 ),
+                                 "id=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(entryNode->newest.entryId)
+                                 )
+                                );
+        }
+        else
+        {
+          return Database_insert(&indexHandle->databaseHandle,
+                                 NULL,  // insertRowId
+                                 "entriesNewest",
+                                 DATABASE_FLAG_REPLACE,
+                                 DATABASE_VALUES
+                                 (
+                                   DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
+                                   DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
+                                   DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
+                                   DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
+                                   DATABASE_VALUE_STRING  ("name",            entryNode->name),
+                                   DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
+                                   DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
+                                   DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
+                                   DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
+                                   DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                 ),
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
+                                 "EXCLUDED.name=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_STRING(entryNode->name)
+                                 )
+                                );
+        }
+      });
     }
-
-    return error;
-  });
+  }
 //fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
 
   // free resources
