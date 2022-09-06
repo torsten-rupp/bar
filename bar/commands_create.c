@@ -3797,18 +3797,35 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  // wait for space in temporary directory
   if (globalOptions.maxTmpSize > 0)
   {
     SEMAPHORE_LOCKED_DO(&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
-      while (   (createInfo->storage.count > 2)                           // more than 2 archives are waiting
-             && (createInfo->storage.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
-             && (createInfo->failError == ERROR_NONE)
-             && !isAborted(createInfo)
-            )
+      if (   (createInfo->storage.count > 2)                           // more than 2 archives are waiting
+          && (createInfo->storage.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
+          && (createInfo->failError == ERROR_NONE)
+          && !isAborted(createInfo)
+         )
       {
-        Semaphore_waitModified(&createInfo->storageInfoLock,30*1000);
+        STATUS_INFO_UPDATE(createInfo,NULL,NULL)
+        {
+          String_setCString(createInfo->statusInfo.message,"wait for temporary space");
+        }
+
+        do
+        {
+          Semaphore_waitModified(&createInfo->storageInfoLock,30*MS_PER_SECOND);
+        }
+        while (   (createInfo->storage.count > 2)
+               && (createInfo->storage.bytes > globalOptions.maxTmpSize)
+               && (createInfo->failError == ERROR_NONE)
+               && !isAborted(createInfo)
+              );
+
+        STATUS_INFO_UPDATE(createInfo,NULL,NULL)
+        {
+          String_clear(createInfo->statusInfo.message);
+        }
       }
     }
   }
@@ -4753,7 +4770,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         n = 0;
         do
         {
-          File_setFileName(storageMsg.archiveName,directoryName);
+          String_set(storageMsg.archiveName,directoryName);
           File_appendFileName(storageMsg.archiveName,prefixFileName);
           String_appendFormat(storageMsg.archiveName,"-%u",n);
           String_append(storageMsg.archiveName,postfixFileName);
