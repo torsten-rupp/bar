@@ -64,6 +64,8 @@ LD_FLAGS_RELEASE           = @LD_FLAGS_RELEASE@
 LD_LIBRARY_PATHS           = @LIBRARY_PATHS@
 LD_LIBRARIES               = @LIBRARIES@
 LD_STATIC_LIBRARIES        = @STATIC_LIBRARIES@
+LD_STATIC_PREFIX           = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
 #------------------------------- test commands--------------------------------
 
