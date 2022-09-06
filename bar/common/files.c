@@ -3796,17 +3796,19 @@ bool File_isDeviceCString(const char *fileName)
     if (debugEmulateBlockDevice != NULL)
     {
       stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");     
-      if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-          || !stringEquals(fileName,emulateDeviceName)
+      if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+          && stringEquals(fileName,emulateDeviceName)
          )
       {
-        isDevice = (   (STAT(fileName,&fileStat) == 0)
-                    && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
-                   );
+        // emulate block device
+        isDevice = TRUE;
       }
       else
       {
-        isDevice = TRUE;
+        // use block device
+        isDevice = (   (STAT(fileName,&fileStat) == 0)
+                    && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+                   );
       }
       stringTokenizerDone(&stringTokenizer);
     }
@@ -3990,7 +3992,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   #ifndef NDEBUG
     const char       *debugEmulateBlockDevice;
     CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName,*emulateFileName;
+    const char       *emulateDeviceName;
   #endif /* not NDEBUG */
 
   assert(fileInfo != NULL);
@@ -4033,17 +4035,19 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
       if (debugEmulateBlockDevice != NULL)
       {
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");     
-        if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            || !stringEquals(fileName,emulateDeviceName)
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(fileName,emulateDeviceName)
            )
         {
-          fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
-        }
-        else
-        {
+          // emulate block device
           fileInfo->type        = FILE_TYPE_SPECIAL;
           fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
           fileInfo->attributes  = 0LL;
+        }
+        else
+        {
+          // use block device
+          fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
         }
         stringTokenizerDone(&stringTokenizer);
       }

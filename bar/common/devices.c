@@ -299,14 +299,11 @@ Errors Device_open(DeviceHandle *deviceHandle,
         if (debugEmulateBlockDevice != NULL)
         {
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-          if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-              || !String_equalsCString(deviceName,emulateDeviceName)
+          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+              && String_equalsCString(deviceName,emulateDeviceName)
              )
           {
-            deviceHandle->file = fopen(String_cString(deviceName),"rb");
-          }
-          else
-          {
+            // emulate block device
             if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
               deviceHandle->file = fopen(emulateFileName,"rb");
@@ -316,10 +313,16 @@ Errors Device_open(DeviceHandle *deviceHandle,
               deviceHandle->file = fopen(emulateDeviceName,"rb");
             }
           }
+          else
+          {
+            // use block device
+            deviceHandle->file = fopen(String_cString(deviceName),"rb");
+          }
           stringTokenizerDone(&stringTokenizer);
         }
         else
         {
+          // use block device
           deviceHandle->file = fopen(String_cString(deviceName),"rb");
         }
       #else /* NDEBUG */
@@ -338,14 +341,11 @@ Errors Device_open(DeviceHandle *deviceHandle,
         if (debugEmulateBlockDevice != NULL)
         {
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-          if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-              || !String_equalsCString(deviceName,emulateDeviceName)
+          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+              && String_equalsCString(deviceName,emulateDeviceName)
              )
           {
-            deviceHandle->file = fopen(String_cString(deviceName),"r+b");
-          }
-          else
-          {
+            // emulate block device
             if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
               deviceHandle->file = fopen(emulateFileName,"r+b");
@@ -354,6 +354,11 @@ Errors Device_open(DeviceHandle *deviceHandle,
             {
               deviceHandle->file = fopen(emulateDeviceName,"r+b");
             }
+          }
+          else
+          {
+            // use block device
+            deviceHandle->file = fopen(String_cString(deviceName),"r+b");
           }
           stringTokenizerDone(&stringTokenizer);
         }
@@ -922,20 +927,10 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
       if (debugEmulateBlockDevice != NULL)
       {
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            || !stringEquals(deviceName,emulateDeviceName))
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(deviceName,emulateDeviceName))
         {
-          if (STAT(deviceName,&fileStat) != 0)
-          {
-            return ERRORX_(IO,errno,"%E",errno);
-          }
-          if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
-          {
-            return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-          }    
-        }
-        else
-        {
+          // emulate block device
           if (stringGetNextToken(&stringTokenizer,&emulateFileName))
           {
             if (STAT(emulateFileName,&fileStat) != 0)
@@ -950,6 +945,18 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
               return ERRORX_(IO,errno,"%E",errno);
             }
           }
+        }
+        else
+        {
+          // use block device
+          if (STAT(deviceName,&fileStat) != 0)
+          {
+            return ERRORX_(IO,errno,"%E",errno);
+          }
+          if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
+          {
+            return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
+          }    
         }
         stringTokenizerDone(&stringTokenizer);
       }
@@ -1001,16 +1008,18 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
       if (debugEmulateBlockDevice != NULL)
       {
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            || !stringEquals(deviceName,emulateDeviceName)
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(deviceName,emulateDeviceName)
            )
         {
-          if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-          else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+          // emulate block device
+          deviceInfo->type = DEVICE_TYPE_BLOCK;
         }
         else
         {
-          deviceInfo->type = DEVICE_TYPE_BLOCK;
+          // use block device
+          if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+          else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
         }
         stringTokenizerDone(&stringTokenizer);
       }
@@ -1030,10 +1039,75 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
       #ifndef NDEBUG
         debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
 
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        if (   !stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            || !stringEquals(deviceName,emulateDeviceName)
-           )
+        if (debugEmulateBlockDevice != NULL)
+        {
+          stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+              && stringEquals(deviceName,emulateDeviceName)
+             )
+          {
+            // emulate block device
+            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+            {
+              if      (STAT(emulateFileName,&fileStat) == 0)
+              {
+                deviceInfo->blockSize = 512;
+                deviceInfo->size      = fileStat.st_size;
+              }
+              else if (!sizesFlag)
+              {
+                deviceInfo->blockSize = 0;
+                deviceInfo->size      = 0LL;
+              }
+              else
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
+            }
+            else
+            {
+              if      (STAT(deviceName,&fileStat) == 0)
+              {
+                deviceInfo->blockSize = 512;
+                deviceInfo->size      = fileStat.st_size;
+              }
+              else if (!sizesFlag)
+              {
+                deviceInfo->blockSize = 0;
+                deviceInfo->size      = 0LL;
+              }
+              else
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
+            }
+          }
+          else
+          {
+            // use block device
+            handle = open(deviceName,O_RDONLY);
+            if      (handle != -1)
+            {
+              #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+                if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+              #endif
+              #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+                if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+              #endif
+              close(handle);
+            }
+            else if (!sizesFlag)
+            {
+              deviceInfo->blockSize = 0;
+              deviceInfo->size      = 0LL;
+            }
+            else
+            {
+              return ERRORX_(IO,errno,"%E",errno);
+            }
+          }
+        }
+        else
         {
           handle = open(deviceName,O_RDONLY);
           if      (handle != -1)
@@ -1054,43 +1128,6 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
           else
           {
             return ERRORX_(IO,errno,"%E",errno);
-          }
-        }
-        else
-        {
-          if (stringGetNextToken(&stringTokenizer,&emulateFileName))
-          {
-            if      (STAT(emulateFileName,&fileStat) == 0)
-            {
-              deviceInfo->blockSize = 512;
-              deviceInfo->size      = fileStat.st_size;
-            }
-            else if (!sizesFlag)
-            {
-              deviceInfo->blockSize = 0;
-              deviceInfo->size      = 0LL;
-            }
-            else
-            {
-              return ERRORX_(IO,errno,"%E",errno);
-            }
-          }
-          else
-          {
-            if      (STAT(deviceName,&fileStat) == 0)
-            {
-              deviceInfo->blockSize = 512;
-              deviceInfo->size      = fileStat.st_size;
-            }
-            else if (!sizesFlag)
-            {
-              deviceInfo->blockSize = 0;
-              deviceInfo->size      = 0LL;
-            }
-            else
-            {
-              return ERRORX_(IO,errno,"%E",errno);
-            }
           }
         }
       #else /* NDEBUG */
