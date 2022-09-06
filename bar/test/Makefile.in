@@ -6630,6 +6630,7 @@ dist: \
 ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)
 	$(INSTALL) -m 664 Makefile.in \
+                          parallel.c \
                           $(DIRECTORY)/bar/$(TEST_DATA_DIR)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive
 	$(INSTALL) -t $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive \
