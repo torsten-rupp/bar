@@ -64,6 +64,8 @@ LD_FLAGS_RELEASE           = @LD_FLAGS_RELEASE@
 LD_LIBRARY_PATHS           = @LIBRARY_PATHS@
 LD_LIBRARIES               = @LIBRARIES@
 LD_STATIC_LIBRARIES        = @STATIC_LIBRARIES@
+LD_STATIC_PREFIX           = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
 #------------------------------- test commands--------------------------------
 
@@ -129,6 +131,7 @@ SSHPASS        = sshpass
 SORT           = sort
 SQLITE3        = sqlite3
 STAT           = stat
+SUDO           = sudo
 SYNC           = sync
 TAIL           = tail
 TAR            = tar
@@ -155,7 +158,6 @@ LOSETUP        = /sbin/losetup
 MKFS           = /sbin/mkfs
 MOUNT          = /bin/mount
 UMOUNT         = /bin/umount
-SUDO           = sudo
 
 LCOV           = lcov
 GENHTML        = genhtml
@@ -266,12 +268,10 @@ endif
 # additional options
 OPTIONS ?= $(O)
 
-# image operations
-ifeq (@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@,1)
+# mount operations
 ifeq (@HAVE_SUDO_COMMAND_LOSETUP@,1)
-ifeq (@HAVE_SUDO_COMMAND_MKFS@,1)
-TEST_IMAGE_OPERATIONS ?= yes
-endif
+ifeq (@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@,1)
+TEST_MOUNT_OPERATIONS ?= yes
 endif
 endif
 
@@ -732,21 +732,6 @@ functionSlaveExecute = \
 functionSlaveCopy = \
   $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SCP) $1 $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST):$2
 
-# helper function to create a test device
-# call functionTestDeviceReset
-functionTestDeviceReset = \
-  ( \
-    $(ECHO) $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
-    $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0) 2>/dev/null; \
-    $(ECHO) $(SUDO) -n $(UMOUNT) $(MOUNT_POINT1); \
-    $(SUDO) -n $(UMOUNT) $(MOUNT_POINT1) 2>/dev/null; \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d $(LOOP0); \
-    $(SUDO) -n $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d $(LOOP1); \
-    $(SUDO) -n $(LOSETUP) -d $(LOOP1) 2>/dev/null; \
-    true; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
 # helper function to create test file with data
 # call functionCreateFileZero,<file>,<count>,<size>
 functionCreateFileZero = \
@@ -771,40 +756,19 @@ functionCreateFileRandom = \
     $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$3 count=$2 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
-# helper function to create a test device
-# call functionTestDeviceCreate,<loop device>,<image file>
-functionTestDeviceCreate = \
-  ( \
-    $(SUDO) -n $(LOSETUP) -d $1 2>/dev/null || true; \
-    $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
-    $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
-    $(SUDO) -n $(CHMOD) o+rw $1; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to delete a test device
-# call functionTestDeviceDelete,<loop device>
-functionTestDeviceDelete = \
-  ( \
-    $(SYNC); \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
-    $(SUDO) -n $(LOSETUP) -d $1; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
 # helper function to create file system on test device
 # call functionTestDeviceInitFilesystem,<loop device>,<mkfs options>
 functionTestDeviceInitFilesystem = \
   ( \
-    $(ECHO) $(SUDO) -n $(MKFS) $2 $1; \
-    $(SUDO) -n $(MKFS) $2 $1 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(MKFS) $2 $1; \
+    $(MKFS) $2 $1 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to initialize file system on a test device
 # call functionInitFilesystem,<image file>,<mkfs options>[,<files>]
 functionInitFilesystem = \
   ( \
-    $(call functionTestDeviceCreate,$(LOOP0),$1); \
-    $(call functionTestDeviceInitFilesystem,$(LOOP0),$2); \
+    $(call functionTestDeviceInitFilesystem,$1,$2); \
     $(if $3,$(ECHO) $(INSTALL) -d $(MOUNT_POINT0); \
             $(INSTALL) -d $(MOUNT_POINT0); \
             $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) $(MOUNT_POINT0); \
@@ -815,7 +779,6 @@ functionInitFilesystem = \
             $(ECHO) $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
             $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
     ) \
-    $(call functionTestDeviceDelete,$(LOOP0)); \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to mount a test device
@@ -1611,7 +1574,6 @@ test7-valgrind test_convert-valgrind:
 test8 test_image: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 8: image)
-ifeq (@HAVE_SUDO_COMMANDS@,1)
 	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1637,9 +1599,6 @@ ifeq (@HAVE_SUDO_COMMANDS@,1)
             fi; \
           done; \
           $(call functionInfoEnd,OK)
-else
-	@$(ECHO) "ERROR: no sudo-commands"
-endif
 
 test8-debug test_image-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_image
@@ -2182,18 +2141,16 @@ test_combined: \
             if test $$rc -ne 0; then \
               exit $$rc; \
             fi; \
-            if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
-              $(MAKE) \
-                BAR_STORAGE="$(INTERMEDIATE_DIR)" \
-                BAR_FILE=test-#### \
-                BAR_PATTERN="test-*" \
-                BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
-                test_image_operations_raw \
-                ; \
-              rc=$$?; \
-              if test $$rc -ne 0; then \
-                exit $$rc; \
-              fi; \
+            $(MAKE) \
+              BAR_STORAGE="$(INTERMEDIATE_DIR)" \
+              BAR_FILE=test-#### \
+              BAR_PATTERN="test-*" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
+              test_image_operations_raw \
+              ; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
             fi; \
           done; \
           rc=$$?; \
@@ -2249,7 +2206,8 @@ test_arguments: \
 	@#
 	# working directory
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(INTERMEDIATE_DIR) $(TEST_OPTIONS) -c test.bar $(PWD)/data/zero.dat $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --directory data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero.dat --overwrite-archive-files $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero.dat --overwrite-archive-files $(LOG))
 	@#
 	# destinations (ignore errors)
 	@$(call functionCleanTestFiles)
@@ -2604,17 +2562,14 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount='foo$(COMMA)$(COMMA)yes' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount='foo$(COMMA)yes' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --mount='foo' $(LOG))
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
-	@$(call functionTestDeviceReset)
+ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@$(call functionCleanTestFiles)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
-	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
 	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --skip-unreadable --mount-device-command='sudo mount %device %directory' --unmount-command='sudo umount %directory' --mount $(MOUNT_POINT0)$(COMMA)$(LOOP0) $(LOG))
 	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
-	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 endif
@@ -2776,13 +2731,11 @@ test_misc:
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
 	  $(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG))); \
   fi
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
+ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@#
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
-	@$(call functionTestDeviceReset)
 	@
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
-	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
@@ -2795,7 +2748,6 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
           $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG) \
         )
 	$(RMDIR) $(MOUNT_POINT0)
-	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 endif
@@ -4187,9 +4139,7 @@ test_image_operations_raw:  \
   $(TEST_CONFIGS)
 	# raw
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# raw zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
@@ -4230,7 +4180,6 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
-endif
 
 .PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
 test_image_operations_ext: \
@@ -4241,18 +4190,17 @@ test_image_operations_ext: \
 # Ext2
 test_image_operations_ext2: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT2@,)
 	# ext2
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext2 zero-data, default block size
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4270,7 +4218,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, default block size
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4288,8 +4237,10 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4308,7 +4259,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4326,7 +4278,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4344,8 +4297,10 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 1024)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 1024)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4364,7 +4319,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4382,7 +4338,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4400,8 +4357,10 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 2048)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 2048)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4419,7 +4378,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4437,7 +4397,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4455,8 +4416,10 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 4096)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 4096)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4469,23 +4432,21 @@ endif
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
-endif
 
 # Ext3
 test_image_operations_ext3: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT3@,)
 	# ext3
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext3 zero-data, default block size
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4503,7 +4464,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, default block size
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4521,8 +4483,10 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4540,7 +4504,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4558,7 +4523,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4576,8 +4542,10 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 1024)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 1024)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4595,7 +4563,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4613,7 +4582,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4631,8 +4601,10 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 2048)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 2048)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4650,7 +4622,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4668,7 +4641,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4686,8 +4660,10 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 4096)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 4096)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4700,23 +4676,21 @@ endif
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
-endif
 
 # Ext4
 test_image_operations_ext4: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT4@,)
 	# ext4
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext4 zero-data, default block size
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4734,7 +4708,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, default block size
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4752,8 +4727,10 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4771,7 +4748,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4789,7 +4767,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4807,8 +4786,10 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 1024)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 1024)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4826,7 +4807,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4844,7 +4826,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4862,8 +4845,10 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 2048)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 2048)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4881,7 +4866,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4899,7 +4885,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4916,10 +4903,9 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	#$(call functionCreateSparse,$(IMAGE0),512G)
 	#$(call functionCreateSparse,$(IMAGE1),512G)
 	#@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	#@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
 	#$(MAKE) test_image_operations_base \
         #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
-	#@$(call functionTestDeviceDelete,$(LOOP1),$(MOUNT_POINT1))
-	#@$(call functionTestDeviceDelete,$(LOOP0),$(MOUNT_POINT0))
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4927,8 +4913,10 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 4096)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 4096)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4941,7 +4929,6 @@ endif
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
-endif
 
 .PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
 test_image_operations_fat: \
@@ -4952,16 +4939,15 @@ test_image_operations_fat: \
 # FAT 12
 test_image_operations_fat12: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@#
 	# FAT12 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),1,1440K)
 	@$(call functionCreateFileZero,$(IMAGE1),1,1440K)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4979,7 +4965,8 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT12 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),1,1440K)
 	@$(call functionCreateFileRandom,$(IMAGE1),1,1440K)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -4997,8 +4984,8 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 12)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5010,21 +4997,19 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
-endif
 
 # FAT 16
 test_image_operations_fat16: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@#
 	# FAT16 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),20,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),20,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5042,7 +5027,8 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT16 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),20,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),20,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5060,8 +5046,10 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 16)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 16)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5073,21 +5061,19 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
-endif
 
 # FAT 32
 test_image_operations_fat32: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@#
 	# FAT32 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5105,7 +5091,8 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5123,8 +5110,10 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 32)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 32)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5135,7 +5124,6 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
-endif
 endif
 
 .PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
@@ -5156,16 +5144,15 @@ endif
 # ReiserFS version 3 (Note: Linux only support block size 4096)
 test_image_operations_reiserfs3: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@#
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5183,7 +5170,8 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5200,7 +5188,8 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5218,7 +5207,8 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5236,8 +5226,10 @@ ifneq (@MKFS_REISERFS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+#	@$(call functionInitFilesystem,$(IMAGE0A),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t reiserfs -b 4096 -q --format 3.6)
+#	@$(call functionInitFilesystem,$(IMAGE0B),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t reiserfs -b 4096 -q --format 3.6)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5249,7 +5241,6 @@ ifneq (@MKFS_REISERFS@,)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
-endif
 
 # Reiser4 (Note: not supported anymore)
 test_image_operations_reiser4:
@@ -5260,12 +5251,10 @@ endif
 .PHONY: test_image_operations_dryrun
 test_image_operations_dryrun: \
   $(TEST_CONFIGS)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# delta tests
 	@$(call functionInfoHeader,test image operation dryrun)
 	@#
 	$(INSTALL) -d intermediate
-	@$(call functionTestDeviceReset)
 	@
 	# raw zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
@@ -5293,13 +5282,11 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@$(call functionInfoFooter)
-endif
 
 .PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image test_image_operations_create
 test_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# normal tests
 	@$(call functionInfoHeader,test image operation base)
 	@$(call functionVerifyParameter,BAR_STORAGE)
@@ -5310,27 +5297,20 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
 	@$(call functionCleanTestFiles)
-	@$(call functionTestDeviceReset)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) $(LOG))
 #TODO: support archive-part-size
 #	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --compress-algorithm=zip9 $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE1))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
-endif
 
 test_image_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# delta tests
 	@$(call functionInfoHeader,test image operation delta)
 	@$(call functionVerifyParameter,BAR_STORAGE)
@@ -5342,46 +5322,31 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
 	@$(call functionCleanTestFiles)
-	@$(call functionTestDeviceReset)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=1 $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_A) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=1 $(LOG))
 	@#
 ifeq (@HAVE_XDELTA3@,1)
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
 endif
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE1))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@#
 	@$(call functionCleanTestFiles)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=1 $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_A) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=1 $(LOG))
 	@#
 ifeq (@HAVE_XDELTA3@,1)
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=1 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
 endif
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE1))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@$(call functionInfoFooter)
-endif
 
 test_image_operations_check:
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# check file systems and compare file content
 	@$(call functionInfoHeader,test image operation check)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5389,26 +5354,21 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	@$(call functionTestDeviceReset)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
-	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) 2>/dev/null $(LOG)
-	@$(call functionTestDeviceDelete,$(DEVICE0))
+	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE0) 2>/dev/null $(LOG)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
-	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE1) 2>/dev/null $(LOG)
-	@$(call functionTestDeviceDelete,$(DEVICE1))
+	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE1) 2>/dev/null $(LOG)
 	@#
+ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),$(MOUNT_POINT0))
 	@$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),$(MOUNT_POINT1))
 	$(SUDO) -n $(DIFF) -r $(MOUNT_POINT0) $(MOUNT_POINT1) $(LOG)
 	@$(call functionDeviceUmount,$(DEVICE0),$(MOUNT_POINT0))
 	@$(call functionDeviceUmount,$(DEVICE1),$(MOUNT_POINT1))
-	@$(call functionInfoFooter)
 endif
+	@$(call functionInfoFooter)
 
 test_image_operations_diff_image:
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# compare devices
 	@$(call functionInfoHeader,test image operation diff image)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5416,27 +5376,20 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	@$(call functionTestDeviceReset)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	@$(call functionTestDeviceDump,$(DEVICE0),$(DUMP0))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	@$(call functionTestDeviceDump,$(DEVICE1),$(DUMP1))
-	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@#
 	$(DIFF) $(DUMP0) $(DUMP1)
 	@#
 	@$(RMF) $(DUMP0) $(DUMP1)
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
-endif
 
 test_image_operations_create: \
   $(TEST_BAR) \
   $(TEST_FILES)
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# normal tests
 	@$(call functionInfoHeader,test image operation create only)
 	@$(call functionVerifyParameter,BAR_STORAGE)
@@ -5445,14 +5398,10 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	@$(call functionVerifyParameter,DEVICE0)
 	@#
 	@$(call functionCleanTestFiles)
-	@$(call functionTestDeviceReset)
 	@#
-	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=1 $(LOG))
-	@$(call functionTestDeviceDelete,$(DEVICE0))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=1 $(LOG))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
-endif
 
 .PHONY: test_optical_operations
 test_optical_operations: \
@@ -5997,11 +5946,7 @@ test_server_operations_batch: \
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
 	# create test archive
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=0 $(LOG))
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
-	@$(call functionTestDeviceReset)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
-	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
-endif
 	@#
 	# run batch server
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
@@ -6195,10 +6140,7 @@ endif
         else \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
-	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
-endif
 	$(RMF) $(BAR_STORAGE)/$(BAR_FILE).bar
 	@$(call functionDoneTestFiles)
 
@@ -6462,21 +6404,14 @@ test_server_operations_socket: \
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
 	# create test archive, test device
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=0 $(LOG))
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
-	@$(call functionTestDeviceReset)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
-	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
-endif
 	@#
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel@EXEEXT@ \
           "$(MAKE) test_server_operations_socket_server" \
           "$(MAKE) test_server_operations_socket_client"
 	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
 	@#
-ifeq ($(TEST_IMAGE_OPERATIONS),yes)
-	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
-endif
 	$(RMF) $(BAR_STORAGE)/$(BAR_FILE).bar
 	#TODO@$(call functionDoneTestFiles)
 	ps auxw|grep bar-debug
@@ -6698,6 +6633,7 @@ dist: \
 ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)
 	$(INSTALL) -m 664 Makefile.in \
+                          parallel.c \
                           $(DIRECTORY)/bar/$(TEST_DATA_DIR)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive
 	$(INSTALL) -t $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive \

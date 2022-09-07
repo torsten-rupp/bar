@@ -333,7 +333,9 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 *          sizesFlag  - TRUE to detect block size+device size
 * Output : deviceInfo - device info
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : only in debug version: if environment variable
+*          DEBUG_EMULATE_BLOCK_DEVICE is set to a file name a device of
+*          that name is emulated
 \***********************************************************************/
 
 Errors Device_getInfo(DeviceInfo  *deviceInfo,

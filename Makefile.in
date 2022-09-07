@@ -850,7 +850,7 @@ build_docker:
           -e TEST_PASSWORD=test \
           -e TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub \
           -e TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa \
-          -e TEST_IMAGE_OPERATIONS=no \
+          -e TEST_MOUNT_OPERATIONS=no \
           -v $(HOME):$(HOME) \
           -v $(PWD):/media/home \
           -w $(PWD) \

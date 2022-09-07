@@ -1,3 +1,9 @@
+2022-xx-xx 0.22a
+  * fix rename existing entries on restore
+  * fix error handling on image compare
+  * fix do skip files by default
+  * bar-index: fix clean orphaned entries
+
 2022-08-30 0.22
   * added support for external index database engines
     MariaDB, PostgreSQL
