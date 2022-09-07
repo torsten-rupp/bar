@@ -2206,7 +2206,8 @@ test_arguments: \
 	@#
 	# working directory
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(INTERMEDIATE_DIR) $(TEST_OPTIONS) -c test.bar $(PWD)/data/zero.dat $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --directory data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero.dat --overwrite-archive-files $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero.dat --overwrite-archive-files $(LOG))
 	@#
 	# destinations (ignore errors)
 	@$(call functionCleanTestFiles)
