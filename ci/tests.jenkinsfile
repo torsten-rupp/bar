@@ -12,6 +12,7 @@ TEST_STEPS = ["basic",
               "signatures",
               "split",
               "convert",
+              "image",
               "storage_file",
 // TODO: instable
 //              "storage_ftp",
