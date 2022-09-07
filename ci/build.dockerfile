@@ -17,6 +17,7 @@ RUN apt-get -y install \
   curl \
   debhelper \
   devscripts \
+  dosfstools \
   e2fsprogs \
   gettext \
   git \
@@ -32,6 +33,7 @@ RUN apt-get -y install \
   pkg-config \
   postgresql \
   psmisc \
+  reiserfsprogs \
   rsync \
   rsyslog \
   sqlite3 \
