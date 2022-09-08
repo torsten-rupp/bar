@@ -18,7 +18,6 @@
 
 #include "common/global.h"
 #include "strings.h"
-#include "bitmaps.h"
 #include "devices.h"
 #include "errors.h"
 

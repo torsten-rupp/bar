@@ -20,7 +20,6 @@
 
 #include "common/global.h"
 #include "common/strings.h"
-#include "common/bitmaps.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
@@ -225,6 +224,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
 * Notes  : -
 \***********************************************************************/
 
+// TODO: implement
 #if 0
 bool Device_getUsedBlocks(DeviceHandle *deviceHandle,
                           uint64       blockOffset,
