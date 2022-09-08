@@ -490,7 +490,6 @@ BAR_MO                      = $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo)
 
 COMMON_SOURCES              = common/arrays.c \
                               common/autofree.c \
-                              common/bitmaps.c \
                               common/cmdoptions.c \
                               common/configvalues.c \
                               common/database.c \
