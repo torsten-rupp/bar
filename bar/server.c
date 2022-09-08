@@ -4437,6 +4437,18 @@ LOCAL void autoIndexThreadCode(void)
                                                // get printable name
                                                Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
+                                               // wait until index is unused
+                                               while (   Index_isIndexInUse()
+                                                      && !isQuit()
+                                                     )
+                                               {
+                                                 Misc_mdelay(5*MS_PER_SECOND);
+                                               }
+                                               if (!isQuit())
+                                               {
+                                                 return ERROR_NONE;
+                                               }
+
                                                // get index id, request index update
                                                error = Index_findStorageByName(&indexHandle,
                                                                                &storageSpecifier,
