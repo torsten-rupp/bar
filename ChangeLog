@@ -4,6 +4,7 @@
   * fixed rename entry on restore: use file name instead
     of path
   * fixed missing source parallel.c, fixed linkage
+  * fixed --transform: glob,regex,extended pattern types
 
 2022-08-30 0.22
   * added support for external index database engines
