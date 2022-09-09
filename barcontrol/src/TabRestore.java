@@ -4372,7 +4372,7 @@ Dprintf.dprintf("");
       widgetStorageTreeToolTip.dispose();
     }
 
-    if (uuidIndexData != null)
+    if (!shell.isDisposed() && (uuidIndexData != null))
     {
       widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
@@ -4486,7 +4486,7 @@ Dprintf.dprintf("");
       widgetStorageTreeToolTip.dispose();
     }
 
-    if (entityIndexData != null)
+    if (!shell.isDisposed() && (entityIndexData != null))
     {
       widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
@@ -4633,7 +4633,7 @@ Dprintf.dprintf("");
       widgetStorageTableToolTip.dispose();
     }
 
-    if (storageIndexData != null)
+    if (!shell.isDisposed() && (storageIndexData != null))
     {
       widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetStorageTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
@@ -4885,7 +4885,7 @@ Dprintf.dprintf("");
       widgetEntryTableToolTip.dispose();
     }
 
-    if (entryIndexData != null)
+    if (!shell.isDisposed() && (entryIndexData != null))
     {
       widgetEntryTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetEntryTableToolTip.setBackground(COLOR_BACKGROUND);
