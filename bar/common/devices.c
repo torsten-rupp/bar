@@ -361,7 +361,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
           deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
         }
       #else /* NDEBUG */
-        deviceHandle->file = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+        deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
       #endif /* not NDEBUG */
       if (deviceHandle->handle == -1)
       {
