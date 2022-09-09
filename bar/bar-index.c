@@ -11061,13 +11061,25 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     integrityFlag = checkIntegrity(&databaseHandle);
   }
+  else
+  {
+    integrityFlag = TRUE;
+  }
   if (checkOrphanedFlag)
   {
     orphanedEntriesCount = checkOrphanedEntries(&databaseHandle);
   }
+  else
+  {
+    orphanedEntriesCount = 0L;
+  }
   if (checkDuplicatesFlag)
   {
     duplicatesCount = checkDuplicates(&databaseHandle);
+  }
+  else
+  {
+    duplicatesCount = 0L;
   }
 
   // recreate triggeres
