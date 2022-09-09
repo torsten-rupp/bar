@@ -96,17 +96,17 @@ LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *
   }
 
   // check if this a ReiserFS super block, detect file system type
-  if      (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1,strlen(REISERFS_SUPER_MAGIC_STRING_V1)) == 0)
+  if      (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1))
   {
     fileSystemType = FILE_SYSTEM_TYPE_REISERFS1;
   }
-  else if (   (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V2)) == 0)
-           || (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V3)) == 0)
+  else if (   stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V2)
+           || stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3)
           )
   {
     fileSystemType = FILE_SYSTEM_TYPE_REISERFS3;
   }
-  else if (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4,strlen(REISERFS_SUPER_MAGIC_STRING_V4)) == 0)
+  else if (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4))
   {
     fileSystemType = FILE_SYSTEM_TYPE_REISERFS4;
   }
@@ -171,6 +171,7 @@ LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reis
 
   assert(deviceHandle != NULL);
   assert(reiserFSHandle != NULL);
+  assert(reiserFSHandle->blockSize != 0);
 
   // calculate block
   block = offset/reiserFSHandle->blockSize;
@@ -184,7 +185,10 @@ LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reis
     // read correct block bitmap if needed
     if (reiserFSHandle->bitmapIndex != (int)bitmapIndex)
     {
-      bitmapBlock = ((bitmapIndex > 0)?(uint32)bitmapIndex*(uint32)reiserFSHandle->blockSize*8:REISERFS_SUPER_BLOCK_OFFSET/reiserFSHandle->blockSize+1)*(uint32)reiserFSHandle->blockSize;
+      bitmapBlock = ((bitmapIndex > 0)
+                      ? (uint32)bitmapIndex*(uint32)reiserFSHandle->blockSize*8
+                      : REISERFS_SUPER_BLOCK_OFFSET/reiserFSHandle->blockSize+1
+                    );//*(uint32)reiserFSHandle->blockSize;
       if (Device_seek(deviceHandle,REISERFS_BLOCK_TO_OFFSET(reiserFSHandle,bitmapBlock)) != ERROR_NONE)
       {
         return TRUE;
