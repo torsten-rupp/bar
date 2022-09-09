@@ -2040,7 +2040,8 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 
 LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  String patternString,replace;
+  PatternTypes patternType;
+  String       patternString,replace;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2058,47 +2059,37 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
            || String_scanCString(value,"x:%S,%S",patternString,replace)
           )
   {
-    if (!Pattern_isValid(patternString,PATTERN_TYPE_EXTENDED_REGEX))
-    {
-      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
-      return FALSE;
-    }
+    patternType = PATTERN_TYPE_EXTENDED_REGEX;
   }
   else if (   String_scanCString(value,"regex:%S,%S",patternString,replace)
            || String_scanCString(value,"r:%S,%S",patternString,replace)
           )
   {
-    if (!Pattern_isValid(patternString,PATTERN_TYPE_REGEX))
-    {
-      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
-      return FALSE;
-    }
+    patternType = PATTERN_TYPE_REGEX;
   }
   else if (   String_scanCString(value,"glob:%S,%S",patternString,replace)
            || String_scanCString(value,"g:%S,%S",patternString,replace)
           )
   {
-    if (!Pattern_isValid(patternString,PATTERN_TYPE_GLOB))
-    {
-      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
-      return FALSE;
-    }
+    patternType = PATTERN_TYPE_GLOB;
   }
   else if (String_scanCString(value,"%S,%S",patternString,replace))
   {
-    if (!Pattern_isValid(patternString,PATTERN_TYPE_REGEX))
-    {
-      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
-      return FALSE;
-    }
+    patternType = PATTERN_TYPE_REGEX;
   }
   else
   {
     stringFormat(errorMessage,errorMessageSize,"Unknown transform value '%s'",value);
     return FALSE;
   }
+  if (!Pattern_isValid(patternString,PATTERN_TYPE_EXTENDED_REGEX))
+  {
+    stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
+    return FALSE;
+  }
 
   // store transform values
+  ((Transform*)variable)->patternType = patternType;;
   String_set(((Transform*)variable)->patternString,patternString);
   String_set(((Transform*)variable)->replace,replace);
 
@@ -5392,10 +5383,13 @@ LOCAL bool configValuePatternParse(void *userData, void *variable, const char *n
   UNUSED_VARIABLE(name);
 
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+  if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
+  else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
+  else if (stringStartsWith(value,"r:"       )) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (stringStartsWith(value,"glob:"    )) { patternType = PATTERN_TYPE_GLOB;           value += 5; }
+  else if (stringStartsWith(value,"g:"       )) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // unquote/unescape
   string = String_newCString(value);
