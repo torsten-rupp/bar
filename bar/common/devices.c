@@ -58,26 +58,20 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#if   defined(PLATFORM_LINUX)
+  #define O_BINARY 0
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
-#ifdef HAVE_FSEEKO
-  #define FSEEK fseeko
-#elif HAVE__FSEEKI64
-  #define FSEEK _fseeki64
+#if HAVE_LSEEK64
+  #define LSEEK lseek64
 #else
-  #define FSEEK fseek
-#endif
-
-#ifdef HAVE_FTELLO
-  #define FTELL ftello
-#elif HAVE__FTELLI64
-  #define FTELL _ftelli64
-#else
-  #define FTELL ftell
+  #define LSEEK lseek
 #endif
 
 #ifdef HAVE_STAT64
@@ -306,29 +300,29 @@ Errors Device_open(DeviceHandle *deviceHandle,
             // emulate block device
             if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
-              deviceHandle->file = fopen(emulateFileName,"rb");
+              deviceHandle->handle = open(emulateFileName,O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
             }
             else
             {
-              deviceHandle->file = fopen(emulateDeviceName,"rb");
+              deviceHandle->handle = open(emulateDeviceName,O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
             }
           }
           else
           {
             // use block device
-            deviceHandle->file = fopen(String_cString(deviceName),"rb");
+            deviceHandle->handle = open(String_cString(deviceName),O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
           }
           stringTokenizerDone(&stringTokenizer);
         }
         else
         {
           // use block device
-          deviceHandle->file = fopen(String_cString(deviceName),"rb");
+          deviceHandle->handle = open(String_cString(deviceName),O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
         }
       #else /* NDEBUG */
-        deviceHandle->file = fopen(String_cString(deviceName),"rb");
+        deviceHandle->handle = open(String_cString(deviceName),O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
       #endif /* not NDEBUG */
-      if (deviceHandle->file == NULL)
+      if (deviceHandle->handle == -1)
       {
         return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
       }
@@ -348,28 +342,28 @@ Errors Device_open(DeviceHandle *deviceHandle,
             // emulate block device
             if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
-              deviceHandle->file = fopen(emulateFileName,"r+b");
+              deviceHandle->handle = open(emulateFileName,O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
             }
             else
             {
-              deviceHandle->file = fopen(emulateDeviceName,"r+b");
+              deviceHandle->handle = open(emulateDeviceName,O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
             }
           }
           else
           {
             // use block device
-            deviceHandle->file = fopen(String_cString(deviceName),"r+b");
+            deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
           }
           stringTokenizerDone(&stringTokenizer);
         }
         else
         {
-          deviceHandle->file = fopen(String_cString(deviceName),"r+b");
+          deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
         }
       #else /* NDEBUG */
-        deviceHandle->file = fopen(String_cString(deviceName),"r+b");
+        deviceHandle->file = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
       #endif /* not NDEBUG */
-      if (deviceHandle->file == NULL)
+      if (deviceHandle->handle == -1)
       {
         return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
       }
@@ -382,23 +376,17 @@ Errors Device_open(DeviceHandle *deviceHandle,
   }
 
   // get device size
-  if (FSEEK(deviceHandle->file,(off_t)0,SEEK_END) == -1)
-  {
-    error = ERRORX_(IO,errno,"%s",String_cString(deviceName));
-    fclose(deviceHandle->file);
-    return error;
-  }
-  n = FTELL(deviceHandle->file);
+  n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_END);
   if (n == (off_t)(-1))
   {
     error = ERRORX_(IO,errno,"%s",String_cString(deviceName));
-    fclose(deviceHandle->file);
+    close(deviceHandle->handle);
     return error;
   }
-  if (FSEEK(deviceHandle->file,(off_t)0,SEEK_SET) == -1)
+  if (LSEEK(deviceHandle->handle,(off_t)0,SEEK_SET) == -1)
   {
     error = ERRORX_(IO,errno,"%s",String_cString(deviceName));
-    fclose(deviceHandle->file);
+    close(deviceHandle->handle);
     return error;
   }
 
@@ -413,36 +401,14 @@ Errors Device_open(DeviceHandle *deviceHandle,
 Errors Device_close(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
+  assert(deviceHandle->handle != -1);
   assert(deviceHandle->name != NULL);
 
-  fclose(deviceHandle->file);
-  deviceHandle->file = NULL;
+  close(deviceHandle->handle);
+  deviceHandle->handle = -1;
   String_delete(deviceHandle->name);
 
   return ERROR_NONE;
-}
-
-bool Device_eof(DeviceHandle *deviceHandle)
-{
-  int  ch;
-  bool eofFlag;
-
-  assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
-
-  ch = getc(deviceHandle->file);
-  if (ch != EOF)
-  {
-    ungetc(ch,deviceHandle->file);
-    eofFlag = FALSE;
-  }
-  else
-  {
-    eofFlag = TRUE;
-  }
-
-  return eofFlag;
 }
 
 Errors Device_read(DeviceHandle *deviceHandle,
@@ -454,12 +420,13 @@ Errors Device_read(DeviceHandle *deviceHandle,
   ssize_t n;
 
   assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
+  assert(deviceHandle->handle != -1);
+  assert(deviceHandle->index <= deviceHandle->size);
   assert(buffer != NULL);
 
-  n = fread(buffer,1,bufferLength,deviceHandle->file);
-  if (   ((n <= 0) && ferror(deviceHandle->file))
-      || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
+  n = read(deviceHandle->handle,buffer,bufferLength);
+  if (   (n == (off_t)(-1))
+      || (n < (ssize_t)bufferLength) && (bytesRead == NULL)
      )
   {
     return ERRORX_(IO,errno,"%s",String_cString(deviceHandle->name));
@@ -479,10 +446,11 @@ Errors Device_write(DeviceHandle *deviceHandle,
   ssize_t n;
 
   assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
+  assert(deviceHandle->handle != -1);
+  assert(deviceHandle->index <= deviceHandle->size);
   assert(buffer != NULL);
 
-  n = fwrite(buffer,1,bufferLength,deviceHandle->file);
+  n = write(deviceHandle->handle,buffer,bufferLength);
   if (n > 0) deviceHandle->index += n;
   if (deviceHandle->index > deviceHandle->size) deviceHandle->size = deviceHandle->index;
   if (n != (ssize_t)bufferLength)
@@ -505,10 +473,11 @@ Errors Device_tell(DeviceHandle *deviceHandle, uint64 *offset)
   off_t n;
 
   assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
+  assert(deviceHandle->handle != -1);
+  assert(deviceHandle->index <= deviceHandle->size);
   assert(offset != NULL);
 
-  n = FTELL(deviceHandle->file);
+  n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_CUR);
   if (n == (off_t)(-1))
   {
     return ERRORX_(IO,errno,"%s",String_cString(deviceHandle->name));
@@ -527,9 +496,10 @@ Errors Device_seek(DeviceHandle *deviceHandle,
                   )
 {
   assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
+  assert(deviceHandle->handle != -1);
+  assert(deviceHandle->index <= deviceHandle->size);
 
-  if (FSEEK(deviceHandle->file,(off_t)offset,SEEK_SET) == -1)
+  if (LSEEK(deviceHandle->handle,(off_t)offset,SEEK_SET) == -1)
   {
     return ERRORX_(IO,errno,"%s",String_cString(deviceHandle->name));
   }

@@ -39,7 +39,7 @@ typedef enum
 typedef struct
 {
   String name;
-  FILE   *file;
+  int    handle;
   uint64 index;
   uint64 size;
 } DeviceHandle;
@@ -140,7 +140,16 @@ Errors Device_close(DeviceHandle *deviceHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool Device_eof(DeviceHandle *deviceHandle);
+INLINE bool Device_eof(DeviceHandle *deviceHandle);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
+INLINE bool Device_eof(DeviceHandle *deviceHandle)
+{
+  assert(deviceHandle != NULL);
+  assert(deviceHandle->handle != -1);
+
+  return deviceHandle->index >= deviceHandle->size;
+}
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Device_read
