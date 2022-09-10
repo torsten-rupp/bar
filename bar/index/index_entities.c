@@ -792,12 +792,14 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                          DatabaseId  entityId
                         )
 {
-  String       string;
-  Errors       error;
-  DatabaseId   uuidId;
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64       createdDateTime;
-  ArchiveTypes archiveType;
+  String           string;
+  Errors           error;
+  DatabaseId       uuidId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64           createdDateTime;
+  ArchiveTypes     archiveType;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
 
   assert(indexHandle != NULL);
 
@@ -2614,7 +2616,6 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
   assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
   assert(Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
 
-  // prune storages of entity if not default entity
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,

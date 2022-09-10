@@ -5113,11 +5113,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           });
 
           // delete old indizes for same storage file
-          error = Index_purgeAllStorages(createInfo->indexHandle,
-                                         &createInfo->storageInfo.storageSpecifier,
-                                         storageMsg.archiveName,
-                                         storageMsg.storageId
-                                        );
+          error = Index_purgeAllStoragesByName(createInfo->indexHandle,
+                                               &createInfo->storageInfo.storageSpecifier,
+                                               storageMsg.archiveName,
+                                               storageMsg.storageId
+                                              );
           if (error != ERROR_NONE)
           {
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
@@ -8215,8 +8215,8 @@ Errors Command_create(ServerIO                     *masterIO,
     }
     else
     {
-      // purge entity on error/abort
-      (void)Index_purgeEntity(&indexHandle,entityId);
+      // delete entity on error/abort
+      (void)Index_deleteEntity(&indexHandle,entityId);
     }
 
     AUTOFREE_REMOVE(&autoFreeList,&entityId);
