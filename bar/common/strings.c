@@ -1731,6 +1731,8 @@ LOCAL const char *getNextParseToken(const char *format, FormatToken *formatToken
 * Name   : parseString
 * Purpose: parse a string (like scanf)
 * Input  : String       - string
+*          length       - length of string
+*          index        - start index or STRING_BEGIN
 *          format       - format string
 *          arguments    - arguments
 *          stringQuotes - string chars or NULL
@@ -2288,6 +2290,7 @@ LOCAL bool parseString(const char *string,
                 }
               }
             }
+
             break;
 #if 0
 still not implemented
@@ -5577,7 +5580,7 @@ bool String_scanCString(const char *s, const char *format, ...)
   assert(format != NULL);
 
   va_start(arguments,format);
-  result = parseString(s,strlen(s),0,format,arguments,NULL,&nextIndex);
+  result = parseString(s,strlen(s),STRING_BEGIN,format,arguments,NULL,&nextIndex);
   UNUSED_VARIABLE(nextIndex);
   va_end(arguments);
 
@@ -5611,7 +5614,7 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
   assert(format != NULL);
 
   va_start(arguments,nextIndex);
-  result = parseString(s,strlen(s),0,format,arguments,STRING_QUOTES,nextIndex);
+  result = parseString(s,strlen(s),STRING_BEGIN,format,arguments,STRING_QUOTES,nextIndex);
   va_end(arguments);
 
   return result;
