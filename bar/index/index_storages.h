@@ -98,8 +98,24 @@ Errors IndexStorage_purge(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
-* Name   : IndexStorage_purgeAll
-* Purpose: purge all storages (mark as "deleted")
+* Name   : IndexStorage_purgeAllById
+* Purpose: purge all storages by entity id (mark as "deleted")
+* Input  : indexHandle   - index handle
+*          entityId      - entity id
+*          keepStorageId - storage database id to keep
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_purgeAllById(IndexHandle *indexHandle,
+                                 DatabaseId  entityId,
+                                 DatabaseId  keepStorageId
+                                );
+
+/***********************************************************************\
+* Name   : IndexStorage_purgeAllByName
+* Purpose: purge all storages by name (mark as "deleted")
 * Input  : indexHandle      - index handle
 *          storageSpecifier - storage specifier or NULL
 *          archiveName      - archive name or NULL
@@ -109,11 +125,11 @@ Errors IndexStorage_purge(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
-                             const StorageSpecifier *storageSpecifier,
-                             ConstString            archiveName,
-                             DatabaseId             keepStorageId
-                            );
+Errors IndexStorage_purgeAllByName(IndexHandle            *indexHandle,
+                                   const StorageSpecifier *storageSpecifier,
+                                   ConstString            archiveName,
+                                   DatabaseId             keepStorageId
+                                  );
 
 /***********************************************************************\
 * Name   : IndexStorage_prune
