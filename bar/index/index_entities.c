@@ -2614,7 +2614,6 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
   assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
   assert(Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
 
-  // prune storages of entity if not default entity
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,

@@ -3160,6 +3160,7 @@ LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, Inde
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            entityId=<id>
 *            storageName=<name>
 *            keepStorageId=<n>
 *          Result:
@@ -3167,6 +3168,7 @@ LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, Inde
 
 LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  IndexId          entityId;
   String           storageName;
   IndexId          keepStorageId;
   StorageSpecifier storageSpecifier;
@@ -3176,14 +3178,10 @@ LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, I
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storage name, keep storage id
+  // get entity id, storage name, keep storage id
+  StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE);
   storageName = String_new();
-  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
-  {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
-    String_delete(storageName);
-    return;
-  }
+  StringMap_getString(argumentMap,"storageName",storageName,NULL);
   StringMap_getInt64(argumentMap,"keepStorageId",&keepStorageId,INDEX_ID_NONE);
   if ((keepStorageId != INDEX_ID_NONE) && (Index_getType(keepStorageId) != INDEX_TYPE_STORAGE))
   {
@@ -3192,30 +3190,48 @@ LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, I
     return;
   }
 
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageName);
-  if (error != ERROR_NONE)
-  {
-    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
-    Storage_doneSpecifier(&storageSpecifier);
-    String_delete(storageName);
-    return;
-  }
-
   if (indexHandle != NULL)
   {
-    // purge storage
-    error = Index_purgeAllStorages(indexHandle,
-                                   &storageSpecifier,
-                                   NULL,
-                                   keepStorageId
-                                  );
-    if (error != ERROR_NONE)
+    if (entityId != INDEX_ID_NONE)
     {
-      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
-      Storage_doneSpecifier(&storageSpecifier);
-      String_delete(storageName);
-      return;
+      error = Index_purgeAllStoragesById(indexHandle,
+                                         entityId,
+                                         keepStorageId
+                                        );
+      if (error != ERROR_NONE)
+      {
+        sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+        Storage_doneSpecifier(&storageSpecifier);
+        String_delete(storageName);
+        return;
+      }
+    }
+
+    if (!String_isEmpty(storageName))
+    {
+      Storage_initSpecifier(&storageSpecifier);
+      error = Storage_parseName(&storageSpecifier,storageName);
+      if (error != ERROR_NONE)
+      {
+        sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+        Storage_doneSpecifier(&storageSpecifier);
+        String_delete(storageName);
+        return;
+      }
+
+      // purge storage
+      error = Index_purgeAllStoragesByName(indexHandle,
+                                           &storageSpecifier,
+                                           NULL,
+                                           keepStorageId
+                                          );
+      if (error != ERROR_NONE)
+      {
+        sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+        Storage_doneSpecifier(&storageSpecifier);
+        String_delete(storageName);
+        return;
+      }
     }
 
     // send result

@@ -2140,11 +2140,84 @@ Errors IndexStorage_purge(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-Errors IndexStorage_purgeAll(IndexHandle            *indexHandle,
-                             const StorageSpecifier *storageSpecifier,
-                             ConstString            archiveName,
-                             DatabaseId             keepStorageId
-                            )
+Errors IndexStorage_purgeAllById(IndexHandle *indexHandle,
+                                 DatabaseId  entityId,
+                                 DatabaseId  keepStorageId
+                                )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+
+  if (indexHandle->masterIO == NULL)
+  {
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   INDEX_ID_ANY,  // uuidId
+                                   INDEX_ID_ENTITY(entityId),
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
+                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
+                                   NULL,  // userName
+                                   NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    while (   (error == ERROR_NONE)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
+                                   NULL,  // jobUUID
+                                   NULL,  // entityId
+                                   NULL,  // scheduleUUID
+                                   NULL,  // hostName
+                                   NULL,  // userName
+                                   NULL,  // comment
+                                   NULL,  // createdDateTime
+                                   NULL,  // archiveType
+                                   &storageId,
+                                   NULL,  // storageName
+                                   NULL,  // createdDateTime
+                                   NULL,  // size
+                                   NULL,  // indexState
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
+                                  )
+          )
+    {
+      error = Index_purgeStorage(indexHandle,storageId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_STORAGE_PURGE_ALL entityId=%"PRIi64" keepStorageId=%"PRIi64,
+                                    INDEX_ID_ENTITY(entityId),
+                                    INDEX_ID_STORAGE(keepStorageId)
+                                   );
+  }
+
+  return error;
+}
+
+Errors IndexStorage_purgeAllByName(IndexHandle            *indexHandle,
+                                   const StorageSpecifier *storageSpecifier,
+                                   ConstString            archiveName,
+                                   DatabaseId             keepStorageId
+                                  )
 {
   IndexId          oldUUIDId,oldEntityId,oldStorageId;
   String           oldStorageName;
@@ -2338,6 +2411,7 @@ Errors IndexStorage_prune(IndexHandle *indexHandle,
     return error;
   }
 
+  // purge storage if OK and empty
   if ((indexState == INDEX_STATE_OK) && IndexStorage_isEmpty(indexHandle,storageId))
   {
     error = IndexStorage_purge(indexHandle,storageId);
@@ -2459,10 +2533,9 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
     String_delete(entryNode->name);
   }
 
-  EntryList  entryList;
-  Errors     error;
-  EntryNode  *entryNode;
-  bool       transactionFlag;
+  EntryList entryList;
+  Errors    error;
+  EntryNode *entryNode;
 
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
@@ -6077,27 +6150,51 @@ Errors Index_purgeStorage(IndexHandle *indexHandle,
   return error;
 }
 
-Errors Index_purgeAllStorages(IndexHandle            *indexHandle,
-                              const StorageSpecifier *storageSpecifier,
-                              ConstString            archiveName,
-                              IndexId                keepIndexId
-                             )
+Errors Index_purgeAllStoragesById(IndexHandle  *indexHandle,
+                                  IndexId      entityId,
+                                  IndexId      keepIndexId
+                                 )
 {
   Errors  error;
 
   assert(indexHandle != NULL);
-  assert(storageSpecifier != NULL);
-  assert(Index_getType(keepIndexId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert((keepIndexId == INDEX_ID_NONE) || (Index_getType(keepIndexId) == INDEX_TYPE_STORAGE));
 
   // check if entries exists for storage
   INDEX_DOX(error,
             indexHandle,
   {
-    return IndexStorage_purgeAll(indexHandle,
-                                 storageSpecifier,
-                                 archiveName,
-                                 Index_getDatabaseId(keepIndexId)
-                                );
+    return IndexStorage_purgeAllById(indexHandle,
+                                     Index_getDatabaseId(entityId),
+                                     Index_getDatabaseId(keepIndexId)
+                                    );
+  });
+
+  return error;
+}
+
+Errors Index_purgeAllStoragesByName(IndexHandle            *indexHandle,
+                                    const StorageSpecifier *storageSpecifier,
+                                    ConstString            archiveName,
+                                    IndexId                keepIndexId
+                                   )
+{
+  Errors  error;
+
+  assert(indexHandle != NULL);
+  assert(storageSpecifier != NULL);
+  assert((keepIndexId == INDEX_ID_NONE) || (Index_getType(keepIndexId) == INDEX_TYPE_STORAGE));
+
+  // check if entries exists for storage
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return IndexStorage_purgeAllByName(indexHandle,
+                                       storageSpecifier,
+                                       archiveName,
+                                       Index_getDatabaseId(keepIndexId)
+                                      );
   });
 
   return error;
@@ -6112,7 +6209,6 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(indexId) == INDEX_TYPE_STORAGE);
 
-  // check if entries exists for storage
   INDEX_DOX(error,
             indexHandle,
   {
