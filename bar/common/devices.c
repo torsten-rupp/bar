@@ -257,7 +257,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   {
     error = ERROR_UNKNOWN;
   }
-  
+
   // free resources
   String_delete(text);
 
@@ -284,6 +284,11 @@ Errors Device_open(DeviceHandle *deviceHandle,
   assert(deviceName != NULL);
 
   // open device
+  #ifdef HAVE_O_LARGEFILE
+    #define FLAGS O_BINARY|O_LARGEFILE
+  #else
+    #define FLAGS O_BINARY
+  #endif
   switch (deviceMode)
   {
     case DEVICE_OPEN_READ:
@@ -300,27 +305,27 @@ Errors Device_open(DeviceHandle *deviceHandle,
             // emulate block device
             if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
-              deviceHandle->handle = open(emulateFileName,O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+              deviceHandle->handle = open(emulateFileName,FLAGS|O_RDONLY);
             }
             else
             {
-              deviceHandle->handle = open(emulateDeviceName,O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+              deviceHandle->handle = open(emulateDeviceName,FLAGS|O_RDONLY);
             }
           }
           else
           {
             // use block device
-            deviceHandle->handle = open(String_cString(deviceName),O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+            deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
           }
           stringTokenizerDone(&stringTokenizer);
         }
         else
         {
           // use block device
-          deviceHandle->handle = open(String_cString(deviceName),O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+          deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
         }
       #else /* NDEBUG */
-        deviceHandle->handle = open(String_cString(deviceName),O_RDONLY|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+        deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
       #endif /* not NDEBUG */
       if (deviceHandle->handle == -1)
       {
@@ -342,26 +347,26 @@ Errors Device_open(DeviceHandle *deviceHandle,
             // emulate block device
             if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
-              deviceHandle->handle = open(emulateFileName,O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+              deviceHandle->handle = open(emulateFileName,FLAGS|O_RDWR);
             }
             else
             {
-              deviceHandle->handle = open(emulateDeviceName,O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+              deviceHandle->handle = open(emulateDeviceName,FLAGS|O_RDWR);
             }
           }
           else
           {
             // use block device
-            deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+            deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
           }
           stringTokenizerDone(&stringTokenizer);
         }
         else
         {
-          deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+          deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
         }
       #else /* NDEBUG */
-        deviceHandle->handle = open(String_cString(deviceName),O_RDWR|O_BINARY|O_LARGEFILE||O_LARGEFILE);
+        deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
       #endif /* not NDEBUG */
       if (deviceHandle->handle == -1)
       {
@@ -374,6 +379,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  #undef FLAGS
 
   // get device size
   n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_END);
@@ -926,7 +932,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
           if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
           {
             return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-          }    
+          }
         }
         stringTokenizerDone(&stringTokenizer);
       }
@@ -939,7 +945,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
         if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
         {
           return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-        }    
+        }
       }
     #else /* NDEBUG */
       if (STAT(deviceName,&fileStat) != 0)
@@ -949,9 +955,9 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
       if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
       {
         return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-      }    
+      }
     #endif /* not NDEBUG */
-    
+
     // init device info
     deviceInfo->timeLastAccess  = fileStat.st_atime;
     deviceInfo->timeModified    = fileStat.st_mtime;
