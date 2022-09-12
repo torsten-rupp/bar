@@ -3,7 +3,9 @@
   * bar-index: fixed clean orphaned
   * fixed rename entry on restore: use file name instead
     of path
-  * fixed missing source parallel.c, fixed linkage
+  * fixed missing source parallel.c in source pckage,
+    fixed linkage
+  * fixed restart aborted job on slave (MACBAR-102)
 
 2022-08-30 0.22
   * added support for external index database engines
