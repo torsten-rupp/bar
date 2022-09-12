@@ -2660,14 +2660,21 @@ void Job_resetRunningInfo(JobNode *jobNode)
   resetStatusInfo(&jobNode->statusInfo);
 
   jobNode->runningInfo.error                 = ERROR_NONE;
-  jobNode->runningInfo.entriesPerSecond      = 0.0;
-  jobNode->runningInfo.bytesPerSecond        = 0.0;
-  jobNode->runningInfo.storageBytesPerSecond = 0.0;
-  jobNode->runningInfo.estimatedRestTime     = 0L;
+  jobNode->runningInfo.lastErrorCode         = ERROR_CODE_NONE;
+  jobNode->runningInfo.lastErrorCode         = ERROR_CODE_NONE;
+  jobNode->runningInfo.lastErrorNumber       = 0;
+  String_clear(jobNode->runningInfo.lastErrorData);
+  
+  jobNode->runningInfo.lastExecutedDateTime  = 0LL;
 
   Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecondFilter     );
   Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecondFilter       );
   Misc_performanceFilterClear(&jobNode->runningInfo.storageBytesPerSecondFilter);
+
+  jobNode->runningInfo.entriesPerSecond      = 0.0;
+  jobNode->runningInfo.bytesPerSecond        = 0.0;
+  jobNode->runningInfo.storageBytesPerSecond = 0.0;
+  jobNode->runningInfo.estimatedRestTime     = 0L;
 }
 
 void Job_initOptions(JobOptions *jobOptions)
