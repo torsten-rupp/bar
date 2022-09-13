@@ -174,6 +174,27 @@ typedef enum
   SLAVE_STATE_PAIRED
 } SlaveStates;
 
+// running info
+typedef struct
+{
+  Errors            error;                            // error
+
+  uint              lastErrorCode;
+  uint              lastErrorNumber;
+  String            lastErrorData;
+
+  uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
+
+  PerformanceFilter entriesPerSecondFilter;
+  PerformanceFilter bytesPerSecondFilter;
+  PerformanceFilter storageBytesPerSecondFilter;
+
+  double            entriesPerSecond;                 // average processed entries last 10s [1/s]
+  double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
+  double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
+  ulong             estimatedRestTime;                // estimated rest running time [s]
+} RunningInfo;
+
 // job node
 typedef struct JobNode
 {
@@ -223,25 +244,7 @@ typedef struct JobNode
   String              volumeMessage;                    // load volume message
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
-  // running info
-  struct
-  {
-    Errors            error;                            // error
-    uint              lastErrorCode;
-    uint              lastErrorNumber;
-    String            lastErrorData;
-
-    uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
-
-    PerformanceFilter entriesPerSecondFilter;
-    PerformanceFilter bytesPerSecondFilter;
-    PerformanceFilter storageBytesPerSecondFilter;
-
-    double            entriesPerSecond;                 // average processed entries last 10s [1/s]
-    double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
-    double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
-    ulong             estimatedRestTime;                // estimated rest running time [s]
-  }                   runningInfo;
+  RunningInfo         runningInfo;
 
   // cached statistics info
   struct
@@ -1570,15 +1573,26 @@ void Job_abort(JobNode *jobNode);
 void Job_reset(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_resetRunningInfo
-* Purpose: reset job running info
-* Input  : jobNode - job node
+* Name   : Job_resetStatusInfo
+* Purpose: reset job status info
+* Input  : statusInfo - status info*
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_resetRunningInfo(JobNode *jobNode);
+void Job_resetStatusInfo(StatusInfo *statusInfo);
+
+/***********************************************************************\
+* Name   : Job_resetRunningInfo
+* Purpose: reset job running info
+* Input  : runningInfo - running info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_resetRunningInfo(RunningInfo *runningInfo);
 
 #if 0
 /***********************************************************************\

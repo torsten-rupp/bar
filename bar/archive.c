@@ -1644,6 +1644,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
 
   error = ERROR_NONE;
 
+fprintf(stderr,"%s:%d: `-++++++++++++++++++++\n",__FILE__,__LINE__);
   if (Index_isAvailable())
   {
     // init variables
@@ -1699,6 +1700,12 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                         archiveIndexNode->file.fragmentOffset,
                                         archiveIndexNode->file.fragmentSize
                                        );
+{
+static  int i=0;
+fprintf(stderr,"%s:%d: xxxxxxxxxx\n",__FILE__,__LINE__);
+  if (i > 5) error = ERROR_DATABASE_TIMEOUT;
+  i++;
+}
                   break;
                 case ARCHIVE_ENTRY_TYPE_IMAGE:
                   error = Index_addImage(&archiveHandle->indexHandle,
