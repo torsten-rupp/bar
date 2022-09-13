@@ -80,8 +80,6 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY           64                       // max. length of history of authorization fail clients
 #define MAX_ABORT_COMMAND_IDS                    512                      // max. aborted command ids history
 
-#define MAX_SCHEDULE_CATCH_TIME                  30                       // max. schedule catch time [days]
-
 #define DEFAULT_PAIRING_MASTER_TIMEOUT           (10*S_PER_MINUTE)        // default timeout pairing new master [s]
 
 // sleep times [s]
@@ -5392,11 +5390,11 @@ NULL,//                                                        scheduleTitle,
                                              ? 100.0-(jobNode->statusInfo.storage.totalSize*100.0)/jobNode->statusInfo.total.size
                                              : 0.0;
 
-    // store last executed date/time, last error code/message
-    jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
+    // store last error code/message, last executed date/time
     jobNode->runningInfo.lastErrorCode        = Error_getCode(jobNode->runningInfo.error);
     jobNode->runningInfo.lastErrorNumber      = Error_getErrno(jobNode->runningInfo.error);
     String_setCString(jobNode->runningInfo.lastErrorData,Error_getData(jobNode->runningInfo.error));
+    jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
 
     // log job result
     switch (jobNode->jobType)
@@ -5583,16 +5581,16 @@ NULL,//                                                        scheduleTitle,
     // done log
     if      (!Job_isRemote(jobNode))
     {
-        logPostProcess(&logHandle,
-                       &jobNode->job.options,
-                       archiveType,
-                       customText,
-                       jobName,
-                       jobNode->jobState,
-                       jobNode->noStorage,
-                       jobNode->dryRun,
-                       jobNode->statusInfo.message
-                      );
+      logPostProcess(&logHandle,
+                     &jobNode->job.options,
+                     archiveType,
+                     customText,
+                     jobName,
+                     jobNode->jobState,
+                     jobNode->noStorage,
+                     jobNode->dryRun,
+                     jobNode->statusInfo.message
+                    );
     }
     doneLog(&logHandle);
 
@@ -10922,7 +10920,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
       return;
     }
 
-    // remove job in list if not running or requested volume
+    // remove job in list if not running, has not requested a password and has not requested a new volume
     if (Job_isRunning(jobNode->jobState))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_RUNNING,"%S",jobNode->name);
@@ -10952,7 +10950,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
       String_delete(fileName);
     }
 
-    // remove from list
+    // remove from list and delete
     Job_listRemove(jobNode);
     Job_delete(jobNode);
   }
