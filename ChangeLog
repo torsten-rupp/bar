@@ -6,6 +6,7 @@
   * fixed missing source parallel.c in source pckage,
     fixed linkage
   * fixed restart aborted job on slave (MACBAR-102)
+  * fixed write change job data
 
 2022-08-30 0.22
   * added support for external index database engines
