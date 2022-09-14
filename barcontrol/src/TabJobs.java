@@ -7912,9 +7912,6 @@ public class TabJobs
               {
                 scheduleData.enabled = tableItem.getChecked();
                 BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
-                BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                         0  // debugLevel
-                                        );
 
               }
               catch (Exception exception)
@@ -10532,10 +10529,6 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -10606,10 +10599,6 @@ throw new Error("NYI");
                                    0  // debugLevel
                                   );
         }
-
-        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                 0  // debugLevel
-                                );
       }
       catch (Exception exception)
       {
@@ -10959,10 +10948,6 @@ throw new Error("NYI");
                                                   ),
                                0  // debugLevel
                               );
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -11028,10 +11013,6 @@ throw new Error("NYI");
                                pattern
                               );
       }
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -11457,10 +11438,6 @@ throw new Error("NYI");
                                valueMap
                               );
       mountData.id = valueMap.getInt("id");
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -11559,10 +11536,6 @@ throw new Error("NYI");
                                                    selectedJobData.uuid,
                                                    mountData.id
                                                   ),
-                               0  // debugLevel
-                              );
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
                                0  // debugLevel
                               );
     }
@@ -11847,10 +11820,6 @@ throw new Error("NYI");
           sourceHashSet.add(pattern);
         }
       }
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -11904,10 +11873,6 @@ throw new Error("NYI");
                                  0  // debugLevel
                                 );
       }
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -11941,10 +11906,6 @@ throw new Error("NYI");
                                                    selectedJobData.uuid
                                                   ),
                                0  // debugLevel\
-                              );
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
                               );
     }
     catch (Exception exception)
@@ -12111,10 +12072,6 @@ throw new Error("NYI");
                                                     ),
                                  0  // debugLevel
                                 );
-
-        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                 0  // debugLevel
-                                );
       }
       catch (Exception exception)
       {
@@ -12169,10 +12126,6 @@ throw new Error("NYI");
                                  pattern
                                 );
         }
-
-        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                 0  // debugLevel
-                                );
       }
       catch (Exception exception)
       {
@@ -12267,10 +12220,6 @@ throw new Error("NYI");
                                pattern
                               );
       }
-
-      BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                               0  // debugLevel
-                              );
     }
     catch (Exception exception)
     {
@@ -14107,10 +14056,6 @@ Dprintf.dprintf("fileName.charAt(i)=%s",fileName.charAt(i));
                                   );
           scheduleData.uuid = valueMap.getString("scheduleUUID");
           scheduleDataMap.put(scheduleData.uuid,scheduleData);
-
-          BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                   0  // debugLevel
-                                  );
         }
         catch (Exception exception)
         {
@@ -14170,10 +14115,6 @@ Dprintf.dprintf("fileName.charAt(i)=%s",fileName.charAt(i));
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"test-created-archives",scheduleData.testCreatedArchives);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
-
-            BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                     0  // debugLevel
-                                    );
           }
           catch (Exception exception)
           {
@@ -14240,10 +14181,6 @@ Dprintf.dprintf("fileName.charAt(i)=%s",fileName.charAt(i));
                                                  );
             scheduleData.uuid = valueMap.getString("scheduleUUID");
             scheduleDataMap.put(scheduleData.uuid,newScheduleData);
-
-            BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                     0  // debugLevel
-                                    );
           }
           catch (Exception exception)
           {
@@ -14303,10 +14240,6 @@ Dprintf.dprintf("fileName.charAt(i)=%s",fileName.charAt(i));
               scheduleDataMap.remove(scheduleData.uuid);
               tableItem.dispose();
             }
-
-            BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                     0  // debugLevel
-                                    );
           }
           catch (Exception exception)
           {
@@ -14910,10 +14843,6 @@ throw new Error("NYI");
                                  valueMap
                                 );
         persistenceData.id = valueMap.getInt("id");
-
-        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
-                                 0  // debugLevel
-                                );
       }
       catch (Exception exception)
       {
@@ -14981,10 +14910,6 @@ throw new Error("NYI");
                                                      selectedJobData.uuid,
                                                      persistenceData.id
                                                     ),
-                                 0  // debugLevel
-                                );
-
-        BARServer.executeCommand(StringParser.format("JOB_FLUSH jobUUID=%s",selectedJobData.uuid),
                                  0  // debugLevel
                                 );
       }

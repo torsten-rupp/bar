@@ -1208,6 +1208,8 @@ JobNode *Job_new(JobTypes    jobType,
                 )
 {
   JobNode *jobNode;
+  
+  assert(name != NULL);
 
   // allocate job node
   jobNode = LIST_NEW_NODE(JobNode);
@@ -1566,16 +1568,10 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
 
 void Job_flush(JobNode *jobNode)
 {
+  Errors error;
+
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if (jobNode->includeExcludeModifiedFlag)
-  {
-    jobNode->includeExcludeModifiedFlag = FALSE;
-  }
-  if (jobNode->mountModifiedFlag)
-  {
-    jobNode->mountModifiedFlag = FALSE;
-  }
   if (jobNode->scheduleModifiedFlag)
   {
     const ScheduleNode *scheduleNode;
@@ -1604,11 +1600,19 @@ void Job_flush(JobNode *jobNode)
         }
       }
     }
-    jobNode->scheduleModifiedFlag = FALSE;
   }
-  if (jobNode->persistenceModifiedFlag)
+
+  if (   (jobNode->includeExcludeModifiedFlag)
+      || (jobNode->mountModifiedFlag)
+      || (jobNode->scheduleModifiedFlag)
+      || (jobNode->persistenceModifiedFlag)
+     )
   {
-    jobNode->persistenceModifiedFlag = FALSE;
+    error = Job_write(jobNode);
+    if (error != ERROR_NONE)
+    {
+      printWarning("cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+    }
   }
 }
 

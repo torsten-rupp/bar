@@ -11005,14 +11005,12 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
         }
 
         Job_flush(jobNode);
-        Job_write(jobNode);
       }
     }
   }
   else
   {
     Job_flushAllModified();
-    Job_writeAllModified();
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
