@@ -58,37 +58,10 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _NO_SESSION_ID
-#define _SIMULATOR
-#define _SIMULATE_PURGE
-
 /***************************** Constants *******************************/
-#define SESSION_KEY_SIZE                         1024     // number of session key bits
-
-#define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
 #define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
 
-#define SLAVE_DEBUG_LEVEL                        1
-#define SLAVE_COMMAND_TIMEOUT                    (10L*MS_PER_SECOND)
-
-#define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
-#define MAX_AUTHORIZATION_PENALITY_TIME          30000    // max. penality time [ms]
-#define MAX_AUTHORIZATION_HISTORY_KEEP_TIME      30000    // max. time to keep entries in authorization fail history [ms]
-#define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
-#define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
-
 #define MAX_SCHEDULE_CATCH_TIME                  30       // max. schedule catch time [days]
-
-#define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
-
-// sleep times [s]
-#define SLEEP_TIME_SLAVE_CONNECT_THREAD          ( 1*60)  // [s]
-#define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
-#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
-#define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
-#define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
-#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
-#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
 
 /***************************** Datatypes *******************************/
 
@@ -1273,7 +1246,8 @@ JobNode *Job_new(JobTypes    jobType,
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  Job_resetRunningInfo(jobNode);
+  Job_resetStatusInfo(&jobNode->statusInfo);
+  Job_resetRunningInfo(&jobNode->runningInfo);
 
   jobNode->executionCount.normal            = 0L;
   jobNode->executionCount.full              = 0L;
@@ -1350,7 +1324,8 @@ JobNode *Job_copy(const JobNode *jobNode,
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  Job_resetRunningInfo(newJobNode);
+  Job_resetStatusInfo(&newJobNode->statusInfo);
+  Job_resetRunningInfo(&newJobNode->runningInfo);
 
   newJobNode->executionCount.normal            = 0L;
   newJobNode->executionCount.full              = 0L;
@@ -1694,7 +1669,8 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
         }
         if (n1 > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n1;
         jobNode->jobState = jobState;
-        jobNode->runningInfo.lastErrorCode = n2;
+        jobNode->runningInfo.lastErrorCode   = n2;
+        jobNode->runningInfo.lastErrorNumber = 0;
         String_setCString(jobNode->runningInfo.lastErrorData,s3);
       }
       else if (   String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n1,s1)
@@ -2562,8 +2538,8 @@ void Job_trigger(JobNode      *jobNode,
   jobNode->volumeUnloadFlag      = FALSE;
   Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
-  // reset running info
-  Job_resetRunningInfo(jobNode);
+  Job_resetStatusInfo(&jobNode->statusInfo);
+  Job_resetRunningInfo(&jobNode->runningInfo);
 }
 
 void Job_start(JobNode *jobNode)
@@ -2571,13 +2547,15 @@ void Job_start(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // set job state, reset last error
-  jobNode->jobState          = JOB_STATE_RUNNING;
-  jobNode->runningInfo.error = ERROR_NONE;
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  // set job state, reset running info
+  jobNode->jobState = JOB_STATE_RUNNING;
+  Job_resetStatusInfo(&jobNode->statusInfo);
+  Job_resetRunningInfo(&jobNode->runningInfo); 
 
   // increment active counter
   jobList.activeCount++;
+
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
 void Job_end(JobNode *jobNode)
@@ -2601,12 +2579,12 @@ void Job_end(JobNode *jobNode)
     jobNode->jobState = JOB_STATE_DONE;
   }
 
-  // signal modified
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
-
   // decrement active counter
   assert(jobList.activeCount > 0);
   jobList.activeCount--;
+
+  // signal modified
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
 void Job_abort(JobNode *jobNode)
@@ -2653,32 +2631,57 @@ void Job_reset(JobNode *jobNode)
   if (!Job_isActive(jobNode->jobState))
   {
     jobNode->jobState = JOB_STATE_NONE;
-    Job_resetRunningInfo(jobNode);
+    Job_resetStatusInfo(&jobNode->statusInfo);
+    Job_resetRunningInfo(&jobNode->runningInfo);
   }
 }
 
-void Job_resetRunningInfo(JobNode *jobNode)
+void Job_resetStatusInfo(StatusInfo *statusInfo)
 {
-  assert(jobNode != NULL);
+  assert(statusInfo != NULL);
 
-  resetStatusInfo(&jobNode->statusInfo);
+  statusInfo->done.count             = 0L;
+  statusInfo->done.size              = 0LL;
+  statusInfo->total.count            = 0L;
+  statusInfo->total.size             = 0LL;
+  statusInfo->collectTotalSumDone    = FALSE;
+  statusInfo->skipped.count          = 0L;
+  statusInfo->skipped.size           = 0LL;
+  statusInfo->error.count            = 0L;
+  statusInfo->error.size             = 0LL;
+  statusInfo->archiveSize            = 0LL;
+  statusInfo->compressionRatio       = 0.0;
+  String_clear(statusInfo->entry.name);
+  statusInfo->entry.doneSize         = 0LL;
+  statusInfo->entry.totalSize        = 0LL;
+  String_clear(statusInfo->storage.name);
+  statusInfo->storage.doneSize       = 0LL;
+  statusInfo->storage.totalSize      = 0LL;
+  statusInfo->volume.number          = 0;
+  statusInfo->volume.progress        = 0.0;
+  String_clear(statusInfo->message);
+}
 
-  jobNode->runningInfo.error                 = ERROR_NONE;
-  jobNode->runningInfo.lastErrorCode         = ERROR_CODE_NONE;
-  jobNode->runningInfo.lastErrorCode         = ERROR_CODE_NONE;
-  jobNode->runningInfo.lastErrorNumber       = 0;
-  String_clear(jobNode->runningInfo.lastErrorData);
+void Job_resetRunningInfo(RunningInfo *runningInfo)
+{
+  assert(runningInfo != NULL);
+
+  runningInfo->error                 = ERROR_NONE;
+
+  runningInfo->lastErrorCode         = ERROR_CODE_NONE;
+  runningInfo->lastErrorNumber       = 0;
+  String_clear(runningInfo->lastErrorData);
   
-  jobNode->runningInfo.lastExecutedDateTime  = 0LL;
+  runningInfo->lastExecutedDateTime  = 0LL;
 
-  Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecondFilter     );
-  Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecondFilter       );
-  Misc_performanceFilterClear(&jobNode->runningInfo.storageBytesPerSecondFilter);
+  Misc_performanceFilterClear(&runningInfo->entriesPerSecondFilter     );
+  Misc_performanceFilterClear(&runningInfo->bytesPerSecondFilter       );
+  Misc_performanceFilterClear(&runningInfo->storageBytesPerSecondFilter);
 
-  jobNode->runningInfo.entriesPerSecond      = 0.0;
-  jobNode->runningInfo.bytesPerSecond        = 0.0;
-  jobNode->runningInfo.storageBytesPerSecond = 0.0;
-  jobNode->runningInfo.estimatedRestTime     = 0L;
+  runningInfo->entriesPerSecond      = 0.0;
+  runningInfo->bytesPerSecond        = 0.0;
+  runningInfo->storageBytesPerSecond = 0.0;
+  runningInfo->estimatedRestTime     = 0L;
 }
 
 void Job_initOptions(JobOptions *jobOptions)

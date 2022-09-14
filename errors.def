@@ -1001,7 +1001,7 @@ ERROR DATABASE_PARSE_ID
   }
 
 ERROR DATABASE_BUSY                    TR("database busy")
-ERROR DATABASE_INTERRUPTED             TR("database operation interupted")
+ERROR DATABASE_INTERRUPTED             TR("database operation interrupted")
 ERROR DATABASE_TIMEOUT
   stringSet(errorText,sizeof(errorText),TR("timeout accessing index"));
   if (!stringIsEmpty(ERROR_DATA))

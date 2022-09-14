@@ -2445,10 +2445,17 @@ public class TabJobs
                                                                                                "3DES",
                                                                                                "CAST5",
                                                                                                "BLOWFISH",
-                                                                                               "AES128","AES192","AES256",
-                                                                                               "TWOFISH128","TWOFISH256",
-                                                                                               "SERPENT128","SERPENT192","SERPENT256",
-                                                                                               "CAMELLIA128","CAMELLIA192","CAMELLIA256"
+                                                                                               "AES128",
+                                                                                               "AES192",
+                                                                                               "AES256",
+                                                                                               "TWOFISH128",
+                                                                                               "TWOFISH256",
+                                                                                               "SERPENT128",
+                                                                                               "SERPENT192",
+                                                                                               "SERPENT256",
+                                                                                               "CAMELLIA128",
+                                                                                               "CAMELLIA192",
+                                                                                               "CAMELLIA256"
                                                                                               },
                                                                                   "none"
                                                                                  );
