@@ -1,4 +1,4 @@
-2022-09-01 0.22a
+2022-09-16 0.22a
   * fixed add newest entry if no entry exists
   * bar-index: fixed clean orphaned
   * fixed rename entry on restore: use file name instead
@@ -8,6 +8,7 @@
     fixed linkage
   * fixed restart aborted job on slave (MACBAR-102)
   * fixed write change job data
+  * fixed some translations
 
 2022-08-30 0.22
   * added support for external index database engines
