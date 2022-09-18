@@ -2386,7 +2386,6 @@ Errors File_write(FileHandle *fileHandle,
   const byte *data;
   size_t     m;
 
-
   FILE_CHECK_VALID(fileHandle);
   assert(buffer != NULL);
 

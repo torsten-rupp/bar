@@ -1644,7 +1644,7 @@ void debugPrintStackTrace(void)
 void debugDumpMemory(const void *address, uint length, bool printAddress)
 {
   const byte *p;
-  uint       z,i;
+  uint       z,j;
 
   assert(address != NULL);
 
@@ -1655,11 +1655,11 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
     if (printAddress) fprintf(stderr,"%08lx:",(unsigned long)p);
     fprintf(stderr,"%08lx  ",(unsigned long)(p-(byte*)address));
 
-    for (i = 0; i < 16; i++)
+    for (j = 0; j < 16; j++)
     {
-      if ((z+i) < length)
+      if ((z+j) < length)
       {
-        p = (const byte*)address+z+i;
+        p = (const byte*)address+z+j;
         fprintf(stderr,"%02x ",((uint)(*p)) & 0xFF);
       }
       else
@@ -1669,11 +1669,11 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
     }
     fprintf(stderr,"  ");
 
-    for (i = 0; i < 16; i++)
+    for (j = 0; j < 16; j++)
     {
-      if ((z+i) < length)
+      if ((z+j) < length)
       {
-        p = (const byte*)address+z+i;
+        p = (const byte*)address+z+j;
         fprintf(stderr,"%c",isprint((int)(*p))?(*p):'.');
       }
       else

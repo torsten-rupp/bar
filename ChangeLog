@@ -1,17 +1,15 @@
-2022-09-01 0.23
-  * fix rename existing entries on restore
-  * fix error handling on image compare
-  * fix do skip files by default
-  * bar-index: fix clean orphaned entries
-
 2022-09-01 0.22a
   * fixed add newest entry if no entry exists
   * bar-index: fixed clean orphaned
   * fixed rename entry on restore: use file name instead
     of path
+  * fixed --transform: glob,regex,extended pattern types
   * fixed missing source parallel.c in source pckage,
     fixed linkage
   * fixed restart aborted job on slave (MACBAR-102)
+  * fixed write change job data
+  * fixed persistence move-to: auto rename destination
+    archive if file already exists
 
 2022-08-30 0.22
   * added support for external index database engines

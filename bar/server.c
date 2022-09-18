@@ -3224,17 +3224,19 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 {
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           baseName,toArchiveName;
+  String           directoryName,baseName,toArchiveName;
   BandWidthList    maxFromBandWidthList,maxToBandWidthList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  Errors           moveError;
   IndexId          storageId;
   uint64           archiveSize;
   StorageInfo      fromStorageInfo,toStorageInfo;
 
   // init variables
-  storageName = String_new();
+  storageName   = String_new();
   Storage_initSpecifier(&storageSpecifier);
+  directoryName = String_new();
   baseName      = String_new();
   toArchiveName = String_new();
 // TODO: bandwidht limitor NYI
@@ -3262,8 +3264,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                 );
   if (error == ERROR_NONE)
   {
-    while (   (error == ERROR_NONE)
-           && Index_getNextStorage(&indexQueryHandle,
+    while (   Index_getNextStorage(&indexQueryHandle,
                                    NULL,  // uuidId
                                    NULL,  // jobUUID
                                    NULL,  // entityId
@@ -3286,95 +3287,144 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                   )
           )
     {
-      error = Storage_parseName(&storageSpecifier,storageName);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      File_getBaseName(baseName,storageSpecifier.archiveName);
+      moveError = ERROR_NONE;
 
-      // get new archive name
-      File_setFileName(toArchiveName,moveToPathName);
-      File_appendFileName(toArchiveName,baseName);
-
-      // move storage
-      error = Storage_init(&fromStorageInfo,
-                           NULL,  // masterIO
-                           &storageSpecifier,
-                           jobOptions,
-                           &maxFromBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_LOW,
-                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
-                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
-                           CALLBACK_(NULL,NULL),  // isPauseFunction
-                           CALLBACK_(NULL,NULL),  // isAbortedFunction
-                           NULL  // logHandle
-                          );
-      if (error != ERROR_NONE)
+      // parse storage name
+      if (moveError == ERROR_NONE)
       {
-        break;
-      }
-      error = Storage_init(&toStorageInfo,
-                           NULL,  // masterIO
-                           moveToStorageSpecifier,
-                           jobOptions,
-                           &maxToBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_LOW,
-                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
-                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
-                           CALLBACK_(NULL,NULL),  // isPauseFunction
-                           CALLBACK_(NULL,NULL),  // isAbortedFunction
-                           NULL  // logHandle
-                          );
-      if (error != ERROR_NONE)
-      {
-        Storage_done(&fromStorageInfo);
-        break;
+        moveError = Storage_parseName(&storageSpecifier,storageName);
+        File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
       }
 
-      error = Storage_copy(&fromStorageInfo,
-                           storageSpecifier.archiveName,
-                           &toStorageInfo,
-                           toArchiveName,
-                           archiveSize
-                          );
-      if (error != ERROR_NONE)
+      // move if prefix path is different or different storage
+      if (moveError == ERROR_NONE)
       {
-        Storage_done(&toStorageInfo);
-        Storage_done(&fromStorageInfo);
-        break;
+        if (   !String_startsWith(directoryName,moveToPathName)
+            || !Storage_equalSpecifiers(&storageSpecifier,
+                                        storageSpecifier.archiveName,
+                                        moveToStorageSpecifier,
+                                        storageSpecifier.archiveName
+                                       )
+           )
+        {
+          // init storages
+          if (moveError == ERROR_NONE)
+          {
+            moveError = Storage_init(&fromStorageInfo,
+                                     NULL,  // masterIO
+                                     &storageSpecifier,
+                                     jobOptions,
+                                     &maxFromBandWidthList,
+                                     SERVER_CONNECTION_PRIORITY_LOW,
+                                     CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                                     CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                                     CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                                     CALLBACK_(NULL,NULL),  // isPauseFunction
+                                     CALLBACK_(NULL,NULL),  // isAbortedFunction
+                                     NULL  // logHandle
+                                    );      
+            if (moveError == ERROR_NONE)
+            {
+              moveError = Storage_init(&toStorageInfo,
+                                       NULL,  // masterIO
+                                       moveToStorageSpecifier,
+                                       jobOptions,
+                                       &maxToBandWidthList,
+                                       SERVER_CONNECTION_PRIORITY_LOW,
+                                       CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                                       CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                                       CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                                       CALLBACK_(NULL,NULL),  // isPauseFunction
+                                       CALLBACK_(NULL,NULL),  // isAbortedFunction
+                                       NULL  // logHandle
+                                      );
+              if (moveError == ERROR_NONE)
+              {
+                // get unique move-to name
+                File_setFileName(toArchiveName,moveToPathName);
+                File_appendFileName(toArchiveName,baseName);
+                if (Storage_exists(&toStorageInfo,toArchiveName))
+                {
+                  String prefixFileName,postfixFileName;
+                  long   index;
+                  uint   n;
+
+                  // rename new archive
+                  prefixFileName  = String_new();
+                  postfixFileName = String_new();
+                  index = String_findLastChar(baseName,STRING_END,'.');
+                  if (index >= 0)
+                  {
+                    String_sub(prefixFileName,baseName,STRING_BEGIN,index);
+                    String_sub(postfixFileName,baseName,index,STRING_END);
+                  }
+                  else
+                  {
+                    String_set(prefixFileName,baseName);
+                  }
+                  n = 0;
+                  do
+                  {
+                    File_setFileName(toArchiveName,moveToPathName);
+                    File_appendFileName(toArchiveName,prefixFileName);
+                    String_appendFormat(toArchiveName,"-%u",n);
+                    String_append(toArchiveName,postfixFileName);
+                    n++;
+                  }
+                  while (Storage_exists(&toStorageInfo,toArchiveName));
+                  String_delete(postfixFileName);
+                  String_delete(prefixFileName);
+                }
+
+                // copy storage
+                moveError = Storage_copy(&fromStorageInfo,
+                                         storageSpecifier.archiveName,
+                                         &toStorageInfo,
+                                         toArchiveName,
+                                         archiveSize
+                                        );
+
+                // update index
+                if (moveError == ERROR_NONE)
+                {
+                  moveError = Index_updateStorage(indexHandle,
+                                                  storageId,
+                                                  NULL,  // hostName,
+                                                  NULL,  // userName,
+                                                  Storage_getName(storageName,moveToStorageSpecifier,toArchiveName),
+                                                  0LL,  // dateTime,
+                                                  archiveSize,
+                                                  NULL,  // comment,
+                                                  FALSE  // updateNewest
+                                                 );
+                }
+
+                // delete original storage
+                if (moveError == ERROR_NONE)
+                {
+                  moveError = Storage_delete(&fromStorageInfo,
+                                             storageSpecifier.archiveName
+                                            );
+                  if (moveError != ERROR_NONE)
+                  {
+                    (void)Storage_delete(&toStorageInfo,toArchiveName);
+                  }
+                }
+
+                // done storage
+                Storage_done(&toStorageInfo);
+              }
+
+              // done storage
+              Storage_done(&fromStorageInfo);
+            }
+          }
+        }
       }
 
-      error = Storage_delete(&fromStorageInfo,
-                             storageSpecifier.archiveName
-                            );
-      if (error != ERROR_NONE)
+      if (moveError != ERROR_NONE)
       {
-        (void)Storage_delete(&toStorageInfo,toArchiveName);
-        Storage_done(&toStorageInfo);
-        Storage_done(&fromStorageInfo);
-        break;
-      }
-
-      Storage_done(&toStorageInfo);
-      Storage_done(&fromStorageInfo);
-
-      // update index
-      error = Index_updateStorage(indexHandle,
-                                  storageId,
-                                  NULL,  // hostName,
-                                  NULL,  // userName,
-                                  Storage_getName(storageName,moveToStorageSpecifier,toArchiveName),
-                                  0LL,  // dateTime,
-                                  archiveSize,
-                                  NULL,  // comment,
-                                  FALSE  // updateNewest
-                                 );
-      if (error != ERROR_NONE)
-      {
-        break;
+        error = moveError;
       }
     }
     Index_doneList(&indexQueryHandle);
@@ -3385,6 +3435,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   List_done(&maxFromBandWidthList);
   String_delete(toArchiveName);
   String_delete(baseName);
+  String_delete(directoryName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
 
@@ -3421,7 +3472,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   ArrayIterator         moveToArrayIterator;
   JobOptions            jobOptions;
   StorageSpecifier      storageSpecifier;
-  String                pathName,baseName;
+  String                directoryName,baseName;
   String                moveToPathName;
   IndexId               moveToEntityId;
   Errors                error;
@@ -3441,7 +3492,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   Storage_initSpecifier(&moveToStorageSpecifier);
   Job_initOptions(&jobOptions);
   Storage_initSpecifier(&storageSpecifier);
-  pathName          = String_new();
+  directoryName     = String_new();
   baseName          = String_new();
   moveToPathName    = String_new();
   storageName       = String_new();
@@ -3499,6 +3550,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     ARRAY_ITERATE(&moveToArray,moveToArrayIterator,moveToInfo)
     {
       // parse move-to name
+fprintf(stderr,"%s:%d: moveto=%s\n",__FILE__,__LINE__,String_cString(moveToInfo.moveTo));
       error = Storage_parseName(&moveToStorageSpecifier,moveToInfo.moveTo);
       if (error != ERROR_NONE)
       {
@@ -3542,6 +3594,9 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
           if (!Array_contains(&entityIdArray,&entityId))
           {
             age = (now-createdDateTime)/S_PER_DAY;
+fprintf(stderr,"%s:%d: age=%d\n",__FILE__,__LINE__,age);
+fprintf(stderr,"%s:%d: lockedCount=%d\n",__FILE__,__LINE__,lockedCount);
+fprintf(stderr,"%s:%d: moveToInfo.maxAge=%d\n",__FILE__,__LINE__,moveToInfo.maxAge);
 
             if (   (lockedCount == 0)
                 && (archiveType == moveToInfo.archiveType)
@@ -3568,6 +3623,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                              0LL,  // offset
                                              INDEX_UNLIMITED
                                             );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
               if (error == ERROR_NONE)
               {
                 while (   INDEX_ID_IS_NONE(moveToEntityId)
@@ -3594,13 +3650,14 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                               )
                       )
                 {
+fprintf(stderr,"%s:%d: storageId=%lld: %s\n",__FILE__,__LINE__,storageId,String_cString(storageName));
                   // parse storage name, get path
                   error = Storage_parseName(&storageSpecifier,storageName);
                   if (error != ERROR_NONE)
                   {
                     continue;
                   }
-                  File_getDirectoryName(pathName,storageSpecifier.archiveName);
+                  File_getDirectoryName(directoryName,storageSpecifier.archiveName);
 
                   // get move-to path name (expand macros)
                   error = Archive_formatName(moveToPathName,
@@ -3616,12 +3673,14 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                   {
                     continue;
                   }
+fprintf(stderr,"%s:%d: pathName=%s\n",__FILE__,__LINE__,String_cString(directoryName));
 
-                  if (!Storage_equalSpecifiers(&moveToStorageSpecifier,
-                                               moveToPathName,
-                                               &storageSpecifier,
-                                               pathName
-                                              )
+                  if (   !String_startsWith(directoryName,moveToPathName)
+                      || !Storage_equalSpecifiers(&storageSpecifier,
+                                                  storageName,
+                                                  &moveToStorageSpecifier,
+                                                  storageName
+                                                 )
                      )
                   {
                     moveToEntityId = entityId;
@@ -3642,6 +3701,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     Array_done(&moveToArray);
 
     // move entity
+fprintf(stderr,"%s:%d: ------------------\n",__FILE__,__LINE__);
+fprintf(stderr,"%s:%d: moveToEntityId=%lld\n",__FILE__,__LINE__,moveToEntityId);
     if (!INDEX_ID_IS_NONE(moveToEntityId))
     {
       Array_append(&entityIdArray,&moveToEntityId);
@@ -3690,29 +3751,27 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
       if (error == ERROR_NONE)
       {
-        plogMessage(NULL,  // logHandle,
-                    LOG_TYPE_INDEX,
-                    "INDEX",
-                    "Moved archives of entity #%"PRIi64" '%s': %s, created at %s to '%s'",
-                    Index_getDatabaseId(moveToEntityId),
-                    String_cString(moveToJobName),
-                    Archive_archiveTypeToString(archiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
-                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName))
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_INDEX,
+                   "Moved archives of entity #%"PRIi64" '%s': %s, created at %s to '%s'",
+                   Index_getDatabaseId(moveToEntityId),
+                   String_cString(moveToJobName),
+                   Archive_archiveTypeToString(archiveType),
+                   Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
+                   String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName))
                    );
       }
       else
       {
-        plogMessage(NULL,  // logHandle,
-                    LOG_TYPE_ERROR,
-                    "INDEX",
-                    "Fail to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
-                    Index_getDatabaseId(moveToEntityId),
-                    String_cString(moveToJobName),
-                    Archive_archiveTypeToString(archiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
-                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName)),
-                    Error_getText(error)
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ERROR,
+                   "Fail to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
+                   Index_getDatabaseId(moveToEntityId),
+                   String_cString(moveToJobName),
+                   Archive_archiveTypeToString(archiveType),
+                   Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
+                   String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName)),
+                   Error_getText(error)
                    );
       }
     }
@@ -3727,7 +3786,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   String_delete(storageName);
   String_delete(moveToPathName);
   String_delete(baseName);
-  String_delete(pathName);
+  String_delete(directoryName);
   Storage_doneSpecifier(&storageSpecifier);
   Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&moveToStorageSpecifier);
