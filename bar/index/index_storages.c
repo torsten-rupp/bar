@@ -3835,6 +3835,28 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   }
 
   // update newest aggregate data
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,storageId);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,
+totalFileCountNewest
+                                                                               +totalImageCountNewest
+                                                                               +totalDirectoryCountNewest
+                                                                               +totalLinkCountNewest
+                                                                               +totalHardlinkCountNewest
+                                                                               +totalSpecialCountNewest
+);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,
+totalFileSizeNewest
+                                                                               +totalImageSizeNewest
+                                                                               +totalHardlinkSizeNewest
+);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalFileCountNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalFileSizeNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalImageCountNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalDirectoryCountNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalLinkCountNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalHardlinkCountNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalHardlinkSizeNewest);
+fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,totalSpecialCountNewest);
   error = Database_update(&indexHandle->databaseHandle,
                           NULL,  // changedRowCount
                           "storages",
