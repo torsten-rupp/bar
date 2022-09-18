@@ -8,6 +8,8 @@
     fixed linkage
   * fixed restart aborted job on slave (MACBAR-102)
   * fixed write change job data
+  * fixed persistence move-to: auto rename destination
+    archive if file already exists
 
 2022-08-30 0.22
   * added support for external index database engines
