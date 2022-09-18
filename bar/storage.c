@@ -745,29 +745,27 @@ LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
   size = Storage_getSize(fromStorageHandle);
 
   // transfer data
+  error           = ERROR_NONE;
   transferedBytes = 0L;
   while (   (transferedBytes < size)
-         && !Storage_isAborted(fromStorageHandle->storageInfo)
-         && !Storage_isAborted(toStorageHandle->storageInfo)
+         && (error == ERROR_NONE)
         )
   {
-    // get block size
+    // get data size
     n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
 
     // read data
     error = Storage_read(fromStorageHandle,buffer,n,NULL);
     if (error != ERROR_NONE)
     {
-      free(buffer);
-      return error;
+      break;
     }
 
     // transfer to storage
     error = Storage_write(toStorageHandle,buffer,n);
     if (error != ERROR_NONE)
     {
-      free(buffer);
-      return error;
+      break;
     }
 
     // next part
@@ -777,18 +775,29 @@ LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
     toStorageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
     if (!updateStorageStatusInfo(toStorageHandle->storageInfo))
     {
-      free(buffer);
-      return ERROR_ABORTED;
+      break;
+    }
+
+    // check abort
+    if (Storage_isAborted(fromStorageHandle->storageInfo))
+    {
+      error = ERROR_ABORTED;
+      break;
+    }
+    if (Storage_isAborted(toStorageHandle->storageInfo))
+    {
+      error = ERROR_ABORTED;
+      break;
     }
 
     // pause storage (if requested)
-    Storage_pause(toStorageHandle->storageInfo);
+    Storage_pause(toStorageHandle->storageInfo);   
   }
 
   // free resources
   free(buffer);
 
-  return ERROR_NONE;
+  return error;
 
   #undef TRANSFER_BUFFER_SIZE
 }
@@ -3846,7 +3855,7 @@ Errors Storage_copy(StorageInfo *fromStorageInfo,
 
   // free resources
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Storage_rename(const StorageInfo *storageInfo,

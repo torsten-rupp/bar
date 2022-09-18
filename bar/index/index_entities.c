@@ -792,14 +792,12 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                          DatabaseId  entityId
                         )
 {
-  String           string;
-  Errors           error;
-  DatabaseId       uuidId;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64           createdDateTime;
-  ArchiveTypes     archiveType;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
+  String       string;
+  Errors       error;
+  DatabaseId   uuidId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64       createdDateTime;
+  ArchiveTypes archiveType;
 
   assert(indexHandle != NULL);
 
