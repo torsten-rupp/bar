@@ -6055,6 +6055,20 @@ Dprintf.dprintf("");
           });
         }
 
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Move to")+"\u2026",Settings.hasExpertRole());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            moveEntityTo();
+          }
+        });
+
         Widgets.addMenuItemSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index")+"\u2026");
@@ -8404,6 +8418,106 @@ Dprintf.dprintf("");
     catch (CommunicationError error)
     {
       Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indices\n\n(error: {0})",error.toString()));
+    }
+
+    updateStorageTreeTableThread.triggerUpdate();
+  }
+
+  /** move all storages of entity to another path
+   */
+  private void moveEntityTo()
+  {
+    try
+    {
+      TreeItem selectedTreeItems[] = widgetStorageTree.getSelection();
+      if (selectedTreeItems.length > 0)
+      {
+        TreeItem selectedTreeItem = selectedTreeItems[0];
+
+        if (   !selectedTreeItem.isDisposed()
+            && (selectedTreeItem.getData() instanceof EntityIndexData)
+           )
+        {
+          EntityIndexData selectedEntityIndexData = (EntityIndexData)selectedTreeItem.getData();
+
+          String moveToPath = Dialogs.file(shell,
+                                           Dialogs.FileDialogTypes.DIRECTORY,
+                                           BARControl.tr("Select move-to path"),
+                                           "",
+                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                       },
+                                           "*",
+                                           BARServer.remoteListDirectory(selectedEntityIndexData.jobUUID)
+                                          );
+Dprintf.dprintf("moveToPath=%s",moveToPath);
+//          String moveTo = Dialogs.path(shell,BARControl.tr("Move storages of entity"),BARControl.tr("Move to:"));
+          if (moveToPath != null)
+          {
+            final BusyDialog busyDialog = new BusyDialog(shell,
+                                                         BARControl.tr("Move storages"),
+                                                         500,
+                                                         100,
+                                                         (String)null,
+                                                         BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                        );
+
+            try
+            {
+              BARServer.executeCommand(StringParser.format("INDEX_ENTITY_MOVE_TO entityId=%lld moveTo=%s",
+                                                           selectedEntityIndexData.id,
+                                                           moveToPath
+                                                          ),
+                                       0, // debugLevel
+                                       new Command.ResultHandler()
+                                       {
+                                         @Override
+                                         public void handle(int i, ValueMap valueMap)
+                                         {
+                                           long   storageId  = valueMap.getLong  ("storageId");
+                                           String name       = valueMap.getString("name");
+                                           long   n          = valueMap.getLong  ("n");
+                                           long   size       = valueMap.getLong  ("size");
+//                                           int    doneCount  = valueMap.getInt   ("doneCount");
+                                           long   doneSize   = valueMap.getLong  ("doneSize");
+//                                           int    totalCount = valueMap.getInt   ("totalCount");
+                                           long   totalSize  = valueMap.getLong  ("totalSize");
+
+                                           busyDialog.updateText(0,name);
+                                           busyDialog.updateProgressBar(0,n);
+                                           busyDialog.updateProgressBar(1,doneSize);
+                                           busyDialog.setMaximum(0,size);
+                                           busyDialog.setMaximum(1,totalSize);
+
+                                           if (busyDialog.isAborted())
+                                           {
+                                             abort();
+                                           }
+                                         }
+                                       }
+                                      );
+
+              busyDialog.close();
+            }
+            catch (BARException exception)
+            {
+              busyDialog.close();
+              if (exception.code != BARException.ABORTED)
+              {
+                Dialogs.error(shell,BARControl.tr("Cannot move entity!\n\n(error: {0})",exception.getMessage()));
+              }
+            }
+            catch (Exception exception)
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot move entity!\n\n(error: {0})",exception.getMessage()));
+              BARControl.logThrowable(exception);
+            }
+          }
+        }
+      }
+    }
+    catch (CommunicationError error)
+    {
+      Dialogs.error(shell,BARControl.tr("Communication error while moving entity\n\n(error: {0})",error.toString()));
     }
 
     updateStorageTreeTableThread.triggerUpdate();
