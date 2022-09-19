@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-08-22 16:48+0200\n"
+"POT-Creation-Date: 2022-09-18 16:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,7 +21,7 @@ msgstr ""
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_compare.c:2378
+#: /home/rupp/tools/bar/bar/commands_compare.c:2379
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
@@ -31,7 +31,7 @@ msgstr ""
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_restore.c:4116
+#: /home/rupp/tools/bar/bar/commands_restore.c:3947
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
@@ -956,7 +956,7 @@ msgid "database busy"
 msgstr ""
 
 #: errors.def:1003
-msgid "database operation interupted"
+msgid "database operation interrupted"
 msgstr ""
 
 #: errors.def:1007
