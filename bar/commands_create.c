@@ -4924,8 +4924,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           break;
         }
 
-        // transfer file data into storage
-        error = Storage_transferFromFile(&fileHandle,&storageHandle);
+        // transfer file data to storage
+        error = Storage_transferFromFile(&fileHandle,
+                                         &storageHandle,
+                                         CALLBACK_(NULL,NULL),  // storageTransferInfo
+                                         CALLBACK_(NULL,NULL)  // isAborted
+                                        );
         if (error != ERROR_NONE)
         {
           (void)Storage_close(&storageHandle);

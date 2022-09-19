@@ -85,8 +85,8 @@ typedef struct
 } StorageStatusInfo;
 
 /***********************************************************************\
-* Name   : StorageStatusInfoFunction
-* Purpose: storage status call-back
+* Name   : StorageUpdateStatusInfoFunction
+* Purpose: storage update status call-back
 * Input  : storageStatusInfo - storage status info
 *          userData          - user data
 * Output : -
@@ -94,9 +94,18 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
+//TODO: eliminate StorageStatusInfo
+#if 1
 typedef bool(*StorageUpdateStatusInfoFunction)(const StorageStatusInfo *storageStatusInfo,
                                                void                    *userData
                                               );
+#else
+typedef bool(*StorageUpdateStatusInfoFunction)(uint64 doneBytes,
+                                               uint   volumenNumber,
+                                               double volumeProgress,
+                                               void   *userData
+                                              );
+#endif
 
 // storage request volume types
 typedef enum
@@ -135,6 +144,23 @@ typedef StorageRequestVolumeResults(*StorageRequestVolumeFunction)(StorageReques
                                                                    const char                *message,
                                                                    void                      *userData
                                                                   );
+
+/***********************************************************************\
+* Name   : StorageTransferInfoFunction
+* Purpose: storage transfer info call-back
+* Input  : doneBytes  - storage done bytes
+*          totalBytes - storage total bytes
+*          userData   - user data
+* Output : -
+* Return : TRUE to continue, FALSE to abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*StorageTransferInfoFunction)(uint64 doneBytes,
+                                           uint64 totalBytes,
+                                           void   *userData
+                                          );
+
 
 // storage modes
 typedef enum
@@ -1521,15 +1547,27 @@ Errors Storage_write(StorageHandle *storageHandle,
 /***********************************************************************\
 * Name   : Storage_transferFromFile
 * Purpose: transfer content of file into storage file
-* Input  : fileHandle     - file handle
-*          storageHandle  - storage handle
+* Input  : fileHandle                  - file handle
+*          storageHandle               - storage handle
+*          storageTransferInfoFunction - update transfer info function
+*                                        (can be NULL)
+*          storageTransferInfoUserData - user data for update transfer
+*                                        info function
+*          isAbortedFunction           - is abort check callback (can
+*                                        be NULL)
+*          isAbortedUserData           - user data for is aborted
+*                                        check
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_transferFromFile(FileHandle    *fromFileHandle,
-                                StorageHandle *storageHandle
+Errors Storage_transferFromFile(FileHandle                  *fromFileHandle,
+                                StorageHandle               *storageHandle,
+                                StorageTransferInfoFunction storageTransferInfoFunction,
+                                void                        *storageTransferInfoUserData,
+                                IsAbortedFunction           isAbortedFunction,
+                                void                        *isAbortedUserData
                                );
 
 /***********************************************************************\
@@ -1603,19 +1641,32 @@ Errors Storage_copyToLocal(const StorageSpecifier          *storageSpecifier,
 /***********************************************************************\
 * Name   : Storage_copy
 * Purpose: copy storage
-* Input  : fromStorageInfo, toStorageInfo - fromt/to storage info
-*          fromArchiveName, toArchiveName - fromt/to archive name (can be NULL)
+* Input  : fromStorageInfo, toStorageInfo - from/to storage info
+*          fromArchiveName, toArchiveName - from/to archive name (can be
+*                                           NULL)
 *          archiveSize                    - archive size [bytes]
+*          storageTransferInfoFunction    - update transfer info function
+*                                           (can be NULL)
+*          storageTransferInfoUserData    - user data for update transfer
+*                                           info function
+*          isAbortedFunction              - is abort check callback (can
+*                                           be NULL)
+*          isAbortedUserData              - user data for is aborted
+*                                           check
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_copy(StorageInfo *fromStorageInfo,
-                    ConstString fromArchiveName,
-                    StorageInfo *toStorageInfo,
-                    ConstString toArchiveName,
-                    uint64      archiveSize
+Errors Storage_copy(StorageInfo                 *fromStorageInfo,
+                    ConstString                 fromArchiveName,
+                    StorageInfo                 *toStorageInfo,
+                    ConstString                 toArchiveName,
+                    uint64                      archiveSize,
+                    StorageTransferInfoFunction storageTransferInfoFunction,
+                    void                        *storageTransferInfoUserData,
+                    IsAbortedFunction           isAbortedFunction,
+                    void                        *isAbortedUserData
                    );
 
 /***********************************************************************\

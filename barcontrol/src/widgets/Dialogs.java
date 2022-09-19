@@ -51,6 +51,8 @@ import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
@@ -5043,7 +5045,8 @@ class Dialogs
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-          T file = (T)widgetPath.getData();
+          T file = listDirectory.newFileInstance(widgetPath.getText());
+          widgetPath.setData(file);
 
           updater.updateFileList(widgetFileList,
                                  file,
@@ -5054,6 +5057,19 @@ class Dialogs
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+        }
+      });
+      widgetPath.addFocusListener(new FocusListener()
+      {
+        @Override
+        public void focusGained(FocusEvent focusEvent)
+        {
+        }
+        @Override
+        public void focusLost(FocusEvent focusEvent)
+        {
+          T file = listDirectory.newFileInstance(widgetPath.getText());
+          widgetPath.setData(file);
         }
       });
       widgetFolderUp.addSelectionListener(new SelectionListener()

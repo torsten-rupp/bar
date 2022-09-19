@@ -3961,9 +3961,11 @@ does not work on Windows? Even cursor keys trigger traversal event?
     });
     text.addFocusListener(new FocusListener()
     {
+      @Override
       public void focusGained(FocusEvent focusEvent)
       {
       }
+      @Override
       public void focusLost(FocusEvent focusEvent)
       {
         Text widget = (Text)focusEvent.widget;
@@ -4135,9 +4137,11 @@ does not work on Windows? Even cursor keys trigger traversal event?
     });
     styledText.addFocusListener(new FocusListener()
     {
+      @Override
       public void focusGained(FocusEvent focusEvent)
       {
       }
+      @Override
       public void focusLost(FocusEvent focusEvent)
       {
         StyledText widget = (StyledText)focusEvent.widget;
@@ -4257,9 +4261,11 @@ does not work on Windows? Even cursor keys trigger traversal event?
     });
     dateTime.addFocusListener(new FocusListener()
     {
+      @Override
       public void focusGained(FocusEvent focusEvent)
       {
       }
+      @Override
       public void focusLost(FocusEvent focusEvent)
       {
         DateTime widget = (DateTime)focusEvent.widget;
@@ -4391,9 +4397,11 @@ e composite widget
     });
     dateTime.addFocusListener(new FocusListener()
     {
+      @Override
       public void focusGained(FocusEvent focusEvent)
       {
       }
+      @Override
       public void focusLost(FocusEvent focusEvent)
       {
         DateTime widget = (DateTime)focusEvent.widget;

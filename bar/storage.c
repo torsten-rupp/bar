@@ -620,15 +620,27 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 /***********************************************************************\
 * Name   : transferFileToStorage
 * Purpose: transfer file data from temporary file to storage
-* Input  : fromFileHandle - file handle of temporary file
-*          storageHandle  - storage handle
+* Input  : fromFileHandle              - file handle of temporary file
+*          storageHandle               - storage handle
+*          storageTransferInfoFunction - update transfer info function
+*                                        (can be NULL)
+*          storageTransferInfoUserData - user data for update transfer
+*                                        info function
+*          isAbortedFunction           - is abort check callback (can
+*                                        be NULL)
+*          isAbortedUserData           - user data for is aborted
+*                                        check
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors transferFileToStorage(FileHandle    *fileHandle,
-                                   StorageHandle *storageHandle
+LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
+                                   StorageHandle               *storageHandle,
+                                   StorageTransferInfoFunction storageTransferInfoFunction,
+                                   void                        *storageTransferInfoUserData,
+                                   IsAbortedFunction           isAbortedFunction,
+                                   void                        *isAbortedUserData
                                   )
 {
   #define TRANSFER_BUFFER_SIZE (1024*1024)
@@ -663,7 +675,13 @@ LOCAL Errors transferFileToStorage(FileHandle    *fileHandle,
 
   // transfer data
   transferedBytes = 0L;
-  while ((transferedBytes < size) && !Storage_isAborted(storageHandle->storageInfo))
+  while (   (transferedBytes < size)
+         && (   (isAbortedFunction == NULL)
+             || !isAbortedFunction(isAbortedUserData)
+            )
+// TODO: remove
+         && !Storage_isAborted(storageHandle->storageInfo)
+        )
   {
     // get block size
     n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
@@ -688,6 +706,14 @@ LOCAL Errors transferFileToStorage(FileHandle    *fileHandle,
     transferedBytes += (uint64)n;
 
     // update status info
+    if (storageTransferInfoFunction != NULL)
+    {
+      storageTransferInfoFunction(transferedBytes,
+                                  size,
+                                  storageTransferInfoUserData
+                                 );
+    }
+// TODO: remove
     storageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
     if (!updateStorageStatusInfo(storageHandle->storageInfo))
     {
@@ -710,16 +736,28 @@ LOCAL Errors transferFileToStorage(FileHandle    *fileHandle,
 /***********************************************************************\
 * Name   : transferStorageToStorage
 * Purpose: transfer data from storage to storage
-* Input  : fromStorageHandle - from storage handle
-*          toStorageHandle   - to storage handle
+* Input  : fromStorageHandle           - from storage handle
+*          toStorageHandle             - to storage handle
+*          storageTransferInfoFunction - update transfer info function
+*                                        (can be NULL)
+*          storageTransferInfoUserData - user data for update transfer
+*                                        info function
+*          isAbortedFunction           - is abort check callback (can
+*                                        be NULL)
+*          isAbortedUserData           - user data for is aborted
+*                                        check
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
-                                      StorageHandle *toStorageHandle
-                                     )
+LOCAL Errors transferStorageToStorage(StorageHandle               *fromStorageHandle,
+                                      StorageHandle               *toStorageHandle,
+                                      StorageTransferInfoFunction storageTransferInfoFunction,
+                                      void                        *storageTransferInfoUserData,
+                                      IsAbortedFunction           isAbortedFunction,
+                                      void                        *isAbortedUserData
+                                    )
 {
   #define TRANSFER_BUFFER_SIZE (1024*1024)
 
@@ -749,6 +787,9 @@ LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
   transferedBytes = 0L;
   while (   (transferedBytes < size)
          && (error == ERROR_NONE)
+         && (   (isAbortedFunction == NULL)
+             || !isAbortedFunction(isAbortedUserData)
+            )
         )
   {
     // get data size
@@ -772,6 +813,11 @@ LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
     transferedBytes += (uint64)n;
 
     // update status info
+    if (storageTransferInfoFunction != NULL)
+    {
+      storageTransferInfoFunction(transferedBytes,size,storageTransferInfoUserData);
+    }
+// TODO: replace by storageTransferInfoFunction
     toStorageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
     if (!updateStorageStatusInfo(toStorageHandle->storageInfo))
     {
@@ -779,6 +825,15 @@ LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
     }
 
     // check abort
+// TODO: replace by isAbortedFunction
+    if (isAbortedFunction != NULL)
+    {
+      if (isAbortedFunction(isAbortedUserData))
+      {
+        error = ERROR_ABORTED;
+        break;
+      }
+    }
     if (Storage_isAborted(fromStorageHandle->storageInfo))
     {
       error = ERROR_ABORTED;
@@ -791,7 +846,7 @@ LOCAL Errors transferStorageToStorage(StorageHandle *fromStorageHandle,
     }
 
     // pause storage (if requested)
-    Storage_pause(toStorageHandle->storageInfo);   
+    Storage_pause(toStorageHandle->storageInfo);
   }
 
   // free resources
@@ -3427,8 +3482,12 @@ Errors Storage_write(StorageHandle *storageHandle,
   return error;
 }
 
-Errors Storage_transferFromFile(FileHandle    *fromFileHandle,
-                                StorageHandle *storageHandle
+Errors Storage_transferFromFile(FileHandle                  *fromFileHandle,
+                                StorageHandle               *storageHandle,
+                                StorageTransferInfoFunction storageTransferInfoFunction,
+                                void                        *storageTransferInfoUserData,
+                                IsAbortedFunction           isAbortedFunction,
+                                void                        *isAbortedUserData
                                )
 {
   Errors error;
@@ -3457,31 +3516,59 @@ Errors Storage_transferFromFile(FileHandle    *fromFileHandle,
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       case STORAGE_TYPE_FTP:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       case STORAGE_TYPE_SSH:
         error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       case STORAGE_TYPE_SFTP:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       case STORAGE_TYPE_WEBDAV:
       case STORAGE_TYPE_WEBDAVS:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       case STORAGE_TYPE_DEVICE:
-        error = transferFileToStorage(fromFileHandle,storageHandle);
+        error = transferFileToStorage(fromFileHandle,
+                                      storageHandle,
+                                      CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                      CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                     );
         break;
       default:
         #ifndef NDEBUG
@@ -3817,11 +3904,15 @@ NULL, // masterIO
   return ERROR_NONE;
 }
 
-Errors Storage_copy(StorageInfo *fromStorageInfo,
-                    ConstString fromArchiveName,
-                    StorageInfo *toStorageInfo,
-                    ConstString toArchiveName,
-                    uint64      archiveSize
+Errors Storage_copy(StorageInfo                 *fromStorageInfo,
+                    ConstString                 fromArchiveName,
+                    StorageInfo                 *toStorageInfo,
+                    ConstString                 toArchiveName,
+                    uint64                      archiveSize,
+                    StorageTransferInfoFunction storageTransferInfoFunction,
+                    void                        *storageTransferInfoUserData,
+                    IsAbortedFunction           isAbortedFunction,
+                    void                        *isAbortedUserData
                    )
 {
   StorageHandle fromStorageHandle,toStorageHandle;
@@ -3841,11 +3932,16 @@ Errors Storage_copy(StorageInfo *fromStorageInfo,
   }
 
   // transfer data
-  error = transferStorageToStorage(&fromStorageHandle,&toStorageHandle);
+  error = transferStorageToStorage(&fromStorageHandle,
+                                   &toStorageHandle,
+                                   CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
+                                   CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                  );
   if (error != ERROR_NONE)
   {
     Storage_close(&toStorageHandle);
     Storage_close(&fromStorageHandle);
+    (void)Storage_delete(toStorageInfo,toArchiveName);
     return error;
   }
 
