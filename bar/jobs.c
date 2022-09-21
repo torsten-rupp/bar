@@ -158,6 +158,29 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 }
 #endif
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugIsPersistenceListSorted
+* Purpose: check if persistence list is sorted ascending
+* Input  : persistenceList - persistence list
+* Output : -
+* Return : TRUE iff sorted ascending
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool debugIsPersistenceListSorted(const PersistenceList *persistenceList)
+{
+  const PersistenceNode *persistenceNode;
+
+  LIST_ITERATE(persistenceList,persistenceNode)
+  {
+    assert(   (persistenceNode->next == NULL)
+           || (persistenceNode->next->maxAge >= persistenceNode->maxAge)
+          );
+  }
+}
+#endif
+
 ScheduleNode *Job_newScheduleNode(ConstString scheduleUUID)
 {
   ScheduleNode *scheduleNode;
@@ -358,6 +381,8 @@ void Job_insertPersistenceNode(PersistenceList *persistenceList,
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
+
+  assert(debugIsPersistenceListSorted(persistenceList));
 }
 
 void Job_freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
@@ -1181,7 +1206,7 @@ JobNode *Job_new(JobTypes    jobType,
                 )
 {
   JobNode *jobNode;
-  
+
   assert(name != NULL);
 
   // allocate job node
@@ -2550,7 +2575,7 @@ void Job_start(JobNode *jobNode)
   // set job state, reset running info
   jobNode->jobState = JOB_STATE_RUNNING;
   Job_resetStatusInfo(&jobNode->statusInfo);
-  Job_resetRunningInfo(&jobNode->runningInfo); 
+  Job_resetRunningInfo(&jobNode->runningInfo);
 
   // increment active counter
   jobList.activeCount++;
@@ -2671,7 +2696,7 @@ void Job_resetRunningInfo(RunningInfo *runningInfo)
   runningInfo->lastErrorCode         = ERROR_CODE_NONE;
   runningInfo->lastErrorNumber       = 0;
   String_clear(runningInfo->lastErrorData);
-  
+
   runningInfo->lastExecutedDateTime  = 0LL;
 
   Misc_performanceFilterClear(&runningInfo->entriesPerSecondFilter     );
@@ -2974,6 +2999,7 @@ void Job_duplicatePersistenceList(PersistenceList *persistenceList, const Persis
 {
   assert(persistenceList != NULL);
   assert(fromPersistenceList != NULL);
+  assert(debugIsPersistenceListSorted(fromPersistenceList));
 
   List_initDuplicate(persistenceList,
                      fromPersistenceList,
@@ -2986,6 +3012,9 @@ void Job_duplicatePersistenceList(PersistenceList *persistenceList, const Persis
 
 void Job_donePersistenceList(PersistenceList *persistenceList)
 {
+  assert(persistenceList != NULL);
+  assert(debugIsPersistenceListSorted(persistenceList));
+
   List_done(persistenceList);
 }
 

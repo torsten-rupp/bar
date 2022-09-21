@@ -2652,8 +2652,6 @@ public class TabStatus
               case DONE:
               case ERROR:
               case ABORTED:
-Dprintf.dprintf("XXXX %s",BARException.getText(errorCode,errorNumber,errorData));
-
                 message.set(BARException.getText(errorCode,errorNumber,errorData));
                 break;
             }
