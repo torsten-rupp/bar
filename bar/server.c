@@ -360,6 +360,7 @@ LOCAL Semaphore             autoIndexThreadTrigger;
 LOCAL Thread                autoIndexThread;             // thread to collect BAR files for auto-index
 LOCAL Thread                persistenceThread;           // thread to purge expired/move archive files
 LOCAL Semaphore             persistenceThreadTrigger;
+LOCAL Semaphore             moveEntityLock;
 
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;                 // current server state
@@ -3262,7 +3263,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   String           storageName;
   StorageSpecifier storageSpecifier;
   String           directoryName,baseName;
-  String           toArchiveName;
+  String           moveToArchivePath;
   BandWidthList    maxFromBandWidthList,maxToBandWidthList;
   Errors           error;
   uint             totalStorageCount;
@@ -3276,152 +3277,133 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   StorageInfo      fromStorageInfo,toStorageInfo;
 
   // init variables
-  storageName   = String_new();
+  storageName       = String_new();
   Storage_initSpecifier(&storageSpecifier);
-  directoryName = String_new();
-  baseName      = String_new();
-  toArchiveName = String_new();
+  directoryName     = String_new();
+  baseName          = String_new();
+  moveToArchivePath = String_new();
 // TODO: bandwidht limitor NYI
   List_init(&maxFromBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
   List_init(&maxToBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
 
-  error = Index_getStoragesInfos(indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 moveEntityId,
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID
-                                 NULL,  // indexIds
-                                 0,  // indexIdCount
-                                 INDEX_TYPE_SET_ALL,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // name
-                                 &totalStorageCount,
-                                 &totalStorageSize,
-                                 NULL,  // totalEntryCount
-                                 NULL,  // totalEntrySize
-                                 NULL//&totalEntryContentSize
-                                );
-  if (error == ERROR_NONE)
+  // lock
+  error = ERROR_UNKNOWN;
+  SEMAPHORE_LOCKED_DO(&moveEntityLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
+    error = Index_getStoragesInfos(indexHandle,
                                    INDEX_ID_ANY,  // uuidId
                                    moveEntityId,
                                    NULL,  // jobUUID
-                                   NULL,  // scheduleUUID,
+                                   NULL,  // scheduleUUID
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_TYPE_SET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // hostName
-                                   NULL,  // userName
                                    NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
+                                   &totalStorageCount,
+                                   &totalStorageSize,
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
+                                   NULL//&totalEntryContentSize
                                   );
     if (error == ERROR_NONE)
     {
-      doneCount = 0;
-      doneSize  = 0LL;
-      while (   Index_getNextStorage(&indexQueryHandle,
-                                     NULL,  // uuidId
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     moveEntityId,
                                      NULL,  // jobUUID
-                                     NULL,  // entityId
-                                     NULL,  // scheduleUUID
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // indexIds
+                                     0,  // indexIdCount
+                                     INDEX_TYPE_SET_ALL,
+                                     INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
                                      NULL,  // hostName
                                      NULL,  // userName
-                                     NULL,  // comment
-                                     NULL,  // createdDateTime
-                                     NULL,  // archiveType
-                                     &storageId,
-                                     storageName,
-                                     NULL,  // createdDateTime,
-                                     &size,  // size
-                                     NULL,  // indexState,
-                                     NULL,  // indexMode,
-                                     NULL,  // lastCheckedDateTime,
-                                     NULL,  // errorMessage
-                                     NULL,  // totalEntryCount
-                                     NULL  // totalEntrySize
-                                    )
-             && (   (isAbortedFunction == NULL)
-                 || !isAbortedFunction(isAbortedUserData)
-                )
-            )
+                                     NULL,  // name
+                                     INDEX_STORAGE_SORT_MODE_NONE,
+                                     DATABASE_ORDERING_NONE,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error == ERROR_NONE)
       {
-        error = Storage_parseName(&storageSpecifier,storageName);
-        if (error != ERROR_NONE)
+        doneCount = 0;
+        doneSize  = 0LL;
+        while (   Index_getNextStorage(&indexQueryHandle,
+                                       NULL,  // uuidId
+                                       NULL,  // jobUUID
+                                       NULL,  // entityId
+                                       NULL,  // scheduleUUID
+                                       NULL,  // hostName
+                                       NULL,  // userName
+                                       NULL,  // comment
+                                       NULL,  // createdDateTime
+                                       NULL,  // archiveType
+                                       &storageId,
+                                       storageName,
+                                       NULL,  // createdDateTime,
+                                       &size,  // size
+                                       NULL,  // indexState,
+                                       NULL,  // indexMode,
+                                       NULL,  // lastCheckedDateTime,
+                                       NULL,  // errorMessage
+                                       NULL,  // totalEntryCount
+                                       NULL  // totalEntrySize
+                                      )
+               && (   (isAbortedFunction == NULL)
+                   || !isAbortedFunction(isAbortedUserData)
+                  )
+              )
         {
-          break;
-        }
-        File_getBaseName(baseName,storageSpecifier.archiveName);
+          moveError = ERROR_NONE;
 
-        // get new archive name
-        File_setFileName(toArchiveName,moveToPath);
-        File_appendFileName(toArchiveName,baseName);
-
-        // update info
-        if (transferInfoFunction != NULL)
-        {
-          transferInfoFunction(storageId,
-                               storageName,
-                               0LL,  // n
-                               0LL,  // size
-                               doneCount,
-                               doneSize,
-                               totalStorageCount,
-                               totalStorageSize,
-                               transferInfoUserData
-                              );
-        }
-
-        moveError = ERROR_NONE;
-
-        // parse storage name
-        if (moveError == ERROR_NONE)
-        {
-          moveError = Storage_parseName(&storageSpecifier,storageName);
-          File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
-        }
-
-        // move if prefix path is different or different storage
-        if (moveError == ERROR_NONE)
-        {
-          if (   !String_startsWith(directoryName,moveToPath)
-              || !Storage_equalSpecifiers(&storageSpecifier,
-                                          storageSpecifier.archiveName,
-                                          moveToStorageSpecifier,
-                                          storageSpecifier.archiveName
-                                         )
-             )
+          // update info
+          if (transferInfoFunction != NULL)
           {
-            // init storages
-            if (moveError == ERROR_NONE)
+            transferInfoFunction(storageId,
+                                 storageName,
+                                 0LL,  // n
+                                 0LL,  // size
+                                 doneCount,
+                                 doneSize,
+                                 totalStorageCount,
+                                 totalStorageSize,
+                                 transferInfoUserData
+                                );
+          }
+
+          if (moveError == ERROR_NONE)
+          {
+            // parse name
+            moveError = Storage_parseName(&storageSpecifier,storageName);
+          }
+
+          if (moveError == ERROR_NONE)
+          {
+            // get new archive name
+            File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
+            File_setFileName(moveToArchivePath,moveToPath);
+            File_appendFileName(moveToArchivePath,baseName);
+
+            // check if path is or storage type are different
+            if (!Storage_equalSpecifiers(&storageSpecifier,
+                                         storageSpecifier.archiveName,
+                                         moveToStorageSpecifier,
+                                         moveToArchivePath
+                                        )
+               )
             {
-              moveError = Storage_init(&fromStorageInfo,
-                                       NULL,  // masterIO
-                                       &storageSpecifier,
-                                       jobOptions,
-                                       &maxFromBandWidthList,
-                                       SERVER_CONNECTION_PRIORITY_LOW,
-                                       CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
-                                       CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                                       CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
-                                       CALLBACK_(NULL,NULL),  // isPauseFunction
-                                       CALLBACK_(NULL,NULL),  // isAbortedFunction
-                                       NULL  // logHandle
-                                      );
+              // init storages
               if (moveError == ERROR_NONE)
               {
-                moveError = Storage_init(&toStorageInfo,
+                moveError = Storage_init(&fromStorageInfo,
                                          NULL,  // masterIO
-                                         moveToStorageSpecifier,
+                                         &storageSpecifier,
                                          jobOptions,
-                                         &maxToBandWidthList,
+                                         &maxFromBandWidthList,
                                          SERVER_CONNECTION_PRIORITY_LOW,
                                          CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
                                          CALLBACK_(NULL,NULL),  // getNamePasswordFunction
@@ -3432,150 +3414,167 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                         );
                 if (moveError == ERROR_NONE)
                 {
-                  // get unique move-to name
-                  File_setFileName(toArchiveName,moveToPath);
-                  File_appendFileName(toArchiveName,baseName);
-                  if (Storage_exists(&toStorageInfo,toArchiveName))
-                  {
-                    String prefixFileName,postfixFileName;
-                    long   index;
-                    uint   n;
-
-                    // rename new archive
-                    prefixFileName  = String_new();
-                    postfixFileName = String_new();
-                    index = String_findLastChar(baseName,STRING_END,'.');
-                    if (index >= 0)
-                    {
-                      String_sub(prefixFileName,baseName,STRING_BEGIN,index);
-                      String_sub(postfixFileName,baseName,index,STRING_END);
-                    }
-                    else
-                    {
-                      String_set(prefixFileName,baseName);
-                    }
-                    n = 0;
-                    do
-                    {
-                      File_setFileName(toArchiveName,moveToPath);
-                      File_appendFileName(toArchiveName,prefixFileName);
-                      String_appendFormat(toArchiveName,"-%u",n);
-                      String_append(toArchiveName,postfixFileName);
-                      n++;
-                    }
-                    while (Storage_exists(&toStorageInfo,toArchiveName));
-                    String_delete(postfixFileName);
-                    String_delete(prefixFileName);
-                  }
-
-                  // copy storage
-                  moveError = Storage_copy(&fromStorageInfo,
-                                           storageSpecifier.archiveName,
-                                           &toStorageInfo,
-                                           toArchiveName,
-                                           size,
-                                           CALLBACK_INLINE(bool,(uint64 doneBytes, uint64 totalBytes, void *userData),
-                                           {
-                                             bool result;
-
-                                             UNUSED_VARIABLE(userData);
-
-                                             if (transferInfoFunction != NULL)
-                                             {
-                                               transferInfoFunction(storageId,
-                                                                    storageName,
-                                                                    doneBytes,
-                                                                    totalBytes,
-                                                                    doneCount,
-                                                                    doneSize,
-                                                                    totalStorageCount,
-                                                                    totalStorageSize,
-                                                                    transferInfoUserData
-                                                                   );
-                                             }
-
-                                             if (isAbortedFunction != NULL)
-                                             {
-                                               result = !isAbortedFunction(isAbortedUserData);
-                                             }
-                                             else
-                                             {
-                                               result = TRUE;
-                                             }
-
-                                             return result;
-                                           },NULL),
-                                           CALLBACK_(isAbortedFunction,isAbortedUserData)
+                  moveError = Storage_init(&toStorageInfo,
+                                           NULL,  // masterIO
+                                           moveToStorageSpecifier,
+                                           jobOptions,
+                                           &maxToBandWidthList,
+                                           SERVER_CONNECTION_PRIORITY_LOW,
+                                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                                           CALLBACK_(NULL,NULL),  // isPauseFunction
+                                           CALLBACK_(NULL,NULL),  // isAbortedFunction
+                                           NULL  // logHandle
                                           );
-
-                  // update index
                   if (moveError == ERROR_NONE)
                   {
-                    moveError = Index_updateStorage(indexHandle,
-                                                    storageId,
-                                                    NULL,  // hostName,
-                                                    NULL,  // userName,
-                                                    Storage_getName(storageName,moveToStorageSpecifier,toArchiveName),
-                                                    0LL,  // dateTime,
-                                                    size,
-                                                    NULL,  // comment,
-                                                    FALSE  // updateNewest
-                                                   );
-                  }
-
-                  // delete original storage
-                  if (moveError == ERROR_NONE)
-                  {
-                    moveError = Storage_delete(&fromStorageInfo,
-                                               storageSpecifier.archiveName
-                                              );
-                    if (moveError != ERROR_NONE)
+                    // get unique move-to name
+                    File_setFileName(moveToArchivePath,moveToPath);
+                    File_appendFileName(moveToArchivePath,baseName);
+                    if (Storage_exists(&toStorageInfo,moveToArchivePath))
                     {
-                      (void)Storage_delete(&toStorageInfo,toArchiveName);
+                      String prefixFileName,postfixFileName;
+                      long   index;
+                      uint   n;
+
+                      // rename new archive
+                      prefixFileName  = String_new();
+                      postfixFileName = String_new();
+                      index = String_findLastChar(baseName,STRING_END,'.');
+                      if (index >= 0)
+                      {
+                        String_sub(prefixFileName,baseName,STRING_BEGIN,index);
+                        String_sub(postfixFileName,baseName,index,STRING_END);
+                      }
+                      else
+                      {
+                        String_set(prefixFileName,baseName);
+                      }
+                      n = 0;
+                      do
+                      {
+                        File_setFileName(moveToArchivePath,moveToPath);
+                        File_appendFileName(moveToArchivePath,prefixFileName);
+                        String_appendFormat(moveToArchivePath,"-%u",n);
+                        String_append(moveToArchivePath,postfixFileName);
+                        n++;
+                      }
+                      while (Storage_exists(&toStorageInfo,moveToArchivePath));
+                      String_delete(postfixFileName);
+                      String_delete(prefixFileName);
                     }
+
+                    // copy storage
+                    moveError = Storage_copy(&fromStorageInfo,
+                                             storageSpecifier.archiveName,
+                                             &toStorageInfo,
+                                             moveToArchivePath,
+                                             size,
+                                             CALLBACK_INLINE(bool,(uint64 doneBytes, uint64 totalBytes, void *userData),
+                                             {
+                                               bool result;
+
+                                               UNUSED_VARIABLE(userData);
+
+                                               if (transferInfoFunction != NULL)
+                                               {
+                                                 transferInfoFunction(storageId,
+                                                                      storageName,
+                                                                      doneBytes,
+                                                                      totalBytes,
+                                                                      doneCount,
+                                                                      doneSize,
+                                                                      totalStorageCount,
+                                                                      totalStorageSize,
+                                                                      transferInfoUserData
+                                                                     );
+                                               }
+
+                                               if (isAbortedFunction != NULL)
+                                               {
+                                                 result = !isAbortedFunction(isAbortedUserData);
+                                               }
+                                               else
+                                               {
+                                                 result = TRUE;
+                                               }
+
+                                               return result;
+                                             },NULL),
+                                             CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                            );
+
+                    // update index
+                    if (moveError == ERROR_NONE)
+                    {
+                      moveError = Index_updateStorage(indexHandle,
+                                                      storageId,
+                                                      NULL,  // hostName,
+                                                      NULL,  // userName,
+                                                      Storage_getName(storageName,moveToStorageSpecifier,moveToArchivePath),
+                                                      0LL,  // dateTime,
+                                                      size,
+                                                      NULL,  // comment,
+                                                      FALSE  // updateNewest
+                                                     );
+                    }
+
+                    // delete original storage
+                    if (moveError == ERROR_NONE)
+                    {
+                      moveError = Storage_delete(&fromStorageInfo,
+                                                 storageSpecifier.archiveName
+                                                );
+                      if (moveError != ERROR_NONE)
+                      {
+                        (void)Storage_delete(&toStorageInfo,moveToArchivePath);
+                      }
+                    }
+
+                    // done storage
+                    Storage_done(&toStorageInfo);
                   }
 
                   // done storage
-                  Storage_done(&toStorageInfo);
+                  Storage_done(&fromStorageInfo);
                 }
-
-                // done storage
-                Storage_done(&fromStorageInfo);
               }
             }
           }
-        }
 
-        if (moveError != ERROR_NONE)
-        {
-          error = moveError;
-        }
+          // update info
+          doneCount++;
+          doneSize += size;
+          if (transferInfoFunction != NULL)
+          {
+            transferInfoFunction(storageId,
+                                 storageName,
+                                 size,
+                                 size,
+                                 doneCount,
+                                 doneSize,
+                                 totalStorageCount,
+                                 totalStorageSize,
+                                 transferInfoUserData
+                                );
+          }
 
-        // update info
-        doneCount++;
-        doneSize += size;
-        if (transferInfoFunction != NULL)
-        {
-          transferInfoFunction(storageId,
-                               storageName,
-                               size,
-                               size,
-                               doneCount,
-                               doneSize,
-                               totalStorageCount,
-                               totalStorageSize,
-                               transferInfoUserData
-                              );
+          if (moveError != ERROR_NONE)
+          {
+            error = moveError;
+          }
         }
+        Index_doneList(&indexQueryHandle);
       }
-      Index_doneList(&indexQueryHandle);
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   // free resources
   List_done(&maxToBandWidthList);
   List_done(&maxFromBandWidthList);
-  String_delete(toArchiveName);
+  String_delete(moveToArchivePath);
   String_delete(baseName);
   String_delete(directoryName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -3615,7 +3614,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   JobOptions            jobOptions;
   StorageSpecifier      storageSpecifier;
   String                directoryName,baseName;
-  String                moveToPathName;
+  String                moveToPath;
+  String                moveToArchivePath;
   IndexId               moveToEntityId;
   Errors                error;
   IndexQueryHandle      indexQueryHandle1,indexQueryHandle2;
@@ -3623,7 +3623,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   ArchiveTypes          archiveType;
   uint64                createdDateTime;
   uint                  lockedCount;
-  uint                  age;
+  uint                  lastMaxAge,age;
   IndexId               storageId;
   String                storageName;
   String                moveToJobUUID,moveToJobName;
@@ -3636,7 +3636,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   Storage_initSpecifier(&storageSpecifier);
   directoryName     = String_new();
   baseName          = String_new();
-  moveToPathName    = String_new();
+  moveToPath        = String_new();
+  moveToArchivePath = String_new();
   storageName       = String_new();
   moveToJobUUID     = String_new();
   moveToJobName     = String_new();
@@ -3647,7 +3648,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     // init variables
     moveToEntityId = INDEX_ID_NONE;
 
-    // get all persistence entries with a move-to destination
+    // get all persistence entries with a move-to destination (sort ascending by max. age)
     Array_init(&moveToArray,
                sizeof(MoveToInfo),
                64,
@@ -3686,9 +3687,25 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         }
       }
     }
+    #ifndef NDEBUG
+      // check if ages are sorted ascending
+      {
+        uint age;
+
+        age = 0;
+        ARRAY_ITERATE(&moveToArray,moveToArrayIterator,moveToInfo)
+        {
+          assert(   (moveToInfo.maxAge == AGE_FOREVER)
+                 || ((uint)moveToInfo.maxAge >= age)
+                );
+          age = moveToInfo.maxAge;
+        }
+      }
+    #endif
 
     // find next storage to move
-    now = Misc_getCurrentDateTime();
+    now        = Misc_getCurrentDateTime();
+    lastMaxAge = 0;
     ARRAY_ITERATE(&moveToArray,moveToArrayIterator,moveToInfo)
     {
       // parse move-to name
@@ -3736,12 +3753,13 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
           {
             age = (now-createdDateTime)/S_PER_DAY;
 
-            if (   (lockedCount == 0)
+            if (   (age > lastMaxAge)
+                && (lockedCount == 0)
                 && (archiveType == moveToInfo.archiveType)
-                && ((moveToInfo.maxAge == AGE_FOREVER) || (age < (uint)moveToInfo.maxAge))
+                && ((moveToInfo.maxAge == AGE_FOREVER) || (age <= (uint)moveToInfo.maxAge))
                )
             {
-              // check storages
+              // check if some storages have to be moved
               error = Index_initListStorages(&indexQueryHandle2,
                                              indexHandle,
                                              INDEX_ID_ANY,  // uuidId
@@ -3793,10 +3811,11 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                   {
                     continue;
                   }
-                  File_getDirectoryName(directoryName,storageSpecifier.archiveName);
+//                  File_getDirectoryName(directoryName,storageSpecifier.archiveName);
+                  File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
 
                   // get move-to path name (expand macros)
-                  error = Archive_formatName(moveToPathName,
+                  error = Archive_formatName(moveToPath,
                                              moveToStorageSpecifier.archiveName,
                                              EXPAND_MACRO_MODE_STRING,
                                              archiveType,
@@ -3810,12 +3829,14 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                     continue;
                   }
 
-                  if (   !String_startsWith(directoryName,moveToPathName)
-                      || !Storage_equalSpecifiers(&storageSpecifier,
-                                                  storageName,
-                                                  &moveToStorageSpecifier,
-                                                  storageName
-                                                 )
+                  // check if path is or storage type are different
+                  File_setFileName(moveToArchivePath,moveToPath);
+                  File_appendFileName(moveToArchivePath,baseName);
+                  if (!Storage_equalSpecifiers(&storageSpecifier,
+                                               storageName,
+                                               &moveToStorageSpecifier,
+                                               moveToArchivePath
+                                              )
                      )
                   {
                     moveToEntityId = entityId;
@@ -3830,6 +3851,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         }
         Index_doneList(&indexQueryHandle1);
       }
+
+      lastMaxAge = moveToInfo.maxAge;
     }
 
     // free resources
@@ -3847,7 +3870,6 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       {
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          // find job if possible
           jobNode = Job_findByUUID(moveToJobUUID);
           if (jobNode != NULL)
           {
@@ -3863,7 +3885,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                            &jobOptions,
                            moveToEntityId,
                            &moveToStorageSpecifier,
-                           moveToPathName,
+                           moveToPath,
                            CALLBACK_(NULL,NULL),  // moveInfoFunction
                            CALLBACK_(NULL,NULL)  // isAbortedFunction
                           );
@@ -3874,7 +3896,6 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       {
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          // find job if possible
           jobNode = Job_findByUUID(moveToJobUUID);
           if (jobNode != NULL)
           {
@@ -3892,7 +3913,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(archiveType),
                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
-                   String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName))
+                   String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPath))
                    );
       }
       else
@@ -3904,7 +3925,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(archiveType),
                    Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
-                   String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPathName)),
+                   String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPath)),
                    Error_getText(error)
                    );
       }
@@ -3918,7 +3939,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   String_delete(moveToJobName);
   String_delete(moveToJobUUID);
   String_delete(storageName);
-  String_delete(moveToPathName);
+  String_delete(moveToArchivePath);
+  String_delete(moveToPath);
   String_delete(baseName);
   String_delete(directoryName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -15605,6 +15627,307 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 }
 
 /***********************************************************************\
+* Name   : serverCommand_entityMoveTo
+* Purpose: move storages of entity to another path
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<id>
+*            moveTo=<path>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId          entityId;
+  String           moveTo;
+  Errors           error;
+  JobOptions       jobOptions;
+  StorageSpecifier storageSpecifier;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get jobUUID, schedule UUID, hostName, userName, archive type
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
+    return;
+  }
+  moveTo = String_new();
+  if (!StringMap_getString(argumentMap,"moveTo",moveTo,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"moveTo=<path>");
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    String_delete(moveTo);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // init variables
+  Job_initOptions(&jobOptions);
+  Storage_initSpecifier(&storageSpecifier);
+// TODO: init specifier, support other types
+  storageSpecifier.type = STORAGE_TYPE_FILESYSTEM;
+
+  // move storages of entity to new path
+  error = moveEntity(indexHandle,
+                     &jobOptions,
+                     entityId,
+                     &storageSpecifier,
+                     moveTo,
+                     CALLBACK_INLINE(void,
+                                     (IndexId     storageId,
+                                      ConstString storageName,
+                                      uint64      n,
+                                      uint64      size,
+                                      uint        doneCount,
+                                      uint64      doneSize,
+                                      uint        totalCount,
+                                      uint64      totalSize,
+                                      void        *userData
+                                     ),
+                     {
+                       UNUSED_VARIABLE(userData);
+
+                       ServerIO_sendResult(&clientInfo->io,
+                                           id,
+                                           FALSE,
+                                           ERROR_NONE,
+                                           "storageId=%"PRIi64" name=%S n=%"PRIu64" size=%"PRIu64" doneCount=%u doneSize=%"PRIu64" totalCount=%u totalSize=%"PRIu64,
+                                           storageId,
+                                           storageName,
+                                           n,
+                                           size,
+                                           doneCount,
+                                           doneSize,
+                                           totalCount,
+                                           totalSize
+                                          );
+                      },NULL),
+                      CALLBACK_INLINE(bool,(void *userData),
+                      {
+                        UNUSED_VARIABLE(userData);
+
+                        return isCommandAborted(clientInfo,id);
+                      },NULL)
+                     );
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&storageSpecifier);
+    Job_doneOptions(&jobOptions);
+    String_delete(moveTo);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    return;
+  }
+  if (isQuit())
+  {
+    Storage_doneSpecifier(&storageSpecifier);
+    Job_doneOptions(&jobOptions);
+    String_delete(moveTo);
+    return;
+  }
+
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&storageSpecifier);
+    Job_doneOptions(&jobOptions);
+    String_delete(moveTo);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  Job_doneOptions(&jobOptions);
+  String_delete(moveTo);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_storageDelete
+* Purpose: delete storage and remove database index
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>|"" and/or
+*            entityId=<id>|0 and/or
+*            storageId=<id>|0
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId      entityId;
+  IndexId      storageId;
+  Errors       error;
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get uuid, job id, and/or storage id
+  String_clear(jobUUID);
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+     )
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // mount devices
+  error = ERROR_NONE;
+  if      (!String_isEmpty(jobUUID))
+  {
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode != NULL)
+      {
+        error = mountAll(&jobNode->job.options.mountList);
+      }
+    }
+  }
+  else if (!INDEX_ID_IS_NONE(entityId))
+  {
+    if (Index_findEntity(indexHandle,
+                         entityId,
+                         NULL,  // findJobUUID
+                         NULL,  // findScheduleUUID
+                         NULL,  // findHostName
+                         ARCHIVE_TYPE_ANY,
+                         0LL,  // findCreatedDate
+                         0L,  // findCreatedTime
+                         uuid,
+                         NULL,  // scheduleUUID
+                         NULL,  // uuidId
+                         NULL,  // entityId
+                         NULL,  // archiveType
+                         NULL,  // createdDateTime
+                         NULL,  // lastErrorMessage
+                         NULL,  // totalEntryCount
+                         NULL  // totalEntrySize
+                        ) == ERROR_NONE
+       )
+    {
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        jobNode = Job_findByUUID(uuid);
+        if (jobNode != NULL)
+        {
+          error = mountAll(&jobNode->job.options.mountList);
+        }
+      }
+    }
+    else
+    {
+      error = ERROR_DATABASE_INDEX_NOT_FOUND;
+    }
+  }
+  else if (!INDEX_ID_IS_NONE(storageId))
+  {
+    if (Index_findStorageById(indexHandle,
+                              storageId,
+                              uuid,
+                              NULL,  // scheduleUUID
+                              NULL,  // uuidId
+                              NULL,  // entityId
+                              NULL,  // storageName
+                              NULL,  // createdDateTime
+                              NULL,  // size
+                              NULL,  // indexState
+                              NULL,  // indexMode
+                              NULL,  // lastCheckedDateTime
+                              NULL,  // errorMessage
+                              NULL,  // totalEntryCount
+                              NULL  // totalEntrySize
+                             ) == ERROR_NONE
+       )
+    {
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        jobNode = Job_findByUUID(uuid);
+        if (jobNode != NULL)
+        {
+          error = mountAll(&jobNode->job.options.mountList);
+        }
+      }
+    }
+    else
+    {
+      error = ERROR_DATABASE_INDEX_NOT_FOUND;
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+    return;
+  }
+
+  if (!String_isEmpty(jobUUID))
+  {
+    // delete all storage files with job UUID
+    error = deleteUUID(indexHandle,jobUUID);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      return;
+    }
+  }
+
+  if (!INDEX_ID_IS_NONE(entityId))
+  {
+    // delete entity
+    error = deleteEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      return;
+    }
+  }
+
+  if (!INDEX_ID_IS_NONE(storageId))
+  {
+    // delete storage file
+    error = deleteStorage(indexHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      return;
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexInfo
 * Purpose: get index info
 * Input  : clientInfo  - client info
@@ -17781,831 +18104,6 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
 }
 
 /***********************************************************************\
-* Name   : serverCommand_storageDelete
-* Purpose: delete storage and remove database index
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>|"" and/or
-*            entityId=<id>|0 and/or
-*            storageId=<id>|0
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId      entityId;
-  IndexId      storageId;
-  Errors       error;
-  StaticString (uuid,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // get uuid, job id, and/or storage id
-  String_clear(jobUUID);
-  entityId  = INDEX_ID_NONE;
-  storageId = INDEX_ID_NONE;
-  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
-     )
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
-    return;
-  }
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // mount devices
-  error = ERROR_NONE;
-  if      (!String_isEmpty(jobUUID))
-  {
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-    {
-      jobNode = Job_findByUUID(jobUUID);
-      if (jobNode != NULL)
-      {
-        error = mountAll(&jobNode->job.options.mountList);
-      }
-    }
-  }
-  else if (!INDEX_ID_IS_NONE(entityId))
-  {
-    if (Index_findEntity(indexHandle,
-                         entityId,
-                         NULL,  // findJobUUID
-                         NULL,  // findScheduleUUID
-                         NULL,  // findHostName
-                         ARCHIVE_TYPE_ANY,
-                         0LL,  // findCreatedDate
-                         0L,  // findCreatedTime
-                         uuid,
-                         NULL,  // scheduleUUID
-                         NULL,  // uuidId
-                         NULL,  // entityId
-                         NULL,  // archiveType
-                         NULL,  // createdDateTime
-                         NULL,  // lastErrorMessage
-                         NULL,  // totalEntryCount
-                         NULL  // totalEntrySize
-                        ) == ERROR_NONE
-       )
-    {
-      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-      {
-        jobNode = Job_findByUUID(uuid);
-        if (jobNode != NULL)
-        {
-          error = mountAll(&jobNode->job.options.mountList);
-        }
-      }
-    }
-    else
-    {
-      error = ERROR_DATABASE_INDEX_NOT_FOUND;
-    }
-  }
-  else if (!INDEX_ID_IS_NONE(storageId))
-  {
-    if (Index_findStorageById(indexHandle,
-                              storageId,
-                              uuid,
-                              NULL,  // scheduleUUID
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              NULL,  // storageName
-                              NULL,  // createdDateTime
-                              NULL,  // size
-                              NULL,  // indexState
-                              NULL,  // indexMode
-                              NULL,  // lastCheckedDateTime
-                              NULL,  // errorMessage
-                              NULL,  // totalEntryCount
-                              NULL  // totalEntrySize
-                             ) == ERROR_NONE
-       )
-    {
-      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-      {
-        jobNode = Job_findByUUID(uuid);
-        if (jobNode != NULL)
-        {
-          error = mountAll(&jobNode->job.options.mountList);
-        }
-      }
-    }
-    else
-    {
-      error = ERROR_DATABASE_INDEX_NOT_FOUND;
-    }
-  }
-  if (error != ERROR_NONE)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-    return;
-  }
-
-  if (!String_isEmpty(jobUUID))
-  {
-    // delete all storage files with job UUID
-    error = deleteUUID(indexHandle,jobUUID);
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-      return;
-    }
-  }
-
-  if (!INDEX_ID_IS_NONE(entityId))
-  {
-    // delete entity
-    error = deleteEntity(indexHandle,entityId);
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-      return;
-    }
-  }
-
-  if (!INDEX_ID_IS_NONE(storageId))
-  {
-    // delete storage file
-    error = deleteStorage(indexHandle,storageId);
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-      return;
-    }
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
-* Name   : serverCommand_restore
-* Purpose: restore archives/files
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            type=ARCHIVES|ENTRIES
-*            destination=<name>
-*            directoryContent=yes|no
-*            sparse=yes|no
-*            skipSignatures=yes|no
-*            restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  typedef enum
-  {
-    ARCHIVES,
-    ENTRIES,
-    UNKNOWN
-  } Types;
-
-  typedef struct
-  {
-    ClientInfo *clientInfo;
-    uint       id;
-    bool       skipAllFlag;
-    bool       abortFlag;
-  } RestoreCommandInfo;
-
-  /***********************************************************************\
-  * Name   : parseRestoreType
-  * Purpose: parse restore type
-  * Input  : name     - name
-  *          userData - user data (not used)
-  * Output : type - type
-  * Return : TRUE iff parsed
-  * Notes  : -
-  \***********************************************************************/
-
-  auto bool parseRestoreType(const char *name, Types *type, void *userData);
-  bool parseRestoreType(const char *name, Types *type, void *userData)
-  {
-    assert(name != NULL);
-    assert(type != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    if      (stringEqualsIgnoreCase("archives",name))
-    {
-      (*type) = ARCHIVES;
-      return TRUE;
-    }
-    else if (stringEqualsIgnoreCase("entries",name))
-    {
-      (*type) = ENTRIES;
-      return TRUE;
-    }
-    else
-    {
-      return FALSE;
-    }
-  }
-
-  /***********************************************************************\
-  * Name   : parseRestoreEntryMode
-  * Purpose: parse restore entry mode
-  * Input  : name     - name
-  *          userData - user data (not used)
-  * Output : type - type
-  * Return : TRUE iff parsed
-  * Notes  : -
-  \***********************************************************************/
-
-  auto bool parseRestoreEntryMode(const char *name, RestoreEntryModes *restoreEntryMode, void *userData);
-  bool parseRestoreEntryMode(const char *name, RestoreEntryModes *restoreEntryMode, void *userData)
-  {
-    assert(name != NULL);
-    assert(restoreEntryMode != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    if      (stringEquals("STOP",name))
-    {
-      (*restoreEntryMode) = RESTORE_ENTRY_MODE_STOP;
-      return TRUE;
-    }
-    else if (stringEquals("RENAME",name))
-    {
-      (*restoreEntryMode) = RESTORE_ENTRY_MODE_RENAME;
-      return TRUE;
-    }
-    else if (stringEquals("OVERWRITE",name))
-    {
-      (*restoreEntryMode) = RESTORE_ENTRY_MODE_OVERWRITE;
-      return TRUE;
-    }
-    else if (stringEquals("SKIP_EXISTING",name))
-    {
-      (*restoreEntryMode) = RESTORE_ENTRY_MODE_SKIP_EXISTING;
-      return TRUE;
-    }
-    else
-    {
-      return FALSE;
-    }
-  }
-
-  /***********************************************************************\
-  * Name   : restoreUpdateStatusInfo
-  * Purpose: update restore status info
-  * Input  : statusInfo - status info data,
-  *          userData   - user data
-  * Output : -
-  * Return : TRUE to continue, FALSE to abort
-  * Notes  : -
-  \***********************************************************************/
-
-  auto void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
-                                    void             *userData
-                                   );
-  void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
-                               void             *userData
-                              )
-  {
-    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
-
-    assert(restoreCommandInfo != NULL);
-    assert(statusInfo != NULL);
-    assert(statusInfo->storage.name != NULL);
-    assert(statusInfo->entry.name != NULL);
-
-    ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                        restoreCommandInfo->id,
-                        FALSE,
-                        ERROR_NONE,
-                        "state=RUNNING doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
-                        statusInfo->done.count,
-                        statusInfo->done.size,
-                        statusInfo->total.count,
-                        statusInfo->total.size,
-                        statusInfo->entry.name,
-                        statusInfo->entry.doneSize,
-                        statusInfo->entry.totalSize,
-                        statusInfo->storage.name,
-                        statusInfo->storage.doneSize,
-                        statusInfo->storage.totalSize
-                       );
-  }
-
-  /***********************************************************************\
-  * Name   : restoreHandleError
-  * Purpose: handle restore error
-  * Input  : error      - error code
-  *          statusInfo - status info data,
-  *          userData   - user data
-  * Output : -
-  * Return : ERROR_NONE or error code
-  * Notes  : -
-  \***********************************************************************/
-
-  auto Errors restoreHandleError(Errors           error,
-                                 const StatusInfo *statusInfo,
-                                 void             *userData
-                                );
-  Errors restoreHandleError(Errors           error,
-                            const StatusInfo *statusInfo,
-                            void             *userData
-                           )
-  {
-    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
-    StringMap          resultMap;
-    ServerIOActions    action;
-
-    assert(restoreCommandInfo != NULL);
-    assert(restoreCommandInfo->clientInfo != NULL);
-    assert(statusInfo != NULL);
-    assert(statusInfo->storage.name != NULL);
-    assert(statusInfo->entry.name != NULL);
-
-    if      (   !restoreCommandInfo->skipAllFlag
-             && !restoreCommandInfo->abortFlag
-            )
-    {
-      // init variables
-      resultMap = StringMap_new();
-
-      // show error
-      if (ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
-                                1*60*MS_PER_SECOND,
-                                resultMap,
-                                "CONFIRM",
-                                "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S message=%'S",
-                                error,
-                                Error_getText(error),
-                                statusInfo->storage.name,
-                                statusInfo->entry.name,
-                                statusInfo->message
-                               ) != ERROR_NONE
-         )
-      {
-        StringMap_delete(resultMap);
-        return error;
-      }
-      if (!StringMap_getEnum(resultMap,"action",&action,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseAction,NULL),SERVER_IO_ACTION_NONE))
-      {
-        StringMap_delete(resultMap);
-        return error;
-      }
-
-      // update state
-      switch (action)
-      {
-        case SERVER_IO_ACTION_NONE:
-          error = ERROR_NONE;
-          break;
-        case SERVER_IO_ACTION_SKIP:
-          error = ERROR_NONE;
-          break;
-        case SERVER_IO_ACTION_SKIP_ALL:
-          restoreCommandInfo->skipAllFlag = TRUE;
-          error = ERROR_NONE;
-          break;
-        case SERVER_IO_ACTION_ABORT:
-          restoreCommandInfo->abortFlag = TRUE;
-          error = ERROR_ABORTED;
-          break;
-      }
-
-      // free resources
-      StringMap_delete(resultMap);
-    }
-    else if (restoreCommandInfo->abortFlag)
-    {
-      error = ERROR_ABORTED;
-    }
-    else
-    {
-      error = ERROR_NONE;
-    }
-
-    return error;
-  }
-
-  /***********************************************************************\
-  * Name   : getNamePassword
-  * Purpose: get name and password
-  * Input  : name          - name (can be NULL)
-  *          password      - password variable
-  *          passwordType  - password type
-  *          text          - text (file name, host name, etc.)
-  *          validateFlag  - TRUE to validate input, FALSE otherwise
-  *          weakCheckFlag - TRUE for weak password checking, FALSE
-  *                          otherwise (print warning if password seems to
-  *                          be a weak password)
-  *          userData      - user data
-  * Output : -
-  * Return : ERROR_NONE or error code
-  * Notes  : -
-  \***********************************************************************/
-
-  auto Errors getNamePassword(String        name,
-                              Password      *password,
-                              PasswordTypes passwordType,
-                              const char    *text,
-                              bool          validateFlag,
-                              bool          weakCheckFlag,
-                              void          *userData
-                             );
-  Errors getNamePassword(String        name,
-                         Password      *password,
-                         PasswordTypes passwordType,
-                         const char    *text,
-                         bool          validateFlag,
-                         bool          weakCheckFlag,
-                         void          *userData
-                        )
-  {
-    RestoreCommandInfo   *restoreCommandInfo = (RestoreCommandInfo*)userData;
-    StringMap            resultMap;
-    Errors               error;
-    ServerIOEncryptTypes encryptType;
-    String               encryptedPassword;
-
-    assert(password != NULL);
-    assert(restoreCommandInfo != NULL);
-
-    UNUSED_VARIABLE(validateFlag);
-    UNUSED_VARIABLE(weakCheckFlag);
-
-    // init variables
-    resultMap = StringMap_new();
-
-    // request password
-    error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
-                                  60*MS_PER_S,
-                                  resultMap,
-                                  "REQUEST_PASSWORD",
-                                  "name=%'S passwordType=%'s passwordText=%'s",
-                                  name,
-                                  getPasswordTypeText(passwordType),
-                                  text
-                                 );
-    if (error != ERROR_NONE)
-    {
-      StringMap_delete(resultMap);
-      return error;
-    }
-
-    // get name, password
-    if (name != NULL)
-    {
-      if (!StringMap_getString(resultMap,"name",name,NULL))
-      {
-        StringMap_delete(resultMap);
-        return ERROR_EXPECTED_PARAMETER;
-      }
-    }
-    if (!StringMap_getEnum(resultMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
-    {
-      StringMap_delete(resultMap);
-      return ERROR_EXPECTED_PARAMETER;
-    }
-    encryptedPassword = String_new();
-    if (!StringMap_getString(resultMap,"encryptedPassword",encryptedPassword,NULL))
-    {
-      String_delete(encryptedPassword);
-      StringMap_delete(resultMap);
-      return ERROR_EXPECTED_PARAMETER;
-    }
-
-    // decrypt password
-    error = ServerIO_decryptPassword(&clientInfo->io,
-                                     password,
-                                     encryptType,
-                                     encryptedPassword
-                                    );
-    if (error != ERROR_NONE)
-    {
-      String_delete(encryptedPassword);
-      StringMap_delete(resultMap);
-      return error;
-    }
-
-    // free resources
-    String_delete(encryptedPassword);
-    StringMap_delete(resultMap);
-
-    return ERROR_NONE;
-  }
-
-  Types              type;
-  bool               directoryContentFlag;
-  bool               sparseFilesFlag;
-  bool               skipVerifySignaturesFlag;
-  String             storageName;
-  IndexId            entryId;
-  String             entryName;
-  JobOptions         jobOptions;
-  StringList         storageNameList;
-  EntryList          includeEntryList;
-  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
-  char               byName[256];
-  RestoreCommandInfo restoreCommandInfo;
-  Errors             error;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // get type, destination, directory content flag, overwrite flag
-  if (!StringMap_getEnum(argumentMap,"type",&type,CALLBACK_((StringMapParseEnumFunction)parseRestoreType,NULL),UNKNOWN))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"type=ARCHIVES|ENTRIES");
-    return;
-  }
-  if (!StringMap_getString(argumentMap,"destination",clientInfo->jobOptions.destination,NULL))
-  {
-    String_delete(clientInfo->jobOptions.destination);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"destination=<name>");
-    return;
-  }
-  StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
-  StringMap_getBool(argumentMap,"sparse",&sparseFilesFlag,FALSE);
-  StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
-  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,CALLBACK_((StringMapParseEnumFunction)parseRestoreEntryMode,NULL),RESTORE_ENTRY_MODE_STOP))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING");
-    return;
-  }
-
-  // init variables
-  storageName = String_new();
-  entryName   = String_new();
-  Job_duplicateOptions(&jobOptions,&clientInfo->jobOptions);
-
-  // get storage/entry list
-  error = ERROR_NONE;
-  StringList_init(&storageNameList);
-  EntryList_init(&includeEntryList);
-  switch (type)
-  {
-    case ARCHIVES:
-      if (error == ERROR_NONE)
-      {
-        error = Index_initListStorages(&indexQueryHandle1,
-                                       indexHandle,
-                                       INDEX_ID_ANY,  // uuidId
-                                       INDEX_ID_ANY,  // entityId
-                                       NULL,  // jobUUID
-                                       NULL,  // scheduleUUID,
-                                       Array_cArray(&clientInfo->indexIdArray),
-                                       Array_length(&clientInfo->indexIdArray),
-                                       INDEX_TYPE_SET_ALL,
-                                       INDEX_STATE_SET_ALL,
-                                       INDEX_MODE_SET_ALL,
-                                       NULL,  // hostName
-                                       NULL,  // userName
-                                       NULL,  // name
-                                       INDEX_STORAGE_SORT_MODE_NONE,
-                                       DATABASE_ORDERING_NONE,
-                                       0LL,  // offset
-                                       INDEX_UNLIMITED
-                                      );
-        if (error == ERROR_NONE)
-        {
-          while (   !isCommandAborted(clientInfo,id)
-                 && !isQuit()
-                 && Index_getNextStorage(&indexQueryHandle1,
-                                         NULL,  // uuidId
-                                         NULL,  // jobUUID
-                                         NULL,  // entityId
-                                         NULL,  // scheduleUUID
-                                         NULL,  // hostName
-                                         NULL,  // userName
-                                         NULL,  // comment
-                                         NULL,  // createdDateTime
-                                         NULL,  // archiveType
-                                         NULL,  // storageId
-                                         storageName,
-                                         NULL,  // createdDateTime
-                                         NULL,  // size
-                                         NULL,  // indexState
-                                         NULL,  // indexMode,
-                                         NULL,  // lastCheckedDateTime,
-                                         NULL,  // errorMessage,
-                                         NULL,  // totalEntryCount
-                                         NULL  // totalEntrySize
-                                        )
-                )
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-          Index_doneList(&indexQueryHandle1);
-        }
-      }
-      if (StringList_isEmpty(&storageNameList))
-      {
-        error = ERROR_ARCHIVE_NOT_FOUND;
-      }
-      break;
-    case ENTRIES:
-      error = Index_initListEntries(&indexQueryHandle1,
-                                    indexHandle,
-                                    NULL, // indexIds
-                                    0, // indexIdCount
-                                    Array_cArray(&clientInfo->entryIdArray),
-                                    Array_length(&clientInfo->entryIdArray),
-                                    INDEX_TYPE_ANY,
-                                    NULL, // name
-                                    FALSE,  // newestOnly,
-                                    FALSE,  //fragments
-                                    INDEX_ENTRY_SORT_MODE_NONE,
-                                    DATABASE_ORDERING_NONE,
-                                    0,
-                                    INDEX_UNLIMITED
-                                   );
-      if (error == ERROR_NONE)
-      {
-        while (   !isCommandAborted(clientInfo,id)
-               && !isQuit()
-               && Index_getNextEntry(&indexQueryHandle1,
-                                     NULL,  // uuidId
-                                     NULL,  // jobUUID,
-                                     NULL,  // entityId
-                                     NULL,  // scheduleUUID,
-                                     NULL,  // hostName
-                                     NULL,  // userName
-                                     NULL,  // archiveType,
-                                     &entryId,
-                                     entryName,
-                                     NULL,  // storageId
-                                     storageName,
-                                     NULL,  // size
-                                     NULL,  // timeModified
-                                     NULL,  // userId
-                                     NULL,  // groupId
-                                     NULL,  // permission
-                                     NULL,  // fragmentCount
-                                     NULL,  // destinationName
-                                     NULL,  // fileSystemType
-                                     NULL  // blockSize
-                                    )
-              )
-        {
-          EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-          if (directoryContentFlag && (Index_getType(entryId) == INDEX_TYPE_DIRECTORY))
-          {
-            String_appendCString(entryName,"/*");
-            EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-          }
-
-          if (   (Index_getType(entryId) == INDEX_TYPE_FILE)
-              || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
-              || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
-             )
-          {
-            error = Index_initListEntryFragments(&indexQueryHandle2,
-                                                 indexHandle,
-                                                 entryId,
-                                                 0,
-                                                 INDEX_UNLIMITED
-                                                );
-            if (error == ERROR_NONE)
-            {
-              while (   !isCommandAborted(clientInfo,id)
-                     && !isQuit()
-                     && Index_getNextEntryFragment(&indexQueryHandle2,
-                                                   NULL,  // entryFragmentId,
-                                                   NULL,  // storageId,
-                                                   storageName,
-                                                   NULL,  // storageDateTime
-                                                   NULL,  // fragmentOffset
-                                                   NULL  // fragmentSize
-                                                  )
-                    )
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              Index_doneList(&indexQueryHandle2);
-            }
-          }
-          else
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-        }
-        Index_doneList(&indexQueryHandle1);
-      }
-      if (StringList_isEmpty(&storageNameList))
-      {
-        error = ERROR_ENTRY_NOT_FOUND;
-      }
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
-  if (error != ERROR_NONE)
-  {
-    EntryList_done(&includeEntryList);
-    StringList_done(&storageNameList);
-    Job_doneOptions(&jobOptions);
-    String_delete(entryName);
-    String_delete(storageName);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-    return;
-  }
-
-  // restore
-  getClientInfoString(clientInfo,byName,sizeof(byName));
-  logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "Start restore by %s: %d archives/%d entries",
-             byName,
-             List_count(&storageNameList),
-             List_count(&includeEntryList)
-            );
-  jobOptions.sparseFilesFlag               = sparseFilesFlag;
-  jobOptions.skipVerifySignaturesFlag = skipVerifySignaturesFlag;
-  restoreCommandInfo.clientInfo  = clientInfo;
-  restoreCommandInfo.id          = id;
-  restoreCommandInfo.skipAllFlag = FALSE;
-  restoreCommandInfo.abortFlag   = FALSE;
-  error = Command_restore(&storageNameList,
-                          &includeEntryList,
-                          NULL,  // excludePatternList
-                          &jobOptions,
-                          CALLBACK_(restoreUpdateStatusInfo,&restoreCommandInfo),
-                          CALLBACK_(restoreHandleError,&restoreCommandInfo),
-                          CALLBACK_(getNamePassword,&restoreCommandInfo),
-                          CALLBACK_(NULL,NULL),  // isPause callback
-                          CALLBACK_INLINE(bool,(void *userData),
-                          {
-                            UNUSED_VARIABLE(userData);
-                            return isCommandAborted(clientInfo,id);
-                          },NULL),
-                          NULL  // logHandle
-                         );
-  if (error == ERROR_NONE)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=RESTORED");
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-  }
-  logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "Done restore for %s",
-             byName
-            );
-
-  // free resources
-  EntryList_done(&includeEntryList);
-  StringList_done(&storageNameList);
-  Job_doneOptions(&jobOptions);
-  String_delete(entryName);
-  String_delete(storageName);
-}
-
-/***********************************************************************\
-* Name   : serverCommand_restoreContinue
-* Purpose: continue restore archives/files
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(argumentMap);
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
 * Name   : serverCommand_indexEntityAdd
 * Purpose: add entity to index database
 * Input  : clientInfo  - client info
@@ -18690,134 +18188,6 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   // free resources
   String_delete(userName);
   String_delete(hostName);
-}
-
-/***********************************************************************\
-* Name   : serverCommand_indexEntityMoveTo
-* Purpose: move storages of entity to another path
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            entityId=<id>
-*            moveTo=<path>
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_indexEntityMoveTo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  IndexId          entityId;
-  String           moveTo;
-  Errors           error;
-  JobOptions       jobOptions;
-  StorageSpecifier storageSpecifier;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // get jobUUID, schedule UUID, hostName, userName, archive type
-  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
-    return;
-  }
-  moveTo = String_new();
-  if (!StringMap_getString(argumentMap,"moveTo",moveTo,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"moveTo=<path>");
-    return;
-  }
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    String_delete(moveTo);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // init variables
-  Job_initOptions(&jobOptions);
-  Storage_initSpecifier(&storageSpecifier);
-// TODO: init specifier, support other types
-  storageSpecifier.type = STORAGE_TYPE_FILESYSTEM;
-
-  // move storages of entity to new path
-  error = moveEntity(indexHandle,
-                     &jobOptions,
-                     entityId,
-                     &storageSpecifier,
-                     moveTo,
-                     CALLBACK_INLINE(void,
-                                     (IndexId     storageId,
-                                      ConstString storageName,
-                                      uint64      n,
-                                      uint64      size,
-                                      uint        doneCount,
-                                      uint64      doneSize,
-                                      uint        totalCount,
-                                      uint64      totalSize,
-                                      void        *userData
-                                     ),
-                     {
-                       UNUSED_VARIABLE(userData);
-
-                       ServerIO_sendResult(&clientInfo->io,
-                                           id,
-                                           FALSE,
-                                           ERROR_NONE,
-                                           "storageId=%"PRIi64" name=%S n=%"PRIu64" size=%"PRIu64" doneCount=%u doneSize=%"PRIu64" totalCount=%u totalSize=%"PRIu64,
-                                           storageId,
-                                           storageName,
-                                           n,
-                                           size,
-                                           doneCount,
-                                           doneSize,
-                                           totalCount,
-                                           totalSize
-                                          );
-                      },NULL),
-                      CALLBACK_INLINE(bool,(void *userData),
-                      {
-                        UNUSED_VARIABLE(userData);
-
-                        return isCommandAborted(clientInfo,id);
-                      },NULL)
-                     );
-  if (error != ERROR_NONE)
-  {
-    Storage_doneSpecifier(&storageSpecifier);
-    Job_doneOptions(&jobOptions);
-    String_delete(moveTo);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
-    return;
-  }
-  if (isQuit())
-  {
-    Storage_doneSpecifier(&storageSpecifier);
-    Job_doneOptions(&jobOptions);
-    String_delete(moveTo);
-    return;
-  }
-
-  if (error != ERROR_NONE)
-  {
-    Storage_doneSpecifier(&storageSpecifier);
-    Job_doneOptions(&jobOptions);
-    String_delete(moveTo);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
-    return;
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-
-  // free resources
-  Storage_doneSpecifier(&storageSpecifier);
-  Job_doneOptions(&jobOptions);
-  String_delete(moveTo);
 }
 
 /***********************************************************************\
@@ -20103,6 +19473,658 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   String_delete(name);
 }
 
+/***********************************************************************\
+* Name   : serverCommand_restore
+* Purpose: restore archives/files
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            type=ARCHIVES|ENTRIES
+*            destination=<name>
+*            directoryContent=yes|no
+*            sparse=yes|no
+*            skipSignatures=yes|no
+*            restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  typedef enum
+  {
+    ARCHIVES,
+    ENTRIES,
+    UNKNOWN
+  } Types;
+
+  typedef struct
+  {
+    ClientInfo *clientInfo;
+    uint       id;
+    bool       skipAllFlag;
+    bool       abortFlag;
+  } RestoreCommandInfo;
+
+  /***********************************************************************\
+  * Name   : parseRestoreType
+  * Purpose: parse restore type
+  * Input  : name     - name
+  *          userData - user data (not used)
+  * Output : type - type
+  * Return : TRUE iff parsed
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseRestoreType(const char *name, Types *type, void *userData);
+  bool parseRestoreType(const char *name, Types *type, void *userData)
+  {
+    assert(name != NULL);
+    assert(type != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEqualsIgnoreCase("archives",name))
+    {
+      (*type) = ARCHIVES;
+      return TRUE;
+    }
+    else if (stringEqualsIgnoreCase("entries",name))
+    {
+      (*type) = ENTRIES;
+      return TRUE;
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
+
+  /***********************************************************************\
+  * Name   : parseRestoreEntryMode
+  * Purpose: parse restore entry mode
+  * Input  : name     - name
+  *          userData - user data (not used)
+  * Output : type - type
+  * Return : TRUE iff parsed
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseRestoreEntryMode(const char *name, RestoreEntryModes *restoreEntryMode, void *userData);
+  bool parseRestoreEntryMode(const char *name, RestoreEntryModes *restoreEntryMode, void *userData)
+  {
+    assert(name != NULL);
+    assert(restoreEntryMode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEquals("STOP",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_STOP;
+      return TRUE;
+    }
+    else if (stringEquals("RENAME",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_RENAME;
+      return TRUE;
+    }
+    else if (stringEquals("OVERWRITE",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_OVERWRITE;
+      return TRUE;
+    }
+    else if (stringEquals("SKIP_EXISTING",name))
+    {
+      (*restoreEntryMode) = RESTORE_ENTRY_MODE_SKIP_EXISTING;
+      return TRUE;
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
+
+  /***********************************************************************\
+  * Name   : restoreUpdateStatusInfo
+  * Purpose: update restore status info
+  * Input  : statusInfo - status info data,
+  *          userData   - user data
+  * Output : -
+  * Return : TRUE to continue, FALSE to abort
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
+                                    void             *userData
+                                   );
+  void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
+                               void             *userData
+                              )
+  {
+    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+
+    assert(restoreCommandInfo != NULL);
+    assert(statusInfo != NULL);
+    assert(statusInfo->storage.name != NULL);
+    assert(statusInfo->entry.name != NULL);
+
+    ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                        restoreCommandInfo->id,
+                        FALSE,
+                        ERROR_NONE,
+                        "state=RUNNING doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
+                        statusInfo->done.count,
+                        statusInfo->done.size,
+                        statusInfo->total.count,
+                        statusInfo->total.size,
+                        statusInfo->entry.name,
+                        statusInfo->entry.doneSize,
+                        statusInfo->entry.totalSize,
+                        statusInfo->storage.name,
+                        statusInfo->storage.doneSize,
+                        statusInfo->storage.totalSize
+                       );
+  }
+
+  /***********************************************************************\
+  * Name   : restoreHandleError
+  * Purpose: handle restore error
+  * Input  : error      - error code
+  *          statusInfo - status info data,
+  *          userData   - user data
+  * Output : -
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
+  auto Errors restoreHandleError(Errors           error,
+                                 const StatusInfo *statusInfo,
+                                 void             *userData
+                                );
+  Errors restoreHandleError(Errors           error,
+                            const StatusInfo *statusInfo,
+                            void             *userData
+                           )
+  {
+    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+    StringMap          resultMap;
+    ServerIOActions    action;
+
+    assert(restoreCommandInfo != NULL);
+    assert(restoreCommandInfo->clientInfo != NULL);
+    assert(statusInfo != NULL);
+    assert(statusInfo->storage.name != NULL);
+    assert(statusInfo->entry.name != NULL);
+
+    if      (   !restoreCommandInfo->skipAllFlag
+             && !restoreCommandInfo->abortFlag
+            )
+    {
+      // init variables
+      resultMap = StringMap_new();
+
+      // show error
+      if (ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                1*60*MS_PER_SECOND,
+                                resultMap,
+                                "CONFIRM",
+                                "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S message=%'S",
+                                error,
+                                Error_getText(error),
+                                statusInfo->storage.name,
+                                statusInfo->entry.name,
+                                statusInfo->message
+                               ) != ERROR_NONE
+         )
+      {
+        StringMap_delete(resultMap);
+        return error;
+      }
+      if (!StringMap_getEnum(resultMap,"action",&action,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseAction,NULL),SERVER_IO_ACTION_NONE))
+      {
+        StringMap_delete(resultMap);
+        return error;
+      }
+
+      // update state
+      switch (action)
+      {
+        case SERVER_IO_ACTION_NONE:
+          error = ERROR_NONE;
+          break;
+        case SERVER_IO_ACTION_SKIP:
+          error = ERROR_NONE;
+          break;
+        case SERVER_IO_ACTION_SKIP_ALL:
+          restoreCommandInfo->skipAllFlag = TRUE;
+          error = ERROR_NONE;
+          break;
+        case SERVER_IO_ACTION_ABORT:
+          restoreCommandInfo->abortFlag = TRUE;
+          error = ERROR_ABORTED;
+          break;
+      }
+
+      // free resources
+      StringMap_delete(resultMap);
+    }
+    else if (restoreCommandInfo->abortFlag)
+    {
+      error = ERROR_ABORTED;
+    }
+    else
+    {
+      error = ERROR_NONE;
+    }
+
+    return error;
+  }
+
+  /***********************************************************************\
+  * Name   : getNamePassword
+  * Purpose: get name and password
+  * Input  : name          - name (can be NULL)
+  *          password      - password variable
+  *          passwordType  - password type
+  *          text          - text (file name, host name, etc.)
+  *          validateFlag  - TRUE to validate input, FALSE otherwise
+  *          weakCheckFlag - TRUE for weak password checking, FALSE
+  *                          otherwise (print warning if password seems to
+  *                          be a weak password)
+  *          userData      - user data
+  * Output : -
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
+  auto Errors getNamePassword(String        name,
+                              Password      *password,
+                              PasswordTypes passwordType,
+                              const char    *text,
+                              bool          validateFlag,
+                              bool          weakCheckFlag,
+                              void          *userData
+                             );
+  Errors getNamePassword(String        name,
+                         Password      *password,
+                         PasswordTypes passwordType,
+                         const char    *text,
+                         bool          validateFlag,
+                         bool          weakCheckFlag,
+                         void          *userData
+                        )
+  {
+    RestoreCommandInfo   *restoreCommandInfo = (RestoreCommandInfo*)userData;
+    StringMap            resultMap;
+    Errors               error;
+    ServerIOEncryptTypes encryptType;
+    String               encryptedPassword;
+
+    assert(password != NULL);
+    assert(restoreCommandInfo != NULL);
+
+    UNUSED_VARIABLE(validateFlag);
+    UNUSED_VARIABLE(weakCheckFlag);
+
+    // init variables
+    resultMap = StringMap_new();
+
+    // request password
+    error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                  60*MS_PER_S,
+                                  resultMap,
+                                  "REQUEST_PASSWORD",
+                                  "name=%'S passwordType=%'s passwordText=%'s",
+                                  name,
+                                  getPasswordTypeText(passwordType),
+                                  text
+                                 );
+    if (error != ERROR_NONE)
+    {
+      StringMap_delete(resultMap);
+      return error;
+    }
+
+    // get name, password
+    if (name != NULL)
+    {
+      if (!StringMap_getString(resultMap,"name",name,NULL))
+      {
+        StringMap_delete(resultMap);
+        return ERROR_EXPECTED_PARAMETER;
+      }
+    }
+    if (!StringMap_getEnum(resultMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
+    {
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
+    encryptedPassword = String_new();
+    if (!StringMap_getString(resultMap,"encryptedPassword",encryptedPassword,NULL))
+    {
+      String_delete(encryptedPassword);
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
+
+    // decrypt password
+    error = ServerIO_decryptPassword(&clientInfo->io,
+                                     password,
+                                     encryptType,
+                                     encryptedPassword
+                                    );
+    if (error != ERROR_NONE)
+    {
+      String_delete(encryptedPassword);
+      StringMap_delete(resultMap);
+      return error;
+    }
+
+    // free resources
+    String_delete(encryptedPassword);
+    StringMap_delete(resultMap);
+
+    return ERROR_NONE;
+  }
+
+  Types              type;
+  bool               directoryContentFlag;
+  bool               sparseFilesFlag;
+  bool               skipVerifySignaturesFlag;
+  String             storageName;
+  IndexId            entryId;
+  String             entryName;
+  JobOptions         jobOptions;
+  StringList         storageNameList;
+  EntryList          includeEntryList;
+  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
+  char               byName[256];
+  RestoreCommandInfo restoreCommandInfo;
+  Errors             error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get type, destination, directory content flag, overwrite flag
+  if (!StringMap_getEnum(argumentMap,"type",&type,CALLBACK_((StringMapParseEnumFunction)parseRestoreType,NULL),UNKNOWN))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"type=ARCHIVES|ENTRIES");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"destination",clientInfo->jobOptions.destination,NULL))
+  {
+    String_delete(clientInfo->jobOptions.destination);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"destination=<name>");
+    return;
+  }
+  StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
+  StringMap_getBool(argumentMap,"sparse",&sparseFilesFlag,FALSE);
+  StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
+  if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&clientInfo->jobOptions.restoreEntryMode,CALLBACK_((StringMapParseEnumFunction)parseRestoreEntryMode,NULL),RESTORE_ENTRY_MODE_STOP))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"restoreEntryMode=STOP|RENAME|OVERWRITE|SKIP_EXISTING");
+    return;
+  }
+
+  // init variables
+  storageName = String_new();
+  entryName   = String_new();
+  Job_duplicateOptions(&jobOptions,&clientInfo->jobOptions);
+
+  // get storage/entry list
+  error = ERROR_NONE;
+  StringList_init(&storageNameList);
+  EntryList_init(&includeEntryList);
+  switch (type)
+  {
+    case ARCHIVES:
+      if (error == ERROR_NONE)
+      {
+        error = Index_initListStorages(&indexQueryHandle1,
+                                       indexHandle,
+                                       INDEX_ID_ANY,  // uuidId
+                                       INDEX_ID_ANY,  // entityId
+                                       NULL,  // jobUUID
+                                       NULL,  // scheduleUUID,
+                                       Array_cArray(&clientInfo->indexIdArray),
+                                       Array_length(&clientInfo->indexIdArray),
+                                       INDEX_TYPE_SET_ALL,
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
+                                       NULL,  // hostName
+                                       NULL,  // userName
+                                       NULL,  // name
+                                       INDEX_STORAGE_SORT_MODE_NONE,
+                                       DATABASE_ORDERING_NONE,
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error == ERROR_NONE)
+        {
+          while (   !isCommandAborted(clientInfo,id)
+                 && !isQuit()
+                 && Index_getNextStorage(&indexQueryHandle1,
+                                         NULL,  // uuidId
+                                         NULL,  // jobUUID
+                                         NULL,  // entityId
+                                         NULL,  // scheduleUUID
+                                         NULL,  // hostName
+                                         NULL,  // userName
+                                         NULL,  // comment
+                                         NULL,  // createdDateTime
+                                         NULL,  // archiveType
+                                         NULL,  // storageId
+                                         storageName,
+                                         NULL,  // createdDateTime
+                                         NULL,  // size
+                                         NULL,  // indexState
+                                         NULL,  // indexMode,
+                                         NULL,  // lastCheckedDateTime,
+                                         NULL,  // errorMessage,
+                                         NULL,  // totalEntryCount
+                                         NULL  // totalEntrySize
+                                        )
+                )
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          Index_doneList(&indexQueryHandle1);
+        }
+      }
+      if (StringList_isEmpty(&storageNameList))
+      {
+        error = ERROR_ARCHIVE_NOT_FOUND;
+      }
+      break;
+    case ENTRIES:
+      error = Index_initListEntries(&indexQueryHandle1,
+                                    indexHandle,
+                                    NULL, // indexIds
+                                    0, // indexIdCount
+                                    Array_cArray(&clientInfo->entryIdArray),
+                                    Array_length(&clientInfo->entryIdArray),
+                                    INDEX_TYPE_ANY,
+                                    NULL, // name
+                                    FALSE,  // newestOnly,
+                                    FALSE,  //fragments
+                                    INDEX_ENTRY_SORT_MODE_NONE,
+                                    DATABASE_ORDERING_NONE,
+                                    0,
+                                    INDEX_UNLIMITED
+                                   );
+      if (error == ERROR_NONE)
+      {
+        while (   !isCommandAborted(clientInfo,id)
+               && !isQuit()
+               && Index_getNextEntry(&indexQueryHandle1,
+                                     NULL,  // uuidId
+                                     NULL,  // jobUUID,
+                                     NULL,  // entityId
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // hostName
+                                     NULL,  // userName
+                                     NULL,  // archiveType,
+                                     &entryId,
+                                     entryName,
+                                     NULL,  // storageId
+                                     storageName,
+                                     NULL,  // size
+                                     NULL,  // timeModified
+                                     NULL,  // userId
+                                     NULL,  // groupId
+                                     NULL,  // permission
+                                     NULL,  // fragmentCount
+                                     NULL,  // destinationName
+                                     NULL,  // fileSystemType
+                                     NULL  // blockSize
+                                    )
+              )
+        {
+          EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+          if (directoryContentFlag && (Index_getType(entryId) == INDEX_TYPE_DIRECTORY))
+          {
+            String_appendCString(entryName,"/*");
+            EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+          }
+
+          if (   (Index_getType(entryId) == INDEX_TYPE_FILE)
+              || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
+              || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
+             )
+          {
+            error = Index_initListEntryFragments(&indexQueryHandle2,
+                                                 indexHandle,
+                                                 entryId,
+                                                 0,
+                                                 INDEX_UNLIMITED
+                                                );
+            if (error == ERROR_NONE)
+            {
+              while (   !isCommandAborted(clientInfo,id)
+                     && !isQuit()
+                     && Index_getNextEntryFragment(&indexQueryHandle2,
+                                                   NULL,  // entryFragmentId,
+                                                   NULL,  // storageId,
+                                                   storageName,
+                                                   NULL,  // storageDateTime
+                                                   NULL,  // fragmentOffset
+                                                   NULL  // fragmentSize
+                                                  )
+                    )
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              Index_doneList(&indexQueryHandle2);
+            }
+          }
+          else
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+        }
+        Index_doneList(&indexQueryHandle1);
+      }
+      if (StringList_isEmpty(&storageNameList))
+      {
+        error = ERROR_ENTRY_NOT_FOUND;
+      }
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  if (error != ERROR_NONE)
+  {
+    EntryList_done(&includeEntryList);
+    StringList_done(&storageNameList);
+    Job_doneOptions(&jobOptions);
+    String_delete(entryName);
+    String_delete(storageName);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+    return;
+  }
+
+  // restore
+  getClientInfoString(clientInfo,byName,sizeof(byName));
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Start restore by %s: %d archives/%d entries",
+             byName,
+             List_count(&storageNameList),
+             List_count(&includeEntryList)
+            );
+  jobOptions.sparseFilesFlag               = sparseFilesFlag;
+  jobOptions.skipVerifySignaturesFlag = skipVerifySignaturesFlag;
+  restoreCommandInfo.clientInfo  = clientInfo;
+  restoreCommandInfo.id          = id;
+  restoreCommandInfo.skipAllFlag = FALSE;
+  restoreCommandInfo.abortFlag   = FALSE;
+  error = Command_restore(&storageNameList,
+                          &includeEntryList,
+                          NULL,  // excludePatternList
+                          &jobOptions,
+                          CALLBACK_(restoreUpdateStatusInfo,&restoreCommandInfo),
+                          CALLBACK_(restoreHandleError,&restoreCommandInfo),
+                          CALLBACK_(getNamePassword,&restoreCommandInfo),
+                          CALLBACK_(NULL,NULL),  // isPause callback
+                          CALLBACK_INLINE(bool,(void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
+                            return isCommandAborted(clientInfo,id);
+                          },NULL),
+                          NULL  // logHandle
+                         );
+  if (error == ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=RESTORED");
+  }
+  else
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+  }
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Done restore for %s",
+             byName
+            );
+
+  // free resources
+  EntryList_done(&includeEntryList);
+  StringList_done(&storageNameList);
+  Job_doneOptions(&jobOptions);
+  String_delete(entryName);
+  String_delete(storageName);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_restoreContinue
+* Purpose: continue restore archives/files
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(argumentMap);
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
 #ifndef NDEBUG
 /***********************************************************************\
 * Name   : serverCommand_debugPrintStatistics
@@ -20451,6 +20473,10 @@ SERVER_COMMANDS[] =
 
   { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
+  { "ENTITY_MOVE_TO",              serverCommand_entityMoveTo,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+
+  { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+
   { "INDEX_INFO",                  serverCommand_indexInfo,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
@@ -20467,19 +20493,16 @@ SERVER_COMMANDS[] =
   { "INDEX_ENTRY_FRAGMENT_LIST",   serverCommand_indexEntryFragmentList,   AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_HISTORY_LIST",          serverCommand_indexHistoryList,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
-
-  { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
-  { "RESTORE_CONTINUE",            serverCommand_restoreContinue,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
-
   { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
-  { "INDEX_ENTITY_MOVE_TO",        serverCommand_indexEntityMoveTo,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+
+  { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "RESTORE_CONTINUE",            serverCommand_restoreContinue,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   // obsolete
   { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
@@ -21539,6 +21562,7 @@ Errors Server_socket(void)
   List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   jobList.activeCount             = 0;
+  Semaphore_init(&moveEntityLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                     = SERVER_STATE_RUNNING;
   pauseFlags.create               = FALSE;
@@ -22406,6 +22430,7 @@ Errors Server_socket(void)
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
+  Semaphore_done(&moveEntityLock);
   if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
   List_done(&authorizationFailList);
   List_done(&clientList);
@@ -22445,6 +22470,7 @@ Errors Server_batch(int inputDescriptor,
   List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   jobList.activeCount             = 0;
+  Semaphore_init(&moveEntityLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                     = SERVER_STATE_RUNNING;
   pauseFlags.create               = FALSE;
@@ -22660,6 +22686,7 @@ processCommand(&clientInfo,commandString);
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
+  Semaphore_done(&moveEntityLock);
   List_done(&authorizationFailList);
   List_done(&clientList);
   Semaphore_done(&clientList.lock);

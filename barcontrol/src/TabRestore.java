@@ -8429,16 +8429,16 @@ Dprintf.dprintf("");
   {
     try
     {
-      TreeItem selectedTreeItems[] = widgetStorageTree.getSelection();
-      if (selectedTreeItems.length > 0)
+      TreeItem treeItems[] = widgetStorageTree.getSelection();
+      if (treeItems.length > 0)
       {
-        TreeItem selectedTreeItem = selectedTreeItems[0];
+        TreeItem treeItem = treeItems[0];
 
-        if (   !selectedTreeItem.isDisposed()
-            && (selectedTreeItem.getData() instanceof EntityIndexData)
+        if (   !treeItem.isDisposed()
+            && (treeItem.getData() instanceof EntityIndexData)
            )
         {
-          EntityIndexData selectedEntityIndexData = (EntityIndexData)selectedTreeItem.getData();
+          EntityIndexData selectedEntityIndexData = (EntityIndexData)treeItem.getData();
 
           String moveToPath = Dialogs.file(shell,
                                            Dialogs.FileDialogTypes.DIRECTORY,
@@ -8449,8 +8449,6 @@ Dprintf.dprintf("");
                                            "*",
                                            BARServer.remoteListDirectory(selectedEntityIndexData.jobUUID)
                                           );
-Dprintf.dprintf("moveToPath=%s",moveToPath);
-//          String moveTo = Dialogs.path(shell,BARControl.tr("Move storages of entity"),BARControl.tr("Move to:"));
           if (moveToPath != null)
           {
             final BusyDialog busyDialog = new BusyDialog(shell,
@@ -8463,7 +8461,7 @@ Dprintf.dprintf("moveToPath=%s",moveToPath);
 
             try
             {
-              BARServer.executeCommand(StringParser.format("INDEX_ENTITY_MOVE_TO entityId=%lld moveTo=%s",
+              BARServer.executeCommand(StringParser.format("ENTITY_MOVE_TO entityId=%lld moveTo=%s",
                                                            selectedEntityIndexData.id,
                                                            moveToPath
                                                           ),
