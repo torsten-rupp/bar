@@ -1990,7 +1990,7 @@ LOCAL void pauseThreadCode(void)
 * Input  : dateTime - date/time
 *          userData - user data (unused)
 * Output : -
-* Return : TRUE iff maintenance time or no maintenance defined at all
+* Return : TRUE if maintenance, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -4251,10 +4251,7 @@ LOCAL void updateIndexThreadCode(void)
         {
           // pause
           pauseIndexUpdate();
-          if (isQuit())
-          {
-            break;
-          }
+          if (isQuit()) break;
 
           // parse storage name, get printable name
           error = Storage_parseName(&storageSpecifier,storageName);
@@ -4423,10 +4420,7 @@ LOCAL void updateIndexThreadCode(void)
         // free resources
         List_done(&indexCryptPasswordList);
       }
-      if (isQuit())
-      {
-        break;
-      }
+      if (isQuit()) break;
 
       // sleep and check quit flag/trigger
       if (storageId == INDEX_ID_NONE)
@@ -4466,9 +4460,7 @@ LOCAL void updateIndexThreadCode(void)
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
   StorageSpecifier storageSpecifier;
-  String           directoryName;
-  StringTokenizer  stringTokenizer;
-  String           storageDirectoryName;
+  String           directoryName,storageDirectoryName;
   const JobNode    *jobNode;
 
   // init variables
@@ -4483,16 +4475,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
     {
       if (Storage_parseName(&storageSpecifier,jobNode->job.storageName) == ERROR_NONE)
       {
-        // get directory part without macros
         File_getDirectoryName(directoryName,storageSpecifier.archiveName);
-        while (   !String_isEmpty(directoryName)
-               && Misc_hasMacros(directoryName)
-              )
-        {
-          File_getDirectoryName(directoryName,directoryName);
-        }
-
-        // add to list
         Storage_getName(storageDirectoryName,&storageSpecifier,directoryName);
         if (!StringList_contains(storageDirectoryList,storageDirectoryName))
         {
@@ -4577,10 +4560,7 @@ LOCAL void autoIndexThreadCode(void)
     {
       // pause
       pauseIndexUpdate();
-      if (isQuit())
-      {
-        break;
-      }
+      if (isQuit()) break;
 
       if (   Index_isInitialized()
           && globalOptions.indexDatabaseAutoUpdateFlag
@@ -4677,7 +4657,7 @@ LOCAL void autoIndexThreadCode(void)
                                                {
                                                  Misc_mdelay(5*MS_PER_SECOND);
                                                }
-                                               if (isQuit())
+                                               if (!isQuit())
                                                {
                                                  return ERROR_NONE;
                                                }
@@ -4781,103 +4761,91 @@ LOCAL void autoIndexThreadCode(void)
           String_delete(storageDirectoryName);
         }
         Job_doneOptions(&jobOptions);
-        if (isQuit())
-        {
-          break;
-        }
+        if (isQuit()) break;
 
         // delete not existing and expired indizes
-        if (isMaintenanceTime(Misc_getCurrentDateTime(),NULL))
+        error = Index_initListStorages(&indexQueryHandle,
+                                       &indexHandle,
+                                       INDEX_ID_ANY,  // uuidId
+                                       INDEX_ID_ANY,  // entity id
+                                       NULL,  // jobUUID
+                                       NULL,  // scheduleUUID,
+                                       NULL,  // indexIds
+                                       0,  // indexIdCount
+                                       INDEX_TYPE_SET_ALL,
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
+                                       NULL,  // hostName
+                                       NULL,  // userName
+                                       NULL,  // name
+                                       INDEX_STORAGE_SORT_MODE_NONE,
+                                       DATABASE_ORDERING_NONE,
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error == ERROR_NONE)
         {
-          error = Index_initListStorages(&indexQueryHandle,
-                                         &indexHandle,
-                                         INDEX_ID_ANY,  // uuidId
-                                         INDEX_ID_ANY,  // entity id
+          now    = Misc_getCurrentDateTime();
+          string = String_new();
+          while (   !isQuit()
+                 && Index_getNextStorage(&indexQueryHandle,
+                                         NULL,  // uuidId
                                          NULL,  // jobUUID
-                                         NULL,  // scheduleUUID,
-                                         NULL,  // indexIds
-                                         0,  // indexIdCount
-                                         INDEX_TYPE_SET_ALL,
-                                         INDEX_STATE_SET_ALL,
-                                         INDEX_MODE_SET_ALL,
+                                         NULL,  // entityId
+                                         NULL,  // scheduleUUID
                                          NULL,  // hostName
                                          NULL,  // userName
-                                         NULL,  // name
-                                         INDEX_STORAGE_SORT_MODE_NONE,
-                                         DATABASE_ORDERING_NONE,
-                                         0LL,  // offset
-                                         INDEX_UNLIMITED
-                                        );
-          if (error == ERROR_NONE)
+                                         NULL,  // comment
+                                         NULL,  // createdDateTime
+                                         NULL,  // archiveType
+                                         &storageId,
+                                         storageName,
+                                         &createdDateTime,
+                                         NULL,  // size
+                                         &indexState,
+                                         &indexMode,
+                                         &lastCheckedDateTime,
+                                         NULL,  // errorMessage
+                                         NULL,  // totalEntryCount
+                                         NULL  // totalEntrySize
+                                        )
+                )
           {
-            now    = Misc_getCurrentDateTime();
-            string = String_new();
-            while (   !isQuit()
-                   && Index_getNextStorage(&indexQueryHandle,
-                                           NULL,  // uuidId
-                                           NULL,  // jobUUID
-                                           NULL,  // entityId
-                                           NULL,  // scheduleUUID
-                                           NULL,  // hostName
-                                           NULL,  // userName
-                                           NULL,  // comment
-                                           NULL,  // createdDateTime
-                                           NULL,  // archiveType
-                                           &storageId,
-                                           storageName,
-                                           &createdDateTime,
-                                           NULL,  // size
-                                           &indexState,
-                                           &indexMode,
-                                           &lastCheckedDateTime,
-                                           NULL,  // errorMessage
-                                           NULL,  // totalEntryCount
-                                           NULL  // totalEntrySize
-                                          )
-                  )
+            // get printable name (if possible)
+            error = Storage_parseName(&storageSpecifier,storageName);
+            if (error == ERROR_NONE)
             {
-              // get printable name (if possible)
-              error = Storage_parseName(&storageSpecifier,storageName);
-              if (error == ERROR_NONE)
-              {
-                Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
-              }
-              else
-              {
-                String_set(printableStorageName,storageName);
-              }
-
-              if (   (indexMode == INDEX_MODE_AUTO)
-                  && (indexState != INDEX_STATE_UPDATE_REQUESTED)
-                  && (indexState != INDEX_STATE_UPDATE)
-                  && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
-                  && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
-                 )
-              {
-                Index_deleteStorage(&indexHandle,storageId);
-
-                plogMessage(NULL,  // logHandle,
-                            LOG_TYPE_INDEX,
-                            "INDEX",
-                            "Auto deleted index for '%s', last checked %s",
-                            String_cString(printableStorageName),
-                            String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,FALSE,NULL))
-                           );
-              }
+              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
             }
-            Index_doneList(&indexQueryHandle);
-            String_delete(string);
+            else
+            {
+              String_set(printableStorageName,storageName);
+            }
+
+            if (   (indexMode == INDEX_MODE_AUTO)
+                && (indexState != INDEX_STATE_UPDATE_REQUESTED)
+                && (indexState != INDEX_STATE_UPDATE)
+                && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
+                && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
+               )
+            {
+              Index_deleteStorage(&indexHandle,storageId);
+
+              plogMessage(NULL,  // logHandle,
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Auto deleted index for '%s', last checked %s",
+                          String_cString(printableStorageName),
+                          String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,FALSE,NULL))
+                         );
+            }
           }
+          Index_doneList(&indexQueryHandle);
+          String_delete(string);
         }
-        if (isQuit())
-        {
-          break;
-        }
+        if (isQuit()) break;
       }
-      if (isQuit())
-      {
-        break;
-      }
+      if (isQuit()) break;
 
       // sleep and check quit flag
       delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,&autoIndexThreadTrigger);
