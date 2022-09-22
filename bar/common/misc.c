@@ -1811,6 +1811,57 @@ MachineId Misc_getMachineId(void)
 
 /*---------------------------------------------------------------------*/
 
+bool Misc_hasMacros(ConstString templateString)
+{
+  assert(templateString != NULL);
+
+  return Misc_hasMacrosCString(String_cString(templateString));
+}
+
+bool Misc_hasMacrosCString(const char *templateString)
+{
+  bool  macroFlag;
+  ulong i;
+
+  assert(templateString != NULL);
+
+  macroFlag = FALSE;
+
+  i = 0;
+  while (   (templateString[i] != NUL)
+         && !macroFlag
+        )
+  {
+    if (templateString[i] == '%')
+    {
+      switch (templateString[i+1])
+      {
+        case '%':
+          // escaped %
+          i += 2;
+          break;
+        case ':':
+          // escaped :
+          i += 2;
+          break;
+        default:
+          // macro %
+          macroFlag = TRUE;
+          i++;
+          break;
+      }
+    }
+    else
+    {
+      i++;
+    }
+  }
+
+  return macroFlag;
+}
+
+bool Misc_hasMacrosCString(const char *templateString);
+
 String Misc_expandMacros(String           string,
                          const char       *templateString,
                          ExpandMacroModes expandMacroMode,

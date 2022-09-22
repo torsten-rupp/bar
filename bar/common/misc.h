@@ -1048,6 +1048,18 @@ MachineId Misc_getMachineId(void);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_hasMacros, Misc_hasMacrosCString
+* Purpose: check if template string contains macros %<name>:<format>
+* Input  : templateString - template string to check
+* Output : -
+* Return : TRUE if template string has macros
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_hasMacros(ConstString templateString);
+bool Misc_hasMacrosCString(const char *templateString);
+
+/***********************************************************************\
 * Name   : Misc_expandMacros
 * Purpose: expand macros %<name>:<format> in string
 * Input  : string               - string variable
