@@ -12790,7 +12790,6 @@ throw new Error("NYI");
         int i = 0;
         while (i < fileName.length())
         {
-Dprintf.dprintf("fileName.charAt(i)=%s",fileName.charAt(i));
           switch (fileName.charAt(i))
           {
             case '%':

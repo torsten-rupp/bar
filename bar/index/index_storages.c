@@ -2399,7 +2399,7 @@ Errors IndexStorage_prune(IndexHandle *indexHandle,
 
   UNUSED_VARIABLE(doneFlag);
   UNUSED_VARIABLE(deletedCounter);
-  
+
   // init variables
   storageName = String_new();
 
@@ -5488,6 +5488,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
   return error;
 }
 
+// TODO: purge, not delete
 Errors Index_deleteStorage(IndexHandle *indexHandle,
                            IndexId     storageId
                           )
