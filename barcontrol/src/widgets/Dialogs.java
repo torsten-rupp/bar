@@ -4324,10 +4324,13 @@ class Dialogs
        */
       public void updateShortcutList(List widgetShortcutList, ArrayList<T> shortcutList)
       {
-        widgetShortcutList.removeAll();
-        for (T file : shortcutList)
+        if (!widgetShortcutList.isDisposed())
         {
-          widgetShortcutList.add(file.getAbsolutePath());
+          widgetShortcutList.removeAll();
+          for (T file : shortcutList)
+          {
+            widgetShortcutList.add(file.getAbsolutePath());
+          }
         }
       }
 
