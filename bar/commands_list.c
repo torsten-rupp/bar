@@ -259,7 +259,7 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 {
   assert(printableStorageName != NULL);
 
-  if (showEntriesFlag || globalOptions.metaInfoFlag)
+  if (showEntriesFlag)
   {
     if (!globalOptions.groupFlag && !globalOptions.noHeaderFooterFlag)
     {
@@ -3200,7 +3200,7 @@ NULL, // masterSocketHandle
                 uint64       createdDateTime;
                 String       comment;
 
-                if (globalOptions.metaInfoFlag && !globalOptions.groupFlag)
+                if (!showEntriesFlag && !globalOptions.groupFlag)
                 {
                   // read archive file
                   hostName = String_new();
@@ -4143,7 +4143,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // output signature state
-  if (!showEntriesFlag && !globalOptions.groupFlag && !globalOptions.metaInfoFlag)
+  if (!showEntriesFlag && !globalOptions.groupFlag)
   {
     switch (allCryptSignatureState)
     {
