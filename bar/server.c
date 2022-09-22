@@ -4251,7 +4251,10 @@ LOCAL void updateIndexThreadCode(void)
         {
           // pause
           pauseIndexUpdate();
-          if (isQuit()) break;
+          if (isQuit())
+          {
+            break;
+          }
 
           // parse storage name, get printable name
           error = Storage_parseName(&storageSpecifier,storageName);
@@ -4420,7 +4423,10 @@ LOCAL void updateIndexThreadCode(void)
         // free resources
         List_done(&indexCryptPasswordList);
       }
-      if (isQuit()) break;
+      if (isQuit())
+      {
+        break;
+      }
 
       // sleep and check quit flag/trigger
       if (storageId == INDEX_ID_NONE)
@@ -4460,7 +4466,9 @@ LOCAL void updateIndexThreadCode(void)
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
   StorageSpecifier storageSpecifier;
-  String           directoryName,storageDirectoryName;
+  String           directoryName;
+  StringTokenizer  stringTokenizer;
+  String           storageDirectoryName;
   const JobNode    *jobNode;
 
   // init variables
@@ -4475,7 +4483,16 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
     {
       if (Storage_parseName(&storageSpecifier,jobNode->job.storageName) == ERROR_NONE)
       {
+        // get directory part without macros
         File_getDirectoryName(directoryName,storageSpecifier.archiveName);
+        while (   !String_isEmpty(directoryName)
+               && Misc_hasMacros(directoryName)
+              )
+        {
+          File_getDirectoryName(directoryName,directoryName);
+        }
+
+        // add to list
         Storage_getName(storageDirectoryName,&storageSpecifier,directoryName);
         if (!StringList_contains(storageDirectoryList,storageDirectoryName))
         {
@@ -4560,7 +4577,10 @@ LOCAL void autoIndexThreadCode(void)
     {
       // pause
       pauseIndexUpdate();
-      if (isQuit()) break;
+      if (isQuit())
+      {
+        break;
+      }
 
       if (   Index_isInitialized()
           && globalOptions.indexDatabaseAutoUpdateFlag
@@ -4649,6 +4669,18 @@ LOCAL void autoIndexThreadCode(void)
                                              case FILE_TYPE_HARDLINK:
                                                // get printable name
                                                Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+                                               // wait until index is unused
+                                               while (   Index_isIndexInUse()
+                                                      && !isQuit()
+                                                     )
+                                               {
+                                                 Misc_mdelay(5*MS_PER_SECOND);
+                                               }
+                                               if (isQuit())
+                                               {
+                                                 return ERROR_NONE;
+                                               }
 
                                                // get index id, request index update
                                                error = Index_findStorageByName(&indexHandle,
@@ -4749,7 +4781,10 @@ LOCAL void autoIndexThreadCode(void)
           String_delete(storageDirectoryName);
         }
         Job_doneOptions(&jobOptions);
-        if (isQuit()) break;
+        if (isQuit())
+        {
+          break;
+        }
 
         // delete not existing and expired indizes
         if (isMaintenanceTime(Misc_getCurrentDateTime(),NULL))
@@ -4834,9 +4869,15 @@ LOCAL void autoIndexThreadCode(void)
             String_delete(string);
           }
         }
-        if (isQuit()) break;
+        if (isQuit())
+        {
+          break;
+        }
       }
-      if (isQuit()) break;
+      if (isQuit())
+      {
+        break;
+      }
 
       // sleep and check quit flag
       delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,&autoIndexThreadTrigger);
