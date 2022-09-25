@@ -92,10 +92,12 @@ typedef struct UUIDNode
 {
   LIST_NODE_HEADER(struct UUIDNode);
 
-  char         jobUUID[MISC_UUID_STRING_LENGTH+1];
-  char         scheduleUUID[MISC_UUID_STRING_LENGTH+1];
-  ScheduleTime beginTime,endTime;
-  bool         cleanFlag;
+  char               jobUUID[MISC_UUID_STRING_LENGTH+1];
+  char               scheduleUUID[MISC_UUID_STRING_LENGTH+1];
+  ScheduleDate       date;
+  ScheduleWeekDaySet weekDaySet;
+  ScheduleTime       beginTime,endTime;
+  bool               cleanFlag;
 } UUIDNode;
 
 typedef struct
@@ -122,6 +124,8 @@ typedef struct
   String       name;
   char         jobUUID[MISC_UUID_STRING_LENGTH+1];
   char         scheduleUUID[MISC_UUID_STRING_LENGTH+1];
+  ScheduleDate date;
+  WeekDaySet   weekDaySet;
   ScheduleTime beginTime,endTime;
   EntryList    entryList;
 } InitNotifyMsg;
@@ -730,6 +734,8 @@ LOCAL void deleteNotify(NotifyInfo *notifyInfo)
 
 LOCAL void addNotifySubDirectories(const char  *jobUUID,
                                    const char  *scheduleUUID,
+                                   ScheduleDate date,
+                                   WeekDaySet   weekDaySet,
                                    ScheduleTime beginTime,
                                    ScheduleTime endTime,
                                    ConstString  baseName
@@ -794,9 +800,11 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
         }
         stringSet(uuidNode->jobUUID,sizeof(uuidNode->jobUUID),jobUUID);
         stringSet(uuidNode->scheduleUUID,sizeof(uuidNode->scheduleUUID),scheduleUUID);
-        uuidNode->beginTime = beginTime;
-        uuidNode->endTime   = endTime;
-        uuidNode->cleanFlag = FALSE;
+        uuidNode->date       = date;
+        uuidNode->weekDaySet = weekDaySet;
+        uuidNode->beginTime  = beginTime;
+        uuidNode->endTime    = endTime;
+        uuidNode->cleanFlag  = FALSE;
       }
       if (notifyInfo == NULL)
       {
@@ -1027,6 +1035,8 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 LOCAL void initNotifies(ConstString     name,
                         const char      *jobUUID,
                         const char      *scheduleUUID,
+                        ScheduleDate    date,
+                        WeekDaySet      weekDaySet,
                         ScheduleTime    beginTime,
                         ScheduleTime    endTime,
                         const EntryList *entryList
@@ -1085,6 +1095,8 @@ LOCAL void initNotifies(ConstString     name,
     // add directory and sub-directories to notify
     addNotifySubDirectories(jobUUID,
                             scheduleUUID,
+                            date,
+                            weekDaySet,
                             beginTime,
                             endTime,
                             baseName
@@ -1226,6 +1238,8 @@ LOCAL void continuousInitDoneThreadCode(void)
         initNotifies(initNotifyMsg.name,
                      initNotifyMsg.jobUUID,
                      initNotifyMsg.scheduleUUID,
+                     initNotifyMsg.date,
+                     initNotifyMsg.weekDaySet,
                      initNotifyMsg.beginTime,
                      initNotifyMsg.endTime,
                      &initNotifyMsg.entryList
@@ -1447,6 +1461,7 @@ LOCAL void continuousThreadCode(void)
   DatabaseHandle             databaseHandle;
   SignalMask                 signalMask;
   ssize_t                    n;
+  uint                       year,month,day,weekDay;
   uint                       currentHour,currentMinute;
   const struct inotify_event *inotifyEvent;
   const NotifyInfo           *notifyInfo;
@@ -1495,13 +1510,13 @@ LOCAL void continuousThreadCode(void)
 
     // process inotify events
     Misc_splitDateTime(Misc_getCurrentDateTime(),
-                       NULL,  // year
-                       NULL,  // month
-                       NULL,  // day
+                       &year,
+                       &month,
+                       &day,
                        &currentHour,
                        &currentMinute,
                        NULL,  // second
-                       NULL,  // weekDay
+                       &weekDay,
                        NULL  // isDayLightSaving
                       );
     inotifyEvent = (const struct inotify_event*)buffer;
@@ -1545,13 +1560,18 @@ fprintf(stderr,"\n");
               // add directory and sub-directories to notify
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
-                // store into notify database
-                if (isInTimeRange(currentHour,currentMinute,
-                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                  uuidNode->endTime.hour,uuidNode->endTime.hour
-                                 )
+                if (   ((uuidNode->date.year  == DATE_ANY       ) || (uuidNode->date.year  == (int)year) )
+                    && ((uuidNode->date.month == DATE_ANY       ) || (uuidNode->date.month == (int)month))
+                    && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
+                    && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
+                    && isInTimeRange(currentHour,currentMinute,
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                    )
+
                    )
                 {
+                  // store into notify database
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
                   {
                     error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
@@ -1577,7 +1597,14 @@ fprintf(stderr,"\n");
                 }
 
                 // add directory and sub-directories to notify
-                addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,uuidNode->beginTime,uuidNode->endTime,absoluteName);
+                addNotifySubDirectories(uuidNode->jobUUID,
+                                        uuidNode->scheduleUUID,
+                                        uuidNode->date,
+                                        uuidNode->weekDaySet,
+                                        uuidNode->beginTime,
+                                        uuidNode->endTime,
+                                        absoluteName
+                                       );
               }
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
@@ -1595,10 +1622,15 @@ fprintf(stderr,"\n");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                if (isInTimeRange(currentHour,currentMinute,
-                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                  uuidNode->endTime.hour,uuidNode->endTime.hour
-                                 )
+                if (   ((uuidNode->date.year  == DATE_ANY       ) || (uuidNode->date.year  == (int)year) )
+                    && ((uuidNode->date.month == DATE_ANY       ) || (uuidNode->date.month == (int)month))
+                    && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
+                    && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
+                    && isInTimeRange(currentHour,currentMinute,
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                    )
+
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1626,7 +1658,14 @@ fprintf(stderr,"\n");
                 }
 
                 // add directory and sub-directories to notify
-                addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,uuidNode->beginTime,uuidNode->endTime,absoluteName);
+                addNotifySubDirectories(uuidNode->jobUUID,
+                                        uuidNode->scheduleUUID,
+                                        uuidNode->date,
+                                        uuidNode->weekDaySet,
+                                        uuidNode->beginTime,
+                                        uuidNode->endTime,
+                                        absoluteName
+                                       );
               }
             }
             else
@@ -1634,10 +1673,15 @@ fprintf(stderr,"\n");
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
-                if (isInTimeRange(currentHour,currentMinute,
-                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                  uuidNode->endTime.hour,uuidNode->endTime.hour
-                                 )
+                if (   ((uuidNode->date.year  == DATE_ANY       ) || (uuidNode->date.year  == (int)year) )
+                    && ((uuidNode->date.month == DATE_ANY       ) || (uuidNode->date.month == (int)month))
+                    && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
+                    && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
+                    && isInTimeRange(currentHour,currentMinute,
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                    )
+
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1681,22 +1725,15 @@ fprintf(stderr,"\n");
             {
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
-// TODO: remove
-#if 0
-fprintf(stderr,"%s:%d: %d:%d in %d:%d..%d:%d: %d\n",__FILE__,__LINE__,
-currentHour,currentMinute,
-                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                  uuidNode->endTime.hour,uuidNode->endTime.hour,
-isInTimeRange(currentHour,currentMinute,
-                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                  uuidNode->endTime.hour,uuidNode->endTime.hour
-                                 )
-);
-#endif
-                if (isInTimeRange(currentHour,currentMinute,
-                                  uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                  uuidNode->endTime.hour,uuidNode->endTime.hour
-                                 )
+                if (   ((uuidNode->date.year  == DATE_ANY       ) || (uuidNode->date.year  == (int)year) )
+                    && ((uuidNode->date.month == DATE_ANY       ) || (uuidNode->date.month == (int)month))
+                    && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
+                    && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
+                    && isInTimeRange(currentHour,currentMinute,
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
+                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                    )
+
                    )
                 {
                   if (!existsEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
@@ -1989,6 +2026,8 @@ void Continuous_done(void)
 Errors Continuous_initNotify(ConstString     name,
                              ConstString     jobUUID,
                              ConstString     scheduleUUID,
+                             ScheduleDate    date,
+                             WeekDaySet      weekDaySet,
                              ScheduleTime    beginTime,
                              ScheduleTime    endTime,
                              const EntryList *entryList
@@ -2002,12 +2041,14 @@ Errors Continuous_initNotify(ConstString     name,
 
   if (initFlag)
   {
-    initNotifyMsg.type      = INIT;
-    initNotifyMsg.name      = String_duplicate(name);
+    initNotifyMsg.type       = INIT;
+    initNotifyMsg.name       = String_duplicate(name);
     stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
     stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
-    initNotifyMsg.beginTime = beginTime;
-    initNotifyMsg.endTime   = endTime;
+    initNotifyMsg.date       = date;
+    initNotifyMsg.weekDaySet = weekDaySet;
+    initNotifyMsg.beginTime  = beginTime;
+    initNotifyMsg.endTime    = endTime;
     EntryList_initDuplicate(&initNotifyMsg.entryList,entryList,NULL,NULL);
 
     (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));

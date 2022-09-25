@@ -12,6 +12,7 @@
     archive if file already exists
   * fixed auto-index: skip macros in paths, termination
     condition
+  * fixed continuous schedule: date+week days
 
 2022-08-30 0.22
   * added support for external index database engines

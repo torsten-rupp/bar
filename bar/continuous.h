@@ -108,6 +108,8 @@ void Continuous_done(void);
 * Input  : name              - job name
 *          jobUUID           - job UUID
 *          scheduleUUID      - schedule UUID (can be NULL)
+*          date              - schedule date
+*          weekDaySet        - schedule weekday set
 *          beginTime,endTime - begin/end time
 * Output : -
 * Return : ERROR_NONE or error code
@@ -117,6 +119,8 @@ void Continuous_done(void);
 Errors Continuous_initNotify(ConstString     name,
                              ConstString     jobUUID,
                              ConstString     scheduleUUID,
+                             ScheduleDate    date,
+                             WeekDaySet      weekDaySet,
                              ScheduleTime    beginTime,
                              ScheduleTime    endTime,
                              const EntryList *entryList
