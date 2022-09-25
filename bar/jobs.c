@@ -174,10 +174,15 @@ LOCAL bool debugIsPersistenceListSorted(const PersistenceList *persistenceList)
 
   LIST_ITERATE(persistenceList,persistenceNode)
   {
-    assert(   (persistenceNode->next == NULL)
-           || (persistenceNode->next->maxAge >= persistenceNode->maxAge)
-          );
+    if (   (persistenceNode->next != NULL)
+        && (persistenceNode->next->maxAge < persistenceNode->maxAge)
+       )
+    {
+      return FALSE;
+    }
   }
+
+  return TRUE;
 }
 #endif
 
@@ -1566,17 +1571,24 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   return scheduleNode;
 }
 
+void Job_setScheduleModified(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  jobNode->scheduleModifiedFlag = TRUE;
+}
+
 void Job_flush(JobNode *jobNode)
 {
-  Errors error;
+  const ScheduleNode *scheduleNode;
+  Errors             error;
 
   assert(Semaphore_isLocked(&jobList.lock));
 
   if (jobNode->scheduleModifiedFlag)
   {
-    const ScheduleNode *scheduleNode;
-
-    // check if continuous schedule exists, update continuous notifies
+    // update continuous notifies
     LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
     {
       if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
@@ -1586,6 +1598,8 @@ void Job_flush(JobNode *jobNode)
           Continuous_initNotify(jobNode->name,
                                 jobNode->job.uuid,
                                 scheduleNode->uuid,
+                                scheduleNode->date,
+                                scheduleNode->weekDaySet,
                                 scheduleNode->beginTime,
                                 scheduleNode->endTime,
                                 &jobNode->job.includeEntryList
@@ -1602,7 +1616,8 @@ void Job_flush(JobNode *jobNode)
     }
   }
 
-  if (   (jobNode->includeExcludeModifiedFlag)
+  if (   (jobNode->modifiedFlag)
+      || (jobNode->includeExcludeModifiedFlag)
       || (jobNode->mountModifiedFlag)
       || (jobNode->scheduleModifiedFlag)
       || (jobNode->persistenceModifiedFlag)
@@ -1616,7 +1631,7 @@ void Job_flush(JobNode *jobNode)
   }
 }
 
-void Job_flushAllModified()
+void Job_flushAll()
 {
   JobNode *jobNode;
 
@@ -2439,7 +2454,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   }
 
   // update jobs
-  Job_writeAllModified();
+  Job_flushAll();
 
   // free resources
   String_delete(fileName);
@@ -2506,27 +2521,6 @@ Errors Job_write(JobNode *jobNode)
   jobNode->persistenceModifiedFlag    = FALSE;
 
   return ERROR_NONE;
-}
-
-void Job_writeAllModified(void)
-{
-  JobNode *jobNode;
-  Errors  error;
-
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    JOB_LIST_ITERATE(jobNode)
-    {
-      if (jobNode->modifiedFlag)
-      {
-        error = Job_write(jobNode);
-        if (error != ERROR_NONE)
-        {
-          printWarning("cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
-        }
-      }
-    }
-  }
 }
 
 void Job_trigger(JobNode      *jobNode,
@@ -3116,6 +3110,8 @@ void Job_updateNotifies(const JobNode *jobNode)
         Continuous_initNotify(jobNode->name,
                               jobNode->job.uuid,
                               scheduleNode->uuid,
+                              scheduleNode->date,
+                              scheduleNode->weekDaySet,
                               scheduleNode->beginTime,
                               scheduleNode->endTime,
                               &jobNode->job.includeEntryList

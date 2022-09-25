@@ -1338,6 +1338,9 @@ INLINE void Job_setModified(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE void Job_setModified(JobNode *jobNode)
 {
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
   jobNode->modifiedFlag = TRUE;
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
@@ -1355,6 +1358,9 @@ INLINE void Job_setIncludeExcludeModified(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE void Job_setIncludeExcludeModified(JobNode *jobNode)
 {
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
   jobNode->includeExcludeModifiedFlag = TRUE;
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
@@ -1372,6 +1378,9 @@ INLINE void Job_setMountModified(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE void Job_setMountModified(JobNode *jobNode)
 {
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
   jobNode->mountModifiedFlag = TRUE;
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
@@ -1385,13 +1394,7 @@ INLINE void Job_setMountModified(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-INLINE void Job_setScheduleModified(JobNode *jobNode);
-#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE void Job_setScheduleModified(JobNode *jobNode)
-{
-  jobNode->scheduleModifiedFlag = TRUE;
-}
-#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+void Job_setScheduleModified(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_setPersistenceModified
@@ -1406,6 +1409,9 @@ INLINE void Job_setPersistenceModified(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE void Job_setPersistenceModified(JobNode *jobNode)
 {
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
   jobNode->persistenceModifiedFlag = TRUE;
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
@@ -1422,7 +1428,7 @@ INLINE void Job_setPersistenceModified(JobNode *jobNode)
 void Job_flush(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_flushAllModified
+* Name   : Job_flushAll
 * Purpose: flush all modified job data
 * Input  : -
 * Output : -
@@ -1430,7 +1436,7 @@ void Job_flush(JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-void Job_flushAllModified(void);
+void Job_flushAll(void);
 
 /***********************************************************************\
 * Name   : Job_readScheduleInfo
@@ -1488,17 +1494,6 @@ Errors Job_rereadAll(ConstString jobsDirectory);
 \***********************************************************************/
 
 Errors Job_write(JobNode *jobNode);
-
-/***********************************************************************\
-* Name   : Job_writeAllModified
-* Purpose: write (update) modified job files
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : update jobList
-\***********************************************************************/
-
-void Job_writeAllModified(void);
 
 /***********************************************************************\
 * Name   : Job_trigger

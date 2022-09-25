@@ -1650,18 +1650,18 @@ LOCAL void schedulerThreadCode(void)
   }
 
   // write all modified jobs, re-read all job config files
-  Job_writeAllModified();
+  Job_flushAll();
   Job_rereadAll(globalOptions.jobsDirectory);
 
-  Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD*MS_PER_SECOND);
+  Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD);
   List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
   executeScheduleDateTime = 0LL;
   while (!isQuit())
   {
+    // write all modified jobs, re-read all job config files
     if (Misc_isTimeout(&rereadJobTimeout))
     {
-      // write all modified jobs, re-read all job config files
-      Job_writeAllModified();
+      Job_flushAll();
       Job_rereadAll(globalOptions.jobsDirectory);
 
       Misc_restartTimeout(&rereadJobTimeout,0);
@@ -11267,7 +11267,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
   }
   else
   {
-    Job_flushAllModified();
+    Job_flushAll();
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
