@@ -175,6 +175,7 @@ LOCAL bool debugIsPersistenceListSorted(const PersistenceList *persistenceList)
   LIST_ITERATE(persistenceList,persistenceNode)
   {
     if (   (persistenceNode->next != NULL)
+        && (persistenceNode->next->maxAge != AGE_FOREVER)
         && (persistenceNode->next->maxAge < persistenceNode->maxAge)
        )
     {

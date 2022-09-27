@@ -689,7 +689,7 @@ PersistenceNode *Job_duplicatePersistenceNode(PersistenceNode *fromPersistenceNo
 *          persistenceNode - persistence node
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : peristennce list sorted ascending in age
 \***********************************************************************/
 
 void Job_insertPersistenceNode(PersistenceList *persistenceList,
