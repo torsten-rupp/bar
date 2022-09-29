@@ -8,11 +8,13 @@
     fixed linkage
   * fixed restart aborted job on slave (MACBAR-102)
   * fixed write change job data
-  * fixed persistence move-to: auto rename destination
-    archive if file already exists
+  * fixed entities persistence move-to: avoid override
+    existing archives, move to correct destination, auto
+    rename destination archive if file already exists
   * fixed auto-index: skip macros in paths, termination
     condition
   * fixed continuous schedule: date+week days
+  * fixed log message 'no server password set'
 
 2022-08-30 0.22
   * added support for external index database engines

@@ -3752,7 +3752,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                 moveToCreatedDateTime = jobEntityNode->createdDateTime;
               }
               Index_doneList(&indexQueryHandle);
-            }            
+            }
           }
         }
 
@@ -6336,7 +6336,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                         : ERROR_INVALID_PASSWORD_;
               logMessage(NULL,  // logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Authorization of %s fail (error: %s)",
+                         "Authorization of master %s fail (error: %s)",
                          getClientInfoString(clientInfo,s,sizeof(s)),
                          Error_getText(error)
                         );
@@ -6384,10 +6384,10 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                     "Authorization of master %s fail (error: %s)",
-                     getClientInfoString(clientInfo,s,sizeof(s)),
-                     Error_getText(error)
-                    );
+                   "Authorization of master %s fail (error: %s)",
+                   getClientInfoString(clientInfo,s,sizeof(s)),
+                   Error_getText(error)
+                  );
       }
     }
     else
@@ -21711,7 +21711,7 @@ Errors Server_socket(void)
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
-  if (Configuration_isHashAvailable(&globalOptions.serverPasswordHash))
+  if (!Configuration_isHashAvailable(&globalOptions.serverPasswordHash))
   {
     printWarning("no server password set!");
   }
