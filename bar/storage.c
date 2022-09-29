@@ -2074,6 +2074,7 @@ uint Storage_getServerSettings(Server                 *server,
   Errors Storage_init(StorageInfo                     *storageInfo,
                       ServerIO                        *masterIO,
                       const StorageSpecifier          *storageSpecifier,
+// TODO: only storageOnMasterFlag need, pass this value and avoid jobOptions?
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
                       ServerConnectionPriorities      serverConnectionPriority,
