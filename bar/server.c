@@ -117,10 +117,10 @@ typedef enum
   PAIRING_MODE_MANUAL
 } PairingModes;
 
-// expiration
-typedef struct ExpirationEntityNode
+// entity
+typedef struct EntityNode
 {
-  LIST_NODE_HEADER(struct ExpirationEntityNode);
+  LIST_NODE_HEADER(struct EntityNode);
 
   IndexId               entityId;
   String                jobUUID;
@@ -131,12 +131,12 @@ typedef struct ExpirationEntityNode
   uint64                totalEntrySize;
   bool                  lockedFlag;
   const PersistenceNode *persistenceNode;
-} ExpirationEntityNode;
+} EntityNode;
 
 typedef struct
 {
-  LIST_HEADER(ExpirationEntityNode);
-} ExpirationEntityList;
+  LIST_HEADER(EntityNode);
+} EntityList;
 
 // aggregate info
 typedef struct
@@ -2566,27 +2566,27 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : freeExpirationNode
-* Purpose: free expiration node
-* Input  : expirationEntityNode - expiration entity node
-*          userData             - not used
+* Name   : freeEntityNode
+* Purpose: free entity node
+* Input  : entityNode - entity node
+*          userData   - not used
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeExpirationNode(ExpirationEntityNode *expirationEntityNode, void *userData)
+LOCAL void freeEntityNode(EntityNode *entityNode, void *userData)
 {
-  assert(expirationEntityNode != NULL);
+  assert(entityNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(expirationEntityNode->jobUUID);
+  String_delete(entityNode->jobUUID);
 }
 
 /***********************************************************************\
 * Name   : newExpirationNode
-* Purpose: allocate new expiration node
+* Purpose: allocate new entity node
 * Input  : entityId        - entity index id
 *          jobUUID         - job UUID
 *          archiveType     - archive type; see ArchiveTypes
@@ -2595,105 +2595,105 @@ LOCAL void freeExpirationNode(ExpirationEntityNode *expirationEntityNode, void *
 *          totalEntryCount - total entry count
 *          totalEntrySize  - total entry size [bytes]
 * Output : -
-* Return : new expiration node
+* Return : new entity node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ExpirationEntityNode *newExpirationNode(IndexId      entityId,
-                                              ConstString  jobUUID,
-                                              ArchiveTypes archiveType,
-                                              uint64       createdDateTime,
-                                              uint64       size,
-                                              ulong        totalEntryCount,
-                                              uint64       totalEntrySize,
-                                              bool         lockedFlag
-                                             )
+LOCAL EntityNode *newExpirationNode(IndexId      entityId,
+                                    ConstString  jobUUID,
+                                    ArchiveTypes archiveType,
+                                    uint64       createdDateTime,
+                                    uint64       size,
+                                    ulong        totalEntryCount,
+                                    uint64       totalEntrySize,
+                                    bool         lockedFlag
+                                   )
 {
-  ExpirationEntityNode *expirationEntityNode;
+  EntityNode *entityNode;
 
-  expirationEntityNode = LIST_NEW_NODE(ExpirationEntityNode);
-  if (expirationEntityNode == NULL)
+  entityNode = LIST_NEW_NODE(EntityNode);
+  if (entityNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  expirationEntityNode->entityId        = entityId;
-  expirationEntityNode->jobUUID         = String_duplicate(jobUUID);
-  expirationEntityNode->archiveType     = archiveType;
-  expirationEntityNode->createdDateTime = createdDateTime;
-  expirationEntityNode->size            = size;
-  expirationEntityNode->totalEntryCount = totalEntryCount;
-  expirationEntityNode->totalEntrySize  = totalEntrySize;
-  expirationEntityNode->lockedFlag      = lockedFlag;
-  expirationEntityNode->persistenceNode = NULL;
+  entityNode->entityId        = entityId;
+  entityNode->jobUUID         = String_duplicate(jobUUID);
+  entityNode->archiveType     = archiveType;
+  entityNode->createdDateTime = createdDateTime;
+  entityNode->size            = size;
+  entityNode->totalEntryCount = totalEntryCount;
+  entityNode->totalEntrySize  = totalEntrySize;
+  entityNode->lockedFlag      = lockedFlag;
+  entityNode->persistenceNode = NULL;
 
-  return expirationEntityNode;
+  return entityNode;
 }
 
 /***********************************************************************\
-* Name   : duplicateExpirationNode
-* Purpose: duplicate expiration node
-* Input  : fromExpirationEntityNode - from expiration node
+* Name   : duplicateEntityNode
+* Purpose: duplicate entity node
+* Input  : fromEntityNode - from entity node
 * Output : -
-* Return : new expiration node
+* Return : new entity node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ExpirationEntityNode *duplicateExpirationNode(const ExpirationEntityNode *fromExpirationEntityNode)
+LOCAL EntityNode *duplicateEntityNode(const EntityNode *fromEntityNode)
 {
-  ExpirationEntityNode *expirationEntityNode;
+  EntityNode *entityNode;
 
-  assert(fromExpirationEntityNode != NULL);
+  assert(fromEntityNode != NULL);
 
-  expirationEntityNode = LIST_NEW_NODE(ExpirationEntityNode);
-  if (expirationEntityNode == NULL)
+  entityNode = LIST_NEW_NODE(EntityNode);
+  if (entityNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  expirationEntityNode->entityId        = fromExpirationEntityNode->entityId;
-  expirationEntityNode->jobUUID         = String_duplicate(fromExpirationEntityNode->jobUUID);
-  expirationEntityNode->archiveType     = fromExpirationEntityNode->archiveType;
-  expirationEntityNode->createdDateTime = fromExpirationEntityNode->createdDateTime;
-  expirationEntityNode->size            = fromExpirationEntityNode->size;
-  expirationEntityNode->totalEntryCount = fromExpirationEntityNode->totalEntryCount;
-  expirationEntityNode->totalEntrySize  = fromExpirationEntityNode->totalEntrySize;
-  expirationEntityNode->lockedFlag      = fromExpirationEntityNode->lockedFlag;
-  expirationEntityNode->persistenceNode = NULL;
+  entityNode->entityId        = fromEntityNode->entityId;
+  entityNode->jobUUID         = String_duplicate(fromEntityNode->jobUUID);
+  entityNode->archiveType     = fromEntityNode->archiveType;
+  entityNode->createdDateTime = fromEntityNode->createdDateTime;
+  entityNode->size            = fromEntityNode->size;
+  entityNode->totalEntryCount = fromEntityNode->totalEntryCount;
+  entityNode->totalEntrySize  = fromEntityNode->totalEntrySize;
+  entityNode->lockedFlag      = fromEntityNode->lockedFlag;
+  entityNode->persistenceNode = NULL;
 
-  return expirationEntityNode;
+  return entityNode;
 }
 
 /***********************************************************************\
-* Name   : getExpirationEntityList
-* Purpose: get expiration list for all entities
-* Input  : expirationList - expiration list variale
+* Name   : getEntityList
+* Purpose: get list of all entities
+* Input  : entityList     - entity list variale
 *          indexHandle    - index handle (can be NULL)
-* Output : expirationList - expiration list (descend ordering)
-* Return : TRUE iff got expiration list
+* Output : entityList - entity list (descend ordering)
+* Return : TRUE iff got entity list
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
-                                   IndexHandle          *indexHandle
-                                  )
+LOCAL bool getEntityList(EntityList  *entityList,
+                         IndexHandle *indexHandle
+                        )
 {
-  Errors                error;
-  IndexQueryHandle      indexQueryHandle;
-  IndexId               entityId;
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes          archiveType;
-  uint64                createdDateTime;
-  uint64                totalSize;
-  uint                  totalEntryCount;
-  uint64                totalEntrySize;
-  uint                  lockedCount;
-  ExpirationEntityNode  *expirationEntityNode;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes     archiveType;
+  uint64           createdDateTime;
+  uint64           totalSize;
+  uint             totalEntryCount;
+  uint64           totalEntrySize;
+  uint             lockedCount;
+  EntityNode       *entityNode;
 
-  assert(expirationEntityList != NULL);
+  assert(entityList != NULL);
 
   // init variables
-  List_init(expirationEntityList,
+  List_init(entityList,
             CALLBACK_(NULL,NULL),
-            CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL)
+            CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL)
            );
 
   if (indexHandle != NULL)
@@ -2736,7 +2736,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
     {
 //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
       // create expiration node
-      expirationEntityNode = newExpirationNode(entityId,
+      entityNode = newExpirationNode(entityId,
                                                jobUUID,
                                                archiveType,
                                                createdDateTime,
@@ -2745,10 +2745,10 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
                                                totalEntrySize,
                                                (lockedCount > 0)
                                               );
-      assert(expirationEntityNode != NULL);
+      assert(entityNode != NULL);
 
       // add to list
-      List_append(expirationEntityList,expirationEntityNode);
+      List_append(entityList,entityNode);
     }
 
     Index_doneList(&indexQueryHandle);
@@ -2758,10 +2758,10 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
   #ifndef NDEBUG
     {
       uint64 lastCreatedDateTime = MAX_UINT64;
-      LIST_ITERATE(expirationEntityList,expirationEntityNode)
+      LIST_ITERATE(entityList,entityNode)
       {
-        assert(expirationEntityNode->createdDateTime <= lastCreatedDateTime);
-        lastCreatedDateTime = expirationEntityNode->createdDateTime;
+        assert(entityNode->createdDateTime <= lastCreatedDateTime);
+        lastCreatedDateTime = entityNode->createdDateTime;
       }
     }
   #endif
@@ -2770,32 +2770,32 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
 }
 
 /***********************************************************************\
-* Name   : getJobExpirationEntityList
-* Purpose: get entity expiration list for job
-* Input  : jobExpirationEntityList - job expiration list variable
-*          expirationEntityList    - expiration list
+* Name   : getJobEntityList
+* Purpose: get job entity list with assigned peristence
+* Input  : jobEntityList - job expiration list variable
+*          entityList    - expiration list
 *          jobUUID                 - job UUID
 *          persistenceList         - job persistence list
-* Output : jobExpirationEntityList - job expiration entity list with
+* Output : jobEntityList - job expiration entity list with
                                      all entities with
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationEntityList,
-                                      const ExpirationEntityList *expirationEntityList,
-                                      ConstString                jobUUID,
-                                      const PersistenceList      *persistenceList
-                                     )
+LOCAL void getJobEntityList(EntityList            *jobEntityList,
+                            const EntityList      *entityList,
+                            ConstString           jobUUID,
+                            const PersistenceList *persistenceList
+                           )
 {
-  uint64                     now;
-  const ExpirationEntityNode *expirationEntityNode;
-  ExpirationEntityNode       *jobExpirationEntityNode;
-  int                        age;
-  const PersistenceNode      *persistenceNode,*nextPersistenceNode;
+  uint64                 now;
+  const EntityNode      *entityNode;
+  EntityNode            *jobEntityNode;
+  int                   age;
+  const PersistenceNode *persistenceNode,*nextPersistenceNode;
 
-  assert(jobExpirationEntityList != NULL);
-  assert(expirationEntityList != NULL);
+  assert(jobEntityList != NULL);
+  assert(entityList != NULL);
   assert(jobUUID != NULL);
   assert(Job_isListLocked());
 
@@ -2803,39 +2803,39 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
   #ifndef NDEBUG
     {
       uint64 lastCreatedDateTime = MAX_UINT64;
-      LIST_ITERATE(expirationEntityList,expirationEntityNode)
+      LIST_ITERATE(entityList,entityNode)
       {
-        assert(expirationEntityNode->createdDateTime <= lastCreatedDateTime);
-        lastCreatedDateTime = expirationEntityNode->createdDateTime;
+        assert(entityNode->createdDateTime <= lastCreatedDateTime);
+        lastCreatedDateTime = entityNode->createdDateTime;
       }
     }
   #endif
 
   // init variables
-  List_init(jobExpirationEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+  List_init(jobEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL));
 
   now = Misc_getCurrentDateTime();
-  LIST_ITERATE(expirationEntityList,expirationEntityNode)
+  LIST_ITERATE(entityList,entityNode)
   {
-//fprintf(stderr,"%s:%d: uuid=%s id=%llu\n",__FILE__,__LINE__,String_cString(expirationEntityNode->jobUUID),Index_getDatabaseId(expirationEntityNode->entityId));
-    if (   String_equals(expirationEntityNode->jobUUID,jobUUID)
+//fprintf(stderr,"%s:%d: uuid=%s id=%llu\n",__FILE__,__LINE__,String_cString(entityNode->jobUUID),Index_getDatabaseId(entityNode->entityId));
+    if (   String_equals(entityNode->jobUUID,jobUUID)
         #ifdef SIMULATE_PURGE
-        && !Array_contains(&simulatedPurgeEntityIdArray,&expirationEntityNode->entityId)
+        && !Array_contains(&simulatedPurgeEntityIdArray,&entityNode->entityId)
         #endif /* SIMULATE_PURGE */
        )
     {
       // create expiration node
-      jobExpirationEntityNode = duplicateExpirationNode(expirationEntityNode);
-      assert(jobExpirationEntityNode != NULL);
+      jobEntityNode = duplicateEntityNode(entityNode);
+      assert(jobEntityNode != NULL);
 
       // find persistence node for entity
-      age                 = (now-expirationEntityNode->createdDateTime)/S_PER_DAY;
-      persistenceNode     = LIST_HEAD(persistenceList);
+      age             = (now-entityNode->createdDateTime)/S_PER_DAY;
+      persistenceNode = LIST_HEAD(persistenceList);
       do
       {
         // find persistence node for archive type
         while (   (persistenceNode != NULL)
-               && (persistenceNode->archiveType != expirationEntityNode->archiveType)
+               && (persistenceNode->archiveType != entityNode->archiveType)
               )
         {
           persistenceNode = persistenceNode->next;
@@ -2850,7 +2850,7 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
             nextPersistenceNode = nextPersistenceNode->next;
           }
           while (   (nextPersistenceNode != NULL)
-                 && (nextPersistenceNode->archiveType != expirationEntityNode->archiveType)
+                 && (nextPersistenceNode->archiveType != entityNode->archiveType)
                 );
         }
 
@@ -2864,7 +2864,7 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
                  )
              )
           {
-            jobExpirationEntityNode->persistenceNode = persistenceNode;
+            jobEntityNode->persistenceNode = persistenceNode;
             break;
           }
         }
@@ -2874,7 +2874,7 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
       while (persistenceNode != NULL);
 
       // add to list
-      List_append(jobExpirationEntityList,jobExpirationEntityNode);
+      List_append(jobEntityList,jobEntityNode);
     }
   }
 
@@ -2882,10 +2882,10 @@ LOCAL void getJobExpirationEntityList(ExpirationEntityList       *jobExpirationE
   #ifndef NDEBUG
     {
       uint64 lastCreatedDateTime = MAX_UINT64;
-      LIST_ITERATE(jobExpirationEntityList,expirationEntityNode)
+      LIST_ITERATE(jobEntityList,entityNode)
       {
-        assert(expirationEntityNode->createdDateTime <= lastCreatedDateTime);
-        lastCreatedDateTime = expirationEntityNode->createdDateTime;
+        assert(entityNode->createdDateTime <= lastCreatedDateTime);
+        lastCreatedDateTime = entityNode->createdDateTime;
       }
     }
   #endif
@@ -2919,32 +2919,32 @@ LOCAL bool hasPersistence(const JobNode *jobNode,
 /***********************************************************************\
 * Name   : isInTransit
 * Purpose: check if entity is "in-transit"
-* Input  : expirationEntityNode - expiration entity node
+* Input  : entityNode - expiration entity node
 * Output : -
 * Return : TRUE iff in transit
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool isInTransit(const ExpirationEntityNode *expirationEntityNode)
+LOCAL bool isInTransit(const EntityNode *entityNode)
 {
-  const PersistenceNode      *nextPersistenceNode;
-  const ExpirationEntityNode *nextExpirationEntityNode;
+  const PersistenceNode *nextPersistenceNode;
+  const EntityNode      *nextEntityNode;
 
-  assert(expirationEntityNode != NULL);
+  assert(entityNode != NULL);
 
-  nextPersistenceNode      = LIST_FIND_NEXT(expirationEntityNode->persistenceNode,
-                                            nextPersistenceNode,
-                                            nextPersistenceNode->archiveType == expirationEntityNode->archiveType
-                                           );
-  nextExpirationEntityNode = LIST_FIND_NEXT(expirationEntityNode,
-                                            nextExpirationEntityNode,
-                                            nextExpirationEntityNode->archiveType == expirationEntityNode->archiveType
-                                           );
+  nextPersistenceNode = LIST_FIND_NEXT(entityNode->persistenceNode,
+                                       nextPersistenceNode,
+                                       nextPersistenceNode->archiveType == entityNode->archiveType
+                                      );
+  nextEntityNode      = LIST_FIND_NEXT(entityNode,
+                                       nextEntityNode,
+                                       nextEntityNode->archiveType == entityNode->archiveType
+                                      );
 
   return (   (nextPersistenceNode != NULL)
-          && (   (nextExpirationEntityNode == NULL)
-              || (   (nextExpirationEntityNode != NULL)
-                  && (expirationEntityNode->persistenceNode != nextExpirationEntityNode->persistenceNode)
+          && (   (nextEntityNode == NULL)
+              || (   (nextEntityNode != NULL)
+                  && (entityNode->persistenceNode != nextEntityNode->persistenceNode)
                  )
              )
          );
@@ -2968,44 +2968,42 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                                   ArchiveTypes newArchiveType
                                  )
 {
-  Array                      entityIdArray;
-  String                     expiredJobName;
-  ExpirationEntityList       expirationEntityList;
-  uint64                     now;
-  IndexId                    expiredEntityId;
-  ArchiveTypes               expiredArchiveType;
-  uint64                     expiredCreatedDateTime;
-  ulong                      expiredTotalEntryCount;
-  uint64                     expiredTotalEntrySize;
-  String                     expiredReason;
-  MountList                  mountList;
-  Errors                     error;
-  const JobNode              *jobNode;
-  ExpirationEntityList       jobExpirationEntityList;
-  const ExpirationEntityNode *jobExpirationEntityNode,*otherJobExpirationEntityNode;
-  const ExpirationEntityNode *nextJobExpirationEntityNode;
-  uint                       age;
-  bool                       inTransit;
-  uint                       totalEntityCount;
-  uint64                     totalEntitySize;
-  char                       string[64];
+  Array            entityIdArray;
+  String           expiredJobName;
+  EntityList       entityList;
+  uint64           now;
+  IndexId          expiredEntityId;
+  ArchiveTypes     expiredArchiveType;
+  uint64           expiredCreatedDateTime;
+  ulong            expiredTotalEntryCount;
+  uint64           expiredTotalEntrySize;
+  String           expiredReason;
+  MountList        mountList;
+  Errors           error;
+  const JobNode    *jobNode;
+  EntityList       jobEntityList;
+  const EntityNode *jobEntityNode,*otherJobEntityNode;
+  const EntityNode *nextJobEntityNode;
+  uint             age;
+  bool             inTransit;
+  uint             totalEntityCount;
+  uint64           totalEntitySize;
+  char             string[64];
 
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   expiredJobName = String_new();
   expiredReason  = String_new();
-  List_init(&expirationEntityList,
+  List_init(&entityList,
             CALLBACK_(NULL,NULL),
-            CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL)
+            CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL)
            );
 
   error = ERROR_NONE;
   do
   {
-    // get expiration entity list
-    getExpirationEntityList(&expirationEntityList,
-                            indexHandle
-                           );
+    // get entity list
+    getEntityList(&entityList,indexHandle);
 
     // init variables
     now                    = Misc_getCurrentDateTime();
@@ -3024,98 +3022,98 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
       // find expired/surpluse entity
       JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(expiredEntityId))
       {
-        // get expiration entity list for job
-        getJobExpirationEntityList(&jobExpirationEntityList,
-                                   &expirationEntityList,
-                                   jobNode->job.uuid,
-                                   &jobNode->job.options.persistenceList
-                                  );
+        // get entity list for job with assigned persistence
+        getJobEntityList(&jobEntityList,
+                         &entityList,
+                         jobNode->job.uuid,
+                         &jobNode->job.options.persistenceList
+                        );
 
         if (   (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))  // wait 10s after change expiration setting before purge
                 || (newArchiveType != ARCHIVE_TYPE_NONE)  // if new entity is created: purge immediately
                )
-            && !List_isEmpty(&jobExpirationEntityList)  // only expire if persistence list is not empty
+            && !List_isEmpty(&jobEntityList)  // only expire if persistence list is not empty
            )
         {
           // find expired entity
-          LIST_ITERATEX(&jobExpirationEntityList,jobExpirationEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
+          LIST_ITERATEX(&jobEntityList,jobEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
           {
             totalEntityCount = 0;
             totalEntitySize  = 0LL;
             inTransit        = FALSE;
 
-            if (   !jobExpirationEntityNode->lockedFlag
-                && (jobExpirationEntityNode->persistenceNode != NULL)
+            if (   !jobEntityNode->lockedFlag
+                && (jobEntityNode->persistenceNode != NULL)
                )
             {
               // calculate number/total size of entities in persistence periode
-              LIST_ITERATE(&jobExpirationEntityList,otherJobExpirationEntityNode)
+              LIST_ITERATE(&jobEntityList,otherJobEntityNode)
               {
-                if (otherJobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->persistenceNode)
+                if (otherJobEntityNode->persistenceNode == jobEntityNode->persistenceNode)
                 {
                   totalEntityCount++;
-                  totalEntitySize += otherJobExpirationEntityNode->size;
+                  totalEntitySize += otherJobEntityNode->size;
                 }
               }
 
               // if new entity for job UUID: increment number of total entities
               if (   String_equals(jobNode->job.uuid,jobUUID)
-                  && (jobExpirationEntityNode->archiveType == newArchiveType)
+                  && (jobEntityNode->archiveType == newArchiveType)
                  )
               {
                 totalEntityCount++;
               }
 
               // get age
-              age = (now-jobExpirationEntityNode->createdDateTime)/S_PER_DAY;
+              age = (now-jobEntityNode->createdDateTime)/S_PER_DAY;
 
               // check if "in-transit"
-              inTransit = isInTransit(jobExpirationEntityNode);
+              inTransit = isInTransit(jobEntityNode);
 
               // check if expired, keep one "in-transit" entity
               if (   !inTransit
-                  && hasPersistence(jobNode,jobExpirationEntityNode->archiveType)
-                  && (   (jobExpirationEntityNode->persistenceNode != NULL)
-                      && (jobExpirationEntityNode->persistenceNode->minKeep != KEEP_ALL)
-                      && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->minKeep)
+                  && hasPersistence(jobNode,jobEntityNode->archiveType)
+                  && (   (jobEntityNode->persistenceNode != NULL)
+                      && (jobEntityNode->persistenceNode->minKeep != KEEP_ALL)
+                      && (totalEntityCount > (uint)jobEntityNode->persistenceNode->minKeep)
                      )
-                  && !Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId)
+                  && !Array_contains(&entityIdArray,&jobEntityNode->entityId)
                  )
               {
                 // persistence defined
-                if       (   (jobExpirationEntityNode->persistenceNode->maxKeep != KEEP_ALL)
-                          && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
-                          && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
+                if       (   (jobEntityNode->persistenceNode->maxKeep != KEEP_ALL)
+                          && (jobEntityNode->persistenceNode->maxKeep >= jobEntityNode->persistenceNode->minKeep)
+                          && (totalEntityCount > (uint)jobEntityNode->persistenceNode->maxKeep)
                          )
                 {
                   // over max-keep limit -> find oldest entry of same type and persistence
                   do
                   {
-                    nextJobExpirationEntityNode = jobExpirationEntityNode->next;
-                    while (   (nextJobExpirationEntityNode != NULL)
-                           && (   (nextJobExpirationEntityNode->archiveType != jobExpirationEntityNode->archiveType)
-                               || (nextJobExpirationEntityNode->persistenceNode != jobExpirationEntityNode->persistenceNode)
+                    nextJobEntityNode = jobEntityNode->next;
+                    while (   (nextJobEntityNode != NULL)
+                           && (   (nextJobEntityNode->archiveType != jobEntityNode->archiveType)
+                               || (nextJobEntityNode->persistenceNode != jobEntityNode->persistenceNode)
                               )
                           )
                     {
-                      nextJobExpirationEntityNode = nextJobExpirationEntityNode->next;
+                      nextJobEntityNode = nextJobEntityNode->next;
                     }
 
-                    if (nextJobExpirationEntityNode != NULL)
+                    if (nextJobEntityNode != NULL)
                     {
-                      jobExpirationEntityNode = nextJobExpirationEntityNode;
+                      jobEntityNode = nextJobEntityNode;
                     }
                   }
-                  while (nextJobExpirationEntityNode != NULL);
+                  while (nextJobEntityNode != NULL);
 
                   // get expired entity
-                  expiredEntityId        = jobExpirationEntityNode->entityId;
+                  expiredEntityId        = jobEntityNode->entityId;
                   String_set(expiredJobName,jobNode->name);
-                  expiredArchiveType     = jobExpirationEntityNode->archiveType;
-                  expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
-                  expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
-                  expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
-                  String_format(expiredReason,"max. keep limit reached (%u)",(uint)jobExpirationEntityNode->persistenceNode->maxKeep);
+                  expiredArchiveType     = jobEntityNode->archiveType;
+                  expiredCreatedDateTime = jobEntityNode->createdDateTime;
+                  expiredTotalEntryCount = jobEntityNode->totalEntryCount;
+                  expiredTotalEntrySize  = jobEntityNode->totalEntrySize;
+                  String_format(expiredReason,"max. keep limit reached (%u)",(uint)jobEntityNode->persistenceNode->maxKeep);
 
                   // get mount list
                   List_copy(&mountList,
@@ -3125,20 +3123,20 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                             NULL
                            );
                 }
-                else if  (   (jobExpirationEntityNode->persistenceNode->maxAge != AGE_FOREVER)
-                          && (age > (uint)jobExpirationEntityNode->persistenceNode->maxAge)
+                else if  (   (jobEntityNode->persistenceNode->maxAge != AGE_FOREVER)
+                          && (age > (uint)jobEntityNode->persistenceNode->maxAge)
                          )
                 {
                   // older than max-age
 
                   // get expired entity
-                  expiredEntityId        = jobExpirationEntityNode->entityId;
+                  expiredEntityId        = jobEntityNode->entityId;
                   String_set(expiredJobName,jobNode->name);
-                  expiredArchiveType     = jobExpirationEntityNode->archiveType;
-                  expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
-                  expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
-                  expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
-                  String_format(expiredReason,"max. age reached (%u days)",jobExpirationEntityNode->persistenceNode->maxAge);
+                  expiredArchiveType     = jobEntityNode->archiveType;
+                  expiredCreatedDateTime = jobEntityNode->createdDateTime;
+                  expiredTotalEntryCount = jobEntityNode->totalEntryCount;
+                  expiredTotalEntrySize  = jobEntityNode->totalEntrySize;
+                  String_format(expiredReason,"max. age reached (%u days)",jobEntityNode->persistenceNode->maxAge);
 
                   // get mount list
                   List_copy(&mountList,
@@ -3153,7 +3151,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
           }
         }
 
-        List_done(&jobExpirationEntityList);
+        List_done(&jobEntityList);
       }
     } // jobList
 
@@ -3218,7 +3216,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 
     // free resources
     List_done(&mountList);
-    List_done(&expirationEntityList);
+    List_done(&entityList);
   }
   while (   !INDEX_ID_IS_NONE(expiredEntityId)
          && !isQuit()
@@ -3288,6 +3286,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 
   // lock
   error = ERROR_UNKNOWN;
+// TODO: do in command move to?
   SEMAPHORE_LOCKED_DO(&entityLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     error = Index_getStoragesInfos(indexHandle,
@@ -3594,45 +3593,30 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 
 LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 {
-  typedef struct
-  {
-    String       jobUUID;
-    String       jobName;
-    ArchiveTypes archiveType;
-    int          maxAge;
-    String       moveTo;
-  } MoveToInfo;
-
-  Array                 entityIdArray;
-  Array                 moveToArray;
-  const JobNode         *jobNode;
-  const PersistenceNode *persistenceNode;
-  MoveToInfo            moveToInfo;
-  StorageSpecifier      moveToStorageSpecifier;
-  uint64                now;
-  ArrayIterator         moveToArrayIterator;
-  JobOptions            jobOptions;
-  StorageSpecifier      storageSpecifier;
-  String                directoryName,baseName;
-  String                moveToPath;
-  String                moveToArchivePath;
-  IndexId               moveToEntityId;
-  Errors                error;
-  IndexQueryHandle      indexQueryHandle1,indexQueryHandle2;
-  IndexId               entityId;
-  ArchiveTypes          archiveType;
-  uint64                createdDateTime;
-  uint                  lockedCount;
-  uint                  lastMaxAge,age;
-  IndexId               storageId;
-  String                storageName;
-  String                moveToJobUUID,moveToJobName;
-  char                  string[64];
+  Array            entityIdArray;
+  StorageSpecifier moveToStorageSpecifier;
+  StorageSpecifier storageSpecifier;
+  String           directoryName,baseName;
+  String           moveToPath;
+  String           moveToArchivePath;
+  String           storageName;
+  EntityList       entityList;
+  IndexId          moveToEntityId;
+  const JobNode    *jobNode;
+  EntityList       jobEntityList;
+  const EntityNode *jobEntityNode;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+  String           moveToJobUUID,moveToJobName;
+  ArchiveTypes     moveToArchiveType;
+  uint64           moveToCreatedDateTime;
+  JobOptions       jobOptions;
+  char             string[64];
 
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Storage_initSpecifier(&moveToStorageSpecifier);
-  Job_initOptions(&jobOptions);
   Storage_initSpecifier(&storageSpecifier);
   directoryName     = String_new();
   baseName          = String_new();
@@ -3641,6 +3625,10 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   storageName       = String_new();
   moveToJobUUID     = String_new();
   moveToJobName     = String_new();
+  Job_initOptions(&jobOptions);
+
+  // get entity list
+  getEntityList(&entityList,indexHandle);
 
   error = ERROR_NONE;
   do
@@ -3648,215 +3636,129 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     // init variables
     moveToEntityId = INDEX_ID_NONE;
 
-    // get all persistence entries with a move-to destination (sort ascending by max. age)
-    Array_init(&moveToArray,
-               sizeof(MoveToInfo),
-               64,
-               CALLBACK_INLINE(void,(void *data, void *userData),
-               {
-                 MoveToInfo *moveToInfo = (MoveToInfo*)data;
-
-                 assert(moveToInfo != NULL);
-
-                 UNUSED_VARIABLE(userData);
-
-                 String_delete(moveToInfo->moveTo);
-                 String_delete(moveToInfo->jobName);
-                 String_delete(moveToInfo->jobUUID);
-               },NULL),
-               CALLBACK_(NULL,NULL)
-              );
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       JOB_LIST_ITERATE(jobNode)
       {
-        LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
+        // get entity list for job with assigned persistence
+        getJobEntityList(&jobEntityList,
+                         &entityList,
+                         jobNode->job.uuid,
+                         &jobNode->job.options.persistenceList
+                        );
+
+        // find entity to move
+        LIST_ITERATE(&jobEntityList,jobEntityNode)
         {
-          if (!String_isEmpty(persistenceNode->moveTo))
+          if (   (jobEntityNode->persistenceNode != NULL)
+              && !String_isEmpty(jobEntityNode->persistenceNode->moveTo)
+              && !Array_contains(&entityIdArray,&jobEntityNode->entityId)
+             )
           {
-            MoveToInfo moveToInfo;
-
-            moveToInfo.jobUUID     = String_duplicate(jobNode->job.uuid);
-            moveToInfo.jobName     = String_duplicate(jobNode->name);
-            moveToInfo.archiveType = persistenceNode->archiveType;
-            moveToInfo.maxAge      = persistenceNode->maxAge;
-            moveToInfo.moveTo      = String_duplicate(persistenceNode->moveTo);
-
-            Array_append(&moveToArray,&moveToInfo);
-          }
-        }
-      }
-    }
-    #ifndef NDEBUG
-      // check if ages are sorted ascending
-      {
-        uint age;
-
-        age = 0;
-        ARRAY_ITERATE(&moveToArray,moveToArrayIterator,moveToInfo)
-        {
-          assert(   (moveToInfo.maxAge == AGE_FOREVER)
-                 || ((uint)moveToInfo.maxAge >= age)
-                );
-          age = moveToInfo.maxAge;
-        }
-      }
-    #endif
-
-    // find next storage to move
-    now        = Misc_getCurrentDateTime();
-    lastMaxAge = 0;
-    ARRAY_ITERATE(&moveToArray,moveToArrayIterator,moveToInfo)
-    {
-      // parse move-to name
-      error = Storage_parseName(&moveToStorageSpecifier,moveToInfo.moveTo);
-      if (error != ERROR_NONE)
-      {
-        continue;
-      }
-
-      // get entity to move
-      error = Index_initListEntities(&indexQueryHandle1,
-                                     indexHandle,
-                                     INDEX_ID_ANY,  // uuidId
-                                     moveToInfo.jobUUID,
-                                     NULL,  // scheduldUUID
-                                     ARCHIVE_TYPE_ANY,
-                                     INDEX_STATE_SET_ALL,
-                                     INDEX_MODE_SET_ALL,
-                                     NULL,  // name
-                                     INDEX_ENTITY_SORT_MODE_CREATED,
-                                     DATABASE_ORDERING_DESCENDING,
-                                     0LL,  // offset
-                                     INDEX_UNLIMITED
-                                    );
-      if (error == ERROR_NONE)
-      {
-        while (   INDEX_ID_IS_NONE(moveToEntityId)
-               && Index_getNextEntity(&indexQueryHandle1,
-                                      NULL,  // uuidId,
-                                      NULL,  // jobUUID,
-                                      NULL,  // scheduleUUID,
-                                      &entityId,
-                                      &archiveType,
-                                      &createdDateTime,
-                                      NULL,  // lastErrorCode
-                                      NULL,  // lastErrorData
-                                      NULL,  // totalSize,
-                                      NULL,  // totalEntryCount,
-                                      NULL,  // totalEntrySize,
-                                      &lockedCount
-                                     )
-              )
-        {
-          if (!Array_contains(&entityIdArray,&entityId))
-          {
-            age = (now-createdDateTime)/S_PER_DAY;
-
-            if (   (age > lastMaxAge)
-                && (lockedCount == 0)
-                && (archiveType == moveToInfo.archiveType)
-                && ((moveToInfo.maxAge == AGE_FOREVER) || (age <= (uint)moveToInfo.maxAge))
-               )
+            // parse move-to name
+            error = Storage_parseName(&moveToStorageSpecifier,jobEntityNode->persistenceNode->moveTo);
+            if (error != ERROR_NONE)
             {
-              // check if some storages have to be moved
-              error = Index_initListStorages(&indexQueryHandle2,
-                                             indexHandle,
-                                             INDEX_ID_ANY,  // uuidId
-                                             entityId,
+              continue;
+            }
+
+            // check if some storages have to be moved
+            error = Index_initListStorages(&indexQueryHandle,
+                                           indexHandle,
+                                           INDEX_ID_ANY,  // uuidId
+                                           jobEntityNode->entityId,
+                                           NULL,  // jobUUID
+                                           NULL,  // scheduleUUID,
+                                           NULL,  // indexIds
+                                           0,  // indexIdCount
+                                           INDEX_TYPE_SET_ALL,
+                                           INDEX_STATE_SET_ALL,
+                                           INDEX_MODE_SET_ALL,
+                                           NULL,  // hostName
+                                           NULL,  // userName
+                                           NULL,  // name
+                                           INDEX_STORAGE_SORT_MODE_NONE,
+                                           DATABASE_ORDERING_NONE,
+                                           0LL,  // offset
+                                           INDEX_UNLIMITED
+                                          );
+            if (error == ERROR_NONE)
+            {
+              while (   INDEX_ID_IS_NONE(moveToEntityId)
+                     && Index_getNextStorage(&indexQueryHandle,
+                                             NULL,  // uuidId
                                              NULL,  // jobUUID
-                                             NULL,  // scheduleUUID,
-                                             NULL,  // indexIds
-                                             0,  // indexIdCount
-                                             INDEX_TYPE_SET_ALL,
-                                             INDEX_STATE_SET_ALL,
-                                             INDEX_MODE_SET_ALL,
+                                             NULL,  // entityId
+                                             NULL,  // scheduleUUID
                                              NULL,  // hostName
                                              NULL,  // userName
-                                             NULL,  // name
-                                             INDEX_STORAGE_SORT_MODE_NONE,
-                                             DATABASE_ORDERING_NONE,
-                                             0LL,  // offset
-                                             INDEX_UNLIMITED
-                                            );
-              if (error == ERROR_NONE)
+                                             NULL,  // comment
+                                             NULL,  // createdDateTime
+                                             NULL,  // archiveType
+                                             &storageId,
+                                             storageName,
+                                             NULL,  // createdDateTime,
+                                             NULL,  // size
+                                             NULL,  // indexState,
+                                             NULL,  // indexMode,
+                                             NULL,  // lastCheckedDateTime,
+                                             NULL,  // errorMessage
+                                             NULL,  // totalEntryCount
+                                             NULL  // totalEntrySize
+                                            )
+                    )
               {
-                while (   INDEX_ID_IS_NONE(moveToEntityId)
-                       && Index_getNextStorage(&indexQueryHandle2,
-                                               NULL,  // uuidId
-                                               NULL,  // jobUUID
-                                               NULL,  // entityId
-                                               NULL,  // scheduleUUID
-                                               NULL,  // hostName
-                                               NULL,  // userName
-                                               NULL,  // comment
-                                               NULL,  // createdDateTime
-                                               NULL,  // archiveType
-                                               &storageId,
-                                               storageName,
-                                               NULL,  // createdDateTime,
-                                               NULL,  // size
-                                               NULL,  // indexState,
-                                               NULL,  // indexMode,
-                                               NULL,  // lastCheckedDateTime,
-                                               NULL,  // errorMessage
-                                               NULL,  // totalEntryCount
-                                               NULL  // totalEntrySize
-                                              )
-                      )
+                // parse storage name, get path
+                error = Storage_parseName(&storageSpecifier,storageName);
+                if (error != ERROR_NONE)
                 {
-                  // parse storage name, get path
-                  error = Storage_parseName(&storageSpecifier,storageName);
-                  if (error != ERROR_NONE)
-                  {
-                    continue;
-                  }
-//                  File_getDirectoryName(directoryName,storageSpecifier.archiveName);
-                  File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
-
-                  // get move-to path name (expand macros)
-                  error = Archive_formatName(moveToPath,
-                                             moveToStorageSpecifier.archiveName,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             archiveType,
-                                             NULL,  // scheduleTitle,
-                                             NULL,  // customText,
-                                             createdDateTime,
-                                             NAME_PART_NUMBER_NONE
-                                            );
-                  if (error != ERROR_NONE)
-                  {
-                    continue;
-                  }
-
-                  // check if path is or storage type are different
-                  File_setFileName(moveToArchivePath,moveToPath);
-                  File_appendFileName(moveToArchivePath,baseName);
-                  if (!Storage_equalSpecifiers(&storageSpecifier,
-                                               storageName,
-                                               &moveToStorageSpecifier,
-                                               moveToArchivePath
-                                              )
-                     )
-                  {
-                    moveToEntityId = entityId;
-                    String_set(moveToJobUUID,moveToInfo.jobUUID);
-                    String_set(moveToJobName,moveToInfo.jobName);
-                  }
+                  continue;
                 }
-                Index_doneList(&indexQueryHandle2);
+                File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
+
+                // get move-to path name (expand macros)
+                error = Archive_formatName(moveToPath,
+                                           moveToStorageSpecifier.archiveName,
+                                           EXPAND_MACRO_MODE_STRING,
+                                           jobEntityNode->archiveType,
+                                           NULL,  // scheduleTitle,
+                                           NULL,  // customText,
+                                           jobEntityNode->createdDateTime,
+                                           NAME_PART_NUMBER_NONE
+                                          );
+                if (error != ERROR_NONE)
+                {
+                  continue;
+                }
+
+                // check if path is or storage type are different
+                File_setFileName(moveToArchivePath,moveToPath);
+                File_appendFileName(moveToArchivePath,baseName);
+                if (Storage_equalSpecifiers(&storageSpecifier,
+                                            storageName,
+                                            &moveToStorageSpecifier,
+                                            moveToArchivePath
+                                           )
+                   )
+                {
+                  continue;
+                }
+
+                // found enity to move
+                moveToEntityId = jobEntityNode->entityId;
+                String_set(moveToJobUUID,jobNode->job.uuid);
+                String_set(moveToJobName,jobNode->name);
+                moveToArchiveType     = jobEntityNode->archiveType;
+                moveToCreatedDateTime = jobEntityNode->createdDateTime;
               }
-            }
+              Index_doneList(&indexQueryHandle);
+            }            
           }
         }
-        Index_doneList(&indexQueryHandle1);
+
+        List_done(&jobEntityList);
       }
-
-      lastMaxAge = moveToInfo.maxAge;
     }
-
-    // free resources
-    Array_done(&moveToArray);
 
     // move entity
     if (!INDEX_ID_IS_NONE(moveToEntityId))
@@ -3911,8 +3813,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    "Moved archives of entity #%"PRIi64" '%s': %s, created at %s to '%s'",
                    Index_getDatabaseId(moveToEntityId),
                    String_cString(moveToJobName),
-                   Archive_archiveTypeToString(archiveType),
-                   Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
+                   Archive_archiveTypeToString(moveToArchiveType),
+                   Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,FALSE,NULL),
                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPath))
                    );
       }
@@ -3923,8 +3825,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    "Fail to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
                    Index_getDatabaseId(moveToEntityId),
                    String_cString(moveToJobName),
-                   Archive_archiveTypeToString(archiveType),
-                   Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,FALSE,NULL),
+                   Archive_archiveTypeToString(moveToArchiveType),
+                   Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,FALSE,NULL),
                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPath)),
                    Error_getText(error)
                    );
@@ -3947,6 +3849,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&moveToStorageSpecifier);
   Array_done(&entityIdArray);
+  List_done(&entityList);
 
   return error;
 }
@@ -4002,14 +3905,14 @@ LOCAL void persistenceThreadCode(void)
                                         );
           }
 
-          // purge expired mounts
-          purgeMounts(FALSE);
-
           // move all entities to destination
           if (error == ERROR_NONE)
           {
             error = moveAllEntities(&indexHandle);
           }
+
+          // purge expired mounts
+          purgeMounts(FALSE);
         }
 
         // sleep
@@ -4659,7 +4562,7 @@ LOCAL void autoIndexThreadCode(void)
                                          UNUSED_VARIABLE(userData);
 
                                          now = Misc_getCurrentDateTime();
-  //fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
+//fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
 
                                          // to avoid add/update on currently created archive, wait for min. 30min after creation
                                          if (now > (fileInfo->timeLastChanged+30*60))
@@ -4709,7 +4612,7 @@ LOCAL void autoIndexThreadCode(void)
                                                  if      (error == ERROR_NONE)
                                                  {
                                                    // already in index -> check if modified/state
-  //fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
+//fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
                                                    if      (fileInfo->timeModified > lastCheckedDateTime)
                                                    {
                                                      // modified -> request update index
@@ -13708,14 +13611,14 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode              *jobNode;
-  const PersistenceNode      *persistenceNode;
-  char                       s1[16],s2[16],s3[16];
-  ExpirationEntityList       expirationEntityList;
-  ExpirationEntityList       jobExpirationEntityList;
-  const ExpirationEntityNode *jobExpirationEntityNode;
-  bool                       inTransit;
+  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
+  const JobNode         *jobNode;
+  const PersistenceNode *persistenceNode;
+  char                  s1[16],s2[16],s3[16];
+  EntityList            entityList;
+  EntityList            jobEntityList;
+  const EntityNode      *jobEntityNode;
+  bool                  inTransit;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13728,7 +13631,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // get expiration entity list
-  getExpirationEntityList(&expirationEntityList,
+  getEntityList(&entityList,
                           indexHandle
                          );
 
@@ -13744,11 +13647,11 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get expiration entity list of job
-    getJobExpirationEntityList(&jobExpirationEntityList,
-                               &expirationEntityList,
-                               jobNode->job.uuid,
-                               &jobNode->job.options.persistenceList
-                              );
+    getJobEntityList(&jobEntityList,
+                     &entityList,
+                     jobNode->job.uuid,
+                     &jobNode->job.options.persistenceList
+                    );
 
 //TODO: totalStorageCount, totalStorageSize
     LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
@@ -13768,21 +13671,21 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
 //TODO
 0LL//                            persistenceNode->totalEntitySize
                          );
-      LIST_ITERATE(&jobExpirationEntityList,jobExpirationEntityNode)
+      LIST_ITERATE(&jobEntityList,jobEntityNode)
       {
-        if (jobExpirationEntityNode->persistenceNode == persistenceNode)
+        if (jobEntityNode->persistenceNode == persistenceNode)
         {
-          inTransit = isInTransit(jobExpirationEntityNode);
+          inTransit = isInTransit(jobEntityNode);
 
           // send entity info
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "persistenceId=%u entityId=%"PRIindexId" createdDateTime=%"PRIu64" size=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" inTransit=%y",
-                              jobExpirationEntityNode->persistenceNode->id,
-                              jobExpirationEntityNode->entityId,
-                              jobExpirationEntityNode->createdDateTime,
-                              jobExpirationEntityNode->size,
-                              jobExpirationEntityNode->totalEntryCount,
-                              jobExpirationEntityNode->totalEntrySize,
+                              jobEntityNode->persistenceNode->id,
+                              jobEntityNode->entityId,
+                              jobEntityNode->createdDateTime,
+                              jobEntityNode->size,
+                              jobEntityNode->totalEntryCount,
+                              jobEntityNode->totalEntrySize,
                               inTransit
                              );
         }
@@ -13791,7 +13694,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // free resources
-  List_done(&jobExpirationEntityList);
+  List_done(&jobEntityList);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
