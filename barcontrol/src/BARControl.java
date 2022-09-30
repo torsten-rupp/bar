@@ -4930,7 +4930,7 @@ if (false) {
         // execute commands
         if (Settings.pairMasterFlag)
         {
-          System.out.print(BARControl.tr("Wait for pairing new master")+"\u2026    ");
+          System.out.print(BARControl.tr("Wait for pairing new master")+"...    ");
 
           // set new master
           try
@@ -4968,12 +4968,12 @@ if (false) {
               }
             }
             while (masterName[0].isEmpty() && (restTime[0] > 0));
+            System.out.print("\b\b\b\b");
 
             BARServer.executeCommand(StringParser.format("MASTER_PAIRING_STOP pair=%y",!masterName[0].isEmpty()),
                                      1  // debugLevel
                                     );
 
-            System.out.print("\b\b\b\b");
             if (!masterName[0].isEmpty())
             {
               System.out.println(String.format(BARControl.tr("''{0}'' - OK",masterName[0])));

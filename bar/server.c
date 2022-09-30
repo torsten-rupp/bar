@@ -6369,6 +6369,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
               // calculate hash from UUID
               (void)Crypt_resetHash(&newMaster.uuidHash);
+              Crypt_updateHash(&newMaster.uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
               Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
             }
 
