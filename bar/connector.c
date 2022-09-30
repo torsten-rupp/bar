@@ -3796,7 +3796,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo, long timeout)
   hostName      = String_new();
   encryptedUUID = String_new();
 
-  // get host name/encrypted UUID for authorization
+  // get encrypted UUID for authorization
   error = ServerIO_encryptData(&connectorInfo->io,
                                String_cString(instanceUUID),
                                String_length(instanceUUID),
