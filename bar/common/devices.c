@@ -432,7 +432,7 @@ Errors Device_read(DeviceHandle *deviceHandle,
 
   n = read(deviceHandle->handle,buffer,bufferLength);
   if (   (n == (off_t)(-1))
-      || (n < (ssize_t)bufferLength) && (bytesRead == NULL)
+      || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
      )
   {
     return ERRORX_(IO,errno,"%s",String_cString(deviceHandle->name));
