@@ -467,6 +467,8 @@ public class Settings
   public static boolean                        serverNoTLS                     = false;
   @SettingValue(name="force-tls")
   public static boolean                        serverForceTLS                  = false;
+  @SettingValue(name="tls-insecure")
+  public static boolean                        serverInsecureTLS               = false;
   @SettingValue(name="role")
   public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
 

@@ -49,6 +49,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import javax.net.ssl.SSLException;
+
 // graphics
 import java.awt.Desktop;
 import org.eclipse.swt.custom.SashForm;
@@ -1965,6 +1967,7 @@ public class BARControl
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
     new Option("--no-tls",                       null,Options.Types.BOOLEAN,    "serverNoTLS"),
     new Option("--force-tls",                    null,Options.Types.BOOLEAN,    "serverForceTLS"),
+    new Option("--insecure-tls",                 null,Options.Types.BOOLEAN,    "serverInsecureTLS"),
     new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
 
     new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
@@ -2229,6 +2232,23 @@ public class BARControl
     System.err.println("Please report this error to "+EMAIL_ADDRESS+".");
   }
 
+  /** renice SSL exception (remove java.security.cert.CertPathValidatorException text from exception)
+   * @param exception i/o exception to renice
+   * @return reniced exception
+   */
+  public static SSLException reniceSSLException(SSLException exception)
+  {
+    final Pattern PATTERN1 = Pattern.compile("^.*\\.CertPathValidatorException:\\s*(.*)$",Pattern.CASE_INSENSITIVE);
+
+    Matcher matcher;
+    if      ((matcher = PATTERN1.matcher(exception.getMessage())).matches())
+    {
+      exception = new SSLException(matcher.group(1),exception);
+    }
+
+    return exception;
+  }
+
   /** renice i/o exception (remove java.io.IOExcpetion text from exception)
    * @param exception i/o exception to renice
    * @return reniced exception
@@ -2372,6 +2392,7 @@ public class BARControl
     System.out.println("                                                      )" );
     System.out.println("         --no-tls                                   - no TLS connection");
     System.out.println("         --force-tls                                - force TLS connection");
+    System.out.println("         --insecure-tls                             - allow insecure TLS connections");
     System.out.println("         --login-dialog                             - force to open login dialog");
     System.out.println("         --pair-master                              - start pairing new master");
     System.out.println("");
@@ -2409,7 +2430,7 @@ public class BARControl
     System.out.println("                                                        normal");
     System.out.println("                                                        expert");
     System.out.println("");
-    System.out.println("         --geometry=<x>x<y>[+x0+y0]                 - window geometry");
+    System.out.println("         --geometry=<x>x<y>[+<x0>+<y0>]             - window geometry");
     System.out.println("");
     System.out.println("         --version                                  - output version");
     System.out.println("         -h|--help                                  - print this help");
@@ -2579,25 +2600,27 @@ if (false) {
   }
 
   /** connect to server
-   * @param serverName server name
-   * @param serverPort server port
-   * @param serverTLSPort server TLS port
-   * @param serverNoTLS server no TLS
+   * @param name server name
+   * @param port server port
+   * @param tlsPort server TLS port
+   * @param caFileName server certificate authority file
+   * @param certificateFileName server certificate file
+   * @param keyFileName server key file
+   * @param noTLS server no TLS
    * @param forceTLS force TLS
-   * @param serverCAFileName server certificate authority file
-   * @param serverCertificateFileName server certificate file
-   * @param serverKeyFileName server key file
+   * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password login password
    */
-  private void connect(String    serverName,
-                       int       serverPort,
-                       int       serverTLSPort,
-                       boolean   serverNoTLS,
-                       boolean   forceTLS,
-                       String    serverCAFileName,
-                       String    serverCertificateFileName,
-                       String    serverKeyFileName,
-                       String    password
+  private void connect(String  name,
+                       int     port,
+                       int     tlsPort,
+                       String  caFileName,
+                       String  certificateFileName,
+                       String  keyFileName,
+                       boolean noTLS,
+                       boolean forceTLS,
+                       boolean insecureTLS,
+                       String  password
                       )
     throws ConnectionError
   {
@@ -2611,14 +2634,14 @@ if (false) {
           // nothing to do
         }
 
-        // connect dialog
+        // busy dialog
         if (shell != null)
         {
           busyDialog = new BusyDialog(shell,
                                       BARControl.tr("Connect"),
                                       400,
                                       60,
-                                      BARControl.tr("Try to connect to ''")+serverName+"'\u2026",
+                                      BARControl.tr("Try to connect to ''")+name+"'\u2026",
                                       BusyDialog.AUTO_ANIMATE
                                      );
         }
@@ -2627,15 +2650,16 @@ if (false) {
     try
     {
       BARServer.connect(display,
-                        serverName,
-                        serverPort,
-                        serverTLSPort,
-                        serverNoTLS,
+                        name,
+                        port,
+                        tlsPort,
+                        caFileName,
+                        certificateFileName,
+                        keyFileName,
+                        noTLS,
                         forceTLS,
-                        password,
-                        serverCAFileName,
-                        serverCertificateFileName,
-                        serverKeyFileName
+                        insecureTLS,
+                        password
                        );
     }
     finally
@@ -3131,11 +3155,12 @@ if (false) {
                 connect(loginData.serverName,
                         loginData.serverPort,
                         loginData.serverTLSPort,
-                        Settings.serverNoTLS,
-                        loginData.forceTLS,
                         Settings.serverCAFileName,
                         Settings.serverCertificateFileName,
                         Settings.serverKeyFileName,
+                        Settings.serverNoTLS,
+                        loginData.forceTLS,
+                        Settings.serverInsecureTLS,
                         loginData.password
                        );
 
@@ -3778,11 +3803,12 @@ if (false) {
           connect(loginData.serverName,
                   loginData.serverPort,
                   loginData.serverTLSPort,
-                  Settings.serverNoTLS,
-                  loginData.forceTLS,
                   Settings.serverCAFileName,
                   Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
+                  Settings.serverNoTLS,
+                  loginData.forceTLS,
+                  Settings.serverInsecureTLS,
                   loginData.password
                  );
 
@@ -3835,11 +3861,12 @@ if (false) {
           connect(loginData.serverName,
                   loginData.serverPort,
                   loginData.serverTLSPort,
-                  Settings.serverNoTLS,
-                  loginData.forceTLS,
                   Settings.serverCAFileName,
                   Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
+                  Settings.serverNoTLS,
+                  loginData.forceTLS,
+                  Settings.serverInsecureTLS,
                   loginData.password
                  );
 
@@ -4277,8 +4304,8 @@ if (false) {
 
           if (menuItem.getSelection())
           {
-            boolean connectOkFlag = false;
-            String  errorMessage  = null;
+            boolean connectOkFlag       = false;
+            String  connectErrorMessage = null;
 
             // try to connect to server with current credentials
             if (!connectOkFlag)
@@ -4295,11 +4322,12 @@ if (false) {
                 connect(loginData.serverName,
                         loginData.serverPort,
                         loginData.serverTLSPort,
-                        Settings.serverNoTLS,
-                        loginData.forceTLS,
                         Settings.serverCAFileName,
                         Settings.serverCertificateFileName,
                         Settings.serverKeyFileName,
+                        Settings.serverNoTLS,
+                        loginData.forceTLS,
+                        Settings.serverInsecureTLS,
                         loginData.password
                        );
 
@@ -4312,11 +4340,11 @@ if (false) {
               }
               catch (ConnectionError error)
               {
-                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
               }
               catch (CommunicationError error)
               {
-                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
               }
             }
 
@@ -4336,11 +4364,12 @@ if (false) {
                   connect(loginData.serverName,
                           loginData.serverPort,
                           loginData.serverTLSPort,
-                          true,  // noTLS,
-                          false,  // forceTLS
                           (String)null,  // serverCAFileName
                           (String)null,  // serverCertificateFileName
                           (String)null,  // serverKeyFileName
+                          true,  // noTLS,
+                          false,  // forceTLS
+                          true,  // insecureTLS,
                           loginData.password
                          );
 
@@ -4353,11 +4382,11 @@ if (false) {
                 }
                 catch (ConnectionError error)
                 {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
                 }
                 catch (CommunicationError error)
                 {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
                 }
               }
             }
@@ -4378,11 +4407,12 @@ if (false) {
                   connect(loginData.serverName,
                           loginData.serverPort,
                           loginData.serverTLSPort,
-                          Settings.serverNoTLS,
-                          loginData.forceTLS,
                           Settings.serverCAFileName,
                           Settings.serverCertificateFileName,
                           Settings.serverKeyFileName,
+                          Settings.serverNoTLS,
+                          loginData.forceTLS,
+                          Settings.serverInsecureTLS,
                           loginData.password
                          );
 
@@ -4395,11 +4425,11 @@ if (false) {
                 }
                 catch (ConnectionError error)
                 {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
                 }
                 catch (CommunicationError error)
                 {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
                 }
               }
             }
@@ -4414,9 +4444,9 @@ if (false) {
             else
             {
               // show error message
-              if (errorMessage != null)
+              if (connectErrorMessage != null)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
               }
               else
               {
@@ -4884,15 +4914,15 @@ if (false) {
       if (Settings.serverPassword != null) loginData.password      = Settings.serverPassword;
 
       // commands
-      if (   (Settings.pairMasterFlag)
+      if (   Settings.pairMasterFlag
           || (Settings.runJobName != null)
           || (Settings.abortJobName != null)
           || (Settings.pauseTime > 0)
           || (Settings.maintenanceTime > 0)
-          || (Settings.pingFlag)
-          || (Settings.suspendFlag)
-          || (Settings.continueFlag)
-          || (Settings.listFlag)
+          || Settings.pingFlag
+          || Settings.suspendFlag
+          || Settings.continueFlag
+          || Settings.listFlag
           || Settings.indexDatabaseInfo
           || (Settings.indexDatabaseAddStorageName != null)
           || (Settings.indexDatabaseRemoveStorageName != null)
@@ -4913,11 +4943,12 @@ if (false) {
           connect(loginData.serverName,
                   loginData.serverPort,
                   loginData.serverTLSPort,
-                  Settings.serverNoTLS,
-                  loginData.forceTLS,
                   Settings.serverCAFileName,
                   Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
+                  Settings.serverNoTLS,
+                  loginData.forceTLS,
+                  Settings.serverInsecureTLS,
                   loginData.password
                  );
         }
@@ -6036,6 +6067,7 @@ Dprintf.dprintf("still not supported");
         display = new Display();
 
         // connect to server
+        String connectErrorMessage = null;
         boolean connectOkFlag = false;
         if (   (loginData.serverName != null)
             && !loginData.serverName.equals("")
@@ -6053,18 +6085,19 @@ Dprintf.dprintf("still not supported");
               connect(loginData.serverName,
                       loginData.serverPort,
                       loginData.serverTLSPort,
-                      Settings.serverNoTLS,
-                      loginData.forceTLS,
                       Settings.serverCAFileName,
                       Settings.serverCertificateFileName,
                       Settings.serverKeyFileName,
+                      Settings.serverNoTLS,
+                      loginData.forceTLS,
+                      Settings.serverInsecureTLS,
                       loginData.password
                      );
               connectOkFlag = true;
             }
             catch (ConnectionError error)
             {
-              // ignored
+              connectErrorMessage = error.getMessage();
             }
           }
           if (!connectOkFlag)
@@ -6075,21 +6108,34 @@ Dprintf.dprintf("still not supported");
               connect(loginData.serverName,
                       loginData.serverPort,
                       loginData.serverTLSPort,
-                      Settings.serverNoTLS,
-                      loginData.forceTLS,
                       Settings.serverCAFileName,
                       Settings.serverCertificateFileName,
                       Settings.serverKeyFileName,
+                      Settings.serverNoTLS,
+                      loginData.forceTLS,
+                      Settings.serverInsecureTLS,
                       ""  // password
                      );
               connectOkFlag = true;
             }
             catch (ConnectionError error)
             {
-              // ignored
+              connectErrorMessage = error.getMessage();
             }
           }
         }
+        if (!connectOkFlag)
+        {
+          if (connectErrorMessage != null)
+          {
+            Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
+          }
+          else
+          {
+            Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
+          }
+        }
+
         while (!connectOkFlag)
         {
           // get login data
@@ -6104,7 +6150,6 @@ Dprintf.dprintf("still not supported");
 /// ??? host name scheck
 
           // try to connect to server
-          String errorMessage = null;
           if (!connectOkFlag)
           {
             try
@@ -6112,11 +6157,12 @@ Dprintf.dprintf("still not supported");
               connect(loginData.serverName,
                       loginData.serverPort,
                       loginData.serverTLSPort,
-                      Settings.serverNoTLS,
-                      loginData.forceTLS,
                       Settings.serverCAFileName,
                       Settings.serverCertificateFileName,
                       Settings.serverKeyFileName,
+                      Settings.serverNoTLS,
+                      loginData.forceTLS,
+                      Settings.serverInsecureTLS,
                       loginData.password
 
                      );
@@ -6124,24 +6170,11 @@ Dprintf.dprintf("still not supported");
             }
             catch (ConnectionError error)
             {
-              errorMessage = error.getMessage();
+              connectErrorMessage = error.getMessage();
             }
             catch (CommunicationError error)
             {
-              if (Dialogs.confirmError(new Shell(),
-                                       BARControl.tr("Connection fail"),
-                                       error.getMessage(),
-                                       BARControl.tr("Try again"),
-                                       BARControl.tr("Cancel")
-                                      )
-                 )
-              {
-                continue;
-              }
-              else
-              {
-                System.exit(ExitCodes.FAIL);
-              }
+              connectErrorMessage = error.getMessage();
             }
           }
           if (!connectOkFlag && loginData.forceTLS)
@@ -6159,35 +6192,23 @@ Dprintf.dprintf("still not supported");
                 BARServer.connect(loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  true, // serverNoTLS,
+                                  (String)null,  // caFileName
+                                  (String)null,  // certificateFileName
+                                  (String)null,  // keyFileName
+                                  true, // noTLS,
                                   false,  // forceTLS
-                                  (String)null,  // serverCAFileName
-                                  (String)null,  // serverCertificateFileName
-                                  (String)null,  // serverKeyFileName
+                                  true, // insecureTLS,
                                   loginData.password
                                  );
                 connectOkFlag = true;
               }
               catch (ConnectionError error)
               {
-                errorMessage = error.getMessage();
+                connectErrorMessage = error.getMessage();
               }
               catch (CommunicationError error)
               {
-                if (Dialogs.confirmError(new Shell(),
-                                         BARControl.tr("Connection fail"),
-                                         error.getMessage(),
-                                         BARControl.tr("Try again"),
-                                         BARControl.tr("Cancel")
-                                        )
-                   )
-                {
-                  continue;
-                }
-                else
-                {
-                  System.exit(ExitCodes.FAIL);
-                }
+                connectErrorMessage = error.getMessage();
               }
             }
             else
@@ -6201,7 +6222,7 @@ Dprintf.dprintf("still not supported");
           {
             if (!Dialogs.confirmError(new Shell(),
                                       BARControl.tr("Connection fail"),
-                                      errorMessage,
+                                      connectErrorMessage,
                                       BARControl.tr("Try again"),
                                       BARControl.tr("Cancel")
                                      )
@@ -6211,6 +6232,8 @@ Dprintf.dprintf("still not supported");
             }
           }
         }
+
+        // store login settings
         Settings.serverForceTLS = loginData.forceTLS;
         Settings.role           = loginData.role;
 

@@ -66,9 +66,12 @@ import javax.crypto.NullCipher;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -1518,23 +1521,25 @@ public class BARServer
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
-   * @param noTLS TRUE to disable TLS
-   * @param forceTLS TRUE to force TLS
-   * @param password server password
    * @param caFileName server CA file name
    * @param certificateFileName server certificate file name
    * @param keyFileName server key file name
+   * @param noTLS TRUE to disable TLS
+   * @param forceTLS TRUE to force TLS
+   * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
+   * @param password server password
    */
   public static void connect(Display display,
                              String  name,
                              int     port,
                              int     tlsPort,
-                             boolean noTLS,
-                             boolean forceTLS,
-                             String  password,
                              String  caFileName,
                              String  certificateFileName,
-                             String  keyFileName
+                             String  keyFileName,
+                             boolean noTLS,
+                             boolean forceTLS,
+                             boolean insecureTLS,
+                             String  password
                             )
   {
     /** key data
@@ -1622,6 +1627,7 @@ public class BARServer
               SSLSocketFactory sslSocketFactory = getSocketFactory(caFile,
                                                                    certificateFile,
                                                                    keyFile,
+                                                                   insecureTLS,
                                                                    ""
                                                                   );
 
@@ -1687,27 +1693,31 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} failed (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} failed (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+            }
+            catch (SSLException exception)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} refused",name,Integer.toString(port));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: no route to host)",name,Integer.toString(port));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host {0}:{1}",name,Integer.toString(port));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
             }
             catch (IOException exception)
             {
@@ -1754,6 +1764,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               SSLSocketFactory sslSocketFactory = getSocketFactory(caFile,
                                                                    certificateFile,
                                                                    keyFile,
+                                                                   insecureTLS,
                                                                    ""
                                                                   );
 
@@ -1798,21 +1809,29 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM key ("+caFile.getPath()+")");
               break;
             }
+            catch (ConnectionError error)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+            }
+            catch (SSLException exception)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+            }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} refused",name,Integer.toString(tlsPort));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}''refused",name,Integer.toString(tlsPort));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host {0}:{1}",name,Integer.toString(tlsPort));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort));
             }
             catch (IOException exception)
             {
@@ -1876,6 +1895,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
+// TODO:
+//              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+//              sslSocket.setTcpNoDelay(true);
               sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
@@ -1916,27 +1938,31 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             catch (BARException exception)
             {
               try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} failed (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} failed (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+            }
+            catch (SSLException exception)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} refused",name,Integer.toString(port));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: no route to host)",name,Integer.toString(port));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host {0}:{1}",name,Integer.toString(port));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
             }
             catch (IOException exception)
             {
@@ -2022,21 +2048,29 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key");
               break;
             }
+            catch (ConnectionError error)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+            }
+            catch (SSLException exception)
+            {
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+            }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host {0}:{1} refused",name,Integer.toString(tlsPort));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(tlsPort));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: no route to host)",name,Integer.toString(tlsPort));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(tlsPort));
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host {0}:{1}",name,Integer.toString(tlsPort));
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort));
             }
             catch (IOException exception)
             {
@@ -2082,15 +2116,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (ConnectException exception)
       {
-        connectErrorMessage = BARControl.tr("connection to host {0}:{1} refused",name,Integer.toString(port));
+        connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
       }
       catch (NoRouteToHostException exception)
       {
-        connectErrorMessage = BARControl.tr("host {0}:{1} unreachable (error: no route to host)",name,Integer.toString(port));
+        connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
       }
       catch (UnknownHostException exception)
       {
-        connectErrorMessage = BARControl.tr("unknown host {0}:{1}",name,Integer.toString(port));
+        connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
       }
       catch (Exception exception)
       {
@@ -2137,7 +2171,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                         );
       if ((valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR) && !Settings.debugIgnoreProtocolVersion)
       {
-        throw new CommunicationError(BARControl.tr("Incompatible protocol version for {0}:{1}: : expected {2}, got {3}",name,Integer.toString(socket.getPort()),Integer.toString(PROTOCOL_VERSION_MAJOR),Integer.toString(valueMap.getInt("major"))));
+        throw new CommunicationError(BARControl.tr("Incompatible protocol version for ''{0}:{1}'': : expected {2}, got {3}",name,Integer.toString(socket.getPort()),Integer.toString(PROTOCOL_VERSION_MAJOR),Integer.toString(valueMap.getInt("major"))));
       }
       if (valueMap.getInt("minor") != PROTOCOL_VERSION_MINOR)
       {
@@ -2157,11 +2191,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
     catch (BARException exception)
     {
-      throw new CommunicationError(BARControl.tr("{0}:{1}: {2}",name,Integer.toString(socket.getPort()),exception.getMessage()));
+      throw new CommunicationError(BARControl.tr("''{0}:{1}'': {2}",name,Integer.toString(socket.getPort()),exception.getMessage()));
     }
     catch (IOException exception)
     {
-      throw new CommunicationError(BARControl.tr("{0}:{1}: {2}",socket.getInetAddress(),Integer.toString(socket.getPort()),exception.getMessage()));
+      throw new CommunicationError(BARControl.tr("''{0}:{1}'': {2}",socket.getInetAddress(),Integer.toString(socket.getPort()),exception.getMessage()));
     }
 
     synchronized(lock)
@@ -2192,34 +2226,37 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
-   * @param noTLS TRUE to disable TLS
-   * @param forceTLS TRUE to force TLS
-   * @param password server password
    * @param caFileName server CA file name
    * @param certificateFileName server certificate file name
    * @param keyFileName server key file name
+   * @param noTLS TRUE to disable TLS
+   * @param forceTLS TRUE to force TLS
+   * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
+   * @param password server password
    */
   public static void connect(String  name,
                              int     port,
                              int     tlsPort,
-                             boolean noTLS,
-                             boolean forceTLS,
-                             String  password,
                              String  caFileName,
                              String  certificateFileName,
-                             String  keyFileName
+                             String  keyFileName,
+                             boolean noTLS,
+                             boolean forceTLS,
+                             boolean insecureTLS,
+                             String  password
                             )
   {
     connect((Display)null,
             name,
             port,
             tlsPort,
-            noTLS,
-            forceTLS,
-            password,
             caFileName,
             certificateFileName,
-            keyFileName
+            keyFileName,
+            noTLS,
+            forceTLS,
+            insecureTLS,
+            password
            );
   }
 
@@ -4433,20 +4470,21 @@ throw new Error("NYI");
    * @param certificateAuthorityFile certificate authority PEM file
    * @param certificateFile certificate PEM file
    * @param keyFile PEM key file
+   * @param insecureTLS  TRUE to accept insecure TLS connections (no certificates check)
    * @param password password or null
    * @return socket factory
    */
-  public static SSLSocketFactory getSocketFactory(File   certificateAuthorityFile,
-                                                  File   certificateFile,
-                                                  File   keyFile,
-                                                  String password
+  public static SSLSocketFactory getSocketFactory(File    certificateAuthorityFile,
+                                                  File    certificateFile,
+                                                  File    keyFile,
+                                                  boolean insecureTLS,
+                                                  String  password
                                                  )
     throws KeyManagementException,NoSuchAlgorithmException,KeyStoreException,UnrecoverableKeyException,IOException,CertificateException
   {
     char[]                passwordChars;
     PEMParser             reader;
     X509CertificateHolder certificateHolder;
-    KeyStore              keyStore;
 
     passwordChars = (password != null) ? password.toCharArray() : new char[0];
 
@@ -4481,28 +4519,57 @@ throw new Error("NYI");
     }
 
     // CA certificate used to authenticate server
-    keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null,null);
+
+    // CA certificate used to authenticate server
     keyStore.setCertificateEntry("ca-certificate",certificateAuthority);
-    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-    trustManagerFactory.init(keyStore);
 
     // certificate and client key for authentication
-    keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    keyStore.load(null,null);
     keyStore.setCertificateEntry("certificate",certificate);
     keyStore.setKeyEntry("private-key",
                          key.getPrivate(),
                          passwordChars,
                          new Certificate[]{certificate}
                         );
+
     KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(keyStore,passwordChars);
+
+    // get certificate trust managers
+    TrustManager[] trustManagers;
+    if (insecureTLS)
+    {
+      trustManagers = new TrustManager[]
+      {
+        new X509TrustManager()
+        {
+          public java.security.cert.X509Certificate[] getAcceptedIssuers()
+          {
+            return new X509Certificate[0];
+          }
+
+          public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType)
+          {
+          }
+
+          public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType)
+          {
+          }
+        }
+      };
+    }
+    else
+    {
+      TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+      trustManagerFactory.init(keyStore);
+      trustManagers = trustManagerFactory.getTrustManagers();
+    };
 
     // create TLS (SSL) socket factory
     SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
     sslContext.init(keyManagerFactory.getKeyManagers(),
-                    trustManagerFactory.getTrustManagers(),
+                    trustManagers,
                     null
                    );
 
