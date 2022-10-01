@@ -6160,17 +6160,17 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   #ifdef HAVE_GNU_TLS
-    if (Configuration_isCertificateAvailable(&globalOptions.serverCA))
+    if (!Configuration_isCertificateAvailable(&globalOptions.serverCA))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
       return;
     }
-    if (Configuration_isCertificateAvailable(&globalOptions.serverCert))
+    if (!Configuration_isCertificateAvailable(&globalOptions.serverCert))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
       return;
     }
-    if (Configuration_isKeyAvailable(&globalOptions.serverKey))
+    if (!Configuration_isKeyAvailable(&globalOptions.serverKey))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
       return;

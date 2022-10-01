@@ -1178,19 +1178,7 @@ Errors Network_receive(SocketHandle *socketHandle,
         events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
         if      (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
         {
-          // receive
           n = recv(socketHandle->handle,buffer,maxLength,0);
-
-          // check if disconected
-          if (n <= 0)
-          {
-            disconnect(socketHandle);
-          }
-        }
-        else if (timeout != NO_WAIT)
-        {
-          // disconnected
-          disconnect(socketHandle);
         }
       }
       break;
@@ -1212,20 +1200,9 @@ Errors Network_receive(SocketHandle *socketHandle,
 
           // wait for data
           events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
-          if      (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
+          if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
           {
-            // receive
             n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
-
-            if (n <= 0)
-            {
-              disconnect(socketHandle);
-            }
-          }
-          else if (timeout != NO_WAIT)
-          {
-            // disconnected
-            disconnect(socketHandle);
           }
         }
       #else /* not HAVE_GNU_TLS */
