@@ -3442,7 +3442,7 @@ public class ServerSettings
         BARServer.getServerOption(logFormat                  ); busyDialog[0].updateProgressBar(i); i++;
         BARServer.getServerOption(logPostCommand             ); busyDialog[0].updateProgressBar(i); i++;
 
-        Widgets.removeAllTableItems(widgetMaintenanceTable);
+        final ArrayList<MaintenanceData> maintenanceDataList = new ArrayList<MaintenanceData>();
         try
         {
           BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST"),
@@ -3461,17 +3461,7 @@ public class ServerSettings
                                        String endTime   = valueMap.getString("endTime"  );
 
                                        // create server data
-                                       MaintenanceData maintenanceData = new MaintenanceData(id,date,weekDays,beginTime,endTime);
-
-                                       // add table entry
-                                       Widgets.insertTableItem(widgetMaintenanceTable,
-                                                               maintenanceDataComparator,
-                                                               maintenanceData,
-                                                               maintenanceData.getDate(),
-                                                               maintenanceData.getWeekDays(),
-                                                               maintenanceData.getBeginTime(),
-                                                               maintenanceData.getEndTime()
-                                                              );
+                                       maintenanceDataList.add(new MaintenanceData(id,date,weekDays,beginTime,endTime));
                                      }
                                    }
                                   );
@@ -3481,39 +3471,54 @@ public class ServerSettings
           Dialogs.error(dialog,BARControl.tr("Get maintenance list fail:\n\n{0}",exception.getMessage()));
           return;
         }
+
+        Widgets.removeAllTableItems(widgetMaintenanceTable);
+        for (MaintenanceData maintenanceData : maintenanceDataList)
+        {
+          // add table entry
+          Widgets.insertTableItem(widgetMaintenanceTable,
+                                  maintenanceDataComparator,
+                                  maintenanceData,
+                                  maintenanceData.getDate(),
+                                  maintenanceData.getWeekDays(),
+                                  maintenanceData.getBeginTime(),
+                                  maintenanceData.getEndTime()
+                                 );
+        }
         busyDialog[0].updateProgressBar(i); i++;
 
         Widgets.removeAllTableItems(widgetServerTable);
-        ServerData serverData;
-        serverData = new ServerData(0,"default",ServerTypes.FTP);
+        ServerData defaultServerData;
+        defaultServerData = new ServerData(0,"default",ServerTypes.FTP);
         Widgets.insertTableItem(widgetServerTable,
                                 serverDataComparator,
-                                serverData,
+                                defaultServerData,
                                 ServerTypes.FTP.toString(),
                                 "default",
-                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                (defaultServerData.maxConnectionCount > 0) ? defaultServerData.maxConnectionCount : "-",
+                                (defaultServerData.maxStorageSize > 0) ? Units.formatByteSize(defaultServerData.maxStorageSize) : "-"
                                );
-        serverData = new ServerData(0,"default",ServerTypes.SSH);
+        defaultServerData = new ServerData(0,"default",ServerTypes.SSH);
         Widgets.insertTableItem(widgetServerTable,
                                 serverDataComparator,
-                                serverData,
+                                defaultServerData,
                                 ServerTypes.SSH.toString(),
                                 "default",
-                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                (defaultServerData.maxConnectionCount > 0) ? defaultServerData.maxConnectionCount : "-",
+                                (defaultServerData.maxStorageSize > 0) ? Units.formatByteSize(defaultServerData.maxStorageSize) : "-"
                                );
-        serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
+        defaultServerData = new ServerData(0,"default",ServerTypes.WEBDAV);
         Widgets.insertTableItem(widgetServerTable,
                                 serverDataComparator,
-                                serverData,
+                                defaultServerData,
                                 ServerTypes.WEBDAV.toString(),
                                 "default",
-                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                (defaultServerData.maxConnectionCount > 0) ? defaultServerData.maxConnectionCount : "-",
+                                (defaultServerData.maxStorageSize > 0) ? Units.formatByteSize(defaultServerData.maxStorageSize) : "-"
                                );
         busyDialog[0].updateProgressBar(i); i++;
 
+        final ArrayList<ServerData> serverDataList = new ArrayList<ServerData>();
         try
         {
           BARServer.executeCommand(StringParser.format("SERVER_LIST"),
@@ -3533,18 +3538,7 @@ public class ServerSettings
                                        int         maxConnectionCount = valueMap.getInt   ("maxConnectionCount",0        );
                                        long        maxStorageSize     = valueMap.getLong  ("maxStorageSize"              );
 
-                                       // create server data
-                                       ServerData serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
-
-                                       // add table entry
-                                       Widgets.insertTableItem(widgetServerTable,
-                                                               serverDataComparator,
-                                                               serverData,
-                                                               serverType.toString(),
-                                                               serverData.name,
-                                                               (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                                               (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                                                              );
+                                       serverDataList.add(new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize));
                                      }
                                    }
                                   );
@@ -3553,6 +3547,17 @@ public class ServerSettings
         {
           Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getMessage()));
           return;
+        }
+        for (ServerData serverData : serverDataList)
+        {
+          Widgets.insertTableItem(widgetServerTable,
+                                  serverDataComparator,
+                                  serverData,
+                                  serverData.type.toString(),
+                                  serverData.name,
+                                  (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                  (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                 );
         }
         busyDialog[0].updateProgressBar(i); i++;
       }

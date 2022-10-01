@@ -8559,7 +8559,6 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     }
   }
 
-
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 

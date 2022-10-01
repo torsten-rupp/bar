@@ -1637,7 +1637,6 @@ public class BARServer
               initSession(display,input,output);
 
               // send startTLS, wait for response
-              String[] errorMessage = new String[1];
               syncExecuteCommand(input,
                                  output,
                                  StringParser.format("START_TLS"),
@@ -1646,6 +1645,7 @@ public class BARServer
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
+// TODO:
 //              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 //              sslSocket.setTcpNoDelay(true);
               sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
@@ -1868,7 +1868,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               initSession(display,input,output);
 
               // send start TLS on plain socket, wait for response
-              String[] errorMessage = new String[1];
               syncExecuteCommand(input,
                                  output,
                                  StringParser.format("START_TLS"),
@@ -2125,7 +2124,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                              passwordEncryptType,
                                              encryptPassword(password)
                                             ),
-                         2  // debugLevel
+// TODO:
+0//                         2  // debugLevel
                         );
 
       // get version, mode
@@ -4671,64 +4671,67 @@ throw new Error("NYI");
     byte          b0,b1,b2;
     int           i0,i1,i2,i3;
 
-    // encode 3-byte tupels
-    i = 0;
-    while ((i+2) < data.length)
+    if (data.length > 0)
     {
-      b0 = data[i+0];
-      b1 = data[i+1];
-      b2 = data[i+2];
+      // encode 3-byte tupels
+      i = 0;
+      while ((i+2) < data.length)
+      {
+        b0 = data[i+0];
+        b1 = data[i+1];
+        b2 = data[i+2];
 
-      i0 = (int)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (int)((b0 & 0x03) << 4) | (int)((b1 & 0xF0) >> 4);
-      assert(i1 < 64);
-      i2 = (int)((b1 & 0x0F) << 2) | (int)((b2 & 0xC0) >> 6);
-      assert(i2 < 64);
-      i3 = (int)(b2 & 0x3F);
-      assert(i3 < 64);
+        i0 = (int)(b0 & 0xFC) >> 2;
+        assert(i0 < 64);
+        i1 = (int)((b0 & 0x03) << 4) | (int)((b1 & 0xF0) >> 4);
+        assert(i1 < 64);
+        i2 = (int)((b1 & 0x0F) << 2) | (int)((b2 & 0xC0) >> 6);
+        assert(i2 < 64);
+        i3 = (int)(b2 & 0x3F);
+        assert(i3 < 64);
 
-      stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
-      stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
-      stringBuffer.append(BASE64_ENCODING_TABLE[i2]);
-      stringBuffer.append(BASE64_ENCODING_TABLE[i3]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i2]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i3]);
 
-      i += 3;
-    }
+        i += 3;
+      }
 
-    // encode last 1,2 bytes
-    if      ((i+1) >= data.length)
-    {
-      // 1 byte => XY==
-      b0 = data[i+0];
+      // encode last 1,2 bytes
+      if      ((i+2) >= data.length)
+      {
+        // 2 byte => XYZ=
+        b0 = data[i+0];
+        b1 = data[i+1];
 
-      i0 = (int)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (int)((b0 & 0x03) << 4);
-      assert(i1 < 64);
+        i0 = (int)(b0 & 0xFC) >> 2;
+        assert(i0 < 64);
+        i1 = (int)((b0 & 0x03) << 4) | (int)((b1 & 0xF0) >> 4);
+        assert(i1 < 64);
+        i2 = (int)((b1 & 0x0F) << 2);
+        assert(i2 < 64);
 
-      stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
-      stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
-      stringBuffer.append('=');
-      stringBuffer.append('=');
-    }
-    else if  ((i+2) >= data.length)
-    {
-      // 2 byte => XYZ=
-      b0 = data[i+0];
-      b1 = data[i+1];
+        stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i2]);
+        stringBuffer.append('=');
+      }
+      else if ((i+1) >= data.length)
+      {
+        // 1 byte => XY==
+        b0 = data[i+0];
 
-      i0 = (int)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (int)((b0 & 0x03) << 4) | (int)((b1 & 0xF0) >> 4);
-      assert(i1 < 64);
-      i2 = (int)((b1 & 0x0F) << 2);
-      assert(i2 < 64);
+        i0 = (int)(b0 & 0xFC) >> 2;
+        assert(i0 < 64);
+        i1 = (int)((b0 & 0x03) << 4);
+        assert(i1 < 64);
 
-      stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
-      stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
-      stringBuffer.append(BASE64_ENCODING_TABLE[i2]);
-      stringBuffer.append('=');
+        stringBuffer.append(BASE64_ENCODING_TABLE[i0]);
+        stringBuffer.append(BASE64_ENCODING_TABLE[i1]);
+        stringBuffer.append('=');
+        stringBuffer.append('=');
+      }
     }
 
     return stringBuffer.toString();

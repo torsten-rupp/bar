@@ -461,6 +461,355 @@ abstract class UpdateJobStateListener
  */
 public class TabStatus
 {
+  /** schedule data
+   */
+  class ScheduleData
+  {
+    final static int NONE = 0;
+    final static int ANY  = -1;
+    final static int MON  = 0;
+    final static int TUE  = 1;
+    final static int WED  = 2;
+    final static int THU  = 3;
+    final static int FRI  = 4;
+    final static int SAT  = 5;
+    final static int SUN  = 6;
+
+    String       uuid;
+    int          year,month,day;
+    int          weekDays;
+    int          hour,minute;
+    ArchiveTypes archiveType;
+
+    /** create schedule data
+     * @param uuid schedule UUID
+     * @param year year
+     * @param month month
+     * @param day day
+     * @param weekDays week days
+     * @param hour hour
+     * @param minute minute
+     * @param archiveType archive type string
+     */
+    ScheduleData(String       uuid,
+                 int          year,
+                 int          month,
+                 int          day,
+                 int          weekDays,
+                 int          hour,
+                 int          minute,
+                 ArchiveTypes archiveType
+                )
+    {
+      this.uuid        = uuid;
+      this.year        = year;
+      this.month       = month;
+      this.day         = day;
+      this.weekDays    = weekDays;
+      this.hour        = hour;
+      this.minute      = minute;
+      this.archiveType = archiveType;
+    }
+
+    /** create schedule data
+     * @param uuid schedule UUID
+     * @param date date string (<year>-<month>-<day>)
+     * @param weekDays week days string; values separated by ','
+     * @param time time string (<hour>:<minute>)
+     * @param archiveType archive type string
+     */
+    ScheduleData(String       uuid,
+                 String       date,
+                 String       weekDays,
+                 String       time,
+                 ArchiveTypes archiveType
+                )
+    {
+      this.uuid        = uuid;
+      setDate(date);
+      setWeekDays(weekDays);
+      setTime(time);
+      this.archiveType = archiveType;
+    }
+
+    /** get year value
+     * @return year string
+     */
+    String getYear()
+    {
+      assert (year == ANY) || (year >= 1) : year;
+
+      return (year != ANY) ? String.format("%04d",year) : "*";
+    }
+
+    /** get month value
+     * @return month string
+     */
+    String getMonth()
+    {
+      assert (month == ANY) || ((month >= 1) && (month <= 12)) : month;
+
+      return (month != ANY) ? String.format("%02d",month) : "*";
+    }
+
+    /** get day value
+     * @return day string
+     */
+    String getDay()
+    {
+      assert (day == ANY) || ((day >= 1) && (day <= 31)) : day;
+
+      return (day != ANY) ? String.format("%02d",day) : "*";
+    }
+
+    /** get week days value
+     * @return week days string
+     */
+    String getWeekDays()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << ScheduleData.MON)
+                               | (1 << ScheduleData.TUE)
+                               | (1 << ScheduleData.WED)
+                               | (1 << ScheduleData.THU)
+                               | (1 << ScheduleData.FRI)
+                               | (1 << ScheduleData.SAT)
+                               | (1 << ScheduleData.SUN)
+                              )) == 0
+                ) : weekDays;
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuilder buffer = new StringBuilder();
+
+        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Mon")); }
+        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Tue")); }
+        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Wed")); }
+        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Thu")); }
+        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Fri")); }
+        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Sat")); }
+        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Sun")); }
+
+        return buffer.toString();
+      }
+    }
+
+    /** set week days
+     * @param weekDays week days string; values separated by ','
+     */
+    void setWeekDays(String weekDays)
+    {
+      if (weekDays.equals("*"))
+      {
+        this.weekDays = ScheduleData.ANY;
+      }
+      else
+      {
+        this.weekDays = ScheduleData.NONE;
+        for (String name : weekDays.split(","))
+        {
+          if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << ScheduleData.MON);
+          else if (name.toLowerCase().equals("tue")) this.weekDays |= (1 << ScheduleData.TUE);
+          else if (name.toLowerCase().equals("wed")) this.weekDays |= (1 << ScheduleData.WED);
+          else if (name.toLowerCase().equals("thu")) this.weekDays |= (1 << ScheduleData.THU);
+          else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << ScheduleData.FRI);
+          else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << ScheduleData.SAT);
+          else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << ScheduleData.SUN);
+        }
+      }
+    }
+
+    /** set week days
+     * @param monFlag true for Monday
+     * @param tueFlag true for Tuesday
+     * @param wedFlag true for Wednesday
+     * @param thuFlag true for Thursday
+     * @param friFlag true for Friday
+     * @param satFlag true for Saturday
+     * @param sunFlag true for Sunday
+     */
+    void setWeekDays(boolean monFlag,
+                     boolean tueFlag,
+                     boolean wedFlag,
+                     boolean thuFlag,
+                     boolean friFlag,
+                     boolean satFlag,
+                     boolean sunFlag
+                    )
+    {
+
+      if (   monFlag
+          && tueFlag
+          && wedFlag
+          && thuFlag
+          && friFlag
+          && satFlag
+          && sunFlag
+         )
+      {
+        this.weekDays = ScheduleData.ANY;
+      }
+      else
+      {
+        this.weekDays = ScheduleData.NONE;
+        if (monFlag) this.weekDays |= (1 << ScheduleData.MON);
+        if (tueFlag) this.weekDays |= (1 << ScheduleData.TUE);
+        if (wedFlag) this.weekDays |= (1 << ScheduleData.WED);
+        if (thuFlag) this.weekDays |= (1 << ScheduleData.THU);
+        if (friFlag) this.weekDays |= (1 << ScheduleData.FRI);
+        if (satFlag) this.weekDays |= (1 << ScheduleData.SAT);
+        if (sunFlag) this.weekDays |= (1 << ScheduleData.SUN);
+      }
+    }
+
+    /** get date value
+     * @return date string
+     */
+    String getDate()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getYear());
+      buffer.append('-');
+      buffer.append(getMonth());
+      buffer.append('-');
+      buffer.append(getDay());
+
+      return buffer.toString();
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     */
+    private void setDate(String year, String month, String day)
+    {
+      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
+      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
+    }
+
+    /** set date
+     * @param date date string
+     */
+    private void setDate(String date)
+    {
+      String[] parts = date.split("-");
+      setDate(parts[0],parts[1],parts[2]);
+    }
+
+    /** get hour value
+     * @return hour string
+     */
+    String getHour()
+    {
+      assert (hour == ANY) || ((hour >= 0) && (hour <= 23)) : hour;
+
+      return (hour != ANY) ? String.format("%02d",hour) : "*";
+    }
+
+    /** get minute value
+     * @return minute string
+     */
+    String getMinute()
+    {
+      assert (minute == ANY) || ((minute >= 0) && (minute <= 59)) : minute;
+
+      return (minute != ANY) ? String.format("%02d",minute) : "*";
+    }
+
+    /** get time value
+     * @return time string
+     */
+    String getTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getHour());
+      buffer.append(':');
+      buffer.append(getMinute());
+
+      return buffer.toString();
+    }
+
+    /** set time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setTime(String hour, String minute)
+    {
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
+      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
+    }
+
+    /** set time
+     * @param time time string
+     */
+    void setTime(String time)
+    {
+      String[] parts = time.split(":");
+      setTime(parts[0],parts[1]);
+    }
+
+    /** get archive type
+     * @return archive type
+     */
+    ArchiveTypes getArchiveType()
+    {
+      return archiveType;
+    }
+
+    /** convert week days to string
+     * @return week days string
+     */
+    String weekDaysToString()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << ScheduleData.MON)
+                               | (1 << ScheduleData.TUE)
+                               | (1 << ScheduleData.WED)
+                               | (1 << ScheduleData.THU)
+                               | (1 << ScheduleData.FRI)
+                               | (1 << ScheduleData.SAT)
+                               | (1 << ScheduleData.SUN)
+                              )) == 0
+                ) : weekDays;
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuilder buffer = new StringBuilder();
+
+        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Mon"); }
+        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Tue"); }
+        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Wed"); }
+        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Thu"); }
+        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Fri"); }
+        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sat"); }
+        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sun"); }
+
+        return buffer.toString();
+      }
+    }
+
+    /** convert data to string
+     */
+    public String toString()
+    {
+      return "ScheduleData {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+"}";
+    }
+  }
+
   /** status update thread
    */
   class TabStatusUpdateThread extends Thread
@@ -2294,6 +2643,7 @@ public class TabStatus
     // set trigger menu
     if (selectedJobData != null)
     {
+      final ArrayList<ScheduleData> scheduleDataList = new ArrayList<ScheduleData>();
       try
       {
 //TODO: sort
@@ -2314,45 +2664,7 @@ public class TabStatus
                                      final String       time         = valueMap.getString ("time"                          );
                                      final ArchiveTypes archiveType  = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
 
-                                     display.syncExec(new Runnable()
-                                     {
-                                       public void run()
-                                       {
-                                         MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,
-                                                                                 String.format("%s %s %s %s",date,weekDays,time,archiveType)
-                                                                                );
-                                         menuItem.addSelectionListener(new SelectionListener()
-                                         {
-                                           @Override
-                                           public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                                           {
-                                           }
-                                           @Override
-                                           public void widgetSelected(SelectionEvent selectionEvent)
-                                           {
-                                             try
-                                             {
-                                               BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
-                                                                                            selectedJobData.uuid,
-                                                                                            scheduleUUID
-                                                                                           ),
-                                                                        0  // debugLevel
-                                                                       );
-                                             }
-                                             catch (Exception exception)
-                                             {
-                                               Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
-                                                                                 selectedJobData.name.replaceAll("&","&&"),
-                                                                                 exception.getMessage()
-                                                                                )
-                                                            );
-                                               BARControl.logThrowable(exception);
-                                               return;
-                                             }
-                                           }
-                                         });
-                                       }
-                                     });
+                                     scheduleDataList.add(new ScheduleData(scheduleUUID,date,weekDays,time,archiveType));
                                    }
                                  }
                                 );
@@ -2365,6 +2677,54 @@ public class TabStatus
       {
         // ignored
       }
+
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (final ScheduleData scheduleData : scheduleDataList)
+          {
+            MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,
+                                                    String.format("%s %s %s %s",
+                                                                  scheduleData.getDate(),
+                                                                  scheduleData.getWeekDays(),
+                                                                  scheduleData.getTime(),
+                                                                  scheduleData.archiveType
+                                                                 )
+                                                   );
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                try
+                {
+                  BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
+                                                               selectedJobData.uuid,
+                                                               scheduleData.uuid
+                                                              ),
+                                           0  // debugLevel
+                                          );
+                }
+                catch (Exception exception)
+                {
+                  Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
+                                                    selectedJobData.name.replaceAll("&","&&"),
+                                                    exception.getMessage()
+                                                   )
+                               );
+                  BARControl.logThrowable(exception);
+                  return;
+                }
+              }
+            });
+          }
+        }
+      });
     }
   }
 

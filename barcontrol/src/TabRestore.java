@@ -2634,24 +2634,24 @@ Dprintf.dprintf("");
                                      long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
 
                                      // add storage index data
-                                     StorageIndexData storageIndexData = new StorageIndexData(storageId,
-                                                                                              jobUUID,
-                                                                                              jobName,
-                                                                                              entityId,
-                                                                                              hostName,
-                                                                                              createdDateTime,
-                                                                                              archiveType,
-                                                                                              name,
-                                                                                              dateTime,
-                                                                                              size,
-                                                                                              indexState,
-                                                                                              indexMode,
-                                                                                              lastCheckedDateTime,
-                                                                                              errorMessage_,
-                                                                                              totalEntryCount,
-                                                                                              totalEntrySize
-                                                                                             );
-                                     storageIndexDataList.add(storageIndexData);
+                                     storageIndexDataList.add(new StorageIndexData(storageId,
+                                                                                   jobUUID,
+                                                                                   jobName,
+                                                                                   entityId,
+                                                                                   hostName,
+                                                                                   createdDateTime,
+                                                                                   archiveType,
+                                                                                   name,
+                                                                                   dateTime,
+                                                                                   size,
+                                                                                   indexState,
+                                                                                   indexMode,
+                                                                                   lastCheckedDateTime,
+                                                                                   errorMessage_,
+                                                                                   totalEntryCount,
+                                                                                   totalEntrySize
+                                                                                  )
+                                                             );
 
                                      // check if aborted
                                      if (isRequestUpdate())
@@ -10037,6 +10037,7 @@ Dprintf.dprintf("");
                                              final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
                                              final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
 
+// TODO: mp syncExec inside executeCommand()?
                                              display.syncExec(new Runnable()
                                              {
                                                public void run()
@@ -10108,6 +10109,7 @@ Dprintf.dprintf("");
                                              final long       entryId   = valueMap.getLong  ("entryId"                   );
                                              final EntryTypes entryType = valueMap.getEnum  ("entryType",EntryTypes.class);
 
+// TODO: mp syncExec inside executeCommand()?
                                              switch (entryType)
                                              {
                                                case FILE:
