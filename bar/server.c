@@ -2985,7 +2985,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   const EntityNode *jobEntityNode,*otherJobEntityNode;
   const EntityNode *nextJobEntityNode;
   uint             age;
-  bool             inTransit;
   uint             totalEntityCount;
   uint64           totalEntitySize;
   char             string[64];
@@ -3040,7 +3039,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
           {
             totalEntityCount = 0;
             totalEntitySize  = 0LL;
-            inTransit        = FALSE;
 
             if (   !jobEntityNode->lockedFlag
                 && (jobEntityNode->persistenceNode != NULL)
@@ -3049,7 +3047,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               // calculate number/total size of entities in persistence periode
               LIST_ITERATE(&jobEntityList,otherJobEntityNode)
               {
-                if (otherJobEntityNode->persistenceNode == jobEntityNode->persistenceNode)
+                if (   (otherJobEntityNode->persistenceNode == jobEntityNode->persistenceNode)
+                    && !isInTransit(otherJobEntityNode)
+                   )
                 {
                   totalEntityCount++;
                   totalEntitySize += otherJobEntityNode->size;
@@ -3067,11 +3067,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               // get age
               age = (now-jobEntityNode->createdDateTime)/S_PER_DAY;
 
-              // check if "in-transit"
-              inTransit = isInTransit(jobEntityNode);
-
-              // check if expired, keep one "in-transit" entity
-              if (   !inTransit
+              // check if expired and not "in-transit"
+              if (   !isInTransit(jobEntityNode)
                   && hasPersistence(jobNode,jobEntityNode->archiveType)
                   && (   (jobEntityNode->persistenceNode != NULL)
                       && (jobEntityNode->persistenceNode->minKeep != KEEP_ALL)
@@ -3080,7 +3077,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                   && !Array_contains(&entityIdArray,&jobEntityNode->entityId)
                  )
               {
-                // persistence defined
+                // persistence defined, expired and not "in-transit"
                 if       (   (jobEntityNode->persistenceNode->maxKeep != KEEP_ALL)
                           && (jobEntityNode->persistenceNode->maxKeep >= jobEntityNode->persistenceNode->minKeep)
                           && (totalEntityCount > (uint)jobEntityNode->persistenceNode->maxKeep)
@@ -3093,6 +3090,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     while (   (nextJobEntityNode != NULL)
                            && (   (nextJobEntityNode->archiveType != jobEntityNode->archiveType)
                                || (nextJobEntityNode->persistenceNode != jobEntityNode->persistenceNode)
+                               || isInTransit(nextJobEntityNode)
                               )
                           )
                     {
