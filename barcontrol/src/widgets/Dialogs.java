@@ -1891,7 +1891,7 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
-        final Shell dialog = open(parentShell,Dialogs.tr("Warning"),200,70);
+        final Shell dialog = openModal(parentShell,Dialogs.tr("Warning"),200,70);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
         // message

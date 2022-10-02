@@ -6313,15 +6313,6 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     return getComboItems(combo,clazz);
   }
 
-  /** set selected option menu item
-   * @param combo option menu combo
-   * @param index index [0..n-1]
-   */
-  public static void setSelectedOptionMenuItem(Combo combo, int index)
-  {
-    setSelectedComboItem(combo,index);
-  }
-
   /** get selected option menu item
    * @param combo option menu combo
    * @param defaultValue default value
@@ -6349,6 +6340,15 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   public static <T> T getSelectedOptionMenuItem(Combo combo)
   {
     return getSelectedOptionMenuItem(combo,(T)null);
+  }
+
+  /** set selected option menu item
+   * @param combo option menu combo
+   * @param index index [0..n-1]
+   */
+  public static void setSelectedOptionMenuItem(Combo combo, int index)
+  {
+    setSelectedComboItem(combo,index);
   }
 
   /** set selected option menu item

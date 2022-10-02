@@ -1399,6 +1399,15 @@ public class BARServer
     }
   };
 
+  /** TLS modes
+   */
+  enum TLSModes
+  {
+    TRY,
+    NONE,
+    FORCE
+  };
+
   /** running states
    */
   enum States
@@ -1524,22 +1533,20 @@ public class BARServer
    * @param caFileName server CA file name
    * @param certificateFileName server certificate file name
    * @param keyFileName server key file name
-   * @param noTLS TRUE to disable TLS
-   * @param forceTLS TRUE to force TLS
+   * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password server password
    */
-  public static void connect(Display display,
-                             String  name,
-                             int     port,
-                             int     tlsPort,
-                             String  caFileName,
-                             String  certificateFileName,
-                             String  keyFileName,
-                             boolean noTLS,
-                             boolean forceTLS,
-                             boolean insecureTLS,
-                             String  password
+  public static void connect(Display            display,
+                             String             name,
+                             int                port,
+                             int                tlsPort,
+                             String             caFileName,
+                             String             certificateFileName,
+                             String             keyFileName,
+                             BARServer.TLSModes tlsMode,
+                             boolean            insecureTLS,
+                             String             password
                             )
   {
     /** key data
@@ -1609,7 +1616,9 @@ public class BARServer
         if (   (keyData.caFileName          != null)
             && (keyData.certificateFileName != null)
             && (keyData.keyFileName         != null)
-            && !noTLS
+            && (   (tlsMode == TLSModes.TRY)
+                || (tlsMode == TLSModes.FORCE)
+               )
            )
         {
           File caFile          = new File(keyData.caFileName);
@@ -1740,7 +1749,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (tlsPort != 0) && !noTLS)
+    if ((socket == null) && (tlsPort != 0) && ((tlsMode == TLSModes.TRY) || (tlsMode == TLSModes.FORCE)))
     {
       // try to create TLS socket with PEM
       for (KeyData keyData : keyData_)
@@ -1985,7 +1994,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (tlsPort != 0) && !noTLS)
+    if ((socket == null) && (tlsPort != 0) && ((tlsMode == TLSModes.TRY) || (tlsMode == TLSModes.FORCE)))
     {
       // try to create TLS socket with JKS
       for (KeyData keyData : keyData_)
@@ -2092,7 +2101,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (port != 0) && !forceTLS)
+    if ((socket == null) && (port != 0) && ((tlsMode == TLSModes.TRY) || (tlsMode == TLSModes.NONE)))
     {
       Socket plainSocket = null;
       try
@@ -2158,8 +2167,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                              passwordEncryptType,
                                              encryptPassword(password)
                                             ),
-// TODO:
-0//                         2  // debugLevel
+                         2  // debugLevel
                         );
 
       // get version, mode
@@ -2229,21 +2237,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param caFileName server CA file name
    * @param certificateFileName server certificate file name
    * @param keyFileName server key file name
-   * @param noTLS TRUE to disable TLS
-   * @param forceTLS TRUE to force TLS
+   * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password server password
    */
-  public static void connect(String  name,
-                             int     port,
-                             int     tlsPort,
-                             String  caFileName,
-                             String  certificateFileName,
-                             String  keyFileName,
-                             boolean noTLS,
-                             boolean forceTLS,
-                             boolean insecureTLS,
-                             String  password
+  public static void connect(String             name,
+                             int                port,
+                             int                tlsPort,
+                             String             caFileName,
+                             String             certificateFileName,
+                             String             keyFileName,
+                             BARServer.TLSModes tlsMode,
+                             boolean            insecureTLS,
+                             String             password
                             )
   {
     connect((Display)null,
@@ -2253,8 +2259,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             caFileName,
             certificateFileName,
             keyFileName,
-            noTLS,
-            forceTLS,
+            tlsMode,
             insecureTLS,
             password
            );
@@ -2321,6 +2326,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
+  }
+
+  /** check if TLS connection
+   * @return true iff TLS connection
+   */
+  public static boolean isTLSConnection()
+  {
+    return socket instanceof SSLSocket;
   }
 
   /** check if master-mode
