@@ -556,16 +556,16 @@ public class TabRestore
     static <T extends IndexData> IndexDataComparator<T> getInstance(final Tree tree)
     {
       final IndexDataComparator<T> indexDataComparator[] = new IndexDataComparator[1];
-      if (!tree.isDisposed())
+      tree.getDisplay().syncExec(new Runnable()
       {
-        tree.getDisplay().syncExec(new Runnable()
+        public void run()
         {
-          public void run()
+          if (!tree.isDisposed())
           {
             indexDataComparator[0] = new IndexDataComparator(tree);
           }
-        });
-      }
+        }
+      });
 
       return indexDataComparator[0];
     }
@@ -724,7 +724,7 @@ public class TabRestore
       }
       catch (IOException exception)
       {
-        // do nothing
+        // ignored
         if (Settings.debugLevel > 0)
         {
           BARControl.printStackTrace(exception);
@@ -753,6 +753,7 @@ public class TabRestore
         }
         catch (java.lang.ClassNotFoundException exception)
         {
+          // ignored
           if (Settings.debugLevel > 0)
           {
             BARControl.printStackTrace(exception);
@@ -761,6 +762,7 @@ public class TabRestore
         }
         catch (IOException exception)
         {
+          // ignored
           if (Settings.debugLevel > 0)
           {
             BARControl.printStackTrace(exception);
@@ -2452,7 +2454,6 @@ Dprintf.dprintf("");
         if (isRequestUpdate()) return;
 
         // remove not existing entities from tree
-
         display.syncExec(new Runnable()
         {
           public void run()
@@ -9086,6 +9087,7 @@ Dprintf.dprintf("");
                   {
                     if (Settings.debugLevel > 0)
                     {
+                      BARServer.disconnect();
                       BARControl.internalError(exception);
                     }
                   }
@@ -9393,7 +9395,8 @@ Dprintf.dprintf("");
 
               updateStorageTreeTableThread.triggerUpdate();
               updateAssignTo();
-              tabJobs.updateJobData();
+
+              Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB);
             }
 //TODO: pass to caller?
             catch (final CommunicationError error)
@@ -10150,17 +10153,17 @@ Dprintf.dprintf("");
                                                    {
                                                      public void run()
                                                      {
-                                                        if (!widgetRestoreTable.isDisposed())
-                                                        {
-                                                          Widgets.addTableItem(widgetRestoreTable,
-                                                                               entryId,
-                                                                               imageName,
-                                                                               entryType.getText(),
-                                                                               Units.formatByteSize(size),
-                                                                               "",
-                                                                               String.format("%d",fragmentCount)
-                                                                              );
-                                                        }
+                                                       if (!widgetRestoreTable.isDisposed())
+                                                       {
+                                                         Widgets.addTableItem(widgetRestoreTable,
+                                                                              entryId,
+                                                                              imageName,
+                                                                              entryType.getText(),
+                                                                              Units.formatByteSize(size),
+                                                                              "",
+                                                                              String.format("%d",fragmentCount)
+                                                                             );
+                                                       }
                                                      }
                                                    });
                                                  }
@@ -10295,9 +10298,10 @@ Dprintf.dprintf("");
         }
         catch (IllegalArgumentException exception)
         {
+          // ignored
           if (Settings.debugLevel > 0)
           {
-            BARControl.internalError(exception);
+            BARControl.printStackTrace(exception);
           }
         }
         finally

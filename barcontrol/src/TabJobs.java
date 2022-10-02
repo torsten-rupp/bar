@@ -104,6 +104,59 @@ import org.eclipse.swt.widgets.Widget;
  */
 public class TabJobs
 {
+  /** status update thread
+   */
+  class UpdateThread extends Thread
+  {
+    final int SLEEP_TIME = 30;
+
+    /** initialize status update thread
+     */
+    UpdateThread()
+    {
+      setName("BARControl Update Job");
+      setDaemon(true);
+    }
+
+    /** run status update thread
+     */
+    public void run()
+    {
+      try
+      {
+        for (;;)
+        {
+          // update
+          try
+          {
+            // update job
+            update();
+          }
+          catch (org.eclipse.swt.SWTException exception)
+          {
+            // ignore SWT exceptions
+            if (Settings.debugLevel > 2)
+            {
+              BARControl.printStackTrace(exception);
+              System.exit(ExitCodes.FAIL);
+            }
+          }
+
+          // sleep a short time
+          try { Thread.sleep(SLEEP_TIME*1000); } catch (InterruptedException exception) { /* ignored */ };
+        }
+      }
+      catch (Throwable throwable)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          BARServer.disconnect();
+          BARControl.internalError(throwable);
+        }
+      }
+    }
+  }
+
   /** entry types
    */
   enum EntryTypes
@@ -730,7 +783,6 @@ public class TabJobs
             }
 
             // update view
-//Dprintf.dprintf("name=%s count=%d size=%d timedOut=%s\n",directoryInfoRequest.name,count,size,timedOut);
             display.syncExec(new Runnable()
             {
               @Override
@@ -2418,165 +2470,166 @@ public class TabJobs
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // global variable references
-  private Shell        shell;
-  private Display      display;
-  private TabStatus    tabStatus;
+  private Shell                        shell;
+  private Display                      display;
+  private UpdateThread                 updateThread;
+  private TabStatus                    tabStatus;
 
   // widgets
-  public  Composite    widgetTab;
-  private TabFolder    widgetTabFolder;
-  private Combo        widgetJobList;
-  private Tree         widgetFileTree;
-  private Shell        widgetFileTreeToolTip = null;
-  private MenuItem     menuItemOpenClose;
-  private MenuItem     menuItemInclude;
-  private MenuItem     menuItemExcludeByList;
-  private MenuItem     menuItemExcludeByNoBackup;
-  private MenuItem     menuItemExcludeByNoDump;
-  private MenuItem     menuItemNone;
-  private Button       widgetInclude;
-  private Button       widgetExclude;
-  private Button       widgetNone;
-  private Table        widgetDeviceTable;
-  private Table        widgetMountTable;
-  private Button       widgetMountTableAdd,widgetMountTableEdit,widgetMountTableRemove;
-  private Table        widgetIncludeTable;
-  private Button       widgetIncludeTableAdd,widgetIncludeTableEdit,widgetIncludeTableRemove;
-  private List         widgetExcludeList;
-  private Button       widgetExcludeListAdd,widgetExcludeListEdit,widgetExcludeListRemove;
-  private Button       widgetArchivePartSizeLimited;
-  private Combo        widgetArchivePartSize;
-  private List         widgetCompressExcludeList;
-  private Button       widgetCompressExcludeListInsert,widgetCompressExcludeListEdit,widgetCompressExcludeListRemove;
-  private Combo[]      widgetCryptAlgorithms = new Combo[4];
-  private Text         widgetCryptPassword1,widgetCryptPassword2;
-  private Combo        widgetFTPMaxBandWidth;
-  private Combo        widgetSCPSFTPMaxBandWidth;
-  private Combo        widgetWebdavMaxBandWidth;
-  private Table        widgetScheduleTable;
-  private Shell        widgetScheduleTableToolTip = null;
-  private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
-  private Tree         widgetPersistenceTree;
-  private Shell        widgetPersistenceTreeToolTip = null;
-  private Button       widgetPersistenceTreeAdd,widgetPersistenceTreeEdit,widgetPersistenceTreeRemove;
+  public  Composite                    widgetTab;
+  private TabFolder                    widgetTabFolder;
+  private Combo                        widgetJobList;
+  private Tree                         widgetFileTree;
+  private Shell                        widgetFileTreeToolTip = null;
+  private MenuItem                     menuItemOpenClose;
+  private MenuItem                     menuItemInclude;
+  private MenuItem                     menuItemExcludeByList;
+  private MenuItem                     menuItemExcludeByNoBackup;
+  private MenuItem                     menuItemExcludeByNoDump;
+  private MenuItem                     menuItemNone;
+  private Button                       widgetInclude;
+  private Button                       widgetExclude;
+  private Button                       widgetNone;
+  private Table                        widgetDeviceTable;
+  private Table                        widgetMountTable;
+  private Button                       widgetMountTableAdd,widgetMountTableEdit,widgetMountTableRemove;
+  private Table                        widgetIncludeTable;
+  private Button                       widgetIncludeTableAdd,widgetIncludeTableEdit,widgetIncludeTableRemove;
+  private List                         widgetExcludeList;
+  private Button                       widgetExcludeListAdd,widgetExcludeListEdit,widgetExcludeListRemove;
+  private Button                       widgetArchivePartSizeLimited;
+  private Combo                        widgetArchivePartSize;
+  private List                         widgetCompressExcludeList;
+  private Button                       widgetCompressExcludeListInsert,widgetCompressExcludeListEdit,widgetCompressExcludeListRemove;
+  private Combo[]                      widgetCryptAlgorithms = new Combo[4];
+  private Text                         widgetCryptPassword1,widgetCryptPassword2;
+  private Combo                        widgetFTPMaxBandWidth;
+  private Combo                        widgetSCPSFTPMaxBandWidth;
+  private Combo                        widgetWebdavMaxBandWidth;
+  private Table                        widgetScheduleTable;
+  private Shell                        widgetScheduleTableToolTip = null;
+  private Button                       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
+  private Tree                         widgetPersistenceTree;
+  private Shell                        widgetPersistenceTreeToolTip = null;
+  private Button                       widgetPersistenceTreeAdd,widgetPersistenceTreeEdit,widgetPersistenceTreeRemove;
 
   // BAR variables
-  private WidgetVariable  slaveHostName             = new WidgetVariable<String> ("slave-host-name","");
-  private WidgetVariable  slaveHostPort             = new WidgetVariable<Integer>("slave-host-port",0);
-  private WidgetVariable  slaveHostForceTLS         = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
-  private WidgetVariable  includeFileCommand        = new WidgetVariable<String> ("include-file-command","");
-  private WidgetVariable  includeImageCommand       = new WidgetVariable<String> ("include-image-command","");
-  private WidgetVariable  excludeCommand            = new WidgetVariable<String> ("exclude-command","");
-  private WidgetVariable  archiveName               = new WidgetVariable<String> ("archive-name","");
-  private WidgetVariable  archiveType               = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
-  private WidgetVariable  archivePartSizeFlag       = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  archivePartSize           = new WidgetVariable<Long>   ("archive-part-size",0L);
-  private WidgetVariable  deltaCompressAlgorithm    = new WidgetVariable<String> ("delta-compress-algorithm",
-                                                                                  new String[]{"none",
-                                                                                               "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
-                                                                                              },
-                                                                                  "none"
-                                                                                 );
-  private WidgetVariable  deltaSource               = new WidgetVariable<String> ("delta-source","");
-  private WidgetVariable  byteCompressAlgorithmType = new WidgetVariable<String> (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
-                                                                                  "none"
-                                                                                 );
-  private WidgetVariable  byteCompressAlgorithm     = new WidgetVariable<String> (new String[]{"none",
-                                                                                               "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                                                                               "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                                                                               "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                                                                               "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                               "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
-                                                                                               "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
-                                                                                              },
-                                                                                  "none"
-                                                                                 );
-  private WidgetVariable  compressMinSize           = new WidgetVariable<Long>   ("compress-min-size",0L);
-  private WidgetVariable  cryptAlgorithm            = new WidgetVariable<String> ("crypt-algorithm",
-                                                                                  new String[]{"none",
-                                                                                               "3DES",
-                                                                                               "CAST5",
-                                                                                               "BLOWFISH",
-                                                                                               "AES128",
-                                                                                               "AES192",
-                                                                                               "AES256",
-                                                                                               "TWOFISH128",
-                                                                                               "TWOFISH256",
-                                                                                               "SERPENT128",
-                                                                                               "SERPENT192",
-                                                                                               "SERPENT256",
-                                                                                               "CAMELLIA128",
-                                                                                               "CAMELLIA192",
-                                                                                               "CAMELLIA256"
-                                                                                              },
-                                                                                  "none"
-                                                                                 );
-  private WidgetVariable  cryptType                 = new WidgetVariable<String> ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
-  private WidgetVariable  cryptPublicKeyFileName    = new WidgetVariable<String> ("crypt-public-key","");
-  private WidgetVariable  cryptPasswordMode         = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
-  private WidgetVariable  cryptPassword             = new WidgetVariable<String> ("crypt-password","");
-  private WidgetVariable  incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
-  private WidgetVariable  storageOnMasterFlag       = new WidgetVariable<Boolean>("storage-on-master",true);
-  private WidgetVariable  storageType               = new WidgetVariable<Enum>   ("storage-type",
-                                                                                  new StorageTypes[]{StorageTypes.FILESYSTEM,
-                                                                                                     StorageTypes.FTP,
-                                                                                                     StorageTypes.SCP,
-                                                                                                     StorageTypes.SFTP,
-                                                                                                     StorageTypes.WEBDAV,
-                                                                                                     StorageTypes.WEBDAVS,
-                                                                                                     StorageTypes.CD,
-                                                                                                     StorageTypes.DVD,
-                                                                                                     StorageTypes.BD,
-                                                                                                     StorageTypes.DEVICE
-                                                                                                  },
-                                                                                  StorageTypes.FILESYSTEM
-                                                                                 );
-  private WidgetVariable  storageHostName           = new WidgetVariable<String> ("");
-  private WidgetVariable  storageHostPort           = new WidgetVariable<Integer>("",0);
-  private WidgetVariable  storageLoginName          = new WidgetVariable<String> ("","");
-  private WidgetVariable  storageLoginPassword      = new WidgetVariable<String> ("","");
-  private WidgetVariable  storageDeviceName         = new WidgetVariable<String> ("","");
-  private WidgetVariable  storageFileName           = new WidgetVariable<String> ("","");
-  private WidgetVariable  archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",
-                                                                                  new String[]
-                                                                                  {
-                                                                                    "stop",
-                                                                                    "rename",
-                                                                                    "append",
-                                                                                    "overwrite"
-                                                                                  },
-                                                                                  "stop"
-                                                                                 );
-  private WidgetVariable  sshPublicKeyFileName      = new WidgetVariable<String> ("ssh-public-key","");
-  private WidgetVariable  sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
-  private WidgetVariable  maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  maxBandWidth              = new WidgetVariable<Long>   ("max-band-width",0L);
-  private WidgetVariable  volumeSize                = new WidgetVariable<String> ("volume-size","");
-  private WidgetVariable  ecc                       = new WidgetVariable<Boolean>("ecc",false);
-  private WidgetVariable  blank                     = new WidgetVariable<Boolean>("blank",false);
-  private WidgetVariable  waitFirstVolume           = new WidgetVariable<Boolean>("wait-first-volume",false);
-  private WidgetVariable  skipUnreadable            = new WidgetVariable<Boolean>("skip-unreadable",false);
-  private WidgetVariable  noStopOnOwnerError        = new WidgetVariable<Boolean>("no-stop-on-owner-error",false);
-  private WidgetVariable  noStopOnAttributeError    = new WidgetVariable<Boolean>("no-stop-on-attribute-error",false);
-  private WidgetVariable  rawImages                 = new WidgetVariable<Boolean>("raw-images",false);
-  private WidgetVariable  overwriteFiles            = new WidgetVariable<Boolean>("overwrite-files",false);
-  private WidgetVariable  preCommand                = new WidgetVariable<String> ("pre-command","");
-  private WidgetVariable  postCommand               = new WidgetVariable<String> ("post-command","");
-  private WidgetVariable  slavePreCommand           = new WidgetVariable<String> ("slave-pre-command","");
-  private WidgetVariable  slavePostCommand          = new WidgetVariable<String> ("slave-post-command","");
-  private WidgetVariable  maxStorageSize            = new WidgetVariable<String> ("max-storage-size","");
-  private WidgetVariable  comment                   = new WidgetVariable<String> ("comment","");
+  private WidgetVariable               slaveHostName             = new WidgetVariable<String> ("slave-host-name","");
+  private WidgetVariable               slaveHostPort             = new WidgetVariable<Integer>("slave-host-port",0);
+  private WidgetVariable               slaveHostForceTLS         = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
+  private WidgetVariable               includeFileCommand        = new WidgetVariable<String> ("include-file-command","");
+  private WidgetVariable               includeImageCommand       = new WidgetVariable<String> ("include-image-command","");
+  private WidgetVariable               excludeCommand            = new WidgetVariable<String> ("exclude-command","");
+  private WidgetVariable               archiveName               = new WidgetVariable<String> ("archive-name","");
+  private WidgetVariable               archiveType               = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
+  private WidgetVariable               archivePartSizeFlag       = new WidgetVariable<Boolean>(false);
+  private WidgetVariable               archivePartSize           = new WidgetVariable<Long>   ("archive-part-size",0L);
+  private WidgetVariable               deltaCompressAlgorithm    = new WidgetVariable<String> ("delta-compress-algorithm",
+                                                                                               new String[]{"none",
+                                                                                                            "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
+                                                                                                           },
+                                                                                               "none"
+                                                                                              );
+  private WidgetVariable               deltaSource               = new WidgetVariable<String> ("delta-source","");
+  private WidgetVariable               byteCompressAlgorithmType = new WidgetVariable<String> (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
+                                                                                               "none"
+                                                                                              );
+  private WidgetVariable               byteCompressAlgorithm     = new WidgetVariable<String> (new String[]{"none",
+                                                                                                            "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                                            "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                                            "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                                            "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                                            "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
+                                                                                                            "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
+                                                                                                           },
+                                                                                               "none"
+                                                                                              );
+  private WidgetVariable               compressMinSize           = new WidgetVariable<Long>   ("compress-min-size",0L);
+  private WidgetVariable               cryptAlgorithm            = new WidgetVariable<String> ("crypt-algorithm",
+                                                                                               new String[]{"none",
+                                                                                                            "3DES",
+                                                                                                            "CAST5",
+                                                                                                            "BLOWFISH",
+                                                                                                            "AES128",
+                                                                                                            "AES192",
+                                                                                                            "AES256",
+                                                                                                            "TWOFISH128",
+                                                                                                            "TWOFISH256",
+                                                                                                            "SERPENT128",
+                                                                                                            "SERPENT192",
+                                                                                                            "SERPENT256",
+                                                                                                            "CAMELLIA128",
+                                                                                                            "CAMELLIA192",
+                                                                                                            "CAMELLIA256"
+                                                                                                           },
+                                                                                               "none"
+                                                                                              );
+  private WidgetVariable               cryptType                 = new WidgetVariable<String> ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
+  private WidgetVariable               cryptPublicKeyFileName    = new WidgetVariable<String> ("crypt-public-key","");
+  private WidgetVariable               cryptPasswordMode         = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
+  private WidgetVariable               cryptPassword             = new WidgetVariable<String> ("crypt-password","");
+  private WidgetVariable               incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
+  private WidgetVariable               storageOnMasterFlag       = new WidgetVariable<Boolean>("storage-on-master",true);
+  private WidgetVariable               storageType               = new WidgetVariable<Enum>   ("storage-type",
+                                                                                               new StorageTypes[]{StorageTypes.FILESYSTEM,
+                                                                                                                  StorageTypes.FTP,
+                                                                                                                  StorageTypes.SCP,
+                                                                                                                  StorageTypes.SFTP,
+                                                                                                                  StorageTypes.WEBDAV,
+                                                                                                                  StorageTypes.WEBDAVS,
+                                                                                                                  StorageTypes.CD,
+                                                                                                                  StorageTypes.DVD,
+                                                                                                                  StorageTypes.BD,
+                                                                                                                  StorageTypes.DEVICE
+                                                                                                               },
+                                                                                               StorageTypes.FILESYSTEM
+                                                                                              );
+  private WidgetVariable               storageHostName           = new WidgetVariable<String> ("");
+  private WidgetVariable               storageHostPort           = new WidgetVariable<Integer>("",0);
+  private WidgetVariable               storageLoginName          = new WidgetVariable<String> ("","");
+  private WidgetVariable               storageLoginPassword      = new WidgetVariable<String> ("","");
+  private WidgetVariable               storageDeviceName         = new WidgetVariable<String> ("","");
+  private WidgetVariable               storageFileName           = new WidgetVariable<String> ("","");
+  private WidgetVariable               archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",
+                                                                                               new String[]
+                                                                                               {
+                                                                                                 "stop",
+                                                                                                 "rename",
+                                                                                                 "append",
+                                                                                                 "overwrite"
+                                                                                               },
+                                                                                               "stop"
+                                                                                              );
+  private WidgetVariable               sshPublicKeyFileName      = new WidgetVariable<String> ("ssh-public-key","");
+  private WidgetVariable               sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
+  private WidgetVariable               maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
+  private WidgetVariable               maxBandWidth              = new WidgetVariable<Long>   ("max-band-width",0L);
+  private WidgetVariable               volumeSize                = new WidgetVariable<String> ("volume-size","");
+  private WidgetVariable               ecc                       = new WidgetVariable<Boolean>("ecc",false);
+  private WidgetVariable               blank                     = new WidgetVariable<Boolean>("blank",false);
+  private WidgetVariable               waitFirstVolume           = new WidgetVariable<Boolean>("wait-first-volume",false);
+  private WidgetVariable               skipUnreadable            = new WidgetVariable<Boolean>("skip-unreadable",false);
+  private WidgetVariable               noStopOnOwnerError        = new WidgetVariable<Boolean>("no-stop-on-owner-error",false);
+  private WidgetVariable               noStopOnAttributeError    = new WidgetVariable<Boolean>("no-stop-on-attribute-error",false);
+  private WidgetVariable               rawImages                 = new WidgetVariable<Boolean>("raw-images",false);
+  private WidgetVariable               overwriteFiles            = new WidgetVariable<Boolean>("overwrite-files",false);
+  private WidgetVariable               preCommand                = new WidgetVariable<String> ("pre-command","");
+  private WidgetVariable               postCommand               = new WidgetVariable<String> ("post-command","");
+  private WidgetVariable               slavePreCommand           = new WidgetVariable<String> ("slave-pre-command","");
+  private WidgetVariable               slavePostCommand          = new WidgetVariable<String> ("slave-post-command","");
+  private WidgetVariable               maxStorageSize            = new WidgetVariable<String> ("max-storage-size","");
+  private WidgetVariable               comment                   = new WidgetVariable<String> ("comment","");
 
   // variables
   private DirectoryInfoThread          directoryInfoThread;
-  private boolean                      directorySizesFlag     = false;
-  private JobData                      selectedJobData        = null;
-  private WidgetEvent                  selectJobEvent         = new WidgetEvent();
-  private HashMap<String,EntryData>    includeHashMap         = new HashMap<String,EntryData>();
-  private HashSet<String>              excludeHashSet         = new HashSet<String>();
-  private HashSet<String>              sourceHashSet          = new HashSet<String>();
-  private HashSet<String>              compressExcludeHashSet = new HashSet<String>();
-  private HashMap<String,ScheduleData> scheduleDataMap        = new HashMap<String,ScheduleData>();
+  private boolean                      directorySizesFlag        = false;
+  private JobData                      selectedJobData           = null;
+  private WidgetEvent                  selectJobEvent            = new WidgetEvent();
+  private HashMap<String,EntryData>    includeHashMap            = new HashMap<String,EntryData>();
+  private HashSet<String>              excludeHashSet            = new HashSet<String>();
+  private HashSet<String>              sourceHashSet             = new HashSet<String>();
+  private HashSet<String>              compressExcludeHashSet    = new HashSet<String>();
+  private HashMap<String,ScheduleData> scheduleDataMap           = new HashMap<String,ScheduleData>();
 
   /** create jobs tab
    * @param parentTabFolder parent tab folder
@@ -8768,7 +8821,7 @@ TODO: implement delete entity
     {
       public void handleEvent(Event event)
       {
-        assert(event.data != null);
+        update();
       }
     });
     shell.addListener(BARControl.USER_EVENT_DELETE_JOB,new Listener()
@@ -8799,6 +8852,9 @@ TODO: implement delete entity
         }
       }
     });
+
+    // create update thread
+    updateThread = new UpdateThread();
   }
 
   /** set tab status reference
@@ -8807,6 +8863,13 @@ TODO: implement delete entity
   public void setTabStatus(TabStatus tabStatus)
   {
     this.tabStatus = tabStatus;
+  }
+
+  /** start update job data
+   */
+  public void startUpdate()
+  {
+    updateThread.start();
   }
 
   /** update job list
@@ -8871,129 +8934,6 @@ TODO: implement delete entity
         }
       }
     });
-  }
-
-  /** update selected job data
-   */
-  public void updateJobData()
-  {
-    final JobData jobData = selectedJobData;
-
-    display.syncExec(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        Widgets.setEnabled(widgetTabFolder,false);
-    }});
-    if (jobData != null)
-    {
-      {
-        BARServer.lockSet();
-      }
-      try
-      {
-        // update root/device lists
-        updateRootList();
-        updateDevicesList();
-
-        // get job data
-        BARServer.getJobOption(jobData.uuid,slaveHostName);
-        BARServer.getJobOption(jobData.uuid,slaveHostPort);
-        BARServer.getJobOption(jobData.uuid,slaveHostForceTLS);
-        BARServer.getJobOption(jobData.uuid,includeFileCommand);
-        BARServer.getJobOption(jobData.uuid,includeImageCommand);
-        BARServer.getJobOption(jobData.uuid,excludeCommand);
-        BARServer.getJobOption(jobData.uuid,archiveName);
-        BARServer.getJobOption(jobData.uuid,archiveType);
-//TODO: use widgetVariable+getJobOption
-        archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
-        archivePartSizeFlag.set(archivePartSize.getLong() > 0);
-
-        String compressAlgorithms[] = parseCompressAlgorithm(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"));
-//Dprintf.dprintf("compressAlgorithms=%s:%s:%s",compressAlgorithms[0],compressAlgorithms[1],compressAlgorithms[2]);
-        deltaCompressAlgorithm.set(compressAlgorithms[0]);
-        byteCompressAlgorithmType.set(compressAlgorithms[1]);
-        byteCompressAlgorithm.set(compressAlgorithms[2]);
-        cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
-        cryptType.set(BARServer.getStringJobOption(jobData.uuid,"crypt-type"));
-        BARServer.getJobOption(jobData.uuid,cryptPublicKeyFileName);
-        cryptPasswordMode.set(BARServer.getStringJobOption(jobData.uuid,"crypt-password-mode"));
-        BARServer.getJobOption(jobData.uuid,cryptPassword);
-        BARServer.getJobOption(jobData.uuid,incrementalListFileName);
-        archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
-// TODO:
-//        BARServer.getStringJobOption(jobData.uuid,archiveFileMode);
-        BARServer.getJobOption(jobData.uuid,storageOnMasterFlag);
-        BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
-        BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
-/* NYI ???
-        maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-band-width")));
-        maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
-*/
-        BARServer.getJobOption(jobData.uuid,volumeSize);
-        BARServer.getJobOption(jobData.uuid,ecc);
-        BARServer.getJobOption(jobData.uuid,blank);
-        BARServer.getJobOption(jobData.uuid,waitFirstVolume);
-        BARServer.getJobOption(jobData.uuid,skipUnreadable);
-        BARServer.getJobOption(jobData.uuid,noStopOnOwnerError);
-        BARServer.getJobOption(jobData.uuid,noStopOnAttributeError);
-        BARServer.getJobOption(jobData.uuid,rawImages);
-        BARServer.getJobOption(jobData.uuid,overwriteFiles);
-        BARServer.getJobOption(jobData.uuid,preCommand);
-        BARServer.getJobOption(jobData.uuid,postCommand);
-        BARServer.getJobOption(jobData.uuid,slavePreCommand);
-        BARServer.getJobOption(jobData.uuid,slavePostCommand);
-        BARServer.getJobOption(jobData.uuid,maxStorageSize);
-        BARServer.getJobOption(jobData.uuid,comment);
-
-        display.syncExec(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            // update trees/tables
-            updateIncludeList(jobData);
-            updateExcludeList(jobData);
-            updateMountList(jobData);
-            updateSourceList(jobData);
-            updateCompressExcludeList(jobData);
-            updateScheduleTable(jobData);
-            updatePersistenceTree(jobData);
-
-            // update images
-            updateFileTreeImages();
-            updateDeviceImages();
-          }
-        });
-      }
-      catch (Exception exception)
-      {
-        // ignored
-      }
-      finally
-      {
-        BARServer.unlockSet();
-      }
-    }
-    else
-    {
-      display.syncExec(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          clearSelectedJob();
-        }
-      });
-    }
-      display.syncExec(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-    Widgets.setEnabled(widgetTabFolder,true);
-    }});
   }
 
   /** create new job
@@ -9434,7 +9374,7 @@ throw new Error("NYI");
         }
       }
 
-      Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,jobData);
+      Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,jobData.uuid);
 
       return true;
     }
@@ -9481,6 +9421,153 @@ throw new Error("NYI");
   }
 
   //-----------------------------------------------------------------------
+
+  /** get selected job data
+   */
+  private void getJobData()
+  {
+    // disable tab
+    display.syncExec(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        Widgets.setEnabled(widgetTabFolder,false);
+    }});
+
+    if (selectedJobData != null)
+    {
+      {
+// TODO: required? values are read only
+        BARServer.lockSet();
+      }
+      try
+      {
+        // update root/device lists
+        updateRootList();
+        updateDevicesList();
+
+        // get job data
+        BARServer.getJobOption(selectedJobData.uuid,slaveHostName);
+        BARServer.getJobOption(selectedJobData.uuid,slaveHostPort);
+        BARServer.getJobOption(selectedJobData.uuid,slaveHostForceTLS);
+        BARServer.getJobOption(selectedJobData.uuid,includeFileCommand);
+        BARServer.getJobOption(selectedJobData.uuid,includeImageCommand);
+        BARServer.getJobOption(selectedJobData.uuid,excludeCommand);
+        BARServer.getJobOption(selectedJobData.uuid,archiveName);
+        BARServer.getJobOption(selectedJobData.uuid,archiveType);
+//TODO: use widgetVariable+getJobOption
+        archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
+        archivePartSizeFlag.set(archivePartSize.getLong() > 0);
+
+        String compressAlgorithms[] = parseCompressAlgorithm(BARServer.getStringJobOption(selectedJobData.uuid,"compress-algorithm"));
+//Dprintf.dprintf("compressAlgorithms=%s:%s:%s",compressAlgorithms[0],compressAlgorithms[1],compressAlgorithms[2]);
+        deltaCompressAlgorithm.set(compressAlgorithms[0]);
+        byteCompressAlgorithmType.set(compressAlgorithms[1]);
+        byteCompressAlgorithm.set(compressAlgorithms[2]);
+        cryptAlgorithm.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-algorithm"));
+        cryptType.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-type"));
+        BARServer.getJobOption(selectedJobData.uuid,cryptPublicKeyFileName);
+        cryptPasswordMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-password-mode"));
+        BARServer.getJobOption(selectedJobData.uuid,cryptPassword);
+        BARServer.getJobOption(selectedJobData.uuid,incrementalListFileName);
+        archiveFileMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-file-mode"));
+// TODO:
+//        BARServer.getStringJobOption(jobData.uuid,archiveFileMode);
+        BARServer.getJobOption(selectedJobData.uuid,storageOnMasterFlag);
+        BARServer.getJobOption(selectedJobData.uuid,sshPublicKeyFileName);
+        BARServer.getJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
+/* NYI ???
+        maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-band-width")));
+        maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
+*/
+        BARServer.getJobOption(selectedJobData.uuid,volumeSize);
+        BARServer.getJobOption(selectedJobData.uuid,ecc);
+        BARServer.getJobOption(selectedJobData.uuid,blank);
+        BARServer.getJobOption(selectedJobData.uuid,waitFirstVolume);
+        BARServer.getJobOption(selectedJobData.uuid,skipUnreadable);
+        BARServer.getJobOption(selectedJobData.uuid,noStopOnOwnerError);
+        BARServer.getJobOption(selectedJobData.uuid,noStopOnAttributeError);
+        BARServer.getJobOption(selectedJobData.uuid,rawImages);
+        BARServer.getJobOption(selectedJobData.uuid,overwriteFiles);
+        BARServer.getJobOption(selectedJobData.uuid,preCommand);
+        BARServer.getJobOption(selectedJobData.uuid,postCommand);
+        BARServer.getJobOption(selectedJobData.uuid,slavePreCommand);
+        BARServer.getJobOption(selectedJobData.uuid,slavePostCommand);
+        BARServer.getJobOption(selectedJobData.uuid,maxStorageSize);
+        BARServer.getJobOption(selectedJobData.uuid,comment);
+
+        // update trees/tables
+        updateIncludeList(selectedJobData);
+        updateExcludeList(selectedJobData);
+        updateMountList(selectedJobData);
+        updateSourceList(selectedJobData);
+        updateCompressExcludeList(selectedJobData);
+        updateScheduleTable(selectedJobData);
+        updatePersistenceTree(selectedJobData);
+
+        // update images
+        updateFileTreeImages();
+        updateDeviceImages();
+      }
+      catch (Exception exception)
+      {
+        // ignored
+      }
+      finally
+      {
+        BARServer.unlockSet();
+      }
+    }
+    else
+    {
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          clearSelectedJob();
+        }
+      });
+    }
+
+    // enable tab
+    display.syncExec(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        Widgets.setEnabled(widgetTabFolder,true);
+      }
+    });
+  }
+
+  /** update selected job data (read only data)
+   */
+  private void update()
+  {
+    if (selectedJobData != null)
+    {
+      try
+      {
+        // update root/device lists
+        updateRootList();
+        updateDevicesList();
+
+        // update trees/tables
+        updatePersistenceTree(selectedJobData);
+      }
+      catch (Throwable throwable)
+      {
+        // internal error
+        if (Settings.debugLevel > 0)
+        {
+          BARServer.disconnect();
+          BARControl.internalError(throwable);
+        }
+      }
+    }
+  }
 
   /** parse compress algorithm string
    * @return [deltaCompressAlgorithm,byteCompressAlgorithmType,byteCompressAlgorithm]
@@ -9586,15 +9673,8 @@ throw new Error("NYI");
       }
     });
 
-    // update data
-    try
-    {
-      updateJobData();
-    }
-    catch (ConnectionError error)
-    {
-      // ignored
-    }
+    // get job data
+    getJobData();
   }
 
   /** clear selected
@@ -10331,12 +10411,12 @@ throw new Error("NYI");
     }
 
     // update table
-    if (!widgetDeviceTable.isDisposed())
+    display.syncExec(new Runnable()
     {
-      display.syncExec(new Runnable()
+      @Override
+      public void run()
       {
-        @Override
-        public void run()
+        if (!widgetDeviceTable.isDisposed())
         {
           final DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable);
 
@@ -10352,8 +10432,8 @@ throw new Error("NYI");
                                    );
           }
         }
-      });
-    }
+      }
+    });
   }
 
   /** update images in device tree
@@ -10434,12 +10514,12 @@ throw new Error("NYI");
         // ignored
       }
 
-      if (!widgetIncludeTable.isDisposed())
+      display.syncExec(new Runnable()
       {
-        display.syncExec(new Runnable()
+        @Override
+        public void run()
         {
-          @Override
-          public void run()
+          if (!widgetIncludeTable.isDisposed())
           {
             Widgets.removeAllTableItems(widgetIncludeTable);
             for (EntryData entryData : includeHashMap.values())
@@ -10452,8 +10532,8 @@ throw new Error("NYI");
                                      );
             }
           }
-        });
-      }
+        }
+      });
     }
   }
 
@@ -10732,12 +10812,12 @@ throw new Error("NYI");
         return;
       }
 
-      if (!widgetIncludeTable.isDisposed())
+      display.syncExec(new Runnable()
       {
-        display.syncExec(new Runnable()
+        @Override
+        public void run()
         {
-          @Override
-          public void run()
+          if (!widgetIncludeTable.isDisposed())
           {
             Widgets.removeAllTableItems(widgetIncludeTable);
             for (EntryData entryData : includeHashMap.values())
@@ -10750,8 +10830,8 @@ throw new Error("NYI");
                                      );
             }
           }
-        });
-      }
+        }
+      });
     }
 
     // update file tree/device images
@@ -10904,7 +10984,6 @@ throw new Error("NYI");
       // ignored
     }
 
-    Widgets.removeAllListItems(widgetExcludeList);
     display.syncExec(new Runnable()
     {
       @Override
@@ -10912,6 +10991,7 @@ throw new Error("NYI");
       {
         if (!widgetExcludeList.isDisposed())
         {
+          Widgets.removeAllListItems(widgetExcludeList);
           for (PatternData patternData : patternDataList)
           {
             Widgets.insertListItem(widgetExcludeList,
@@ -11293,7 +11373,6 @@ throw new Error("NYI");
       // ignored
     }
 
-    Widgets.removeAllListItems(widgetCompressExcludeList);
     display.syncExec(new Runnable()
     {
       @Override
@@ -11301,6 +11380,7 @@ throw new Error("NYI");
       {
         if (!widgetCompressExcludeList.isDisposed())
         {
+          Widgets.removeAllListItems(widgetCompressExcludeList);
           for (PatternData patternData : patternDataList)
           {
             Widgets.insertListItem(widgetCompressExcludeList,
@@ -11351,12 +11431,12 @@ throw new Error("NYI");
       // ignored
     }
 
-    if (!widgetMountTable.isDisposed())
+    display.syncExec(new Runnable()
     {
-      display.syncExec(new Runnable()
+      @Override
+      public void run()
       {
-        @Override
-        public void run()
+        if (!widgetMountTable.isDisposed())
         {
           final MountDataComparator mountDataComparator = new MountDataComparator(widgetMountTable);
 
@@ -11371,8 +11451,8 @@ throw new Error("NYI");
                                          );
           }
         }
-      });
-    }
+      }
+    });
   }
 
   /** edit mount data
@@ -13700,13 +13780,13 @@ throw new Error("NYI");
         return;
       }
 
-      if (!widgetScheduleTable.isDisposed())
+      // update schedule table
+      display.syncExec(new Runnable()
       {
-        // update schedule table
-        display.syncExec(new Runnable()
+        @Override
+        public void run()
         {
-          @Override
-          public void run()
+          if (!widgetScheduleTable.isDisposed())
           {
             synchronized(scheduleDataMap)
             {
@@ -13787,8 +13867,8 @@ throw new Error("NYI");
               }
             }
           }
-        });
-      }
+        }
+      });
     }
     catch (CommunicationError error)
     {
@@ -14220,7 +14300,7 @@ throw new Error("NYI");
         tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(scheduleData);
 
-        Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData);
+        Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData.uuid);
       }
     }
   }
@@ -14279,7 +14359,7 @@ throw new Error("NYI");
                                  );
           tableItem.setChecked(scheduleData.enabled);
 
-          Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData);
+          Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData.uuid);
         }
       }
     }
@@ -14349,7 +14429,7 @@ throw new Error("NYI");
           newTableItem.setChecked(newScheduleData.enabled);
           newTableItem.setData(newScheduleData);
 
-          Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData);
+          Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData.uuid);
         }
       }
     }
@@ -14508,57 +14588,69 @@ throw new Error("NYI");
     catch (Exception exception)
     {
       // ignored
+      if (Settings.debugLevel > 0)
+      {
+        BARControl.printStackTrace(exception);
+      }
     }
 
-    if (!widgetPersistenceTree.isDisposed())
+    display.syncExec(new Runnable()
     {
-      final PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(PersistenceDataComparator.SortModes.MAX_AGE);
-
-      final HashSet<TreeItem>         removedTreeItems       = Widgets.getAllTreeItems(widgetPersistenceTree);
-
-      // add persistence nodes
-      final HashMap<Integer,TreeItem> persistenceTreeItemMap = new HashMap<Integer,TreeItem>();
-      for (PersistenceData persistenceData : persistenceDataArray)
+      @Override
+      public void run()
       {
-        TreeItem treeItem = Widgets.updateInsertTreeItem(widgetPersistenceTree,
-                                                         persistenceDataComparator,
-                                                         Widgets.TREE_ITEM_FLAG_FOLDER,
-                                                         persistenceData,
-                                                         persistenceData.archiveType.getText(),
-                                                         Keep.format(persistenceData.minKeep),
-                                                         Keep.format(persistenceData.maxKeep),
-                                                         Age.format(persistenceData.maxAge)
-                                                        );
-        persistenceTreeItemMap.put(persistenceData.id,treeItem);
-
-        removedTreeItems.remove(treeItem);
-      }
-
-      // add entities to persitences nodes
-      for (EntityIndexData entityIndexData : entityIndexDataMap.keySet())
-      {
-        TreeItem persistenceTreeItem = persistenceTreeItemMap.get(entityIndexDataMap.get(entityIndexData));
-        if (persistenceTreeItem != null)
+        if (!widgetPersistenceTree.isDisposed())
         {
-          TreeItem treeItem = Widgets.updateInsertTreeItem(persistenceTreeItem,
-                                                           Widgets.TREE_ITEM_FLAG_OPEN,
-                                                           entityIndexData,
-                                                           "",
-                                                           "",
-                                                           "",
-                                                           "",
-                                                           SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000)),
-                                                           (int)((System.currentTimeMillis()/1000-entityIndexData.createdDateTime)/(24*60*60)),
-                                                           Units.formatByteSize(entityIndexData.totalEntrySize)
-                                                          );
-          if (entityIndexData.inTransit) Widgets.setTreeItemColor(treeItem,COLOR_IN_TRANSIT);
+          final PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(PersistenceDataComparator.SortModes.MAX_AGE);
 
-          removedTreeItems.remove(treeItem);
+
+          HashSet<TreeItem>         removedTreeItems       = Widgets.getAllTreeItems(widgetPersistenceTree);
+
+          // add persistence nodes
+          final HashMap<Integer,TreeItem> persistenceTreeItemMap = new HashMap<Integer,TreeItem>();
+          for (PersistenceData persistenceData : persistenceDataArray)
+          {
+            TreeItem treeItem = Widgets.updateInsertTreeItem(widgetPersistenceTree,
+                                                             persistenceDataComparator,
+                                                             Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                             persistenceData,
+                                                             persistenceData.archiveType.getText(),
+                                                             Keep.format(persistenceData.minKeep),
+                                                             Keep.format(persistenceData.maxKeep),
+                                                             Age.format(persistenceData.maxAge)
+                                                            );
+            persistenceTreeItemMap.put(persistenceData.id,treeItem);
+
+            removedTreeItems.remove(treeItem);
+          }
+
+          // add entities to persitences nodes
+          for (EntityIndexData entityIndexData : entityIndexDataMap.keySet())
+          {
+            TreeItem persistenceTreeItem = persistenceTreeItemMap.get(entityIndexDataMap.get(entityIndexData));
+            if (persistenceTreeItem != null)
+            {
+              TreeItem treeItem = Widgets.updateInsertTreeItem(persistenceTreeItem,
+                                                               Widgets.TREE_ITEM_FLAG_OPEN,
+                                                               entityIndexData,
+                                                               "",
+                                                               "",
+                                                               "",
+                                                               "",
+                                                               SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000)),
+                                                               (int)((System.currentTimeMillis()/1000-entityIndexData.createdDateTime)/(24*60*60)),
+                                                               Units.formatByteSize(entityIndexData.totalEntrySize)
+                                                              );
+              if (entityIndexData.inTransit) Widgets.setTreeItemColor(treeItem,COLOR_IN_TRANSIT);
+
+              removedTreeItems.remove(treeItem);
+            }
+          }
+
+          Widgets.removeTreeItems(removedTreeItems);
         }
       }
-
-      Widgets.removeTreeItems(removedTreeItems);
-    }
+    });
   }
 
   /** edit persistence data
@@ -15421,28 +15513,6 @@ throw new Error("NYI");
         BARControl.resetCursor();
       }
     }
-  }
-
-  // ----------------------------------------------------------------------
-
-  /** start update all data
-   */
-  private void update()
-  {
-    Background.run(new BackgroundRunnable()
-    {
-      public void run()
-      {
-        try
-        {
-          updateJobData();
-        }
-        catch (ConnectionError error)
-        {
-          // ignored
-        }
-      }
-    });
   }
 }
 

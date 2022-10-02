@@ -812,18 +812,17 @@ public class TabStatus
 
   /** status update thread
    */
-  class TabStatusUpdateThread extends Thread
+  class UpdateThread extends Thread
   {
-    private TabStatus tabStatus;
+    final int SLEEP_TIME = 1;
 
     /** initialize status update thread
      * @param tabStatus tab status
      */
-    TabStatusUpdateThread(TabStatus tabStatus)
+    UpdateThread()
     {
-      this.tabStatus = tabStatus;
-      setDaemon(true);
       setName("BARControl Update Status");
+      setDaemon(true);
     }
 
     /** run status update thread
@@ -835,18 +834,10 @@ public class TabStatus
         int i = 0;
         for (;;)
         {
-          // sleep a short time
-          try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
-
           // update
           try
           {
-            // update status, running job info
-            tabStatus.updateStatus();
-            tabStatus.updateJobInfo();
-
-            // update job list
-            if (i == 0) tabStatus.updateJobList();
+            update(i == 0);
           }
           catch (org.eclipse.swt.SWTException exception)
           {
@@ -859,6 +850,9 @@ public class TabStatus
           }
 
           i = (i+1)%10;
+
+          // sleep a short time
+          try { Thread.sleep(SLEEP_TIME*1000); } catch (InterruptedException exception) { /* ignored */ };
         }
       }
       catch (Throwable throwable)
@@ -867,7 +861,6 @@ public class TabStatus
         {
           BARServer.disconnect();
           BARControl.internalError(throwable);
-          System.exit(ExitCodes.FAIL);
         }
       }
     }
@@ -885,7 +878,7 @@ public class TabStatus
   // global variable references
   private Shell                           shell;
   private Display                         display;
-  private TabStatusUpdateThread           tabStatusUpdateThread;
+  private UpdateThread                    updateThread;
   private TabJobs                         tabJobs;
 
   // menu/widgets
@@ -2346,8 +2339,6 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-        assert(event.data != null);
-
         updateJobList();
         setSelectedJob(selectedJobData);
       }
@@ -2372,9 +2363,8 @@ public class TabStatus
       }
     });
 
-    // create status update thread
-    tabStatusUpdateThread = new TabStatusUpdateThread(this);
-    tabStatusUpdateThread.setDaemon(true);
+    // create update thread
+    updateThread = new UpdateThread();
   }
 
   /** set jobs tab
@@ -2389,8 +2379,7 @@ public class TabStatus
    */
   public void startUpdate()
   {
-    update();
-    tabStatusUpdateThread.start();
+    updateThread.start();
   }
 
   /** get job by name
@@ -2608,7 +2597,6 @@ public class TabStatus
           }
         }
       });
-
     }
     catch (Exception exception)
     {
@@ -2620,6 +2608,7 @@ public class TabStatus
     }
 
     // update tab jobs list
+// TODO: send event
     tabJobs.updateJobList(jobDataMap.values());
   }
 
@@ -2749,14 +2738,6 @@ public class TabStatus
                                                                 : ""
                                                              )+"'"
                              );
-  }
-
-  /** set selected job
-   * @param jobUUID job UUID
-   */
-  private void setSelectedJob(String jobUUID)
-  {
-    setSelectedJob(jobDataMap.get(jobUUID));
   }
 
   /** clear selected job
@@ -3076,13 +3057,14 @@ public class TabStatus
     }
   }
 
-  /** update status, job list, job data
+  /** update job data
+   * @param updateJobListFlag true to update job list, too
    */
-  private void update()
+  private void update(boolean updateJobListFlag)
   {
     try
     {
-      updateJobList();
+      if (updateJobListFlag) updateJobList();
 
       updateStatus();
       updateJobInfo();
@@ -3091,6 +3073,13 @@ public class TabStatus
     {
       // ignored
     }
+  }
+
+  /** update job data
+   */
+  private void update()
+  {
+    update(true);
   }
 
   /** start selected job
@@ -3463,7 +3452,7 @@ public class TabStatus
 
     if (tabJobs.jobRename(selectedJobData))
     {
-      Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData);
+      Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData.uuid);
     }
   }
 
