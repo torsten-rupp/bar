@@ -3087,6 +3087,7 @@ if (false) {
 
     // start auto update
     tabStatus.startUpdate();
+    tabJobs.startUpdate();
 
     // add tab listener
     display.addFilter(SWT.KeyDown,new Listener()
@@ -6305,12 +6306,10 @@ Dprintf.dprintf("still not supported");
     catch (AssertionError error)
     {
       internalError(error);
-      System.exit(ExitCodes.INTERNAL_ERROR);
     }
     catch (InternalError error)
     {
-      printInternalError(error);
-      System.exit(ExitCodes.INTERNAL_ERROR);
+      internalError(error);
     }
     catch (Error error)
     {

@@ -254,11 +254,11 @@ class SimpleBusyDialog
    */
   public void animate()
   {
-    if (!dialog.isDisposed())
+    display.syncExec(new Runnable()
     {
-      display.syncExec(new Runnable()
+      public void run()
       {
-        public void run()
+        if (!dialog.isDisposed())
         {
           int x = (data.animationIndex%8)*48;
           int y = (data.animationIndex/8)*48;
@@ -277,8 +277,8 @@ class SimpleBusyDialog
 
           data.animationIndex = 1+(data.animationIndex % 23);
         }
-      });
-    }
+      }
+    });
   }
 
   /** auto animate dialog
@@ -396,11 +396,11 @@ class SimpleProgressDialog
    */
   public void animate()
   {
-    if (!dialog.isDisposed())
+    display.syncExec(new Runnable()
     {
-      display.syncExec(new Runnable()
+      public void run()
       {
-        public void run()
+        if (!dialog.isDisposed())
         {
           int x = (data.animationIndex%8)*48;
           int y = (data.animationIndex/8)*48;
@@ -421,8 +421,8 @@ class SimpleProgressDialog
 
           data.animationIndex = (data.animationIndex+1) % 24;
         }
-      });
-    }
+      }
+    });
   }
 
   /** auto animate dialog
