@@ -1476,54 +1476,54 @@ public class BARControl
    */
   class LoginData
   {
-    String  serverName;       // server name
-    int     serverPort;       // server port
-    int     serverTLSPort;    // server TLS port
-    boolean forceTLS;         // force TLS
-    String  password;         // login password
-    Roles   role;             // role
+    String             name;            // server name
+    int                port;            // server port
+    int                tlsPort;         // server TLS port
+    BARServer.TLSModes tlsMode;         // TLS mode
+    String             password;        // login password
+    Roles              role;            // role
 
     /** create login data
      * @param serverName server name
      * @param port server port
      * @param tlsPort server TLS port
+     * @param tlsMode TLS mode; see BARServer.TLSModes
      * @param password server password
-     * @param forceTLS TRUE to force TLS
      * @param role role
      */
-    LoginData(String name, int port, int tlsPort, boolean forceTLS, String password, Roles role)
+    LoginData(String name, int port, int tlsPort, BARServer.TLSModes tlsMode, String password, Roles role)
     {
       final Settings.Server lastServer = Settings.getLastServer();
 
-      this.serverName    = !name.isEmpty()     ? name     : ((lastServer != null) ? lastServer.name : Settings.DEFAULT_SERVER_NAME    );
-      this.serverPort    = (port != 0        ) ? port     : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_PORT    );
-      this.serverTLSPort = (port != 0        ) ? tlsPort  : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_TLS_PORT);
-      this.forceTLS      = forceTLS;
-      this.password      = !password.isEmpty() ? password : "";
-      this.role          = role;
+      this.name     = !name.isEmpty()     ? name     : ((lastServer != null) ? lastServer.name : Settings.DEFAULT_SERVER_NAME    );
+      this.port     = (port != 0        ) ? port     : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_PORT    );
+      this.tlsPort  = (port != 0        ) ? tlsPort  : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_TLS_PORT);
+      this.tlsMode  = tlsMode;
+      this.password = !password.isEmpty() ? password : "";
+      this.role     = role;
     }
 
     /** create login data
      * @param serverName server name
      * @param port server port
      * @param tlsPort server TLS port
-     * @param forceTLS TRUE to force TLS
+     * @param tlsMode TLS mode; see BARServer.TLSModes
      * @param role role
      */
-    LoginData(String name, int port, int tlsPort, boolean forceTLS, Roles role)
+    LoginData(String name, int port, int tlsPort, BARServer.TLSModes tlsMode, Roles role)
     {
-      this(name,port,tlsPort,forceTLS,"",role);
+      this(name,port,tlsPort,tlsMode,"",role);
     }
 
     /** create login data
      * @param port server port
      * @param tlsPort server TLS port
-     * @param forceTLS TRUE to force TLS
+     * @param tlsMode TLS mode; see BARServer.TLSModes
      * @param role role
      */
-    LoginData(int port, int tlsPort, boolean forceTLS, Roles role)
+    LoginData(int port, int tlsPort, BARServer.TLSModes tlsMode, Roles role)
     {
-      this("",port,tlsPort,forceTLS,role);
+      this("",port,tlsPort,tlsMode,role);
     }
 
     /** convert data to string
@@ -1532,7 +1532,7 @@ public class BARControl
     @Override
     public String toString()
     {
-      return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+", "+(forceTLS ? "TLS" : "plain")+"}";
+      return "LoginData {"+name+", "+port+", "+tlsPort+", "+tlsMode+"}";
     }
   }
 
@@ -2606,21 +2606,19 @@ if (false) {
    * @param caFileName server certificate authority file
    * @param certificateFileName server certificate file
    * @param keyFileName server key file
-   * @param noTLS server no TLS
-   * @param forceTLS force TLS
+   * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password login password
    */
-  private void connect(String  name,
-                       int     port,
-                       int     tlsPort,
-                       String  caFileName,
-                       String  certificateFileName,
-                       String  keyFileName,
-                       boolean noTLS,
-                       boolean forceTLS,
-                       boolean insecureTLS,
-                       String  password
+  private void connect(String             name,
+                       int                port,
+                       int                tlsPort,
+                       String             caFileName,
+                       String             certificateFileName,
+                       String             keyFileName,
+                       BARServer.TLSModes tlsMode,
+                       boolean            insecureTLS,
+                       String             password
                       )
     throws ConnectionError
   {
@@ -2656,8 +2654,7 @@ if (false) {
                         caFileName,
                         certificateFileName,
                         keyFileName,
-                        noTLS,
-                        forceTLS,
+                        tlsMode,
                         insecureTLS,
                         password
                        );
@@ -3142,24 +3139,27 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Settings.Server defaultServer = Settings.getLastServer();
+            Settings.Server    defaultServer = Settings.getLastServer();
+            BARServer.TLSModes tlsMode;
+            if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+            else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
+            else                              tlsMode = BARServer.TLSModes.TRY;
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                       (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                      !Settings.serverNoTLS && Settings.serverForceTLS,
+                                      tlsMode,
                                       Settings.role
                                      );
             if (getLoginData(loginData,false))
             {
               try
               {
-                connect(loginData.serverName,
-                        loginData.serverPort,
-                        loginData.serverTLSPort,
+                connect(loginData.name,
+                        loginData.port,
+                        loginData.tlsPort,
                         Settings.serverCAFileName,
                         Settings.serverCertificateFileName,
                         Settings.serverKeyFileName,
-                        Settings.serverNoTLS,
-                        loginData.forceTLS,
+                        loginData.tlsMode,
                         Settings.serverInsecureTLS,
                         loginData.password
                        );
@@ -3179,6 +3179,13 @@ if (false) {
                 {
                   serverMenuLastSelectedItem.setSelection(true);
                 }
+
+                return;
+              }
+
+              if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+              {
+                Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
               }
             }
           }
@@ -3800,14 +3807,13 @@ if (false) {
       {
         try
         {
-          connect(loginData.serverName,
-                  loginData.serverPort,
-                  loginData.serverTLSPort,
+          connect(loginData.name,
+                  loginData.port,
+                  loginData.tlsPort,
                   Settings.serverCAFileName,
                   Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
-                  Settings.serverNoTLS,
-                  loginData.forceTLS,
+                  loginData.tlsMode,
                   Settings.serverInsecureTLS,
                   loginData.password
                  );
@@ -3846,26 +3852,30 @@ if (false) {
             quitFlag = true;
             break;
           }
+        }
+
+        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+        {
+          Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
         }
       }
 
       // try to connect to new server
       while (   !connectOkFlag
              && getLoginData(loginData,false)
-             && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
+             && ((loginData.port != 0) || (loginData.tlsPort != 0))
             )
       {
         // try to connect to server
         try
         {
-          connect(loginData.serverName,
-                  loginData.serverPort,
-                  loginData.serverTLSPort,
+          connect(loginData.name,
+                  loginData.port,
+                  loginData.tlsPort,
                   Settings.serverCAFileName,
                   Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
-                  Settings.serverNoTLS,
-                  loginData.forceTLS,
+                  loginData.tlsMode,
                   Settings.serverInsecureTLS,
                   loginData.password
                  );
@@ -3904,6 +3914,11 @@ if (false) {
             quitFlag = true;
             break;
           }
+        }
+
+        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+        {
+          Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
         }
       }
     }
@@ -4079,9 +4094,9 @@ if (false) {
       serverData[i] = servers[i].getData();
     }
 
-    final Combo   widgetServerName;
-    final Spinner widgetServerPort;
-    final Button  widgetForceTLS;
+    final Combo   widgetName;
+    final Spinner widgetPort;
+    final Combo   widgetTLSMode;
     final Text    widgetPassword;
     final Button  widgetRoleBasic,widgetRoleNormal,widgetRoleExpert;
     final Button  widgetLoginButton;
@@ -4094,23 +4109,32 @@ if (false) {
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
       subComposite = new Composite(composite,SWT.NONE);
-      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0},2));
+      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0},2));
       subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
       {
-        widgetServerName = Widgets.newCombo(subComposite,SWT.LEFT|SWT.BORDER);
-        widgetServerName.setItems(serverData);
-        if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
-        Widgets.layout(widgetServerName,0,0,TableLayoutData.WE);
+        widgetName = Widgets.newCombo(subComposite,SWT.LEFT|SWT.BORDER);
+        widgetName.setItems(serverData);
+        if (loginData.name != null) widgetName.setText(loginData.name);
+        Widgets.layout(widgetName,0,0,TableLayoutData.WE);
 
-        widgetServerPort = Widgets.newSpinner(subComposite,SWT.RIGHT|SWT.BORDER);
-        widgetServerPort.setMinimum(0);
-        widgetServerPort.setMaximum(65535);
-        widgetServerPort.setSelection(loginData.serverPort);
-        Widgets.layout(widgetServerPort,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+        widgetPort = Widgets.newSpinner(subComposite,SWT.RIGHT|SWT.BORDER);
+        widgetPort.setMinimum(0);
+        widgetPort.setMaximum(65535);
+        widgetPort.setSelection(loginData.port);
+        Widgets.layout(widgetPort,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
-        widgetForceTLS = Widgets.newCheckbox(subComposite,BARControl.tr("TLS"));
-        widgetForceTLS.setSelection(loginData.forceTLS);
-        Widgets.layout(widgetForceTLS,0,2,TableLayoutData.W);
+        label = new Label(subComposite,SWT.LEFT);
+        label.setText(BARControl.tr("TLS"));
+        label.setLayoutData(new TableLayoutData(0,2,TableLayoutData.W));
+
+        widgetTLSMode = Widgets.newOptionMenu(subComposite);
+        Widgets.setOptionMenuItems(widgetTLSMode,new Object[]{BARControl.tr("try"  ),BARServer.TLSModes.TRY,
+                                                              BARControl.tr("none" ),BARServer.TLSModes.NONE,
+                                                              BARControl.tr("force"),BARServer.TLSModes.FORCE
+                                                             }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetTLSMode,loginData.tlsMode);
+        Widgets.layout(widgetTLSMode,0,3,TableLayoutData.W);
       }
 
       label = Widgets.newLabel(composite);
@@ -4169,10 +4193,10 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          loginData.serverName = widgetServerName.getText();
-          loginData.serverPort = widgetServerPort.getSelection();
-          loginData.forceTLS   = widgetForceTLS.getSelection();
-          loginData.password   = widgetPassword.getText();
+          loginData.name     = widgetName.getText();
+          loginData.port     = widgetPort.getSelection();
+          loginData.tlsMode  = Widgets.getSelectedOptionMenuItem(widgetTLSMode,BARServer.TLSModes.TRY);
+          loginData.password = widgetPassword.getText();
           if (roleFlag)
           {
             if      (widgetRoleBasic.getSelection() ) loginData.role = Roles.BASIC;
@@ -4203,7 +4227,7 @@ if (false) {
     }
 
     // install handlers
-    widgetServerName.addSelectionListener(new SelectionListener()
+    widgetName.addSelectionListener(new SelectionListener()
     {
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4213,9 +4237,9 @@ if (false) {
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Settings.Server server = servers[widgetServerName.getSelectionIndex()];
-        widgetServerName.setText((server.name != null) ? server.name : "");
-        widgetServerPort.setSelection(server.port);
+        Settings.Server server = servers[widgetName.getSelectionIndex()];
+        widgetName.setText((server.name != null) ? server.name : "");
+        widgetPort.setSelection(server.port);
         widgetPassword.setText(((server.password != null) && !server.password.isEmpty()) ? server.password : "");
       }
     });
@@ -4232,25 +4256,25 @@ if (false) {
       }
     });
 
-    Widgets.setNextFocus(widgetServerName,
-                         widgetServerPort,
+    Widgets.setNextFocus(widgetName,
+                         widgetPort,
                          widgetPassword,
                          widgetLoginButton
                         );
-    if ((loginData.serverName != null) && (loginData.serverName.length() != 0))
+    if ((loginData.name != null) && (loginData.name.length() != 0))
     {
       widgetPassword.forceFocus();
     }
     else
     {
-      widgetServerName.forceFocus();
+      widgetName.forceFocus();
     }
     Boolean result = (Boolean)Dialogs.run(dialog);
-    if ((result != null) && result && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0)))
+    if ((result != null) && result && ((loginData.port != 0) || (loginData.tlsPort != 0)))
     {
       // store new name+port, shorten list
-      Settings.addServer(loginData.serverName,
-                         (loginData.serverPort != 0) ? loginData.serverPort : loginData.serverTLSPort,
+      Settings.addServer(loginData.name,
+                         (loginData.port != 0) ? loginData.port : loginData.tlsPort,
                          loginData.password
                         );
       Settings.save();
@@ -4310,23 +4334,27 @@ if (false) {
             // try to connect to server with current credentials
             if (!connectOkFlag)
             {
+              BARServer.TLSModes tlsMode;
+              if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+              else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
+              else                              tlsMode = BARServer.TLSModes.TRY;
+
               loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.serverNoTLS && Settings.serverForceTLS,
+                                        tlsMode,
                                         (!server.password.isEmpty()) ? server.password : "",
                                         Settings.role
                                        );
               try
               {
-                connect(loginData.serverName,
-                        loginData.serverPort,
-                        loginData.serverTLSPort,
+                connect(loginData.name,
+                        loginData.port,
+                        loginData.tlsPort,
                         Settings.serverCAFileName,
                         Settings.serverCertificateFileName,
                         Settings.serverKeyFileName,
-                        Settings.serverNoTLS,
-                        loginData.forceTLS,
+                        loginData.tlsMode,
                         Settings.serverInsecureTLS,
                         loginData.password
                        );
@@ -4348,8 +4376,7 @@ if (false) {
               }
             }
 
-            // try to connect to server without TLS/TLS
-            if (!connectOkFlag && loginData.forceTLS)
+            if (!connectOkFlag && loginData.tlsMode == BARServer.TLSModes.FORCE)
             {
               if (Dialogs.confirmError(new Shell(),
                                        BARControl.tr("Connection fail"),
@@ -4359,16 +4386,16 @@ if (false) {
                                       )
                  )
               {
+                // try to connect to server without TLS/SSL
                 try
                 {
-                  connect(loginData.serverName,
-                          loginData.serverPort,
-                          loginData.serverTLSPort,
+                  connect(loginData.name,
+                          loginData.port,
+                          loginData.tlsPort,
                           (String)null,  // serverCAFileName
                           (String)null,  // serverCertificateFileName
                           (String)null,  // serverKeyFileName
-                          true,  // noTLS,
-                          false,  // forceTLS
+                          BARServer.TLSModes.NONE,
                           true,  // insecureTLS,
                           loginData.password
                          );
@@ -4394,24 +4421,28 @@ if (false) {
             // try to connect to server with new credentials
             if (!connectOkFlag)
             {
+              BARServer.TLSModes tlsMode;
+              if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+              else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
+              else                              tlsMode = BARServer.TLSModes.TRY;
+
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.serverNoTLS && Settings.serverForceTLS,
+                                        tlsMode,
                                         Settings.role
                                        );
               if (getLoginData(loginData,false))
               {
                 try
                 {
-                  connect(loginData.serverName,
-                          loginData.serverPort,
-                          loginData.serverTLSPort,
+                  connect(loginData.name,
+                          loginData.port,
+                          loginData.tlsPort,
                           Settings.serverCAFileName,
                           Settings.serverCertificateFileName,
                           Settings.serverKeyFileName,
-                          Settings.serverNoTLS,
-                          loginData.forceTLS,
+                          loginData.tlsMode,
                           Settings.serverInsecureTLS,
                           loginData.password
                          );
@@ -4436,6 +4467,11 @@ if (false) {
 
             if (connectOkFlag)
             {
+              if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+              {
+                Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+              }
+
               updateServerMenu();
 
               // notify new server
@@ -4900,18 +4936,22 @@ if (false) {
       if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
       if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
       if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
+      BARServer.TLSModes tlsMode;
+      if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+      else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
+      else                              tlsMode = BARServer.TLSModes.TRY;
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                !Settings.serverNoTLS && Settings.serverForceTLS,
+                                tlsMode,
                                 (server != null) ? server.password : "",
                                 Settings.role
                                );
       // support deprecated server settings
-      if (Settings.serverName     != null) loginData.serverName    = Settings.serverName;
-      if (Settings.serverPort     != -1  ) loginData.serverPort    = Settings.serverPort;
-      if (Settings.serverTLSPort  != -1  ) loginData.serverTLSPort = Settings.serverTLSPort;
-      if (Settings.serverPassword != null) loginData.password      = Settings.serverPassword;
+      if (Settings.serverName     != null) loginData.name     = Settings.serverName;
+      if (Settings.serverPort     != -1  ) loginData.port     = Settings.serverPort;
+      if (Settings.serverTLSPort  != -1  ) loginData.tlsPort  = Settings.serverTLSPort;
+      if (Settings.serverPassword != null) loginData.password = Settings.serverPassword;
 
       // commands
       if (   Settings.pairMasterFlag
@@ -4940,14 +4980,13 @@ if (false) {
         // connect to server
         try
         {
-          connect(loginData.serverName,
-                  loginData.serverPort,
-                  loginData.serverTLSPort,
+          connect(loginData.name,
+                  loginData.port,
+                  loginData.tlsPort,
                   Settings.serverCAFileName,
                   Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
-                  Settings.serverNoTLS,
-                  loginData.forceTLS,
+                  loginData.tlsMode,
                   Settings.serverInsecureTLS,
                   loginData.password
                  );
@@ -4956,6 +4995,11 @@ if (false) {
         {
           printError(BARControl.tr("cannot connect to server (error: {0})",error.getMessage()));
           System.exit(ExitCodes.FAIL);
+        }
+
+        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+        {
+          printWarning(BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
         }
 
         // execute commands
@@ -6067,72 +6111,39 @@ Dprintf.dprintf("still not supported");
         display = new Display();
 
         // connect to server
-        String connectErrorMessage = null;
-        boolean connectOkFlag = false;
-        if (   (loginData.serverName != null)
-            && !loginData.serverName.equals("")
-            && !Settings.loginDialogFlag
-           )
+        boolean connectOkFlag       = false;
+        String  connectErrorMessage = null;
+        if (!Settings.loginDialogFlag)
         {
-          if (   !connectOkFlag
-              && (loginData.password != null)
-              && !loginData.password.equals("")
-             )
+          // try to connect to server with preset data
+          try
           {
-            // try to connect to server with preset data
-            try
-            {
-              connect(loginData.serverName,
-                      loginData.serverPort,
-                      loginData.serverTLSPort,
-                      Settings.serverCAFileName,
-                      Settings.serverCertificateFileName,
-                      Settings.serverKeyFileName,
-                      Settings.serverNoTLS,
-                      loginData.forceTLS,
-                      Settings.serverInsecureTLS,
-                      loginData.password
-                     );
-              connectOkFlag = true;
-            }
-            catch (ConnectionError error)
-            {
-              connectErrorMessage = error.getMessage();
-            }
+            connect(loginData.name,
+                    loginData.port,
+                    loginData.tlsPort,
+                    Settings.serverCAFileName,
+                    Settings.serverCertificateFileName,
+                    Settings.serverKeyFileName,
+                    loginData.tlsMode,
+                    Settings.serverInsecureTLS,
+                    loginData.password
+                   );
+            connectOkFlag = true;
+          }
+          catch (ConnectionError error)
+          {
+            connectErrorMessage = error.getMessage();
           }
           if (!connectOkFlag)
           {
-            // try to connect to server with empty password
-            try
+            if (connectErrorMessage != null)
             {
-              connect(loginData.serverName,
-                      loginData.serverPort,
-                      loginData.serverTLSPort,
-                      Settings.serverCAFileName,
-                      Settings.serverCertificateFileName,
-                      Settings.serverKeyFileName,
-                      Settings.serverNoTLS,
-                      loginData.forceTLS,
-                      Settings.serverInsecureTLS,
-                      ""  // password
-                     );
-              connectOkFlag = true;
+              Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
             }
-            catch (ConnectionError error)
+            else
             {
-              connectErrorMessage = error.getMessage();
+              Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
             }
-          }
-        }
-        if (!connectOkFlag)
-        {
-          if (connectErrorMessage != null)
-          {
-            Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
-          }
-          else
-          {
-            Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
           }
         }
 
@@ -6143,7 +6154,7 @@ Dprintf.dprintf("still not supported");
           {
             System.exit(ExitCodes.OK);
           }
-          if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
+          if ((loginData.port == 0) && (loginData.tlsPort == 0))
           {
             throw new Error(BARControl.tr("Cannot connect to server. No server ports specified!"));
           }
@@ -6154,14 +6165,13 @@ Dprintf.dprintf("still not supported");
           {
             try
             {
-              connect(loginData.serverName,
-                      loginData.serverPort,
-                      loginData.serverTLSPort,
+              connect(loginData.name,
+                      loginData.port,
+                      loginData.tlsPort,
                       Settings.serverCAFileName,
                       Settings.serverCertificateFileName,
                       Settings.serverKeyFileName,
-                      Settings.serverNoTLS,
-                      loginData.forceTLS,
+                      loginData.tlsMode,
                       Settings.serverInsecureTLS,
                       loginData.password
 
@@ -6177,7 +6187,7 @@ Dprintf.dprintf("still not supported");
               connectErrorMessage = error.getMessage();
             }
           }
-          if (!connectOkFlag && loginData.forceTLS)
+          if (!connectOkFlag && (loginData.tlsMode == BARServer.TLSModes.FORCE))
           {
             if (Dialogs.confirmError(new Shell(),
                                      BARControl.tr("Connection fail"),
@@ -6187,16 +6197,16 @@ Dprintf.dprintf("still not supported");
                                     )
                )
             {
+              // try to connect to server without TLS/SSL
               try
               {
-                BARServer.connect(loginData.serverName,
-                                  loginData.serverPort,
-                                  loginData.serverTLSPort,
+                BARServer.connect(loginData.name,
+                                  loginData.port,
+                                  loginData.tlsPort,
                                   (String)null,  // caFileName
                                   (String)null,  // certificateFileName
                                   (String)null,  // keyFileName
-                                  true, // noTLS,
-                                  false,  // forceTLS
+                                  BARServer.TLSModes.NONE,
                                   true, // insecureTLS,
                                   loginData.password
                                  );
@@ -6218,7 +6228,14 @@ Dprintf.dprintf("still not supported");
           }
 
           // check if connected
-          if (!connectOkFlag)
+          if (connectOkFlag)
+          {
+            if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+            {
+              Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+            }
+          }
+          else
           {
             if (!Dialogs.confirmError(new Shell(),
                                       BARControl.tr("Connection fail"),
@@ -6234,7 +6251,8 @@ Dprintf.dprintf("still not supported");
         }
 
         // store login settings
-        Settings.serverForceTLS = loginData.forceTLS;
+        Settings.serverNoTLS    = (loginData.tlsMode == BARServer.TLSModes.NONE );
+        Settings.serverForceTLS = (loginData.tlsMode == BARServer.TLSModes.FORCE);
         Settings.role           = loginData.role;
 
         do
