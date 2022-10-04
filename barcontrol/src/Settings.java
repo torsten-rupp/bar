@@ -329,25 +329,11 @@ public class Settings
     {
       if ((server.password != null) && !server.password.isEmpty())
       {
-        if (server.port != -1)
-        {
-          return StringParser.format("%s:%d:%'s",server.name,server.port,server.password);
-        }
-        else
-        {
-          return StringParser.format("%s:%d:%'s",server.name,DEFAULT_SERVER_PORT,server.password);
-        }
+        return StringParser.format("%s:%d:%'s",server.name,server.port,server.password);
       }
       else
       {
-        if (server.port != -1)
-        {
-          return StringParser.format("%s:%d",server.name,server.port);
-        }
-        else
-        {
-          return StringParser.format("%s",server.name);
-        }
+        return StringParser.format("%s:%d",server.name,server.port);
       }
     }
 
@@ -358,7 +344,7 @@ public class Settings
     public boolean equals(Server server0, Server server1)
     {
       return    server0.name.equals(server1.name)
-             && server0.port ==  server1.port;
+             && (server0.port == server1.port);
     }
   }
 
@@ -540,9 +526,9 @@ public class Settings
   @SettingValue(name="server-password",deprecated=true)
   public static String                         serverPassword                  = null;
   @SettingValue(name="server-port",deprecated=true)
-  public static int                            serverPort                      = -1;
+  public static int                            serverPort                      = DEFAULT_SERVER_PORT;
   @SettingValue(name="server-tls-port",deprecated=true)
-  public static int                            serverTLSPort                   = -1;
+  public static int                            serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
 
   // ------------------------ native functions ----------------------------
 

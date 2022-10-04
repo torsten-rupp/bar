@@ -3008,7 +3008,7 @@ if (false) {
         label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
         label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText("BAR control "+Config.VERSION+".\n"+
+        label.setText("\uF512 2"+"BAR control "+Config.VERSION+".\n"+
                       "\n"+
                       BARControl.tr("Written by Torsten Rupp")+"\n"
                      );
@@ -3855,6 +3855,7 @@ if (false) {
           }
         }
 
+        // show warning if no TLS connection established
         if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
         {
           Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
@@ -3917,6 +3918,7 @@ if (false) {
           }
         }
 
+        // show warning if no TLS connection established
         if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
         {
           Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
@@ -3970,7 +3972,7 @@ if (false) {
     {
       shell.setLocation(Settings.geometry.x,Settings.geometry.y);
     }
-    shell.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
+    shell.setText((BARServer.isTLSConnection() ? "\u26BF ":"")+"BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
 
     // listeners
     shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
@@ -3980,7 +3982,7 @@ if (false) {
         Shell widget = (Shell)event.widget;
         if (!widget.isDisposed())
         {
-          widget.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
+          widget.setText((BARServer.isTLSConnection() ? "\u26BF ":"")+"BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
           updateMaster();
         }
       }
@@ -4468,6 +4470,7 @@ if (false) {
 
             if (connectOkFlag)
             {
+              // show warning if no TLS connection established
               if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
               {
                 Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
@@ -6135,6 +6138,11 @@ Dprintf.dprintf("still not supported");
           {
             connectErrorMessage = error.getMessage();
           }
+          catch (CommunicationError error)
+          {
+            connectErrorMessage = error.getMessage();
+          }
+
           if (!connectOkFlag)
           {
             if (connectErrorMessage != null)
@@ -6188,49 +6196,63 @@ Dprintf.dprintf("still not supported");
               connectErrorMessage = error.getMessage();
             }
           }
+
           if (!connectOkFlag && (loginData.tlsMode == BARServer.TLSModes.FORCE))
           {
-            if (Dialogs.confirmError(new Shell(),
-                                     BARControl.tr("Connection fail"),
-                                     BARControl.tr("Connection fail. Try to connect without TLS (SSL)?"),
-                                     BARControl.tr("Try without TLS (SSL)"),
-                                     BARControl.tr("Cancel")
-                                    )
-               )
+            if (connectErrorMessage != null)
             {
-              // try to connect to server without TLS/SSL
-              try
-              {
-                BARServer.connect(loginData.name,
-                                  loginData.port,
-                                  loginData.tlsPort,
-                                  (String)null,  // caFileName
-                                  (String)null,  // certificateFileName
-                                  (String)null,  // keyFileName
-                                  BARServer.TLSModes.NONE,
-                                  true, // insecureTLS,
-                                  loginData.password
-                                 );
-                connectOkFlag = true;
-              }
-              catch (ConnectionError error)
-              {
-                connectErrorMessage = error.getMessage();
-              }
-              catch (CommunicationError error)
-              {
-                connectErrorMessage = error.getMessage();
-              }
+              Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
             }
             else
             {
-              System.exit(ExitCodes.FAIL);
+              Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
+            }
+
+            if (loginData.tlsMode == BARServer.TLSModes.FORCE)
+            {
+              if (Dialogs.confirmError(new Shell(),
+                                       BARControl.tr("Connection fail"),
+                                       BARControl.tr("Connection fail. Try to connect without TLS (SSL)?"),
+                                       BARControl.tr("Try without TLS (SSL)"),
+                                       BARControl.tr("Cancel")
+                                      )
+                 )
+              {
+                // try to connect to server without TLS/SSL
+                try
+                {
+                  BARServer.connect(loginData.name,
+                                    loginData.port,
+                                    loginData.tlsPort,
+                                    (String)null,  // caFileName
+                                    (String)null,  // certificateFileName
+                                    (String)null,  // keyFileName
+                                    BARServer.TLSModes.NONE,
+                                    true, // insecureTLS,
+                                    loginData.password
+                                   );
+                  connectOkFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+              }
+              else
+              {
+                System.exit(ExitCodes.FAIL);
+              }
             }
           }
 
           // check if connected
           if (connectOkFlag)
           {
+            // show warning if no TLS connection established
             if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
             {
               Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));

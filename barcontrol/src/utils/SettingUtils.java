@@ -74,6 +74,7 @@ interface SettingMigrate
   String   name()            default "";              // name of value
   String   defaultValue()    default "";              // default value
   Class    type()            default DEFAULT.class;   // adapter class
+  boolean  unique()          default false;           // true iff unique value
   boolean  deprecated()      default false;           // true iff deprecated setting
   String[] deprecatedNames() default "";              // deprecated names
 
@@ -326,7 +327,7 @@ public class SettingUtils
 
     /** migrate values
      */
-    public void Xmigrate(Object value)
+    public void migrate(Object value)
     {
     }
   }
@@ -2717,12 +2718,12 @@ throwable.printStackTrace();
    */
   private static Object[] addArrayUniq(Object[] array, Object object, ValueAdapter settingValueAdapter)
   {
-    int z = 0;
-    while ((z < array.length) && !settingValueAdapter.equals(array[z],object))
+    int i = 0;
+    while ((i < array.length) && !settingValueAdapter.equals(array[i],object))
     {
-      z++;
+      i++;
     }
-    if (z >= array.length)
+    if (i >= array.length)
     {
       array = Arrays.copyOf(array,array.length+1);
       array[array.length-1] = object;
