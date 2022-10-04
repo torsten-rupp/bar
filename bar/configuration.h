@@ -87,6 +87,11 @@ extern GlobalOptions globalOptions;            // global options
 extern String        instanceUUID;             // BAR instance UUID
 
 /****************************** Macros *********************************/
+#ifndef NDEBUG
+  #define Configuration_initKey(...)      __Configuration_initKey     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Configuration_duplicateKey(...) __Configuration_duplicateKey(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Configuration_doneKey(...)      __Configuration_doneKey     (__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : BYTES_SHORT
@@ -180,32 +185,14 @@ INLINE bool Configuration_isCertificateAvailable(const Certificate *certificate)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Configuration_initKey(Key *key);
-
-/***********************************************************************\
-* Name   : Configuration_setKey
-* Purpose: set public/private key
-* Input  : key    - key
-*          data   - key data
-*          length - length of key data [bytes]
-* Output : -
-* Return : TRUE iff set
-* Notes  : -
-\***********************************************************************/
-
-bool Configuration_setKey(Key *key, const void *data, uint length);
-
-/***********************************************************************\
-* Name   : Configuration_setKeyString
-* Purpose: set public/private key with string
-* Input  : key    - key
-*          string - key data (PEM encoded)
-* Output : -
-* Return : TRUE iff set
-* Notes  : -
-\***********************************************************************/
-
-bool Configuration_setKeyString(Key *key, ConstString string);
+#else /* not NDEBUG */
+void __Configuration_initKey(const char *__fileName__,
+                             ulong      __lineNb__,
+                             Key        *key
+                            );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Configuration_duplicateKey
@@ -217,7 +204,15 @@ bool Configuration_setKeyString(Key *key, ConstString string);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 bool Configuration_duplicateKey(Key *key, const Key *fromKey);
+#else /* not NDEBUG */
+bool __Configuration_duplicateKey(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  Key        *key,
+                                  const Key  *fromKey
+                                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Configuration_doneKey
@@ -228,7 +223,41 @@ bool Configuration_duplicateKey(Key *key, const Key *fromKey);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Configuration_doneKey(Key *key);
+#else /* not NDEBUG */
+void __Configuration_doneKey(const char *__fileName__,
+                             ulong      __lineNb__,
+                             Key        *key
+                            );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Configuration_setKey
+* Purpose: set public/private key
+* Input  : key      - key variable
+*          fileName - file name or NULL
+*          data     - key data
+*          length   - length of key data [bytes]
+* Output : key - key
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_setKey(Key *key, const char *fileName, const void *data, uint length);
+
+/***********************************************************************\
+* Name   : Configuration_setKeyString
+* Purpose: set public/private key with string
+* Input  : key      - key
+*          fileName - file name or NULL
+*          string   - key data (PEM encoded)
+* Output : key - key
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_setKeyString(Key *key, const char *fileName, ConstString string);
 
 /***********************************************************************\
 * Name   : Configuration_clearKey
