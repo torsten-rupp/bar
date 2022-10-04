@@ -825,7 +825,7 @@ ERROR DEPRECATED_OR_IGNORED_VALUE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR AUTHORIZATION                    TR("authorization fail")
+ERROR AUTHORIZATION                    TR("authorization failed")
 ERROR JOB_NOT_FOUND
   stringSet(errorText,sizeof(errorText),TR("job not found"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -931,7 +931,7 @@ ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_NOT_FOUND               TR("database not found")
 ERROR DATABASE_CONNECT                 TR("connect to database fail")
 ERROR DATABASE_CONNECTION_LOST         TR("database connection lost")
-ERROR DATABASE_AUTHORIZATION           TR("database authorization fail")
+ERROR DATABASE_AUTHORIZATION           TR("database authorization failed")
 
 ERROR DATABASE_VERSION
   stringSet(errorText,sizeof(errorText),TR("insufficient database version"));

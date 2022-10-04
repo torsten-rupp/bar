@@ -1528,9 +1528,7 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
   (void)File_close(&fileHandle);
 
   // set key data
-  if (key->data != NULL) freeSecure(key->data);
-  key->data   = data;
-  key->length = dataLength;
+  Configuration_setKey(key,fileName,data,dataLength);
 
   printInfo(3,"Read key file '%s'\n",fileName);
 
@@ -2427,9 +2425,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
     }
 
     // set key data
-    if (key->data != NULL) freeSecure(key->data);
-    key->data   = data;
-    key->length = dataLength;
+    Configuration_setKey(key,NULL,data,dataLength);
   }
   else
   {
@@ -2452,9 +2448,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
       memCopyFast(data,dataLength,value,dataLength);
 
       // set key data
-      if (key->data != NULL) freeSecure(key->data);
-      key->data   = data;
-      key->length = dataLength;
+      Configuration_setKey(key,NULL,data,dataLength);
     }
   }
 
@@ -6208,9 +6202,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
       }
 
       // set key data
-      if (key->data != NULL) freeSecure(key->data);
-      key->data   = data;
-      key->length = dataLength;
+      Configuration_setKey(key,NULL,data,dataLength);
     }
   }
   else
@@ -6233,9 +6225,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
       memCopyFast(data,dataLength,value,dataLength);
 
       // set key data
-      if (key->data != NULL) freeSecure(key->data);
-      key->data   = data;
-      key->length = dataLength;
+      Configuration_setKey(key,NULL,data,dataLength);
     }
   }
 
@@ -6283,8 +6273,21 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
 
         if ((key != NULL) && Configuration_isKeyAvailable(key))
         {
-          String_appendCString(line,"base64:");
-          Misc_base64Encode(line,key->data,key->length);
+          switch (key->type)
+          {
+            case KEY_TYPE_FILE:
+              String_appendFormat(line,"%S",key->fileName);
+              break;
+            case KEY_TYPE_CONFIG:
+              String_appendCString(line,"base64:");
+              Misc_base64Encode(line,key->data,key->length);
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
+          }
 
           (*formatUserData) = NULL;
 
@@ -8361,19 +8364,109 @@ void Configuration_doneAll(void)
   doneGlobalOptions();
 }
 
+#ifdef NDEBUG
 void Configuration_initKey(Key *key)
+#else /* not NDEBUG */
+void __Configuration_initKey(const char *__fileName__,
+                             ulong      __lineNb__,
+                             Key        *key
+                            )
+                            
+#endif /* NDEBUG */
 {
   assert(key != NULL);
 
-  key->data   = NULL;
-  key->length = 0;
+  key->type     = KEY_TYPE_NONE;
+  key->fileName = NULL;
+  key->data     = NULL;
+  key->length   = 0;
+  
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(key,Key);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,key,Key);
+  #endif /* NDEBUG */
 }
 
-bool Configuration_setKey(Key *key, const void *data, uint length)
+#ifdef NDEBUG
+bool Configuration_duplicateKey(Key *key, const Key *fromKey)
+#else /* not NDEBUG */
+bool __Configuration_duplicateKey(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  Key        *key,
+                                  const Key  *fromKey
+                                 )
+#endif /* NDEBUG */
+{
+  uint length;
+  void *data;
+
+  assert(key != NULL);
+  assert(fromKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromKey);
+  assert((fromKey->type != KEY_TYPE_FILE) || (fromKey->fileName != NULL));
+
+  if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
+  {
+    length = fromKey->length;
+    data = allocSecure(length);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+    memCopyFast(data,length,fromKey->data,length);
+  }
+  else
+  {
+    data   = NULL;
+    length = 0;
+  }
+
+  key->type     = fromKey->type;
+  key->fileName = (fromKey->type == KEY_TYPE_FILE)
+                    ? String_duplicate(fromKey->fileName)
+                    : NULL;
+  key->data     = data;
+  key->length   = length;
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(key,Key);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,key,Key);
+  #endif /* NDEBUG */
+
+  return TRUE;
+}
+
+#ifdef NDEBUG
+void Configuration_doneKey(Key *key)
+#else /* not NDEBUG */
+void __Configuration_doneKey(const char *__fileName__,
+                             ulong      __lineNb__,
+                             Key        *key
+                            )
+#endif /* NDEBUG */
+{
+  assert(key != NULL);
+  assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
+  DEBUG_CHECK_RESOURCE_TRACE(key);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(key,Key);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,key,Key);
+  #endif /* NDEBUG */
+
+  if (key->type == KEY_TYPE_FILE) String_delete(key->fileName);
+  if (key->data != NULL) freeSecure(key->data);
+}
+
+bool Configuration_setKey(Key *key, const char *fileName, const void *data, uint length)
 {
   void *newData;
 
   assert(key != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(key);
 
   newData = allocSecure(length);
   if (newData == NULL)
@@ -8382,61 +8475,38 @@ bool Configuration_setKey(Key *key, const void *data, uint length)
   }
   memCopyFast(newData,length,data,length);
 
+  if (key->type == KEY_TYPE_FILE) String_delete(key->fileName);
   if (key->data != NULL) freeSecure(key->data);
-  key->data   = newData;
-  key->length = length;
+  key->type     = (fileName != NULL)
+                    ? KEY_TYPE_FILE
+                    : KEY_TYPE_CONFIG;
+  key->fileName = (fileName != NULL)
+                    ? String_newCString(fileName)
+                    : NULL;
+  key->data     = newData;
+  key->length   = length;
 
   return TRUE;
 }
 
-bool Configuration_setKeyString(Key *key, ConstString string)
-{
-  return Configuration_setKey(key,String_cString(string),String_length(string));
-}
-
-bool Configuration_duplicateKey(Key *key, const Key *fromKey)
-{
-  uint length;
-  void *data;
-
-  assert(key != NULL);
-
-  if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
-  {
-    length = fromKey->length;
-    data = allocSecure(length);
-    if (data == NULL)
-    {
-      return FALSE;
-    }
-    memCopyFast(data,length,fromKey->data,length);
-  }
-  else
-  {
-    data   = NULL;
-    length = 0;
-  }
-
-  key->data   = data;
-  key->length = length;
-
-  return TRUE;
-}
-
-void Configuration_doneKey(Key *key)
+bool Configuration_setKeyString(Key *key, const char *fileName, ConstString string)
 {
   assert(key != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(key);
 
-  if (key->data != NULL) freeSecure(key->data);
-  key->data   = NULL;
-  key->length = 0;
+  return Configuration_setKey(key,fileName,String_cString(string),String_length(string));
 }
 
 void Configuration_clearKey(Key *key)
 {
   assert(key != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(key);
 
-  Configuration_doneKey(key);
+  if (key->type == KEY_TYPE_FILE) String_delete(key->fileName);
+  if (key->data != NULL) freeSecure(key->data);
+  key->type   = KEY_TYPE_NONE;
+  key->data   = NULL;
+  key->length = 0;
 }
 
 bool Configuration_copyKey(Key *key, const Key *fromKey)
@@ -8445,6 +8515,10 @@ bool Configuration_copyKey(Key *key, const Key *fromKey)
   void *data;
 
   assert(key != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(key);
+  assert(fromKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromKey);
+  assert((fromKey->type != KEY_TYPE_FILE) || (fromKey->fileName != NULL));
 
   if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
   {
@@ -8462,9 +8536,14 @@ bool Configuration_copyKey(Key *key, const Key *fromKey)
     length = 0;
   }
 
+  if (key->type == KEY_TYPE_FILE) String_delete(key->fileName);
   if (key->data != NULL) freeSecure(key->data);
-  key->data   = data;
-  key->length = length;
+  key->type     = fromKey->type;
+  key->fileName = (fromKey->type == KEY_TYPE_FILE)
+                    ? String_duplicate(fromKey->fileName)
+                    : NULL;
+  key->data     = data;
+  key->length   = length;
 
   return TRUE;
 }
@@ -9368,14 +9447,14 @@ Errors Configuration_readAllServerKeys(void)
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName) && (readKeyFile(&key,fileName) == ERROR_NONE))
   {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
+    Configuration_copyKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
+    Configuration_copyKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
   if (File_exists(fileName) && (readKeyFile(&key,fileName) == ERROR_NONE))
   {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
+    Configuration_copyKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
+    Configuration_copyKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
   }
   Configuration_doneKey(&key);
 

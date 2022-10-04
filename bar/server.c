@@ -3961,7 +3961,7 @@ LOCAL void persistenceThreadCode(void)
 LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, const Password *cryptPassword, const Key *cryptPrivateKey)
 {
   IndexCryptPasswordNode *indexCryptPasswordNode;
-
+  
   if (!LIST_CONTAINS(indexCryptPasswordList,
                      indexCryptPasswordNode,
                         Password_equals(indexCryptPasswordNode->cryptPassword,cryptPassword)
@@ -3976,7 +3976,14 @@ LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordL
     }
 
     indexCryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
-    Configuration_duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
+    if (cryptPrivateKey != NULL)
+    {
+      Configuration_duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
+    }
+    else
+    {
+      Configuration_initKey(&indexCryptPasswordNode->cryptPrivateKey);
+    }
 
     List_append(indexCryptPasswordList,indexCryptPasswordNode);
   }
@@ -6285,7 +6292,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Authorization of client %s fail - invalid password",
+                   "Authorization of client %s failed - invalid password",
                    getClientInfoString(clientInfo,s,sizeof(s))
                   );
         error = ERROR_INVALID_PASSWORD_;
@@ -6334,7 +6341,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                         : ERROR_INVALID_PASSWORD_;
               logMessage(NULL,  // logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Authorization of master %s fail (error: %s)",
+                         "Authorization of master %s failed (error: %s)",
                          getClientInfoString(clientInfo,s,sizeof(s)),
                          Error_getText(error)
                         );
@@ -6383,7 +6390,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Authorization of master %s fail (error: %s)",
+                   "Authorization of master %s failed (error: %s)",
                    getClientInfoString(clientInfo,s,sizeof(s)),
                    Error_getText(error)
                   );
@@ -6395,7 +6402,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Authorization of master %s fail (error: %s)",
+                 "Authorization of master %s failed (error: %s)",
                  getClientInfoString(clientInfo,s,sizeof(s)),
                  Error_getText(error)
                 );
@@ -7672,8 +7679,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       {
         Password_setString(&serverNode->server.ssh.password,password);
       }
-      Configuration_setKeyString(&serverNode->server.ssh.publicKey,publicKey);
-      Configuration_setKeyString(&serverNode->server.ssh.privateKey,privateKey);
+      Configuration_setKeyString(&serverNode->server.ssh.publicKey,NULL,publicKey);
+      Configuration_setKeyString(&serverNode->server.ssh.privateKey,NULL,privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
       String_set(serverNode->server.webDAV.loginName,loginName);
@@ -7681,8 +7688,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       {
         Password_setString(&serverNode->server.webDAV.password,password);
       }
-      Configuration_setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
-      Configuration_setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
+      Configuration_setKeyString(&serverNode->server.webDAV.publicKey,NULL,publicKey);
+      Configuration_setKeyString(&serverNode->server.webDAV.privateKey,NULL,privateKey);
       break;
   }
   serverNode->server.maxConnectionCount = maxConnectionCount;
@@ -7842,8 +7849,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         {
           Password_setString(&serverNode->server.ssh.password,password);
         }
-        Configuration_setKeyString(&serverNode->server.ssh.publicKey,publicKey);
-        Configuration_setKeyString(&serverNode->server.ssh.privateKey,privateKey);
+        Configuration_setKeyString(&serverNode->server.ssh.publicKey,NULL,publicKey);
+        Configuration_setKeyString(&serverNode->server.ssh.privateKey,NULL,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
         String_set(serverNode->server.webDAV.loginName,loginName);
@@ -7851,8 +7858,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         {
           Password_setString(&serverNode->server.webDAV.password,password);
         }
-        Configuration_setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
-        Configuration_setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
+        Configuration_setKeyString(&serverNode->server.webDAV.publicKey,NULL,publicKey);
+        Configuration_setKeyString(&serverNode->server.webDAV.privateKey,NULL,privateKey);
         break;
     }
     serverNode->server.maxConnectionCount = maxConnectionCount;
