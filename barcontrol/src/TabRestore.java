@@ -709,13 +709,13 @@ public class TabRestore
         DND.error(DND.ERROR_INVALID_DATA);
       }
 
-      IndexData indexData = (IndexData)object;
+      HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)object;
       try
       {
         // write data to a byte array and then ask super to convert to pMedium
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         ObjectOutputStream outputStream = new ObjectOutputStream(byteArrayOutputStream);
-        outputStream.writeObject(indexData);
+        outputStream.writeObject(indexDataHashSet);
         byte[] buffer = byteArrayOutputStream.toByteArray();
         outputStream.close();
 
@@ -744,11 +744,12 @@ public class TabRestore
         if (buffer == null) return null;
 
         IndexData indexData = null;
+        HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
         try
         {
           ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(buffer);
           ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
-          indexData = (IndexData)inputStream.readObject();
+          indexDataHashSet = (HashSet<IndexData>)inputStream.readObject();
           inputStream.close ();
         }
         catch (java.lang.ClassNotFoundException exception)
@@ -770,7 +771,7 @@ public class TabRestore
           return null;
         }
 
-        return indexData;
+        return indexDataHashSet;
       }
 
       return null;
@@ -797,7 +798,8 @@ public class TabRestore
      */
     protected boolean validate(Object object)
     {
-      return (object != null && (object instanceof IndexData));
+      return     (object != null)
+              && (object instanceof HashSet);
     }
   }
 
@@ -4344,7 +4346,7 @@ Dprintf.dprintf("");
 
   private UpdateStorageTreeTableThread                updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
   private TabJobs                                     tabJobs;
-  private IndexData                                   selectedIndexData = null;
+  private HashSet<IndexData>                          selectedIndexDataHashSet = null;
 
   private Timer                                       updateAssignToTimer        = new Timer(true);
   private TimerTask                                   updateAssignToTimerTask    = null;
@@ -5563,23 +5565,15 @@ Dprintf.dprintf("");
         {
           Point point = new Point(dragSourceEvent.x,dragSourceEvent.y);
 
-          TreeItem treeItem = widgetStorageTree.getItem(point);
-          if (treeItem != null)
-          {
-            selectedIndexData = (IndexData)treeItem.getData();
-          }
-          else
-          {
-            dragSourceEvent.doit = false;
-          }
+          selectedIndexDataHashSet = getSelectedIndexData();
         }
         public void dragSetData(DragSourceEvent dragSourceEvent)
         {
-          dragSourceEvent.data = selectedIndexData;
+          dragSourceEvent.data = selectedIndexDataHashSet;
         }
         public void dragFinished(DragSourceEvent dragSourceEvent)
         {
-          selectedIndexData = null;
+          selectedIndexDataHashSet = null;
         }
       });
       dropTarget = new DropTarget(widgetStorageTree,DND.DROP_MOVE);
@@ -5603,18 +5597,18 @@ Dprintf.dprintf("");
             TreeItem treeItem = widgetStorageTree.getItem(point);
             if (treeItem != null)
             {
-              IndexData fromIndexData = (IndexData)dropTargetEvent.data;
-              IndexData toIndexData   = (IndexData)treeItem.getData();
+              HashSet<IndexData> fromIndexDataHashSet = (HashSet<IndexData>)dropTargetEvent.data;
+              IndexData toIndexData                   = (IndexData)treeItem.getData();
 
               if      (toIndexData instanceof UUIDIndexData)
               {
                 UUIDIndexData toUUIDIndexData = (UUIDIndexData)toIndexData;
-                assignStorages(fromIndexData,toUUIDIndexData);
+                assignStorages(fromIndexDataHashSet,toUUIDIndexData);
               }
               else if (toIndexData instanceof EntityIndexData)
               {
                 EntityIndexData toEntityIndexData = (EntityIndexData)toIndexData;
-                assignStorages(fromIndexData,toEntityIndexData);
+                assignStorages(fromIndexDataHashSet,toEntityIndexData);
               }
               else if (toIndexData instanceof StorageIndexData)
               {
@@ -5624,7 +5618,7 @@ Dprintf.dprintf("");
                   EntityIndexData toEntityIndexData = (EntityIndexData)treeItem.getParentItem().getData();
                   if (toEntityIndexData != null)
                   {
-                    assignStorages(fromIndexData,toEntityIndexData);
+                    assignStorages(fromIndexDataHashSet,toEntityIndexData);
                   }
                 }
               }
