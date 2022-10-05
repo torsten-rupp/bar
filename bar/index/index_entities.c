@@ -893,16 +893,6 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
         return error;
       }
 
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Purged entity #%"PRIu64": job %s, type '%s', created at %s",
-                  entityId,
-                  String_cString(jobUUID),
-                  Archive_archiveTypeToString(archiveType),
-                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
-                 );
-
       // prune UUID
       if (uuidId != DATABASE_ID_NONE)
       {
