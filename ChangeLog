@@ -16,7 +16,10 @@
   * fixed continuous schedule: date+week days
   * fixed log message 'no server password set'
   * fixed TLS connections: reading certificates
-  * BARControl: added option --insecure-tls
+  * BARConrol: fixed possible dead-lock in server
+    communication
+  * BARControl: added option --insecure-tls, improved
+    login dialogs
 
 2022-08-30 0.22
   * added support for external index database engines

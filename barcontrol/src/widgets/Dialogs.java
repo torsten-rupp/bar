@@ -2895,6 +2895,7 @@ class Dialogs
    * @param parentShell parent shell
    * @param showAgainFieldFlag show again field updater or null
    * @param title title string
+   * @param image image
    * @param message confirmation message
    * @param texts array with texts
    * @param helpTexts help texts or null
@@ -2907,6 +2908,7 @@ class Dialogs
   public static int select(Shell                     parentShell,
                            final BooleanFieldUpdater showAgainFieldFlag,
                            String                    title,
+                           Image                     image,
                            String                    message,
                            String[]                  texts,
                            String[]                  helpTexts,
@@ -2916,8 +2918,6 @@ class Dialogs
                            int                       defaultValue
                           )
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
-
     Composite composite,subComposite;
     Label     label;
     Button    button;
@@ -2941,7 +2941,7 @@ class Dialogs
         {
           // image
           label = new Label(composite,SWT.LEFT);
-          label.setImage(IMAGE);
+          label.setImage(image);
           label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
           subComposite = new Composite(composite,SWT.NONE);
@@ -3134,6 +3134,63 @@ class Dialogs
 
   /** select dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
+   * @param okText ok-text
+   * @param cancelText cancel-text
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1) or -1
+   */
+  public static int select(Shell                     parentShell,
+                           final BooleanFieldUpdater showAgainFieldFlag,
+                           String                    title,
+                           String                    message,
+                           String[]                  texts,
+                           String[]                  helpTexts,
+                           boolean[]                 enabled,
+                           String                    okText,
+                           String                    cancelText,
+                           int                       defaultValue
+                          )
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,helpTexts,enabled,okText,cancelText,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
+   * @param okText ok-text
+   * @param cancelText cancel-text
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1) or -1
+   */
+  public static int select(Shell     parentShell,
+                           String    title,
+                           Image     image,
+                           String    message,
+                           String[]  texts,
+                           String[]  helpTexts,
+                           boolean[] enabled,
+                           String    okText,
+                           String    cancelText,
+                           int       defaultValue)
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
    * @param title title string
    * @param message confirmation message
    * @param texts array with texts
@@ -3154,7 +3211,35 @@ class Dialogs
                            String    cancelText,
                            int       defaultValue)
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,(String)null,(String)null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           Image               image,
+                           String              message,
+                           String[]            texts,
+                           String[]            helpTexts,
+                           boolean[]           enabled,
+                           int                 defaultValue
+                          )
+  {
+    return select(parentShell,showAgainFieldFlag,title,image,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3178,7 +3263,33 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,(String)null,(String)null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell     parentShell,
+                           String    title,
+                           Image     image,
+                           String    message,
+                           String[]  texts,
+                           String[]  helpTexts,
+                           boolean[] enabled,
+                           int       defaultValue
+                          )
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3200,7 +3311,33 @@ class Dialogs
                            int       defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,(String)null,(String)null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           Image               image,
+                           String              message,
+                           String[]            texts,
+                           boolean[]           enabled,
+                           int                 defaultValue
+                          )
+  {
+    return select(parentShell,showAgainFieldFlag,title,image,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3222,7 +3359,31 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,(String[])null,null,(String)null,(String)null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell     parentShell,
+                           String    title,
+                           Image     image,
+                           String    message,
+                           String[]  texts,
+                           boolean[] enabled,
+                           int       defaultValue
+                          )
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3242,7 +3403,33 @@ class Dialogs
                            int       defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,(String[])null,null,(String)null,(String)null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param imag eimage
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           Image               image,
+                           String              message,
+                           String[]            texts,
+                           String[]            helpTexts,
+                           int                 defaultValue
+                          )
+  {
+    return select(parentShell,showAgainFieldFlag,title,image,message,texts,helpTexts,(boolean[])null,defaultValue);
   }
 
   /** select dialog
@@ -3264,7 +3451,31 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,helpTexts,(boolean[])null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell    parentShell,
+                           String   title,
+                           Image    image,
+                           String   message,
+                           String[] texts,
+                           String[] helpTexts,
+                           int      defaultValue
+                          )
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,helpTexts,(boolean[])null,defaultValue);
   }
 
   /** select dialog
@@ -3284,7 +3495,31 @@ class Dialogs
                            int      defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,helpTexts,(boolean[])null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell               parentShell,
+                           BooleanFieldUpdater showAgainFieldFlag,
+                           String              title,
+                           Image               image,
+                           String              message,
+                           String[]            texts,
+                           int                 defaultValue
+                          )
+  {
+    return select(parentShell,showAgainFieldFlag,title,image,message,texts,(String[])null,(boolean[])null,defaultValue);
   }
 
   /** select dialog
@@ -3304,7 +3539,29 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,(String[])null,null,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,(String[])null,(boolean[])null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell    parentShell,
+                           String   title,
+                           Image    image,
+                           String   message,
+                           String[] texts,
+                           int      defaultValue
+                          )
+  {
+    return select(parentShell,title,image,message,texts,(String[])null,defaultValue);
   }
 
   /** select dialog
@@ -3326,7 +3583,9 @@ class Dialogs
                            int      defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,(String[])null,null,okText,cancelText,defaultValue);
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,(String[])null,(boolean[])null,okText,cancelText,defaultValue);
   }
 
   /** select dialog
