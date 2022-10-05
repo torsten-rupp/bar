@@ -2188,7 +2188,7 @@ public class BARControl
    */
   public static void printError(Throwable throwable)
   {
-    System.err.println("ERROR: "+throwable.getMessage());
+    System.err.println(BARControl.tr("ERROR")+": "+throwable.getMessage());
   }
 
   /** print error to stderr
@@ -2197,7 +2197,7 @@ public class BARControl
    */
   public static void printError(String format, Object... args)
   {
-    System.err.println("ERROR: "+String.format(format,args));
+    System.err.println(BARControl.tr("ERROR")+": "+String.format(format,args));
   }
 
   /** print warning to stderr
@@ -2206,7 +2206,7 @@ public class BARControl
    */
   public static void printWarning(String format, Object... args)
   {
-    System.err.println("Warning: "+String.format(format,args));
+    System.err.println(BARControl.tr("Warning")+": "+String.format(format,args));
   }
 
   /** print internal error to stderr
@@ -3140,6 +3140,10 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
+            // disable menu
+            serverMenu.setEnabled(false);
+            
+            // login
             Settings.Server    defaultServer = Settings.getLastServer();
             BARServer.TLSModes tlsMode;
             if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
@@ -3150,45 +3154,27 @@ if (false) {
                                       tlsMode,
                                       Settings.role
                                      );
-            if (getLoginData(loginData,false))
+            if (login(loginData,
+                      true  // loginDialogFlag
+                     )
+               )
             {
-              try
+              updateServerMenu();
+
+              // notify new server
+              Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+            }
+            else
+            {
+              // revert selection
+              if (serverMenuLastSelectedItem != null)
               {
-                connect(loginData.name,
-                        loginData.port,
-                        loginData.tlsPort,
-                        Settings.serverCAFileName,
-                        Settings.serverCertificateFileName,
-                        Settings.serverKeyFileName,
-                        loginData.tlsMode,
-                        Settings.serverInsecureTLS,
-                        loginData.password
-                       );
-
-                updateServerMenu();
-
-                // notify new server
-                Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-              }
-              catch (ConnectionError error)
-              {
-                // show error message
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
-
-                // revert selection
-                if (serverMenuLastSelectedItem != null)
-                {
-                  serverMenuLastSelectedItem.setSelection(true);
-                }
-
-                return;
-              }
-
-              if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
-              {
-                Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+                serverMenuLastSelectedItem.setSelection(true);
               }
             }
+
+            // enable menu
+            serverMenu.setEnabled(true);
           }
         });
 
@@ -3792,7 +3778,7 @@ if (false) {
    */
   private boolean tryReconnect(String message)
   {
-    boolean connectOkFlag = false;
+    boolean connectedFlag = false;
 
     // try to reconnect
     if (Dialogs.confirmError(new Shell(),
@@ -3804,7 +3790,7 @@ if (false) {
        )
     {
       // try to connect to last server
-      while (!connectOkFlag)
+      while (!connectedFlag)
       {
         try
         {
@@ -3824,7 +3810,7 @@ if (false) {
           // notify new server
           Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
 
-          connectOkFlag = true;
+          connectedFlag = true;
         }
         catch (ConnectionError error)
         {
@@ -3863,7 +3849,7 @@ if (false) {
       }
 
       // try to connect to new server
-      while (   !connectOkFlag
+      while (   !connectedFlag
              && getLoginData(loginData,false)
              && ((loginData.port != 0) || (loginData.tlsPort != 0))
             )
@@ -3887,7 +3873,7 @@ if (false) {
           // notify new server
           Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
 
-          connectOkFlag = true;
+          connectedFlag = true;
         }
         catch (ConnectionError error)
         {
@@ -3927,7 +3913,7 @@ if (false) {
     }
 
     // refresh or stop if not connected
-    if (connectOkFlag)
+    if (connectedFlag)
     {
       // SWT bug/limitation work-around: current tab is not refreshed, force refresh by switching tabs
       int currentTabItemIndex = tabFolder.getSelectionIndex();
@@ -3950,7 +3936,7 @@ if (false) {
       quitFlag = true;
     }
 
-    return connectOkFlag;
+    return connectedFlag;
   }
 
   /** run application
@@ -4007,8 +3993,8 @@ if (false) {
     }
 
     // SWT event loop
-    boolean connectOkFlag = true;
-    while (!shell.isDisposed() && connectOkFlag)
+    boolean connectedFlag = true;
+    while (!shell.isDisposed() && connectedFlag)
     {
 //System.err.print(".");
       try
@@ -4020,7 +4006,7 @@ if (false) {
       }
       catch (ConnectionError error)
       {
-        connectOkFlag = tryReconnect(error.getMessage());
+        connectedFlag = tryReconnect(error.getMessage());
       }
       catch (SWTException exception)
       {
@@ -4034,7 +4020,7 @@ if (false) {
         // try reconnect
         if (throwable != null)
         {
-          connectOkFlag = tryReconnect(exception.getCause().getMessage());
+          connectedFlag = tryReconnect(exception.getCause().getMessage());
         }
         else
         {
@@ -4331,151 +4317,27 @@ if (false) {
 
           if (menuItem.getSelection())
           {
-            boolean connectOkFlag       = false;
-            String  connectErrorMessage = null;
+            boolean connectedFlag         = false;
+            String  connectErrorMessage[] = new String[]{null};
 
             // try to connect to server with current credentials
-            if (!connectOkFlag)
+            BARServer.TLSModes tlsMode;
+            if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+            else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
+            else                              tlsMode = BARServer.TLSModes.TRY;
+
+            loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
+                                      (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                      (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
+                                      tlsMode,
+                                      (!server.password.isEmpty()) ? server.password : "",
+                                      Settings.role
+                                     );
+            connectedFlag = login(loginData,
+                                  false  // loginDialogFlag
+                                 );
+            if (connectedFlag)
             {
-              BARServer.TLSModes tlsMode;
-              if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
-              else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
-              else                              tlsMode = BARServer.TLSModes.TRY;
-
-              loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
-                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        tlsMode,
-                                        (!server.password.isEmpty()) ? server.password : "",
-                                        Settings.role
-                                       );
-              try
-              {
-                connect(loginData.name,
-                        loginData.port,
-                        loginData.tlsPort,
-                        Settings.serverCAFileName,
-                        Settings.serverCertificateFileName,
-                        Settings.serverKeyFileName,
-                        loginData.tlsMode,
-                        Settings.serverInsecureTLS,
-                        loginData.password
-                       );
-
-                updateServerMenu();
-
-                // notify new server
-                Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-
-                connectOkFlag = true;
-              }
-              catch (ConnectionError error)
-              {
-                if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
-              }
-              catch (CommunicationError error)
-              {
-                if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
-              }
-            }
-
-            if (!connectOkFlag && loginData.tlsMode == BARServer.TLSModes.FORCE)
-            {
-              if (Dialogs.confirmError(new Shell(),
-                                       BARControl.tr("Connection fail"),
-                                       BARControl.tr("Connection fail. Try to connect without TLS (SSL)?"),
-                                       BARControl.tr("Try without TLS (SSL)"),
-                                       BARControl.tr("Cancel")
-                                      )
-                 )
-              {
-                // try to connect to server without TLS/SSL
-                try
-                {
-                  connect(loginData.name,
-                          loginData.port,
-                          loginData.tlsPort,
-                          (String)null,  // serverCAFileName
-                          (String)null,  // serverCertificateFileName
-                          (String)null,  // serverKeyFileName
-                          BARServer.TLSModes.NONE,
-                          true,  // insecureTLS,
-                          loginData.password
-                         );
-
-                  updateServerMenu();
-
-                  // notify new server
-                  Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-
-                  connectOkFlag = true;
-                }
-                catch (ConnectionError error)
-                {
-                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
-                }
-                catch (CommunicationError error)
-                {
-                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
-                }
-              }
-            }
-
-            // try to connect to server with new credentials
-            if (!connectOkFlag)
-            {
-              BARServer.TLSModes tlsMode;
-              if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
-              else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
-              else                              tlsMode = BARServer.TLSModes.TRY;
-
-              loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        tlsMode,
-                                        Settings.role
-                                       );
-              if (getLoginData(loginData,false))
-              {
-                try
-                {
-                  connect(loginData.name,
-                          loginData.port,
-                          loginData.tlsPort,
-                          Settings.serverCAFileName,
-                          Settings.serverCertificateFileName,
-                          Settings.serverKeyFileName,
-                          loginData.tlsMode,
-                          Settings.serverInsecureTLS,
-                          loginData.password
-                         );
-
-                  updateServerMenu();
-
-                  // notify new server
-                  Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-
-                  connectOkFlag = true;
-                }
-                catch (ConnectionError error)
-                {
-                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
-                }
-                catch (CommunicationError error)
-                {
-                  if (connectErrorMessage == null) connectErrorMessage = error.getMessage();
-                }
-              }
-            }
-
-            if (connectOkFlag)
-            {
-              // show warning if no TLS connection established
-              if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
-              {
-                Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
-              }
-
               updateServerMenu();
 
               // notify new server
@@ -4483,16 +4345,6 @@ if (false) {
             }
             else
             {
-              // show error message
-              if (connectErrorMessage != null)
-              {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
-              }
-              else
-              {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
-              }
-
               // revert selection
               if (serverMenuLastSelectedItem != null)
               {
@@ -4905,6 +4757,227 @@ if (false) {
     }
   }
 
+  /**_login on server
+   * @param loginData login data
+   * @param loginDialogFlag true to show login dialog
+   * return true iff login done
+   */
+  private boolean login(LoginData loginData, boolean loginDialogFlag)
+  {
+    boolean retryFlag;
+    boolean connectedFlag       = false;
+    String  connectErrorMessage = null;
+
+    if (loginDialogFlag)
+    {
+      if (!getLoginData(loginData,true))
+      {
+        return false;
+      }
+    }
+
+    do
+    {
+      retryFlag = true;
+
+      if (!connectedFlag)
+      {
+        // try to connect to server with default settings
+        try
+        {
+          connect(loginData.name,
+                  loginData.port,
+                  loginData.tlsPort,
+                  Settings.serverCAFileName,
+                  Settings.serverCertificateFileName,
+                  Settings.serverKeyFileName,
+                  loginData.tlsMode,
+                  Settings.serverInsecureTLS,
+                  loginData.password
+
+                 );
+          connectedFlag = true;
+        }
+        catch (ConnectionError error)
+        {
+          connectErrorMessage = error.getMessage();
+        }
+        catch (CommunicationError error)
+        {
+          connectErrorMessage = error.getMessage();
+        }
+      }
+
+      if (!connectedFlag && (loginData.tlsMode == BARServer.TLSModes.FORCE))
+      {
+        if (loginData.tlsMode == BARServer.TLSModes.FORCE)
+        {
+          final Image IMAGE = Widgets.loadImage(new Shell().getDisplay(),"error.png");
+
+          if (!Settings.serverInsecureTLS)
+          {
+            // try again with insecure TLS/without TLS
+            switch (Dialogs.select(new Shell(),
+                                   BARControl.tr("Connection fail"),
+                                   IMAGE,
+                                   (connectErrorMessage != null)
+                                     ? BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage
+                                     : BARControl.tr("Connection fail"),
+                                   new String[]
+                                   {
+                                     BARControl.tr("Try with insecure TLS (SSL)"),
+                                     BARControl.tr("Try without TLS (SSL)"),
+                                     BARControl.tr("Cancel")
+                                   },
+                                   0
+                                  )
+                   )
+            {
+              case 0:
+                // try to connect to server with insecure TLS/SSL
+                try
+                {
+                  BARServer.connect(loginData.name,
+                                    loginData.port,
+                                    loginData.tlsPort,
+                                    (String)null,  // caFileName
+                                    (String)null,  // certificateFileName
+                                    (String)null,  // keyFileName
+                                    loginData.tlsMode,
+                                    true, // insecureTLS,
+                                    loginData.password
+                                   );
+                  connectedFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                break;
+              case 1:
+                // try to connect to server without TLS/SSL
+                try
+                {
+                  BARServer.connect(loginData.name,
+                                    loginData.port,
+                                    loginData.tlsPort,
+                                    (String)null,  // caFileName
+                                    (String)null,  // certificateFileName
+                                    (String)null,  // keyFileName
+                                    BARServer.TLSModes.NONE,
+                                    false, // insecureTLS,
+                                    loginData.password
+                                   );
+                  connectedFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                break;
+              case 2:
+                retryFlag = false;
+                break;
+            }
+          }
+          else
+          {
+            // try again without TLS
+            switch (Dialogs.select(new Shell(),
+                                   BARControl.tr("Connection fail"),
+                                   IMAGE,
+                                   (connectErrorMessage != null)
+                                     ? BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage
+                                     : BARControl.tr("Connection fail"),
+                                   new String[]
+                                   {
+                                     BARControl.tr("Try without TLS (SSL)"),
+                                     BARControl.tr("Cancel")
+                                   },
+                                   0
+                                  )
+                   )
+            {
+              case 0:
+                // try to connect to server without TLS/SSL
+                try
+                {
+                  BARServer.connect(loginData.name,
+                                    loginData.port,
+                                    loginData.tlsPort,
+                                    (String)null,  // caFileName
+                                    (String)null,  // certificateFileName
+                                    (String)null,  // keyFileName
+                                    BARServer.TLSModes.NONE,
+                                    false, // insecureTLS,
+                                    loginData.password
+                                   );
+                  connectedFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  connectErrorMessage = error.getMessage();
+                }
+                break;
+              case 1:
+                retryFlag = false;
+                break;
+            }
+          }
+        }
+      }
+
+      if (!connectedFlag && retryFlag)
+      {
+        // show error dialog
+        Dialogs.error(new Shell(),
+                      (connectErrorMessage != null)
+                        ? BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage
+                        : BARControl.tr("Connection fail")
+                     );
+
+        // get login data
+        if (!getLoginData(loginData,true))
+        {
+          break;
+        }
+        if ((loginData.port == 0) && (loginData.tlsPort == 0))
+        {
+          throw new Error(BARControl.tr("Cannot connect to server. No server ports specified!"));
+        }
+      }
+    }
+    while (!connectedFlag && retryFlag);
+
+    // check if connected
+    if (connectedFlag)
+    {
+      // show warning if no TLS connection established
+      if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+      {
+        Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+      }
+      
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
   /** barcontrol main
    * @param args command line arguments
    */
@@ -5001,9 +5074,10 @@ if (false) {
           System.exit(ExitCodes.FAIL);
         }
 
+        // show warning if no TLS connection established
         if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
         {
-          printWarning(BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+          printWarning(BARControl.tr("Established a none-TLS connection only. Transmitted data may be vulnerable!"));
         }
 
         // execute commands
@@ -6114,163 +6188,15 @@ Dprintf.dprintf("still not supported");
         }
         display = new Display();
 
+        boolean connectedFlag = false;
+        
         // connect to server
-        boolean connectOkFlag       = false;
-        String  connectErrorMessage = null;
-        if (!Settings.loginDialogFlag)
+        if (!login(loginData,
+                   Settings.loginDialogFlag
+                  )
+           )
         {
-          // try to connect to server with preset data
-          try
-          {
-            connect(loginData.name,
-                    loginData.port,
-                    loginData.tlsPort,
-                    Settings.serverCAFileName,
-                    Settings.serverCertificateFileName,
-                    Settings.serverKeyFileName,
-                    loginData.tlsMode,
-                    Settings.serverInsecureTLS,
-                    loginData.password
-                   );
-            connectOkFlag = true;
-          }
-          catch (ConnectionError error)
-          {
-            connectErrorMessage = error.getMessage();
-          }
-          catch (CommunicationError error)
-          {
-            connectErrorMessage = error.getMessage();
-          }
-
-          if (!connectOkFlag)
-          {
-            if (connectErrorMessage != null)
-            {
-              Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
-            }
-            else
-            {
-              Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
-            }
-          }
-        }
-
-        while (!connectOkFlag)
-        {
-          // get login data
-          if (!getLoginData(loginData,true))
-          {
-            System.exit(ExitCodes.OK);
-          }
-          if ((loginData.port == 0) && (loginData.tlsPort == 0))
-          {
-            throw new Error(BARControl.tr("Cannot connect to server. No server ports specified!"));
-          }
-/// ??? host name scheck
-
-          // try to connect to server
-          if (!connectOkFlag)
-          {
-            try
-            {
-              connect(loginData.name,
-                      loginData.port,
-                      loginData.tlsPort,
-                      Settings.serverCAFileName,
-                      Settings.serverCertificateFileName,
-                      Settings.serverKeyFileName,
-                      loginData.tlsMode,
-                      Settings.serverInsecureTLS,
-                      loginData.password
-
-                     );
-              connectOkFlag = true;
-            }
-            catch (ConnectionError error)
-            {
-              connectErrorMessage = error.getMessage();
-            }
-            catch (CommunicationError error)
-            {
-              connectErrorMessage = error.getMessage();
-            }
-          }
-
-          if (!connectOkFlag && (loginData.tlsMode == BARServer.TLSModes.FORCE))
-          {
-            if (connectErrorMessage != null)
-            {
-              Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage);
-            }
-            else
-            {
-              Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
-            }
-
-            if (loginData.tlsMode == BARServer.TLSModes.FORCE)
-            {
-              if (Dialogs.confirmError(new Shell(),
-                                       BARControl.tr("Connection fail"),
-                                       BARControl.tr("Connection fail. Try to connect without TLS (SSL)?"),
-                                       BARControl.tr("Try without TLS (SSL)"),
-                                       BARControl.tr("Cancel")
-                                      )
-                 )
-              {
-                // try to connect to server without TLS/SSL
-                try
-                {
-                  BARServer.connect(loginData.name,
-                                    loginData.port,
-                                    loginData.tlsPort,
-                                    (String)null,  // caFileName
-                                    (String)null,  // certificateFileName
-                                    (String)null,  // keyFileName
-                                    BARServer.TLSModes.NONE,
-                                    true, // insecureTLS,
-                                    loginData.password
-                                   );
-                  connectOkFlag = true;
-                }
-                catch (ConnectionError error)
-                {
-                  connectErrorMessage = error.getMessage();
-                }
-                catch (CommunicationError error)
-                {
-                  connectErrorMessage = error.getMessage();
-                }
-              }
-              else
-              {
-                System.exit(ExitCodes.FAIL);
-              }
-            }
-          }
-
-          // check if connected
-          if (connectOkFlag)
-          {
-            // show warning if no TLS connection established
-            if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
-            {
-              Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
-            }
-          }
-          else
-          {
-            if (!Dialogs.confirmError(new Shell(),
-                                      BARControl.tr("Connection fail"),
-                                      connectErrorMessage,
-                                      BARControl.tr("Try again"),
-                                      BARControl.tr("Cancel")
-                                     )
-               )
-            {
-              System.exit(ExitCodes.FAIL);
-            }
-          }
+          System.exit(ExitCodes.FAIL);
         }
 
         // store login settings

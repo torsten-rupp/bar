@@ -18,7 +18,8 @@
   * fixed TLS connections: reading certificates
   * BARConrol: fixed possible dead-lock in server
     communication
-  * BARControl: added option --insecure-tls
+  * BARControl: added option --insecure-tls, improved
+    login dialogs
 
 2022-08-30 0.22
   * added support for external index database engines
