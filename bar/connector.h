@@ -140,6 +140,12 @@ void Connector_done(ConnectorInfo *connectorInfo);
 * Input  : connectorInfo - connector info
 *          hostName      - slave host name
 *          hostPort      - slave host port
+*          caData        - TLS CA data or NULL
+*          caLength      - TLS CA data length
+*          cert          - TLS cerificate or NULL
+*          certLength    - TLS cerificate data length
+*          key           - TLS private key or NULL
+*          keyLength     - TLS private key data length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -147,7 +153,13 @@ void Connector_done(ConnectorInfo *connectorInfo);
 
 Errors Connector_connect(ConnectorInfo *connectorInfo,
                          ConstString   hostName,
-                         uint          hostPort
+                         uint          hostPort,
+                         const void    *caData,
+                         uint          caLength,
+                         const void    *certData,
+                         uint          certLength,
+                         const void    *keyData,
+                         uint          keyLength
                         );
 
 /***********************************************************************\

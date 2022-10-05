@@ -1358,7 +1358,13 @@ LOCAL void pairingThreadCode(void)
                 // try connect to slave
                 error = Connector_connect(&slaveNode->connectorInfo,
                                           slaveNode->name,
-                                          slaveNode->port
+                                          slaveNode->port,
+                                          globalOptions.serverCA.data,
+                                          globalOptions.serverCA.length,
+                                          globalOptions.serverCert.data,
+                                          globalOptions.serverCert.length,
+                                          globalOptions.serverKey.data,
+                                          globalOptions.serverKey.length
                                          );
                 if (error == ERROR_NONE)
                 {
@@ -2737,14 +2743,14 @@ LOCAL bool getEntityList(EntityList  *entityList,
 //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
       // create expiration node
       entityNode = newExpirationNode(entityId,
-                                               jobUUID,
-                                               archiveType,
-                                               createdDateTime,
-                                               totalSize,
-                                               totalEntryCount,
-                                               totalEntrySize,
-                                               (lockedCount > 0)
-                                              );
+                                     jobUUID,
+                                     archiveType,
+                                     createdDateTime,
+                                     totalSize,
+                                     totalEntryCount,
+                                     totalEntrySize,
+                                     (lockedCount > 0)
+                                    );
       assert(entityNode != NULL);
 
       // add to list
@@ -3028,7 +3034,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                          &jobNode->job.options.persistenceList
                         );
 
-        if (   (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))  // wait 10s after change expiration setting before purge
+        if (   (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))  // wait 10min after change expiration setting before purge
                 || (newArchiveType != ARCHIVE_TYPE_NONE)  // if new entity is created: purge immediately
                )
             && !List_isEmpty(&jobEntityList)  // only expire if persistence list is not empty
@@ -3047,8 +3053,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               // calculate number/total size of entities in persistence periode
               LIST_ITERATE(&jobEntityList,otherJobEntityNode)
               {
-                if (   (otherJobEntityNode->persistenceNode == jobEntityNode->persistenceNode)
-                    && !isInTransit(otherJobEntityNode)
+                if (   (otherJobEntityNode->persistenceNode == jobEntityNode->persistenceNode)  // same periode
+                    && !otherJobEntityNode->lockedFlag                                          // not locked
+                    && !isInTransit(otherJobEntityNode)                                         // not "in-intransit"
                    )
                 {
                   totalEntityCount++;
@@ -3167,9 +3174,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
                     #ifdef SIMULATE_PURGE
-                      "Purge expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
+                      "Purge expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
                     #else /* not SIMULATE_PURGE */
-                      "Purge expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
+                      "Purge expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
@@ -3196,9 +3203,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
                     #ifdef SIMULATE_PURGE
-                      "Purge entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated) failed: %s",
+                      "Purge entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated) failed: %s",
                     #else /* not SIMULATE_PURGE */
-                      "Purge entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) failed: %s",
+                      "Purge entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) failed: %s",
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
@@ -3648,7 +3655,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         // find entity to move
         LIST_ITERATE(&jobEntityList,jobEntityNode)
         {
-          if (   (jobEntityNode->persistenceNode != NULL)
+          if (   !jobEntityNode->lockedFlag
+              && (jobEntityNode->persistenceNode != NULL)
               && !String_isEmpty(jobEntityNode->persistenceNode->moveTo)
               && !Array_contains(&entityIdArray,&jobEntityNode->entityId)
              )

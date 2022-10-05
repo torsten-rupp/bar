@@ -248,14 +248,26 @@ bool ServerIO_parseAction(const char      *actionText,
 #ifdef NDEBUG
   Errors ServerIO_connectNetwork(ServerIO    *serverIO,
                                  ConstString hostName,
-                                 uint        hostPort
+                                 uint        hostPort,
+                                 const void  *caData,
+                                 uint        caLength,
+                                 const void  *certData,
+                                 uint        certLength,
+                                 const void  *keyData,
+                                 uint        keyLength
                                 );
 #else /* not NDEBUG */
   Errors __ServerIO_connectNetwork(const char *__fileName__,
                                    ulong      __lineNb__,
                                    ServerIO    *serverIO,
                                    ConstString hostName,
-                                   uint        hostPort
+                                   uint        hostPort,
+                                   const void  *caData,
+                                   uint        caLength,
+                                   const void  *certData,
+                                   uint        certLength,
+                                   const void  *keyData,
+                                   uint        keyLength
                                   );
 #endif /* NDEBUG */
 

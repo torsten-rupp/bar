@@ -682,6 +682,10 @@ LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archive
                             storageInfo->storageSpecifier.hostPort,
                             storageInfo->storageSpecifier.loginName,
                             storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
                             storageInfo->scp.privateKey.data,
@@ -743,6 +747,10 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
                             storageInfo->storageSpecifier.hostPort,
                             storageInfo->storageSpecifier.loginName,
                             storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
                             storageInfo->scp.privateKey.data,
@@ -808,6 +816,10 @@ LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString ar
                             storageInfo->storageSpecifier.hostPort,
                             storageInfo->storageSpecifier.loginName,
                             storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
                             storageInfo->scp.privateKey.data,
@@ -933,6 +945,10 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
                             storageHandle->storageInfo->storageSpecifier.loginName,
                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageHandle->storageInfo->scp.publicKey.data,
                             storageHandle->storageInfo->scp.publicKey.length,
                             storageHandle->storageInfo->scp.privateKey.data,
@@ -1040,6 +1056,10 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
                             storageHandle->storageInfo->storageSpecifier.loginName,
                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageHandle->storageInfo->scp.publicKey.data,
                             storageHandle->storageInfo->scp.publicKey.length,
                             storageHandle->storageInfo->scp.privateKey.data,
