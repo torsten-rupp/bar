@@ -570,6 +570,10 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                           hostPort,
                           loginName,
                           loginPassword,
+                          NULL,  // caData
+                          0,     // caLength
+                          NULL,  // certData
+                          0,     // certLength
                           publicKeyData,
                           publicKeyLength,
                           privateKeyData,

@@ -580,10 +580,14 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         hostPort,
                        ConstString  loginName,
                        Password     *password,
-                       const void   *sshPublicKeyData,
-                       uint         sshPublicKeyLength,
-                       const void   *sshPrivateKeyData,
-                       uint         sshPrivateKeyLength,
+                       const void   *caData,
+                       uint         caLength,
+                       const void   *certData,
+                       uint         certLength,
+                       const void   *publicKeyData,
+                       uint         publicKeyLength,
+                       const void   *privateKeyData,
+                       uint         privateKeyLength,
                        SocketFlags  socketFlags
                       )
 {
@@ -764,10 +768,14 @@ Errors Network_connect(SocketHandle *socketHandle,
                                    socketType,
                                    loginName,
                                    password,
-                                   sshPublicKeyData,
-                                   sshPublicKeyLength,
-                                   sshPrivateKeyData,
-                                   sshPrivateKeyLength,
+                                   caData,
+                                   caLength,
+                                   certData,
+                                   certLength,
+                                   publicKeyData,
+                                   publicKeyLength,
+                                   privateKeyData,
+                                   privateKeyLength,
                                    socketFlags
                                   );
 }
@@ -777,10 +785,14 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                  SocketTypes  socketType,
                                  ConstString  loginName,
                                  Password     *password,
-                                 const void   *sshPublicKeyData,
-                                 uint         sshPublicKeyLength,
-                                 const void   *sshPrivateKeyData,
-                                 uint         sshPrivateKeyLength,
+                                 const void   *caData,
+                                 uint         caLength,
+                                 const void   *certData,
+                                 uint         certLength,
+                                 const void   *publicKeyData,
+                                 uint         publicKeyLength,
+                                 const void   *privateKeyData,
+                                 uint         privateKeyLength,
                                  SocketFlags  socketFlags
                                 )
 {
@@ -849,7 +861,44 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
       }
       break;
     case SOCKET_TYPE_TLS:
-      return ERROR_FUNCTION_NOT_SUPPORTED;
+      #ifdef HAVE_GNU_TLS
+      {
+        assert(loginName != NULL);
+
+        // check login name
+        if (String_isEmpty(loginName))
+        {
+          return ERROR_NO_LOGIN_NAME;
+        }
+
+        // check if certificate is valid
+        error = validateCertificate(certData,certLength);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // init SSL
+        error = initSSL(socketHandle,caData,caLength,certData,certLength,privateKeyData,privateKeyLength);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      #else /* not HAVE_GNU_TLS */
+        UNUSED_VARIABLE(loginName);
+        UNUSED_VARIABLE(password);
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+        UNUSED_VARIABLE(publicKeyData);
+        UNUSED_VARIABLE(publicKeyLength);
+        UNUSED_VARIABLE(privateKeyData);
+        UNUSED_VARIABLE(privateKeyLength);
+
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GNU_TLS */
       break;
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -864,13 +913,18 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
 
         assert(loginName != NULL);
 
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+
         // check login name
         if (String_isEmpty(loginName))
         {
           return ERROR_NO_LOGIN_NAME;
         }
 
-        // init SSL session
+        // init SSH session
         socketHandle->ssh2.session = libssh2_session_init();
         if (socketHandle->ssh2.session == NULL)
         {
@@ -918,15 +972,15 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         result = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
-          if ((sshPublicKeyData != NULL) && (sshPrivateKeyData != NULL))
+          if ((publicKeyData != NULL) && (privateKeyData != NULL))
           {
             result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
                                                            String_cString(loginName),
                                                            String_length(loginName),
-                                                           sshPublicKeyData,
-                                                           sshPublicKeyLength,
-                                                           sshPrivateKeyData,
-                                                           sshPrivateKeyLength,
+                                                           publicKeyData,
+                                                           publicKeyLength,
+                                                           privateKeyData,
+                                                           privateKeyLength,
                                                            plainPassword
                                                           );
           }
@@ -1008,10 +1062,14 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(loginName);
         UNUSED_VARIABLE(password);
-        UNUSED_VARIABLE(sshPublicKeyData);
-        UNUSED_VARIABLE(sshPublicKeyLength);
-        UNUSED_VARIABLE(sshPrivateKeyData);
-        UNUSED_VARIABLE(sshPrivateKeyLength);
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+        UNUSED_VARIABLE(publicKeyData);
+        UNUSED_VARIABLE(publicKeyLength);
+        UNUSED_VARIABLE(privateKeyData);
+        UNUSED_VARIABLE(privateKeyLength);
 
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -1640,9 +1698,16 @@ Errors Network_startTLS(SocketHandle *socketHandle,
 
     // init SSL
     error = initSSL(socketHandle,caData,caLength,certData,certLength,keyData,keyLength);
-    if (error == ERROR_NONE)
+    if (error != ERROR_NONE)
     {
-      socketHandle->type = SOCKET_TYPE_TLS;
+      #if  defined(PLATFORM_LINUX)
+        flags = fcntl(socketHandle->handle,F_GETFL,0);
+        (void)fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
+      #elif defined(PLATFORM_WINDOWS)
+        n = 1;
+        (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
+      #endif /* PLATFORM_... */
+      return error;
     }
 
     // re-enable temporary non-blocking
@@ -1656,6 +1721,8 @@ Errors Network_startTLS(SocketHandle *socketHandle,
         (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
       #endif /* PLATFORM_... */
     }
+
+    socketHandle->type = SOCKET_TYPE_TLS;
 
     return ERROR_NONE;
   #else /* not HAVE_GNU_TLS */

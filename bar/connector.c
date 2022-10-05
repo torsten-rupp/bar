@@ -136,7 +136,13 @@ LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
 
 LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
                               ConstString   hostName,
-                              uint          hostPort
+                              uint          hostPort,
+                              const void    *caData,
+                              uint          caLength,
+                              const void    *certData,
+                              uint          certLength,
+                              const void    *keyData,
+                              uint          keyLength
                              )
 {
   Errors error;
@@ -147,7 +153,13 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   // connect network server i/o
   error = ServerIO_connectNetwork(&connectorInfo->io,
                                   hostName,
-                                  (hostPort != 0) ? hostPort : DEFAULT_SERVER_PORT
+                                  (hostPort != 0) ? hostPort : DEFAULT_SERVER_PORT,
+                                  caData,
+                                  caLength,
+                                  certData,
+                                  certLength,
+                                  keyData,
+                                  keyLength
                                  );
   if (error != ERROR_NONE)
   {
@@ -2512,7 +2524,7 @@ LOCAL void connectorCommand_indexEntityPurge(ConnectorInfo *connectorInfo, Index
 
   if (indexHandle != NULL)
   {
-    // prune entity
+    // purge entity
     error = Index_purgeEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
@@ -3747,7 +3759,13 @@ void Connector_done(ConnectorInfo *connectorInfo)
 
 Errors Connector_connect(ConnectorInfo *connectorInfo,
                          ConstString   hostName,
-                         uint          hostPort
+                         uint          hostPort,
+                         const void    *caData,
+                         uint          caLength,
+                         const void    *certData,
+                         uint          certLength,
+                         const void    *keyData,
+                         uint          keyLength
                         )
 {
   Errors error;
@@ -3761,7 +3779,13 @@ Errors Connector_connect(ConnectorInfo *connectorInfo,
   // connect connector, get session id/public key
   error = connectorConnect(connectorInfo,
                            hostName,
-                           hostPort
+                           hostPort,
+                           caData,
+                           caLength,
+                           certData,
+                           certLength,
+                           keyData,
+                           keyLength
                           );
   if (error != ERROR_NONE)
   {

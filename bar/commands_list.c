@@ -3355,6 +3355,10 @@ NULL, // masterSocketHandle
                                   storageSpecifier->hostPort,
                                   storageSpecifier->loginName,
                                   &sshServer.password,
+                                  NULL,  // caData
+                                  0,     // caLength
+                                  NULL,  // certData
+                                  0,     // certLength
                                   sshServer.publicKey.data,
                                   sshServer.publicKey.length,
                                   sshServer.privateKey.data,
@@ -3379,6 +3383,10 @@ NULL, // masterSocketHandle
                                     storageSpecifier->hostPort,
                                     storageSpecifier->loginName,
                                     &sshPassword,
+                                    NULL,  // caData
+                                    0,     // caLength
+                                    NULL,  // certData
+                                    0,     // certLength
                                     sshServer.publicKey.data,
                                     sshServer.publicKey.length,
                                     sshServer.privateKey.data,

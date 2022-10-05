@@ -1182,6 +1182,10 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
                               storageInfo->storageSpecifier.hostPort,
                               storageInfo->storageSpecifier.loginName,
                               storageInfo->storageSpecifier.loginPassword,
+                              NULL,  // caData
+                              0,     // caLength
+                              NULL,  // certData
+                              0,     // certLength
                               storageInfo->sftp.publicKey.data,
                               storageInfo->sftp.publicKey.length,
                               storageInfo->sftp.privateKey.data,
@@ -1237,6 +1241,10 @@ LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiv
                               storageInfo->storageSpecifier.hostPort,
                               storageInfo->storageSpecifier.loginName,
                               storageInfo->storageSpecifier.loginPassword,
+                              NULL,  // caData
+                              0,     // caLength
+                              NULL,  // certData
+                              0,     // certLength
                               storageInfo->sftp.publicKey.data,
                               storageInfo->sftp.publicKey.length,
                               storageInfo->sftp.privateKey.data,
@@ -1294,6 +1302,10 @@ LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString a
                               storageInfo->storageSpecifier.hostPort,
                               storageInfo->storageSpecifier.loginName,
                               storageInfo->storageSpecifier.loginPassword,
+                              NULL,  // caData
+                              0,     // caLength
+                              NULL,  // certData
+                              0,     // certLength
                               storageInfo->sftp.publicKey.data,
                               storageInfo->sftp.publicKey.length,
                               storageInfo->sftp.privateKey.data,
@@ -1417,6 +1429,10 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
                             storageHandle->storageInfo->storageSpecifier.loginName,
                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageHandle->storageInfo->sftp.publicKey.data,
                             storageHandle->storageInfo->sftp.publicKey.length,
                             storageHandle->storageInfo->sftp.privateKey.data,
@@ -1578,6 +1594,10 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
                             storageHandle->storageInfo->storageSpecifier.loginName,
                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageHandle->storageInfo->sftp.publicKey.data,
                             storageHandle->storageInfo->sftp.publicKey.length,
                             storageHandle->storageInfo->sftp.privateKey.data,
@@ -2144,6 +2164,10 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
                             storageInfo->storageSpecifier.hostPort,
                             storageInfo->storageSpecifier.loginName,
                             storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageInfo->sftp.publicKey.data,
                             storageInfo->sftp.publicKey.length,
                             storageInfo->sftp.privateKey.data,
@@ -2195,6 +2219,10 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                             storageInfo->storageSpecifier.hostPort,
                             storageInfo->storageSpecifier.loginName,
                             storageInfo->storageSpecifier.loginPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             storageInfo->sftp.publicKey.data,
                             storageInfo->sftp.publicKey.length,
                             storageInfo->sftp.privateKey.data,
@@ -2253,6 +2281,10 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
                               storageInfo->storageSpecifier.hostPort,
                               storageInfo->storageSpecifier.loginName,
                               storageInfo->storageSpecifier.loginPassword,
+                              NULL,  // caData
+                              0,     // caLength
+                              NULL,  // certData
+                              0,     // certLength
                               storageInfo->sftp.publicKey.data,
                               storageInfo->sftp.publicKey.length,
                               storageInfo->sftp.privateKey.data,
@@ -2431,6 +2463,10 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
                             storageDirectoryListHandle->storageSpecifier.hostPort,
                             storageDirectoryListHandle->storageSpecifier.loginName,
                             &defaultSSHPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
                             sshServer.publicKey.data,
                             sshServer.publicKey.length,
                             sshServer.privateKey.data,

@@ -538,14 +538,26 @@ bool ServerIO_parseAction(const char      *actionText,
 #ifdef NDEBUG
   Errors ServerIO_connectNetwork(ServerIO    *serverIO,
                                  ConstString hostName,
-                                 uint        hostPort
+                                 uint        hostPort,
+                                 const void  *caData,
+                                 uint        caLength,
+                                 const void  *certData,
+                                 uint        certLength,
+                                 const void  *keyData,
+                                 uint        keyLength
                                 )
 #else /* not NDEBUG */
   Errors __ServerIO_connectNetwork(const char *__fileName__,
                                    ulong      __lineNb__,
                                    ServerIO    *serverIO,
                                    ConstString hostName,
-                                   uint        hostPort
+                                   uint        hostPort,
+                                   const void  *caData,
+                                   uint        caLength,
+                                   const void  *certData,
+                                   uint        certLength,
+                                   const void  *keyData,
+                                   uint        keyLength
                                   )
 #endif /* NDEBUG */
 {
@@ -570,6 +582,12 @@ bool ServerIO_parseAction(const char      *actionText,
   serverIO->lineFlag          = FALSE;
   List_clear(&serverIO->resultList);
 
+(void)caData;
+(void)caLength;
+(void)certData;
+(void)certLength;
+(void)keyData;
+(void)keyLength;
   // connect to server
   error = Network_connect(&serverIO->network.socketHandle,
 //TODO
@@ -579,10 +597,14 @@ SOCKET_TYPE_PLAIN,
                           hostPort,
                           NULL,  // loginName
                           NULL,  // password
-                          NULL,  // sshPublicKeyData
-                          0,     // sshPublicKeyLength
-                          NULL,  // sshPrivateKeyData
-                          0,     // sshPrivateKeyLength
+                          NULL,  // caData
+                          0,     // caLength
+                          NULL,  // certData
+                          0,     // certLength
+                          NULL,  // publicKeyData
+                          0,     // publicKeyLength
+                          NULL,  // privateKeyData
+                          0,     // privateKeyLength
                           SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                          );
   if (error != ERROR_NONE)
@@ -591,15 +613,13 @@ SOCKET_TYPE_PLAIN,
     return error;
   }
 
-  // accept session data
+  // read session data
   line         = String_new();
   argumentMap  = StringMap_new();
   id           = String_new();
   encryptTypes = String_new();
   n            = String_new();
   e            = String_new();
-
-  // read session data
   error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
   if (error != ERROR_NONE)
   {
