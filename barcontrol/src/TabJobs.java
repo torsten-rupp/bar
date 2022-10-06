@@ -14639,7 +14639,7 @@ throw new Error("NYI");
                                                                "",
                                                                SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000)),
                                                                (int)((System.currentTimeMillis()/1000-entityIndexData.createdDateTime)/(24*60*60)),
-                                                               Units.formatByteSize(entityIndexData.totalEntrySize)
+                                                               Units.formatByteSize(entityIndexData.totalSize)
                                                               );
               if (entityIndexData.inTransit) Widgets.setTreeItemColor(treeItem,COLOR_IN_TRANSIT);
 
