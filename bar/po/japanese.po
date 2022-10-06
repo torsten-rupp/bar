@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-09-18 16:32+0200\n"
+"POT-Creation-Date: 2022-10-06 04:05+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -832,7 +832,7 @@ msgid "deprecated or ignored value"
 msgstr ""
 
 #: errors.def:827
-msgid "authorization fail"
+msgid "authorization failed"
 msgstr ""
 
 #: errors.def:831
@@ -896,7 +896,7 @@ msgid "database connection lost"
 msgstr ""
 
 #: errors.def:933
-msgid "database authorization fail"
+msgid "database authorization failed"
 msgstr ""
 
 #: errors.def:938
