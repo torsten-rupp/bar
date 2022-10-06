@@ -306,6 +306,7 @@ or
 * Name   : initSSL
 * Purpose: init SSL encryption on socket
 * Input  : socketHandle - socket handle
+*          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
 *          caData       - TLS CA data or NULL (PEM encoded)
 *          caLength     - TSL CA data length
 *          cert         - TLS cerificate or NULL (PEM encoded)
@@ -317,13 +318,14 @@ or
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initSSL(SocketHandle *socketHandle,
-                     const void   *caData,
-                     uint         caLength,
-                     const void   *certData,
-                     uint         certLength,
-                     const void   *keyData,
-                     uint         keyLength
+LOCAL Errors initSSL(SocketHandle    *socketHandle,
+                     NetworkTLSTypes tlsType,
+                     const void      *caData,
+                     uint            caLength,
+                     const void      *certData,
+                     uint            certLength,
+                     const void      *keyData,
+                     uint            keyLength
                     )
 {
   gnutls_datum_t caDatum,certDatum,keyDatum;
@@ -343,7 +345,8 @@ UNUSED_VARIABLE(caData);
 UNUSED_VARIABLE(caLength);
 
   // init certificate and key
-  if (gnutls_certificate_allocate_credentials(&socketHandle->gnuTLS.credentials) != GNUTLS_E_SUCCESS)
+  result = gnutls_certificate_allocate_credentials(&socketHandle->gnuTLS.credentials);
+  if (result != GNUTLS_E_SUCCESS)
   {
     return ERROR_INIT_TLS;
   }
@@ -382,22 +385,32 @@ UNUSED_VARIABLE(caLength);
                                   );
 
   // initialize session
-  if (gnutls_init(&socketHandle->gnuTLS.session,GNUTLS_SERVER) != 0)
+  switch (tlsType)
   {
+    case NETWORK_TLS_TYPE_SERVER: result = gnutls_init(&socketHandle->gnuTLS.session,GNUTLS_SERVER); break;
+    case NETWORK_TLS_TYPE_CLIENT: result = gnutls_init(&socketHandle->gnuTLS.session,GNUTLS_CLIENT); break;
+  }
+  if (result != GNUTLS_E_SUCCESS)
+  {
+    gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
+    gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
     return ERROR_INIT_TLS;
   }
 
-  if (gnutls_set_default_priority(socketHandle->gnuTLS.session) != 0)
+  result = gnutls_set_default_priority(socketHandle->gnuTLS.session);
+  if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_deinit(socketHandle->gnuTLS.session);
+    gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
+    gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
     return ERROR_INIT_TLS;
   }
 
-  if (gnutls_credentials_set(socketHandle->gnuTLS.session,
-                             GNUTLS_CRD_CERTIFICATE,
-                             socketHandle->gnuTLS.credentials
-                            ) != 0
-     )
+  result = gnutls_credentials_set(socketHandle->gnuTLS.session,
+                                  GNUTLS_CRD_CERTIFICATE,
+                                  socketHandle->gnuTLS.credentials
+                                 );
+  if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_deinit(socketHandle->gnuTLS.session);
     gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
@@ -422,7 +435,7 @@ NYI: how to do certificate verification?
                           );
 
   // do handshake
-  gnutls_transport_set_int(socketHandle->gnuTLS.session, socketHandle->handle);
+  gnutls_transport_set_int(socketHandle->gnuTLS.session,socketHandle->handle);
   do
   {
     result = gnutls_handshake(socketHandle->gnuTLS.session);
@@ -879,7 +892,15 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         }
 
         // init SSL
-        error = initSSL(socketHandle,caData,caLength,certData,certLength,privateKeyData,privateKeyLength);
+        error = initSSL(socketHandle,
+                        NETWORK_TLS_TYPE_SERVER,
+                        caData,
+                        caLength,
+                        certData,
+                        certLength,
+                        privateKeyData,
+                        privateKeyLength
+                       );
         if (error != ERROR_NONE)
         {
           return error;
@@ -1642,13 +1663,14 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
   disconnectDescriptor(serverSocketHandle->handle);
 }
 
-Errors Network_startTLS(SocketHandle *socketHandle,
-                        const void   *caData,
-                        uint         caLength,
-                        const void   *certData,
-                        uint         certLength,
-                        const void   *keyData,
-                        uint         keyLength
+Errors Network_startTLS(SocketHandle    *socketHandle,
+                        NetworkTLSTypes tlsType,
+                        const void      *caData,
+                        uint            caLength,
+                        const void      *certData,
+                        uint            certLength,
+                        const void      *keyData,
+                        uint            keyLength
                        )
 {
   #ifdef HAVE_GNU_TLS
@@ -1697,7 +1719,7 @@ Errors Network_startTLS(SocketHandle *socketHandle,
     }
 
     // init SSL
-    error = initSSL(socketHandle,caData,caLength,certData,certLength,keyData,keyLength);
+    error = initSSL(socketHandle,tlsType,caData,caLength,certData,certLength,keyData,keyLength);
     if (error != ERROR_NONE)
     {
       #if  defined(PLATFORM_LINUX)
@@ -1791,6 +1813,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
       #ifdef HAVE_GNU_TLS
         // init SSL
         error = initSSL(socketHandle,
+                        NETWORK_TLS_TYPE_SERVER,
                         serverSocketHandle->caData,
                         serverSocketHandle->caLength,
                         serverSocketHandle->certData,

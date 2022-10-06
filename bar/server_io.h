@@ -610,9 +610,10 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 /***********************************************************************\
 * Name   : ServerIO_vsendCommand, ServerIO_sendCommand
 * Purpose: send command
-* Input  : serverIO - server i/o
-*          format   - command format string
-*          ...      - optional arguments for command format string
+* Input  : serverIO   - server i/o
+*          debugLevel - debug level
+*          format     - command format string
+*          ...        - optional arguments for command format string
 * Output : id - command id
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -637,6 +638,7 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 * Name   : ServerIO_vexecuteCommand, ServerIO_executeCommand
 * Purpose: execute server command
 * Input  : serverIO              - server i/o
+*          debugLevel            - debug level
 *          timeout               - timeout [ms] or WAIT_FOREVER
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function

@@ -164,6 +164,12 @@ typedef struct
   } stderrBuffer;
 } NetworkExecuteHandle;
 
+typedef enum
+{
+  NETWORK_TLS_TYPE_SERVER,
+  NETWORK_TLS_TYPE_CLIENT
+} NetworkTLSTypes;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -547,6 +553,7 @@ Errors Network_reject(const ServerSocketHandle *serverSocketHandle);
 * Name   : Network_startTLS
 * Purpose: start TLS (TLS) encryption on socket connection
 * Input  : socketHandle - socket handle
+*          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
 *          caData       - TLS CA data or NULL (PEM encoded)
 *          caLength     - TLS CA data length
 *          cert         - TLS cerificate or NULL (PEM encoded)
@@ -558,13 +565,14 @@ Errors Network_reject(const ServerSocketHandle *serverSocketHandle);
 * Notes  : call after Network_accept() to establish a SSL encryption
 \***********************************************************************/
 
-Errors Network_startTLS(SocketHandle *socketHandle,
-                        const void   *caData,
-                        uint         caLength,
-                        const void   *certData,
-                        uint         certLength,
-                        const void   *keyData,
-                        uint         keyLength
+Errors Network_startTLS(SocketHandle    *socketHandle,
+                        NetworkTLSTypes tlsType,
+                        const void      *caData,
+                        uint            caLength,
+                        const void      *certData,
+                        uint            certLength,
+                        const void      *keyData,
+                        uint            keyLength
                        );
 
 /***********************************************************************\
