@@ -2429,6 +2429,9 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 
     // set key data
     Configuration_setKey(key,NULL,data,dataLength);
+
+    // free resources
+    freeSecure(data);
   }
   else
   {
@@ -2452,6 +2455,9 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 
       // set key data
       Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
     }
   }
 
@@ -6206,6 +6212,9 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 
       // set key data
       Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
     }
   }
   else
@@ -6229,6 +6238,9 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 
       // set key data
       Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
     }
   }
 
