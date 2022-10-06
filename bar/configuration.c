@@ -1532,6 +1532,9 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
 
   printInfo(3,"Read key file '%s'\n",fileName);
 
+  // free resources
+  freeSecure(data);
+
   return ERROR_NONE;
 }
 
@@ -2426,6 +2429,9 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 
     // set key data
     Configuration_setKey(key,NULL,data,dataLength);
+
+    // free resources
+    freeSecure(data);
   }
   else
   {
@@ -2449,6 +2455,9 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 
       // set key data
       Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
     }
   }
 
@@ -6203,6 +6212,9 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 
       // set key data
       Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
     }
   }
   else
@@ -6226,6 +6238,9 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 
       // set key data
       Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
     }
   }
 
@@ -8371,7 +8386,7 @@ void __Configuration_initKey(const char *__fileName__,
                              ulong      __lineNb__,
                              Key        *key
                             )
-                            
+
 #endif /* NDEBUG */
 {
   assert(key != NULL);
@@ -8380,7 +8395,7 @@ void __Configuration_initKey(const char *__fileName__,
   key->fileName = NULL;
   key->data     = NULL;
   key->length   = 0;
-  
+
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(key,Key);
   #else /* not NDEBUG */
@@ -8448,8 +8463,8 @@ void __Configuration_doneKey(const char *__fileName__,
 #endif /* NDEBUG */
 {
   assert(key != NULL);
-  assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
   DEBUG_CHECK_RESOURCE_TRACE(key);
+  assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(key,Key);
@@ -8467,6 +8482,7 @@ bool Configuration_setKey(Key *key, const char *fileName, const void *data, uint
 
   assert(key != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(key);
+  assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
 
   newData = allocSecure(length);
   if (newData == NULL)
@@ -8493,6 +8509,7 @@ bool Configuration_setKeyString(Key *key, const char *fileName, ConstString stri
 {
   assert(key != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(key);
+  assert(string != NULL);
 
   return Configuration_setKey(key,fileName,String_cString(string),String_length(string));
 }
@@ -8500,6 +8517,7 @@ bool Configuration_setKeyString(Key *key, const char *fileName, ConstString stri
 void Configuration_clearKey(Key *key)
 {
   assert(key != NULL);
+  assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
   DEBUG_CHECK_RESOURCE_TRACE(key);
 
   if (key->type == KEY_TYPE_FILE) String_delete(key->fileName);
@@ -8516,6 +8534,7 @@ bool Configuration_copyKey(Key *key, const Key *fromKey)
 
   assert(key != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(key);
+  assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
   assert(fromKey != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fromKey);
   assert((fromKey->type != KEY_TYPE_FILE) || (fromKey->fileName != NULL));
@@ -8840,14 +8859,14 @@ void Configuration_doneServer(Server *server)
       String_delete(server->ftp.loginName);
       break;
     case SERVER_TYPE_SSH:
-      if (Configuration_isKeyAvailable(&server->ssh.privateKey)) Configuration_doneKey(&server->ssh.privateKey);
-      if (Configuration_isKeyAvailable(&server->ssh.publicKey)) Configuration_doneKey(&server->ssh.publicKey);
+      Configuration_doneKey(&server->ssh.privateKey);
+      Configuration_doneKey(&server->ssh.publicKey);
       Password_done(&server->ssh.password);
       String_delete(server->ssh.loginName);
       break;
     case SERVER_TYPE_WEBDAV:
-      if (Configuration_isKeyAvailable(&server->webDAV.privateKey)) Configuration_doneKey(&server->webDAV.privateKey);
-      if (Configuration_isKeyAvailable(&server->webDAV.publicKey)) Configuration_doneKey(&server->webDAV.publicKey);
+      Configuration_doneKey(&server->webDAV.privateKey);
+      Configuration_doneKey(&server->webDAV.publicKey);
       Password_done(&server->webDAV.password);
       String_delete(server->webDAV.loginName);
       break;
