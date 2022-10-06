@@ -383,7 +383,19 @@ LOCAL bool receiveData(ServerIO *serverIO)
   ulong readBytes;
 
   assert(serverIO != NULL);
+  assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
   assert(serverIO->inputBufferLength <= serverIO->inputBufferSize);
+
+  // shift input buffer
+  if (serverIO->inputBufferIndex > 0)
+  {
+    memCopy(&serverIO->inputBuffer[0],serverIO->inputBufferSize,
+            &serverIO->inputBuffer[serverIO->inputBufferIndex],serverIO->inputBufferLength-serverIO->inputBufferIndex
+           );
+    serverIO->inputBufferLength -= serverIO->inputBufferIndex;
+    serverIO->inputBufferIndex = 0;
+  }
+  assert(serverIO->inputBufferIndex == 0);
 
   // get max. number of bytes to receive
   maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
@@ -480,6 +492,310 @@ LOCAL bool receiveData(ServerIO *serverIO)
   }
 
   return TRUE;
+}
+
+/***********************************************************************\
+* Name   : vsendCommand
+* Purpose: send command
+* Input  : serverIO   - server i/o
+*          debugLevel -
+*          format     - command format string
+*          arguments  - arguments for command format
+* Output : id - command id
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors vsendCommand(ServerIO   *serverIO,
+                          uint       debugLevel,
+                          uint       *id,
+                          const char *format,
+                          va_list    arguments
+                         )
+{
+  String   s;
+  Errors   error;
+  #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
+  #endif /* HAVE_NEWLOCALE */
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(id != NULL);
+  assert(format != NULL);
+
+  // init variables
+  s = String_new();
+
+  // get new command id
+  (*id) = atomicIncrement(&serverIO->commandId,1);
+
+  // format command
+  #ifdef HAVE_NEWLOCALE
+    oldLocale = uselocale(POSIXLocale);
+  #endif /* HAVE_NEWLOCALE */
+  {
+    String_format(s,"%u ",*id);
+    String_appendVFormat(s,format,arguments);
+  }
+  #ifdef HAVE_NEWLOCALE
+    uselocale(oldLocale);
+  #endif /* HAVE_NEWLOCALE */
+
+  // send command
+  error = sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(s);
+    return error;
+  }
+  #ifndef NDEBUG
+    if (globalOptions.debug.serverLevel >= debugLevel)
+    {
+      fprintf(stderr,"DEBUG: sent command %s\n",String_cString(s));
+    }
+  #else
+    UNUSED_VARIABLE(debugLevel);
+  #endif /* not DEBUG */
+
+  // free resources
+  String_delete(s);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : receiveResult
+* Purpose: receive result synchronous
+* Input  : serverIO              - server i/o
+*          timeout               - timeout [ms] or WAIT_FOREVER
+* Output : id            - command id
+*          completedFlag - TRUE iff command is completed
+*          resultMap     - resuits map
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors receiveResult(ServerIO  *serverIO,
+                           long      timeout,
+                           uint      *id,
+                           bool      *completedFlag,
+                           StringMap resultMap
+                          )
+{
+  bool               resultFlag;
+  TimeoutInfo        timeoutInfo;
+  Errors             error;
+  uint               errorCode;
+  String             data;
+  #ifndef NDEBUG
+    size_t             iteratorVariable;
+    Codepoint          codepoint;
+  #endif /* not NDEBU G */
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(id != NULL);
+  assert(completedFlag != NULL);
+  assert(resultMap != NULL);
+
+  // init variables
+  data = String_new();
+
+  resultFlag = FALSE;
+  Misc_initTimeout(&timeoutInfo,timeout);
+  do
+  {
+//fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
+    while (!getLine(serverIO))
+    {
+      receiveData(serverIO);
+    }
+
+    // parse
+    if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,id,completedFlag,&errorCode,data))
+    {
+      // command results: <id> <complete flag> <error code> <data>
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",*id,*completedFlag,errorCode,String_cString(data));
+        }
+      #endif /* not DEBUG */
+
+      // get result
+      if (errorCode == ERROR_CODE_NONE)
+      {
+        if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+        {
+          // parse error -> discard
+          #ifndef NDEBUG
+            if (globalOptions.debug.serverLevel >= 1)
+            {
+              fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
+            }
+          #endif /* not DEBUG */
+          continue;
+        }
+
+        error      = (errorCode != ERROR_CODE_NONE) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
+        resultFlag = TRUE;
+      }
+    }
+    else
+    {
+      // unknown
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
+          STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
+          {
+            if (iswprint(codepoint))
+            {
+              fprintf(stderr,"%s",charUTF8(codepoint));
+            }
+          }
+          fprintf(stderr,"\n");
+        }
+      #endif /* not DEBUG */
+    }
+
+    // done line
+    doneLine(serverIO);
+  }
+  while (   !resultFlag
+         && !Misc_isTimeout(&timeoutInfo)
+        );
+  Misc_doneTimeout(&timeoutInfo);
+
+  // free resources
+  String_delete(data);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : vsyncExecuteCommand
+* Purpose: execute server command synchronous
+* Input  : serverIO              - server i/o
+*          debugLevel            - debug level
+*          timeout               - timeout [ms] or WAIT_FOREVER
+*          commandResultFunction - command result function (can be NULL)
+*          commandResultUserData - user data for command result function
+*          format                - format string
+*          arguments             - arguments
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
+                                 uint                          debugLevel,
+                                 long                          timeout,
+                                 ServerIOCommandResultFunction commandResultFunction,
+                                 void                          *commandResultUserData,
+                                 const char                    *format,
+                                 va_list                       arguments
+                                )
+{
+  uint      id;
+  Errors    error;
+  bool      completedFlag;
+  StringMap resultMap;
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(format != NULL);
+
+  error = ERROR_UNKNOWN;
+
+  // send command
+  error = vsendCommand(serverIO,
+                       debugLevel,
+                       &id,
+                       format,
+                       arguments
+                      );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // wait for results
+  resultMap = StringMap_new();
+  do
+  {
+    error = receiveResult(serverIO,
+                          timeout,
+                          &id,
+                          &completedFlag,
+                          resultMap
+                         );
+    if ((error == ERROR_NONE) && (commandResultFunction != NULL))
+    {
+      error = commandResultFunction(resultMap,commandResultUserData);
+    }
+  }
+  while ((error == ERROR_NONE) && !completedFlag);
+  StringMap_delete(resultMap);
+
+  #ifndef NDEBUG
+    if (error != ERROR_NONE)
+    {
+      if (globalOptions.debug.serverLevel >= 1)
+      {
+        fprintf(stderr,"DEBUG: execute command %u: '%s' fail: %s\n",id,format,Error_getText(error));
+      }
+    }
+  #endif /* not DEBUG */
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : syncExecuteCommand
+* Purpose: execute server command synchronous
+* Input  : serverIO              - server i/o
+*          debugLevel            - debug level
+*          timeout               - timeout [ms] or WAIT_FOREVER
+*          commandResultFunction - command result function (can be NULL)
+*          commandResultUserData - user data for command result function
+*          format                - format string
+*          ...                   - optional arguments
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors syncExecuteCommand(ServerIO                      *serverIO,
+                                uint                          debugLevel,
+                                long                          timeout,
+                                ServerIOCommandResultFunction commandResultFunction,
+                                void                          *commandResultUserData,
+                                const char                    *format,
+                                ...
+                               )
+{
+  va_list arguments;
+  Errors  error;
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  error = vsyncExecuteCommand(serverIO,
+                              debugLevel,
+                              timeout,
+                              commandResultFunction,
+                              commandResultUserData,
+                              format,
+                              arguments
+                             );
+  va_end(arguments);
+
+  return error;
 }
 
 // ----------------------------------------------------------------------
@@ -582,29 +898,21 @@ bool ServerIO_parseAction(const char      *actionText,
   serverIO->lineFlag          = FALSE;
   List_clear(&serverIO->resultList);
 
-(void)caData;
-(void)caLength;
-(void)certData;
-(void)certLength;
-(void)keyData;
-(void)keyLength;
   // connect to server
   error = Network_connect(&serverIO->network.socketHandle,
-//TODO
-//                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
-SOCKET_TYPE_PLAIN,
+                          SOCKET_TYPE_PLAIN,
                           hostName,
                           hostPort,
                           NULL,  // loginName
                           NULL,  // password
                           NULL,  // caData
-                          0,     // caLength
+                          0,  // caLength
                           NULL,  // certData
-                          0,     // certLength
+                          0,  // certLength
                           NULL,  // publicKeyData
                           0,     // publicKeyLength
-                          NULL,  // privateKeyData
-                          0,     // privateKeyLength
+                          NULL,  // keyData
+                          0,  // keyLength
                           SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                          );
   if (error != ERROR_NONE)
@@ -731,6 +1039,38 @@ SOCKET_TYPE_PLAIN,
     Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERROR_INVALID_KEY;
+  }
+
+  // try to start TLS
+  error = syncExecuteCommand(serverIO,
+                             SERVER_IO_DEBUG_LEVEL,
+                             SERVER_IO_TIMEOUT,
+                             CALLBACK_(NULL,NULL),  // commandResultFunction
+                             "START_TLS"
+                            );
+  if (error == ERROR_NONE)
+  {
+    error = Network_startTLS(&serverIO->network.socketHandle,
+                             NETWORK_TLS_TYPE_CLIENT,
+                             caData,
+                             caLength,
+                             certData,
+                             certLength,
+                             keyData,
+                             keyLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      String_delete(e);
+      String_delete(n);
+      String_delete(encryptTypes);
+      String_delete(id);
+      StringMap_delete(argumentMap);
+      String_delete(line);
+      Network_disconnect(&serverIO->network.socketHandle);
+      doneIO(serverIO);
+      return error;
+    }
   }
 
   // free resources
@@ -1470,20 +1810,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
 
-  // shift input buffer
-  if (serverIO->inputBufferIndex > 0)
-  {
-    memCopy(&serverIO->inputBuffer[0],serverIO->inputBufferSize,
-            &serverIO->inputBuffer[serverIO->inputBufferIndex],serverIO->inputBufferLength-serverIO->inputBufferIndex
-           );
-    serverIO->inputBufferLength -= serverIO->inputBufferIndex;
-    serverIO->inputBufferIndex = 0;
-  }
-  assert(serverIO->inputBufferIndex == 0);
-
-  // receive data
   return receiveData(serverIO);
 }
 
@@ -1625,55 +1952,10 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
                              va_list    arguments
                             )
 {
-  String   s;
-  Errors   error;
-  #ifdef HAVE_NEWLOCALE
-    locale_t oldLocale;
-  #endif /* HAVE_NEWLOCALE */
-
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-  assert(id != NULL);
-  assert(format != NULL);
 
-  // init variables
-  s = String_new();
-
-  // get new command id
-  (*id) = atomicIncrement(&serverIO->commandId,1);
-
-  // format command
-  #ifdef HAVE_NEWLOCALE
-    oldLocale = uselocale(POSIXLocale);
-  #endif /* HAVE_NEWLOCALE */
-  {
-    String_format(s,"%u ",*id);
-    String_appendVFormat(s,format,arguments);
-  }
-  #ifdef HAVE_NEWLOCALE
-    uselocale(oldLocale);
-  #endif /* HAVE_NEWLOCALE */
-
-  // send command
-  error = sendData(serverIO,s);
-  if (error != ERROR_NONE)
-  {
-    String_delete(s);
-    return error;
-  }
-  #ifndef NDEBUG
-    if (globalOptions.debug.serverLevel >= debugLevel)
-    {
-      fprintf(stderr,"DEBUG: sent command %s\n",String_cString(s));
-    }
-  #else
-    UNUSED_VARIABLE(debugLevel);
-  #endif /* not DEBUG */
-
-  // free resources
-  String_delete(s);
-
-  return ERROR_NONE;
+  return vsendCommand(serverIO,debugLevel,id,format,arguments);
 }
 
 Errors ServerIO_sendCommand(ServerIO   *serverIO,
@@ -1691,7 +1973,7 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   assert(format != NULL);
 
   va_start(arguments,format);
-  error = ServerIO_vsendCommand(serverIO,debugLevel,id,format,arguments);
+  error = vsendCommand(serverIO,debugLevel,id,format,arguments);
   va_end(arguments);
 
   return error;

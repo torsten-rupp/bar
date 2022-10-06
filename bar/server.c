@@ -3969,7 +3969,7 @@ LOCAL void persistenceThreadCode(void)
 LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, const Password *cryptPassword, const Key *cryptPrivateKey)
 {
   IndexCryptPasswordNode *indexCryptPasswordNode;
-  
+
   if (!LIST_CONTAINS(indexCryptPasswordList,
                      indexCryptPasswordNode,
                         Password_equals(indexCryptPasswordNode->cryptPassword,cryptPassword)
@@ -6222,6 +6222,7 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
     SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       error = Network_startTLS(&clientInfo->io.network.socketHandle,
+                               NETWORK_TLS_TYPE_SERVER,
                                globalOptions.serverCA.data,
                                globalOptions.serverCA.length,
                                globalOptions.serverCert.data,
@@ -21565,6 +21566,7 @@ Errors Server_socket(void)
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
+  AUTOFREE_ADD(&autoFreeList,&entityLock,{ Semaphore_done(&entityLock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
@@ -22035,6 +22037,7 @@ Errors Server_socket(void)
               // start SSL
               #ifdef HAVE_GNU_TLS
                 error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
+                                         NETWORK_TLS_TYPE_SERVER,
                                          globalOptions.serverCA.data,
                                          globalOptions.serverCA.length,
                                          globalOptions.serverCert.data,
