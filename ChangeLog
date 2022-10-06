@@ -1,4 +1,4 @@
-2022-09-01 0.22a
+2022-09-09 0.22a
   * fixed add newest entry if no entry exists
   * bar-index: fixed clean orphaned
   * fixed rename entry on restore: use file name instead
@@ -16,6 +16,7 @@
   * fixed continuous schedule: date+week days
   * fixed log message 'no server password set'
   * fixed TLS connections: reading certificates
+  * fixed auto-index: add move-to paths for search
   * BARConrol: fixed possible dead-lock in server
     communication
   * BARControl: added option --insecure-tls, improved

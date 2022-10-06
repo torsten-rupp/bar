@@ -4385,11 +4385,12 @@ LOCAL void updateIndexThreadCode(void)
 
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
-  StorageSpecifier storageSpecifier;
-  String           directoryName;
-  StringTokenizer  stringTokenizer;
-  String           storageDirectoryName;
-  const JobNode    *jobNode;
+  StorageSpecifier      storageSpecifier;
+  String                directoryName;
+  StringTokenizer       stringTokenizer;
+  String                storageDirectoryName;
+  const JobNode         *jobNode;
+  const PersistenceNode *persistenceNode;
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -4414,9 +4415,36 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
         // add to list
         Storage_getName(storageDirectoryName,&storageSpecifier,directoryName);
-        if (!StringList_contains(storageDirectoryList,storageDirectoryName))
+        if (   !String_isEmpty(storageDirectoryName)
+            && !StringList_contains(storageDirectoryList,storageDirectoryName)
+           )
         {
           StringList_append(storageDirectoryList,storageDirectoryName);
+        }
+      }
+
+      LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
+      {
+        if (   !String_isEmpty(persistenceNode->moveTo)
+            && Storage_parseName(&storageSpecifier,persistenceNode->moveTo) == ERROR_NONE)
+        {
+          // get directory part without macros
+          String_set(directoryName,storageSpecifier.archiveName);
+          while (   !String_isEmpty(directoryName)
+                 && Misc_hasMacros(directoryName)
+                )
+          {
+            File_getDirectoryName(directoryName,directoryName);
+          }
+
+          // add to list
+          Storage_getName(storageDirectoryName,&storageSpecifier,directoryName);
+          if (   !String_isEmpty(storageDirectoryName)
+              && !StringList_contains(storageDirectoryList,storageDirectoryName)
+             )
+          {
+            StringList_append(storageDirectoryList,storageDirectoryName);
+          }
         }
       }
     }
