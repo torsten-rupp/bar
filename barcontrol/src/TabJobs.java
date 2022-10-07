@@ -2514,111 +2514,112 @@ public class TabJobs
   private Button                       widgetPersistenceTreeAdd,widgetPersistenceTreeEdit,widgetPersistenceTreeRemove;
 
   // BAR variables
-  private WidgetVariable               slaveHostName             = new WidgetVariable<String> ("slave-host-name","");
-  private WidgetVariable               slaveHostPort             = new WidgetVariable<Integer>("slave-host-port",0);
-  private WidgetVariable               slaveHostForceTLS         = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
-  private WidgetVariable               includeFileCommand        = new WidgetVariable<String> ("include-file-command","");
-  private WidgetVariable               includeImageCommand       = new WidgetVariable<String> ("include-image-command","");
-  private WidgetVariable               excludeCommand            = new WidgetVariable<String> ("exclude-command","");
-  private WidgetVariable               archiveName               = new WidgetVariable<String> ("archive-name","");
-  private WidgetVariable               archiveType               = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
-  private WidgetVariable               archivePartSizeFlag       = new WidgetVariable<Boolean>(false);
-  private WidgetVariable               archivePartSize           = new WidgetVariable<Long>   ("archive-part-size",0L);
-  private WidgetVariable               deltaCompressAlgorithm    = new WidgetVariable<String> ("delta-compress-algorithm",
-                                                                                               new String[]{"none",
-                                                                                                            "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
-                                                                                                           },
-                                                                                               "none"
-                                                                                              );
-  private WidgetVariable               deltaSource               = new WidgetVariable<String> ("delta-source","");
-  private WidgetVariable               byteCompressAlgorithmType = new WidgetVariable<String> (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
-                                                                                               "none"
-                                                                                              );
-  private WidgetVariable               byteCompressAlgorithm     = new WidgetVariable<String> (new String[]{"none",
-                                                                                                            "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                                                                                            "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                                                                                            "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                                                                                            "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                                            "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
-                                                                                                            "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
-                                                                                                           },
-                                                                                               "none"
-                                                                                              );
-  private WidgetVariable               compressMinSize           = new WidgetVariable<Long>   ("compress-min-size",0L);
-  private WidgetVariable               cryptAlgorithm            = new WidgetVariable<String> ("crypt-algorithm",
-                                                                                               new String[]{"none",
-                                                                                                            "3DES",
-                                                                                                            "CAST5",
-                                                                                                            "BLOWFISH",
-                                                                                                            "AES128",
-                                                                                                            "AES192",
-                                                                                                            "AES256",
-                                                                                                            "TWOFISH128",
-                                                                                                            "TWOFISH256",
-                                                                                                            "SERPENT128",
-                                                                                                            "SERPENT192",
-                                                                                                            "SERPENT256",
-                                                                                                            "CAMELLIA128",
-                                                                                                            "CAMELLIA192",
-                                                                                                            "CAMELLIA256"
-                                                                                                           },
-                                                                                               "none"
-                                                                                              );
-  private WidgetVariable               cryptType                 = new WidgetVariable<String> ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
-  private WidgetVariable               cryptPublicKeyFileName    = new WidgetVariable<String> ("crypt-public-key","");
-  private WidgetVariable               cryptPasswordMode         = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
-  private WidgetVariable               cryptPassword             = new WidgetVariable<String> ("crypt-password","");
-  private WidgetVariable               incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
-  private WidgetVariable               storageOnMasterFlag       = new WidgetVariable<Boolean>("storage-on-master",true);
-  private WidgetVariable               storageType               = new WidgetVariable<Enum>   ("storage-type",
-                                                                                               new StorageTypes[]{StorageTypes.FILESYSTEM,
-                                                                                                                  StorageTypes.FTP,
-                                                                                                                  StorageTypes.SCP,
-                                                                                                                  StorageTypes.SFTP,
-                                                                                                                  StorageTypes.WEBDAV,
-                                                                                                                  StorageTypes.WEBDAVS,
-                                                                                                                  StorageTypes.CD,
-                                                                                                                  StorageTypes.DVD,
-                                                                                                                  StorageTypes.BD,
-                                                                                                                  StorageTypes.DEVICE
-                                                                                                               },
-                                                                                               StorageTypes.FILESYSTEM
-                                                                                              );
-  private WidgetVariable               storageHostName           = new WidgetVariable<String> ("");
-  private WidgetVariable               storageHostPort           = new WidgetVariable<Integer>("",0);
-  private WidgetVariable               storageLoginName          = new WidgetVariable<String> ("","");
-  private WidgetVariable               storageLoginPassword      = new WidgetVariable<String> ("","");
-  private WidgetVariable               storageDeviceName         = new WidgetVariable<String> ("","");
-  private WidgetVariable               storageFileName           = new WidgetVariable<String> ("","");
-  private WidgetVariable               archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",
-                                                                                               new String[]
-                                                                                               {
-                                                                                                 "stop",
-                                                                                                 "rename",
-                                                                                                 "append",
-                                                                                                 "overwrite"
-                                                                                               },
-                                                                                               "stop"
-                                                                                              );
-  private WidgetVariable               sshPublicKeyFileName      = new WidgetVariable<String> ("ssh-public-key","");
-  private WidgetVariable               sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
-  private WidgetVariable               maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
-  private WidgetVariable               maxBandWidth              = new WidgetVariable<Long>   ("max-band-width",0L);
-  private WidgetVariable               volumeSize                = new WidgetVariable<String> ("volume-size","");
-  private WidgetVariable               ecc                       = new WidgetVariable<Boolean>("ecc",false);
-  private WidgetVariable               blank                     = new WidgetVariable<Boolean>("blank",false);
-  private WidgetVariable               waitFirstVolume           = new WidgetVariable<Boolean>("wait-first-volume",false);
-  private WidgetVariable               skipUnreadable            = new WidgetVariable<Boolean>("skip-unreadable",false);
-  private WidgetVariable               noStopOnOwnerError        = new WidgetVariable<Boolean>("no-stop-on-owner-error",false);
-  private WidgetVariable               noStopOnAttributeError    = new WidgetVariable<Boolean>("no-stop-on-attribute-error",false);
-  private WidgetVariable               rawImages                 = new WidgetVariable<Boolean>("raw-images",false);
-  private WidgetVariable               overwriteFiles            = new WidgetVariable<Boolean>("overwrite-files",false);
-  private WidgetVariable               preCommand                = new WidgetVariable<String> ("pre-command","");
-  private WidgetVariable               postCommand               = new WidgetVariable<String> ("post-command","");
-  private WidgetVariable               slavePreCommand           = new WidgetVariable<String> ("slave-pre-command","");
-  private WidgetVariable               slavePostCommand          = new WidgetVariable<String> ("slave-post-command","");
-  private WidgetVariable               maxStorageSize            = new WidgetVariable<String> ("max-storage-size","");
-  private WidgetVariable               comment                   = new WidgetVariable<String> ("comment","");
+  private WidgetVariable               slaveHostName             = new WidgetVariable<String>            ("slave-host-name","");
+  private WidgetVariable               slaveHostPort             = new WidgetVariable<Integer>           ("slave-host-port",0);
+// TODO: string -> BARServer.TLSModes
+  private WidgetVariable               slaveTLSMode              = new WidgetVariable<String>            ("slave-tls-mode","none");
+  private WidgetVariable               includeFileCommand        = new WidgetVariable<String>            ("include-file-command","");
+  private WidgetVariable               includeImageCommand       = new WidgetVariable<String>            ("include-image-command","");
+  private WidgetVariable               excludeCommand            = new WidgetVariable<String>            ("exclude-command","");
+  private WidgetVariable               archiveName               = new WidgetVariable<String>            ("archive-name","");
+  private WidgetVariable               archiveType               = new WidgetVariable<String>            ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
+  private WidgetVariable               archivePartSizeFlag       = new WidgetVariable<Boolean>           (false);
+  private WidgetVariable               archivePartSize           = new WidgetVariable<Long>              ("archive-part-size",0L);
+  private WidgetVariable               deltaCompressAlgorithm    = new WidgetVariable<String>            ("delta-compress-algorithm",
+                                                                                                          new String[]{"none",
+                                                                                                                       "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
+                                                                                                                      },
+                                                                                                          "none"
+                                                                                                         );
+  private WidgetVariable               deltaSource               = new WidgetVariable<String>            ("delta-source","");
+  private WidgetVariable               byteCompressAlgorithmType = new WidgetVariable<String>            (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
+                                                                                                          "none"
+                                                                                                         );
+  private WidgetVariable               byteCompressAlgorithm     = new WidgetVariable<String>            (new String[]{"none",
+                                                                                                                       "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                                                       "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                                                       "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                                                       "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                                                       "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
+                                                                                                                       "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
+                                                                                                                      },
+                                                                                                          "none"
+                                                                                                         );
+  private WidgetVariable               compressMinSize           = new WidgetVariable<Long>              ("compress-min-size",0L);
+  private WidgetVariable               cryptAlgorithm            = new WidgetVariable<String>            ("crypt-algorithm",
+                                                                                                          new String[]{"none",
+                                                                                                                       "3DES",
+                                                                                                                       "CAST5",
+                                                                                                                       "BLOWFISH",
+                                                                                                                       "AES128",
+                                                                                                                       "AES192",
+                                                                                                                       "AES256",
+                                                                                                                       "TWOFISH128",
+                                                                                                                       "TWOFISH256",
+                                                                                                                       "SERPENT128",
+                                                                                                                       "SERPENT192",
+                                                                                                                       "SERPENT256",
+                                                                                                                       "CAMELLIA128",
+                                                                                                                       "CAMELLIA192",
+                                                                                                                       "CAMELLIA256"
+                                                                                                                      },
+                                                                                                          "none"
+                                                                                                         );
+  private WidgetVariable               cryptType                 = new WidgetVariable<String>            ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
+  private WidgetVariable               cryptPublicKeyFileName    = new WidgetVariable<String>            ("crypt-public-key","");
+  private WidgetVariable               cryptPasswordMode         = new WidgetVariable<String>            ("crypt-password-mode",new String[]{"default","ask","config"},"default");
+  private WidgetVariable               cryptPassword             = new WidgetVariable<String>            ("crypt-password","");
+  private WidgetVariable               incrementalListFileName   = new WidgetVariable<String>            ("incremental-list-file","");
+  private WidgetVariable               storageOnMasterFlag       = new WidgetVariable<Boolean>           ("storage-on-master",true);
+  private WidgetVariable               storageType               = new WidgetVariable<Enum>              ("storage-type",
+                                                                                                          new StorageTypes[]{StorageTypes.FILESYSTEM,
+                                                                                                                             StorageTypes.FTP,
+                                                                                                                             StorageTypes.SCP,
+                                                                                                                             StorageTypes.SFTP,
+                                                                                                                             StorageTypes.WEBDAV,
+                                                                                                                             StorageTypes.WEBDAVS,
+                                                                                                                             StorageTypes.CD,
+                                                                                                                             StorageTypes.DVD,
+                                                                                                                             StorageTypes.BD,
+                                                                                                                             StorageTypes.DEVICE
+                                                                                                                          },
+                                                                                                          StorageTypes.FILESYSTEM
+                                                                                                         );
+  private WidgetVariable               storageHostName           = new WidgetVariable<String>            ("");
+  private WidgetVariable               storageHostPort           = new WidgetVariable<Integer>           ("",0);
+  private WidgetVariable               storageLoginName          = new WidgetVariable<String>            ("","");
+  private WidgetVariable               storageLoginPassword      = new WidgetVariable<String>            ("","");
+  private WidgetVariable               storageDeviceName         = new WidgetVariable<String>            ("","");
+  private WidgetVariable               storageFileName           = new WidgetVariable<String>            ("","");
+  private WidgetVariable               archiveFileMode           = new WidgetVariable<String>            ("archive-file-mode",
+                                                                                                          new String[]
+                                                                                                          {
+                                                                                                            "stop",
+                                                                                                            "rename",
+                                                                                                            "append",
+                                                                                                            "overwrite"
+                                                                                                          },
+                                                                                                          "stop"
+                                                                                                         );
+  private WidgetVariable               sshPublicKeyFileName      = new WidgetVariable<String>            ("ssh-public-key","");
+  private WidgetVariable               sshPrivateKeyFileName     = new WidgetVariable<String>            ("ssh-private-key","");
+  private WidgetVariable               maxBandWidthFlag          = new WidgetVariable<Boolean>           (false);
+  private WidgetVariable               maxBandWidth              = new WidgetVariable<Long>              ("max-band-width",0L);
+  private WidgetVariable               volumeSize                = new WidgetVariable<String>            ("volume-size","");
+  private WidgetVariable               ecc                       = new WidgetVariable<Boolean>           ("ecc",false);
+  private WidgetVariable               blank                     = new WidgetVariable<Boolean>           ("blank",false);
+  private WidgetVariable               waitFirstVolume           = new WidgetVariable<Boolean>           ("wait-first-volume",false);
+  private WidgetVariable               skipUnreadable            = new WidgetVariable<Boolean>           ("skip-unreadable",false);
+  private WidgetVariable               noStopOnOwnerError        = new WidgetVariable<Boolean>           ("no-stop-on-owner-error",false);
+  private WidgetVariable               noStopOnAttributeError    = new WidgetVariable<Boolean>           ("no-stop-on-attribute-error",false);
+  private WidgetVariable               rawImages                 = new WidgetVariable<Boolean>           ("raw-images",false);
+  private WidgetVariable               overwriteFiles            = new WidgetVariable<Boolean>           ("overwrite-files",false);
+  private WidgetVariable               preCommand                = new WidgetVariable<String>            ("pre-command","");
+  private WidgetVariable               postCommand               = new WidgetVariable<String>            ("post-command","");
+  private WidgetVariable               slavePreCommand           = new WidgetVariable<String>            ("slave-pre-command","");
+  private WidgetVariable               slavePostCommand          = new WidgetVariable<String>            ("slave-post-command","");
+  private WidgetVariable               maxStorageSize            = new WidgetVariable<String>            ("max-storage-size","");
+  private WidgetVariable               comment                   = new WidgetVariable<String>            ("comment","");
 
   // variables
   private DirectoryInfoThread          directoryInfoThread;
@@ -3019,11 +3020,19 @@ public class TabJobs
       });
       Widgets.addModifyListener(new WidgetModifyListener(spinner,slaveHostPort));
 
-      button = Widgets.newCheckbox(composite,BARControl.tr("TLS"));
-      button.setToolTipText(BARControl.tr("Enable to force TLS protected connection."));
-      button.setEnabled(false);
-      Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
-      Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
+      label = new Label(composite,SWT.LEFT);
+      label.setText(BARControl.tr("TLS"));
+      label.setLayoutData(new TableLayoutData(0,4,TableLayoutData.W));
+
+      combo = Widgets.newOptionMenu(composite);
+      Widgets.setOptionMenuItems(combo,new Object[]{BARControl.tr("none" ),BARServer.TLSModes.NONE,
+                                                    BARControl.tr("try"  ),BARServer.TLSModes.TRY,
+                                                    BARControl.tr("force"),BARServer.TLSModes.FORCE
+                                                   }
+                                );
+      Widgets.setSelectedOptionMenuItem(combo,BARServer.TLSModes.FORCE);
+      Widgets.layout(combo,0,5,TableLayoutData.W);
+      Widgets.addEventListener(new WidgetEventListener(combo,selectJobEvent)
       {
         @Override
         public void trigger(Control control)
@@ -3031,7 +3040,7 @@ public class TabJobs
           Widgets.setEnabled(control,(selectedJobData != null) && !slaveHostName.getString().isEmpty());
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostName)
+      Widgets.addModifyListener(new WidgetModifyListener(combo,slaveHostName)
       {
         @Override
         public void modified(Control control, WidgetVariable slaveHostName)
@@ -3039,7 +3048,7 @@ public class TabJobs
           Widgets.setEnabled(control,!slaveHostName.getString().isEmpty());
         }
       });
-      button.addSelectionListener(new SelectionListener()
+      combo.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3048,12 +3057,13 @@ public class TabJobs
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
+          Combo              widget = (Combo)selectionEvent.widget;
+          BARServer.TLSModes tlsMode = Widgets.getSelectedComboItem(widget,BARServer.TLSModes.NONE);
 
           try
           {
-            slaveHostForceTLS.set(widget.getSelection());
-            BARServer.setJobOption(selectedJobData.uuid,slaveHostForceTLS);
+            slaveTLSMode.set(tlsMode.toString());
+            BARServer.setJobOption(selectedJobData.uuid,slaveTLSMode);
           }
           catch (Exception exception)
           {
@@ -3061,7 +3071,7 @@ public class TabJobs
           }
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostForceTLS));
+      Widgets.addModifyListener(new WidgetModifyListener(combo,slaveTLSMode));
     }
 
     // create sub-tabs
@@ -9450,7 +9460,7 @@ throw new Error("NYI");
         // get job data
         BARServer.getJobOption(selectedJobData.uuid,slaveHostName);
         BARServer.getJobOption(selectedJobData.uuid,slaveHostPort);
-        BARServer.getJobOption(selectedJobData.uuid,slaveHostForceTLS);
+        BARServer.getJobOption(selectedJobData.uuid,slaveTLSMode);
         BARServer.getJobOption(selectedJobData.uuid,includeFileCommand);
         BARServer.getJobOption(selectedJobData.uuid,includeImageCommand);
         BARServer.getJobOption(selectedJobData.uuid,excludeCommand);

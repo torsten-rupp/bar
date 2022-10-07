@@ -1142,7 +1142,7 @@ void Job_init(Job *job)
   job->uuid                    = String_new();
   job->slaveHost.name          = String_new();
   job->slaveHost.port          = 0;
-  job->slaveHost.forceTLS      = FALSE;
+  job->slaveHost.tlsMode       = TLS_MODE_NONE;
   job->storageName             = String_new();
   job->storageNameListStdin    = FALSE;
   job->storageNameListFileName = String_new();
@@ -1164,7 +1164,7 @@ void Job_initDuplicate(Job *job, const Job *fromJob)
   job->uuid                    = String_duplicate(fromJob->uuid);
   job->slaveHost.name          = String_duplicate(fromJob->slaveHost.name);
   job->slaveHost.port          = fromJob->slaveHost.port;
-  job->slaveHost.forceTLS      = fromJob->slaveHost.forceTLS;
+  job->slaveHost.tlsMode       = fromJob->slaveHost.tlsMode;
 
   job->storageName             = String_duplicate(fromJob->storageName);
   job->storageNameListStdin    = fromJob->storageNameListStdin;
@@ -1250,6 +1250,7 @@ JobNode *Job_new(JobTypes    jobType,
 
   jobNode->jobState                         = JOB_STATE_NONE;
   jobNode->slaveState                       = SLAVE_STATE_OFFLINE;
+  jobNode->slaveTLS                         = FALSE;
 
   initStatusInfo(&jobNode->statusInfo);
 
@@ -1328,6 +1329,7 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   newJobNode->jobState                         = JOB_STATE_NONE;
   newJobNode->slaveState                       = SLAVE_STATE_OFFLINE;
+  newJobNode->slaveTLS                         = FALSE;
 
   initStatusInfo(&newJobNode->statusInfo);
 
@@ -1930,8 +1932,8 @@ bool Job_read(JobNode *jobNode)
   // reset job values
   String_clear(jobNode->job.uuid);
   String_clear(jobNode->job.slaveHost.name);
-  jobNode->job.slaveHost.port     = 0;
-  jobNode->job.slaveHost.forceTLS = FALSE;
+  jobNode->job.slaveHost.port    = 0;
+  jobNode->job.slaveHost.tlsMode = TLS_MODE_NONE;
   String_clear(jobNode->job.storageName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
@@ -3013,7 +3015,7 @@ void Job_donePersistenceList(PersistenceList *persistenceList)
   List_done(persistenceList);
 }
 
-SlaveNode *Job_addSlave(ConstString name, uint port)
+SlaveNode *Job_addSlave(ConstString name, uint port, TLSModes tlsMode)
 {
   SlaveNode *slaveNode;
 
@@ -3027,6 +3029,7 @@ SlaveNode *Job_addSlave(ConstString name, uint port)
   }
   slaveNode->name               = String_duplicate(name);
   slaveNode->port               = port;
+  slaveNode->tlsMode            = tlsMode;
   Connector_init(&slaveNode->connectorInfo);
   slaveNode->lastOnlineDateTime = 0LL;
   slaveNode->authorizedFlag     = FALSE;
