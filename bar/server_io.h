@@ -237,9 +237,16 @@ bool ServerIO_parseAction(const char      *actionText,
 /***********************************************************************\
 * Name   : ServerIO_connectNetwork
 * Purpose: connect server network i/o
-* Input  : serverIO - server i/o
-*          hostName - slave host name
-*          hostPort - slave host port
+* Input  : serverIO   - server i/o
+*          hostName   - slave host name
+*          hostPort   - slave host port
+*          tlsMode    - TLS mode; see TLS_MODES_...
+*          caData     - TLS CA data or NULL
+*          caLength   - TLS CA data length
+*          cert       - TLS cerificate or NULL
+*          certLength - TLS cerificate data length
+*          keyData    - key data or NULL
+*          keyLength  - key data length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -249,6 +256,7 @@ bool ServerIO_parseAction(const char      *actionText,
   Errors ServerIO_connectNetwork(ServerIO    *serverIO,
                                  ConstString hostName,
                                  uint        hostPort,
+                                 TLSModes    tlsMode,
                                  const void  *caData,
                                  uint        caLength,
                                  const void  *certData,
@@ -262,6 +270,7 @@ bool ServerIO_parseAction(const char      *actionText,
                                    ServerIO    *serverIO,
                                    ConstString hostName,
                                    uint        hostPort,
+                                   TLSModes    tlsMode,
                                    const void  *caData,
                                    uint        caLength,
                                    const void  *certData,
@@ -365,9 +374,9 @@ void ServerIO_setEnd(ServerIO *serverIO);
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool ServerIO_isConnected(ServerIO *serverIO);
+INLINE bool ServerIO_isConnected(const ServerIO *serverIO);
 #if defined(NDEBUG) || defined(__SERVER_IO_IMPLEMENTATION__)
-INLINE bool ServerIO_isConnected(ServerIO *serverIO)
+INLINE bool ServerIO_isConnected(const ServerIO *serverIO)
 {
   bool isConnected;
 
@@ -392,6 +401,44 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
   }
 
   return isConnected;
+}
+#endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : ServerIO_isConnected
+* Purpose: check if connected
+* Input  : serverIO - server i/o
+* Output : -
+* Return : TRUE iff connected
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool ServerIO_hasTLS(const ServerIO *serverIO);
+#if defined(NDEBUG) || defined(__SERVER_IO_IMPLEMENTATION__)
+INLINE bool ServerIO_hasTLS(const ServerIO *serverIO)
+{
+  bool hasTLS;
+
+  assert(serverIO != NULL);
+
+  hasTLS = FALSE;
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      hasTLS = Network_hasTLS(&serverIO->network.socketHandle);
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+
+  return hasTLS;
 }
 #endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
 

@@ -855,6 +855,7 @@ bool ServerIO_parseAction(const char      *actionText,
   Errors ServerIO_connectNetwork(ServerIO    *serverIO,
                                  ConstString hostName,
                                  uint        hostPort,
+                                 TLSModes    tlsMode,
                                  const void  *caData,
                                  uint        caLength,
                                  const void  *certData,
@@ -868,6 +869,7 @@ bool ServerIO_parseAction(const char      *actionText,
                                    ServerIO    *serverIO,
                                    ConstString hostName,
                                    uint        hostPort,
+                                   TLSModes    tlsMode,
                                    const void  *caData,
                                    uint        caLength,
                                    const void  *certData,
@@ -1041,36 +1043,83 @@ bool ServerIO_parseAction(const char      *actionText,
     return ERROR_INVALID_KEY;
   }
 
-  // try to start TLS
-  error = syncExecuteCommand(serverIO,
-                             SERVER_IO_DEBUG_LEVEL,
-                             SERVER_IO_TIMEOUT,
-                             CALLBACK_(NULL,NULL),  // commandResultFunction
-                             "START_TLS"
-                            );
-  if (error == ERROR_NONE)
+  switch (tlsMode)
   {
-    error = Network_startTLS(&serverIO->network.socketHandle,
-                             NETWORK_TLS_TYPE_CLIENT,
-                             caData,
-                             caLength,
-                             certData,
-                             certLength,
-                             keyData,
-                             keyLength
-                            );
-    if (error != ERROR_NONE)
-    {
-      String_delete(e);
-      String_delete(n);
-      String_delete(encryptTypes);
-      String_delete(id);
-      StringMap_delete(argumentMap);
-      String_delete(line);
-      Network_disconnect(&serverIO->network.socketHandle);
-      doneIO(serverIO);
-      return error;
-    }
+    case TLS_MODE_NONE:
+      break;
+    case TLS_MODE_TRY:
+      error = syncExecuteCommand(serverIO,
+                                 SERVER_IO_DEBUG_LEVEL,
+                                 SERVER_IO_TIMEOUT,
+                                 CALLBACK_(NULL,NULL),  // commandResultFunction
+                                 "START_TLS"
+                                );
+      if (error == ERROR_NONE)
+      {
+        error = Network_startTLS(&serverIO->network.socketHandle,
+                                 NETWORK_TLS_TYPE_CLIENT,
+                                 caData,
+                                 caLength,
+                                 certData,
+                                 certLength,
+                                 keyData,
+                                 keyLength
+                                );
+        if (error != ERROR_NONE)
+        {
+          String_delete(e);
+          String_delete(n);
+          String_delete(encryptTypes);
+          String_delete(id);
+          StringMap_delete(argumentMap);
+          String_delete(line);
+          Network_disconnect(&serverIO->network.socketHandle);
+          doneIO(serverIO);
+          return error;
+        }
+      }
+      break;
+    case TLS_MODE_FORCE:
+      error = syncExecuteCommand(serverIO,
+                                 SERVER_IO_DEBUG_LEVEL,
+                                 SERVER_IO_TIMEOUT,
+                                 CALLBACK_(NULL,NULL),  // commandResultFunction
+                                 "START_TLS"
+                                );
+      if (error != ERROR_NONE)
+      {
+        String_delete(e);
+        String_delete(n);
+        String_delete(encryptTypes);
+        String_delete(id);
+        StringMap_delete(argumentMap);
+        String_delete(line);
+        Network_disconnect(&serverIO->network.socketHandle);
+        doneIO(serverIO);
+        return error;
+      }
+      error = Network_startTLS(&serverIO->network.socketHandle,
+                               NETWORK_TLS_TYPE_CLIENT,
+                               caData,
+                               caLength,
+                               certData,
+                               certLength,
+                               keyData,
+                               keyLength
+                              );
+      if (error != ERROR_NONE)
+      {
+        String_delete(e);
+        String_delete(n);
+        String_delete(encryptTypes);
+        String_delete(id);
+        StringMap_delete(argumentMap);
+        String_delete(line);
+        Network_disconnect(&serverIO->network.socketHandle);
+        doneIO(serverIO);
+        return error;
+      }
+      break;
   }
 
   // free resources

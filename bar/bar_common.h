@@ -295,6 +295,14 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+// TLS modes
+typedef enum
+{
+  TLS_MODE_NONE,
+  TLS_MODE_TRY,
+  TLS_MODE_FORCE
+} TLSModes;
+
 // transform
 typedef struct
 {

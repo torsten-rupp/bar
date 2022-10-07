@@ -44,6 +44,7 @@ extern CommandLineOption COMMAND_LINE_OPTIONS[];
 // config values
 extern const ConfigValueUnit   CONFIG_VALUE_BYTES_UNITS[];
 extern const ConfigValueUnit   CONFIG_VALUE_BITS_UNITS[];
+extern const ConfigValueSelect CONFIG_VALUE_TLS_MODES[];
 extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[];
 extern const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[];
 extern const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[];
