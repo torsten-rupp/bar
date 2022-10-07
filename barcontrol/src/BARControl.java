@@ -3008,7 +3008,7 @@ if (false) {
         label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
         label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText("\uF512 2"+"BAR control "+Config.VERSION+".\n"+
+        label.setText("BAR control "+Config.VERSION+".\n"+
                       "\n"+
                       BARControl.tr("Written by Torsten Rupp")+"\n"
                      );
@@ -3142,7 +3142,7 @@ if (false) {
           {
             // disable menu
             serverMenu.setEnabled(false);
-            
+
             // login
             Settings.Server    defaultServer = Settings.getLastServer();
             BARServer.TLSModes tlsMode;
@@ -4969,7 +4969,7 @@ if (false) {
       {
         Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
       }
-      
+
       return true;
     }
     else
@@ -6189,7 +6189,7 @@ Dprintf.dprintf("still not supported");
         display = new Display();
 
         boolean connectedFlag = false;
-        
+
         // connect to server
         if (!login(loginData,
                    Settings.loginDialogFlag

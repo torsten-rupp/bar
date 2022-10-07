@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 // graphics
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
@@ -32,9 +33,9 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
@@ -167,6 +168,7 @@ class JobData implements Comparable<JobData>
   String       slaveHostName;
   int          slaveHostPort;
   SlaveStates  slaveState;
+  boolean      slaveTLS;
   ArchiveTypes archiveType;
   long         archivePartSize;
   String       deltaCompressAlgorithm;
@@ -188,6 +190,7 @@ class JobData implements Comparable<JobData>
    * @param slaveHostName slave host name
    * @param slaveHostPort slave host port
    * @param slaveState slave state
+   * @param slaveTLS true iff TLS connection established
    * @param archiveType archive type
    * @param archivePartSize archive part size
    * @param deltaCompressAlgorithm delta compress algorithm
@@ -205,6 +208,7 @@ class JobData implements Comparable<JobData>
           String       slaveHostName,
           int          slaveHostPort,
           SlaveStates  slaveState,
+          boolean      slaveTLS,
           ArchiveTypes archiveType,
           long         archivePartSize,
           String       deltaCompressAlgorithm,
@@ -223,6 +227,7 @@ class JobData implements Comparable<JobData>
     this.slaveHostName          = slaveHostName;
     this.slaveHostPort          = slaveHostPort;
     this.slaveState             = slaveState;
+    this.slaveTLS               = slaveTLS;
     this.archiveType            = archiveType;
     this.archivePartSize        = archivePartSize;
     this.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -322,7 +327,7 @@ class JobData implements Comparable<JobData>
   @Override
   public String toString()
   {
-    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+":"+slaveHostPort+"', "+archiveType+"}";
+    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+":"+slaveHostPort+"', "+slaveTLS+", "+archiveType+"}";
   }
 };
 
@@ -872,6 +877,9 @@ public class TabStatus
   private final Color            COLOR_ERROR;
   private final Color            COLOR_ABORTED;
 
+  // images
+  private final Image            IMAGE_LOCK;
+
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -958,6 +966,9 @@ public class TabStatus
     COLOR_REQUEST = new Color(null,0xFF,0xFF,0xA0);
     COLOR_ERROR   = new Color(null,0xFF,0xA0,0xA0);
     COLOR_ABORTED = new Color(null,0xC0,0xC0,0xC0);
+
+    // get images
+    IMAGE_LOCK = Widgets.loadImage(display,"lock.png");
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
@@ -2429,27 +2440,28 @@ public class TabStatus
                                  public void handle(int i, ValueMap valueMap)
                                  {
                                    // get data
-                                   String              jobUUID                = valueMap.getString("jobUUID"                             );
-                                   String              master                 = valueMap.getString("master",""                           );
-                                   String              name                   = valueMap.getString("name"                                );
-                                   JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
-                                   String              slaveHostName          = valueMap.getString("slaveHostName",""                    );
-                                   int                 slaveHostPort          = valueMap.getInt   ("slaveHostPort",0                     );
-                                   JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
-                                   ArchiveTypes        archiveType            = valueMap.getEnum  ("archiveType",ArchiveTypes.class      );
-                                   long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
-//TODO: enum?
-                                   String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
-//TODO: enum?
-                                   String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
-//TODO: enum?
-                                   String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
-//TODO: enum?
-                                   String              cryptType              = valueMap.getString("cryptType"                           );
-//TODO: enum?
-                                   String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
-                                   long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
-                                   long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
+                                   String              jobUUID                = valueMap.getString ("jobUUID"                             );
+                                   String              master                 = valueMap.getString ("master",""                           );
+                                   String              name                   = valueMap.getString ("name"                                );
+                                   JobData.States      state                  = valueMap.getEnum   ("state",JobData.States.class          );
+                                   String              slaveHostName          = valueMap.getString ("slaveHostName",""                    );
+                                   int                 slaveHostPort          = valueMap.getInt    ("slaveHostPort",0                     );
+                                   JobData.SlaveStates slaveState             = valueMap.getEnum   ("slaveState",JobData.SlaveStates.class);
+                                   boolean             slaveTLS               = valueMap.getBoolean("slaveTLS",false                      );
+                                   ArchiveTypes        archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class      );
+                                   long                archivePartSize        = valueMap.getLong   ("archivePartSize"                     );
+//TODO: enum?                                                                                      
+                                   String              deltaCompressAlgorithm = valueMap.getString ("deltaCompressAlgorithm"              );
+//TODO: enum?                                                                                      
+                                   String              byteCompressAlgorithm  = valueMap.getString ("byteCompressAlgorithm"               );
+//TODO: enum?                                                                                      
+                                   String              cryptAlgorithm         = valueMap.getString ("cryptAlgorithm"                      );
+//TODO: enum?                                                                                      
+                                   String              cryptType              = valueMap.getString ("cryptType"                           );
+//TODO: enum?                                                                                      
+                                   String              cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                   );
+                                   long                lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                );
+                                   long                estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                   );
 
                                    JobData jobData = jobDataMap.get(jobUUID);
                                    if (jobData != null)
@@ -2460,6 +2472,7 @@ public class TabStatus
                                      jobData.slaveHostName          = slaveHostName;
                                      jobData.slaveHostPort          = slaveHostPort;
                                      jobData.slaveState             = slaveState;
+                                     jobData.slaveTLS               = slaveTLS;
                                      jobData.archiveType            = archiveType;
                                      jobData.archivePartSize        = archivePartSize;
                                      jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -2479,6 +2492,7 @@ public class TabStatus
                                                            slaveHostName,
                                                            slaveHostPort,
                                                            slaveState,
+                                                           slaveTLS,
                                                            archiveType,
                                                            archivePartSize,
                                                            deltaCompressAlgorithm,
@@ -2537,6 +2551,7 @@ public class TabStatus
                                           jobData.formatLastExecutedDateTime(),
                                           jobData.formatEstimatedRestTime()
                                          );
+                  if (jobData.slaveTLS) tableItem.setImage(1,IMAGE_LOCK);
 
                   // keep table item
                   removeTableItemSet.remove(tableItem);
@@ -2559,6 +2574,7 @@ public class TabStatus
                                                       jobData.formatLastExecutedDateTime(),
                                                       jobData.formatEstimatedRestTime()
                                                      );
+                  if (jobData.slaveTLS) tableItem.setImage(1,IMAGE_LOCK);
                   tableItem.setData(jobData);
                 }
 

@@ -1403,9 +1403,25 @@ public class BARServer
    */
   enum TLSModes
   {
-    TRY,
     NONE,
-    FORCE
+    TRY,
+    FORCE;
+
+    /** convert to string
+     * @return string
+     */
+    @Override
+    public String toString()
+    {
+      switch (this)
+      {
+        case NONE:
+        default:
+                    return "none";
+        case TRY:   return "try";
+        case FORCE: return "force";
+      }
+    }
   };
 
   /** running states

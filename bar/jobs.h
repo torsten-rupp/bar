@@ -130,9 +130,9 @@ typedef struct
 
   struct
   {
-    String name;
-    uint   port;
-    bool   forceTLS;
+    String   name;
+    uint     port;
+    TLSModes tlsMode;
   }                   slaveHost;                        // slave host
 
   String              storageName;                      // storage name
@@ -225,6 +225,7 @@ typedef struct JobNode
   JobStates           jobState;
 //TODO: required?
   SlaveStates         slaveState;
+  bool                slaveTLS;                         // TRUE if slave TLS connection established
 
   StatusInfo          statusInfo;
 
@@ -295,6 +296,7 @@ typedef struct SlaveNode
 
   String        name;
   uint          port;
+  TLSModes      tlsMode;
   ConnectorInfo connectorInfo;
   uint64        lastOnlineDateTime;
   bool          authorizedFlag;
@@ -1675,14 +1677,15 @@ void Job_donePersistenceList(PersistenceList *persistenceList);
 /***********************************************************************\
 * Name   : Job_addSlave
 * Purpose: add slave
-* Input  : name - host name
-*          port - host port
+* Input  : name    - host name
+*          port    - host port
+*          tlsMode - TLS mode; see TLS_MODES_...
 * Output : -
 * Return : slave node
 * Notes  : -
 \***********************************************************************/
 
-SlaveNode *Job_addSlave(ConstString name, uint port);
+SlaveNode *Job_addSlave(ConstString name, uint port, TLSModes tlsMode);
 
 /***********************************************************************\
 * Name   : Job_removeSlave
