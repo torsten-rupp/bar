@@ -958,7 +958,7 @@ public class TabStatus
     ProgressBar progressBar;
 
     // get shell, display
-    shell = parentTabFolder.getShell();
+    shell   = parentTabFolder.getShell();
     display = shell.getDisplay();
 
     // get colors

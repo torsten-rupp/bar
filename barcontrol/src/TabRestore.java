@@ -5145,7 +5145,7 @@ Dprintf.dprintf("");
           Point     size;
 
           // get current foreground color
-          Color foreground = widgetEntryTableTitle.getForeground();
+          Color foreground = widget.getForeground();
 
           // title
           text = BARControl.tr("Storage");
@@ -6511,7 +6511,7 @@ Dprintf.dprintf("");
           Point     size;
 
           // get current foreground color
-          Color foreground = widgetEntryTableTitle.getForeground();
+          Color foreground = widget.getForeground();
 
           // title
           text = BARControl.tr("Entries");

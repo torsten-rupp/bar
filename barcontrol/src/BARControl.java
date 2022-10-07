@@ -78,7 +78,7 @@ import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Device;
-//import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
@@ -2019,6 +2019,9 @@ public class BARControl
   };
 
   // --------------------------- variables --------------------------------
+  // images
+  private static Image IMAGE_LOCK;
+
   private static I18n      i18n;
   private static Display   display;
   private static Shell     shell;
@@ -3077,6 +3080,26 @@ if (false) {
     // create tabs
     tabFolder = Widgets.newTabFolder(shell);
     Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
+    tabFolder.addPaintListener(new PaintListener()
+    {
+      @Override
+      public void paintControl(PaintEvent paintEvent)
+      {
+        TabFolder widget = (TabFolder)paintEvent.widget;
+        GC        gc     = paintEvent.gc;
+        Rectangle bounds;
+       
+        if (BARServer.isTLSConnection())
+        {
+          bounds = IMAGE_LOCK.getBounds();
+          gc.drawImage(IMAGE_LOCK,
+                       widget.getBounds().width-bounds.width,
+                       bounds.height/2-2
+                      );
+        }
+      }
+    });
+
     tabStatus  = new TabStatus (tabFolder,SWT.F1);
     tabJobs    = new TabJobs   (tabFolder,SWT.F2);
     tabRestore = new TabRestore(tabFolder,SWT.F3);
@@ -3958,7 +3981,7 @@ if (false) {
     {
       shell.setLocation(Settings.geometry.x,Settings.geometry.y);
     }
-    shell.setText((BARServer.isTLSConnection() ? "\u26BF ":"")+"BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
+    shell.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
 
     // listeners
     shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
@@ -3968,7 +3991,7 @@ if (false) {
         Shell widget = (Shell)event.widget;
         if (!widget.isDisposed())
         {
-          widget.setText((BARServer.isTLSConnection() ? "\u26BF ":"")+"BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
+          widget.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
           updateMaster();
         }
       }
@@ -6187,6 +6210,9 @@ Dprintf.dprintf("still not supported");
           Device.DEBUG=true;
         }
         display = new Display();
+
+        // get images
+        IMAGE_LOCK = Widgets.loadImage(display,"lock.png");
 
         boolean connectedFlag = false;
 
