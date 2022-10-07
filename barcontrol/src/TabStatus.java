@@ -2551,7 +2551,7 @@ public class TabStatus
                                           jobData.formatLastExecutedDateTime(),
                                           jobData.formatEstimatedRestTime()
                                          );
-                  if (jobData.slaveTLS) tableItem.setImage(1,IMAGE_LOCK);
+                  if (jobData.slaveTLS) tableItem.setImage(2,IMAGE_LOCK);
 
                   // keep table item
                   removeTableItemSet.remove(tableItem);
@@ -2574,7 +2574,7 @@ public class TabStatus
                                                       jobData.formatLastExecutedDateTime(),
                                                       jobData.formatEstimatedRestTime()
                                                      );
-                  if (jobData.slaveTLS) tableItem.setImage(1,IMAGE_LOCK);
+                  if (jobData.slaveTLS) tableItem.setImage(2,IMAGE_LOCK);
                   tableItem.setData(jobData);
                 }
 
