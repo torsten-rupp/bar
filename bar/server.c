@@ -1232,13 +1232,14 @@ LOCAL void pairingThreadCode(void)
   * Purpose: update slave state in job
   * Input  : slaveNode  - slave node
   *          slaveState - slave state
+  *          slaveTLS   - TRUE iff slave TLS connection
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState);
-  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState)
+  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS);
+  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS)
   {
     JobNode *jobNode;
 
@@ -1252,6 +1253,7 @@ LOCAL void pairingThreadCode(void)
            )
         {
           jobNode->slaveState = slaveState;
+          jobNode->slaveTLS   = slaveTLS;
         }
       }
     }
@@ -1289,7 +1291,7 @@ LOCAL void pairingThreadCode(void)
               Connector_disconnect(&slaveNode->connectorInfo);
 
               // update slave state in job
-              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE);
+              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE);
 
               // log info
               if (slaveNode->authorizedFlag)
@@ -1320,7 +1322,8 @@ LOCAL void pairingThreadCode(void)
                 if (slaveNode == NULL)
                 {
                   slaveNode = Job_addSlave(jobNode->job.slaveHost.name,
-                                           jobNode->job.slaveHost.port
+                                           jobNode->job.slaveHost.port,
+                                           jobNode->job.slaveHost.tlsMode
                                           );
                 }
               }
@@ -1359,6 +1362,7 @@ LOCAL void pairingThreadCode(void)
                 error = Connector_connect(&slaveNode->connectorInfo,
                                           slaveNode->name,
                                           slaveNode->port,
+                                          slaveNode->tlsMode,
                                           globalOptions.serverCA.data,
                                           globalOptions.serverCA.length,
                                           globalOptions.serverCert.data,
@@ -1427,26 +1431,41 @@ LOCAL void pairingThreadCode(void)
                   {
                     if (slaveProtocolVersionMajor == SERVER_PROTOCOL_VERSION_MAJOR)
                     {
-                      updateSlaveState(slaveNode,SLAVE_STATE_PAIRED);
+                      updateSlaveState(slaveNode,
+                                       SLAVE_STATE_PAIRED,
+                                       Connector_hasTLS(&slaveNode->connectorInfo)
+                                      );
                     }
                     else
                     {
-                      updateSlaveState(slaveNode,SLAVE_STATE_WRONG_PROTOCOL_VERSION);
+                      updateSlaveState(slaveNode,
+                                       SLAVE_STATE_WRONG_PROTOCOL_VERSION,
+                                       Connector_hasTLS(&slaveNode->connectorInfo)
+                                      );
                     }
                   }
                   else
                   {
-                    updateSlaveState(slaveNode,SLAVE_STATE_WRONG_MODE);
+                    updateSlaveState(slaveNode,
+                                     SLAVE_STATE_WRONG_MODE,
+                                     Connector_hasTLS(&slaveNode->connectorInfo)
+                                    );
                   }
                 }
               }
               else if (Connector_isConnected(&slaveNode->connectorInfo))
               {
-                updateSlaveState(slaveNode,SLAVE_STATE_ONLINE);
+                updateSlaveState(slaveNode,
+                                 SLAVE_STATE_ONLINE,
+                                 Connector_hasTLS(&slaveNode->connectorInfo)
+                                );
               }
               else
               {
-                updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE);
+                updateSlaveState(slaveNode,
+                                 SLAVE_STATE_OFFLINE,
+                                 FALSE
+                                );
               }
 
 #if 0
@@ -4387,7 +4406,6 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
   StorageSpecifier      storageSpecifier;
   String                directoryName;
-  StringTokenizer       stringTokenizer;
   String                storageDirectoryName;
   const JobNode         *jobNode;
   const PersistenceNode *persistenceNode;
@@ -10442,15 +10460,19 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu",
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
                           Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                           jobNode->job.slaveHost.name,
                           jobNode->job.slaveHost.port,
-                          jobNode->job.slaveHost.forceTLS,
+                          ConfigValue_selectToString(CONFIG_VALUE_TLS_MODES,
+                                                     jobNode->job.slaveHost.tlsMode,
+                                                     NULL
+                                                    ),
                           getSlaveStateText(jobNode->slaveState),
+                          jobNode->slaveTLS,
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                      (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
                                                       || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )

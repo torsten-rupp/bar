@@ -240,7 +240,7 @@ bool Network_hostExistsCString(const char *hostName);
 *          cert             - TLS cerificate or NULL
 *          certLength       - TLS cerificate data length
 *          publicKeyData    - SSH public key data or NULL
-*          publickeyLength  - SSH public key data length
+*          publicKeyLength  - SSH public key data length
 *          privateKeyData   - TLS/SSH private key data or NULL
 *          privateKeyLength - TLS/SSH private key data length
 *          socketFlags      - socket flags; see SOCKET_FLAG_*
@@ -326,6 +326,25 @@ void Network_disconnect(SocketHandle *socketHandle);
 void Network_disconnectDescriptor(int socketDescriptor);
 
 /***********************************************************************\
+* Name   : Network_getSocketType
+* Purpose: get socket type
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : socket yype
+* Notes  : -
+\***********************************************************************/
+
+INLINE SocketTypes Network_getSocketType(SocketHandle *socketHandle);
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
+INLINE SocketTypes Network_getSocketType(SocketHandle *socketHandle)
+{
+  assert(socketHandle != NULL);
+
+  return socketHandle->type;
+}
+#endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Network_isConnected
 * Purpose: check if connected
 * Input  : socketHandle - socket handle
@@ -341,6 +360,25 @@ INLINE bool Network_isConnected(SocketHandle *socketHandle)
   assert(socketHandle != NULL);
 
   return socketHandle->isConnected;
+}
+#endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Network_hasTLS
+* Purpose: check if TLS connected
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : TRUE iff TLS connected
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Network_hasTLS(SocketHandle *socketHandle);
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
+INLINE bool Network_hasTLS(SocketHandle *socketHandle)
+{
+  assert(socketHandle != NULL);
+
+  return socketHandle->type == SOCKET_TYPE_TLS;
 }
 #endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 

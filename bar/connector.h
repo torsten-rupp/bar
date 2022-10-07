@@ -53,6 +53,7 @@ typedef enum
 // connector info
 typedef struct
 {
+// TODO: remove
 bool            forceSSL;                // force SSL connection to connector hose
   ConnectorStates state;
   ServerIO        io;
@@ -140,6 +141,7 @@ void Connector_done(ConnectorInfo *connectorInfo);
 * Input  : connectorInfo - connector info
 *          hostName      - slave host name
 *          hostPort      - slave host port
+*          tlsMode       - TLS mode; see TLS_MODES_...
 *          caData        - TLS CA data or NULL
 *          caLength      - TLS CA data length
 *          cert          - TLS cerificate or NULL
@@ -154,6 +156,7 @@ void Connector_done(ConnectorInfo *connectorInfo);
 Errors Connector_connect(ConnectorInfo *connectorInfo,
                          ConstString   hostName,
                          uint          hostPort,
+                         TLSModes      tlsMode,
                          const void    *caData,
                          uint          caLength,
                          const void    *certData,
@@ -228,6 +231,28 @@ INLINE bool Connector_isShutdown(const ConnectorInfo *connectorInfo)
   assert(connectorInfo != NULL);
 
   return (connectorInfo->state == CONNECTOR_STATE_SHUTDOWN);
+}
+#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Connector_isConnected
+* Purpose: check if connector is connected
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : TRUE iff connected or authorized
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Connector_hasTLS(const ConnectorInfo *connectorInfo);
+#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
+INLINE bool Connector_hasTLS(const ConnectorInfo *connectorInfo)
+{
+  assert(connectorInfo != NULL);
+
+  return    (   (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
+             || (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED)
+            )
+         && ServerIO_hasTLS(&connectorInfo->io);
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 

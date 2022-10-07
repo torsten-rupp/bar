@@ -305,6 +305,13 @@ const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
   {"K",1024LL},
 );
 
+const ConfigValueSelect CONFIG_VALUE_TLS_MODES[] = CONFIG_VALUE_SELECT_ARRAY
+(
+  {"none", TLS_MODE_NONE,},
+  {"try",  TLS_MODE_TRY, },
+  {"force",TLS_MODE_FORCE},
+);
+
 const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
 (
   {"normal",      ARCHIVE_TYPE_NORMAL,     },
@@ -3413,6 +3420,36 @@ LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable,
   {
     (*(bool*)variable) = FALSE;
   }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueDeprecatedForceTLSParse
+* Purpose: config value option call back for deprecated force-tls
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueDeprecatedForceTLSParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(TLSModes*)variable) = TLS_MODE_FORCE;
 
   return TRUE;
 }
@@ -8215,7 +8252,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_COMMENT            ("slave settings"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
   CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL,"<n>"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS,                  "yes|no"),
+  CONFIG_STRUCT_VALUE_SELECT      ("slave-tls-mode",            JobNode,job.slaveHost.tlsMode,                   CONFIG_VALUE_TLS_MODES,"<mode>"),
 
   CONFIG_VALUE_SPACE(),
 
@@ -8350,8 +8387,9 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   // deprecated
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueDeprecatedRemoteHostParse,NULL,"slave-host-name",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueDeprecatedRemotePortParse,NULL,"slave-host-port",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.tlsMode,                   configValueDeprecatedForceTLSParse,NULL,"slave-tls-mode",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.tlsMode,                   configValueDeprecatedForceTLSParse,NULL,"slave-tls-mode",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-tls",      JobNode,job.slaveHost.tlsMode,                   configValueDeprecatedForceTLSParse,NULL,"slave-tls-mode",TRUE),
   // Note: archive-file-mode=overwrite
   CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueDeprecatedArchiveFileModeOverwriteParse,NULL,"archive-file-mode",TRUE),
   // Note: restore-entry-mode=overwrite

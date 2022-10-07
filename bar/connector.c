@@ -129,6 +129,13 @@ LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
 * Input  : connectorInfo - connector info
 *          hostName      - host name
 *          hostPort      - host port
+*          tlsMode       - TLS mode; see TLS_MODES_...
+*          caData        - TLS CA data or NULL
+*          caLength      - TLS CA data length
+*          cert          - TLS cerificate or NULL
+*          certLength    - TLS cerificate data length
+*          keyData       - key data or NULL
+*          keyLength     - key data length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -137,6 +144,7 @@ LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
 LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
                               ConstString   hostName,
                               uint          hostPort,
+                              TLSModes      tlsMode,
                               const void    *caData,
                               uint          caLength,
                               const void    *certData,
@@ -154,6 +162,7 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   error = ServerIO_connectNetwork(&connectorInfo->io,
                                   hostName,
                                   (hostPort != 0) ? hostPort : DEFAULT_SERVER_PORT,
+                                  tlsMode,
                                   caData,
                                   caLength,
                                   certData,
@@ -3760,6 +3769,7 @@ void Connector_done(ConnectorInfo *connectorInfo)
 Errors Connector_connect(ConnectorInfo *connectorInfo,
                          ConstString   hostName,
                          uint          hostPort,
+                         TLSModes      tlsMode,
                          const void    *caData,
                          uint          caLength,
                          const void    *certData,
@@ -3780,6 +3790,7 @@ Errors Connector_connect(ConnectorInfo *connectorInfo,
   error = connectorConnect(connectorInfo,
                            hostName,
                            hostPort,
+                           tlsMode,
                            caData,
                            caLength,
                            certData,
