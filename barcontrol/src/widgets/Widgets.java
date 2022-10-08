@@ -6817,18 +6817,23 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     // save data
     Object   data = tableItems[i].getData();
     String[] texts;
+    Image[]  images;
     if (columnCount > 0)
     {
-      texts = new String[columnCount];
+      texts  = new String[columnCount];
+      images = new Image[columnCount];
       for (int z = 0; z < columnCount; z++)
       {
-        texts[z] = tableItems[i].getText(z);
+        texts[z]  = tableItems[i].getText (z);
+        images[z] = tableItems[i].getImage(z);
       }
     }
     else
     {
-      texts = new String[1];
-      texts[0] = tableItems[i].getText();
+      texts  = new String[1];
+      images = new Image[1];
+      texts[0]  = tableItems[i].getText ();
+      images[0] = tableItems[i].getImage();
     }
     Color foregroundColor = tableItems[i].getForeground();
     Color backgroundColor = tableItems[i].getBackground();
@@ -6841,12 +6846,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     {
       for (int z = 0; z < columnCount; z++)
       {
-        tableItems[i].setText(z,tableItems[j].getText(z));
+        tableItems[i].setText (z,tableItems[j].getText (z));
+        tableItems[i].setImage(z,tableItems[j].getImage(z));
       }
     }
     else
     {
-      tableItems[i].setText(tableItems[j].getText());
+      tableItems[i].setText (tableItems[j].getText ());
+      tableItems[i].setImage(tableItems[j].getImage());
     }
     tableItems[i].setForeground(tableItems[j].getForeground());
     tableItems[i].setBackground(tableItems[j].getBackground());
@@ -6857,12 +6864,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     {
       for (int z = 0; z < columnCount; z++)
       {
-        tableItems[j].setText(z,texts[z]);
+        tableItems[j].setText (z,texts [z]);
+        tableItems[j].setImage(z,images[z]);
       }
     }
     else
     {
-      tableItems[j].setText(texts[0]);
+      tableItems[j].setText (texts [0]);
+      tableItems[j].setImage(images[0]);
     }
     tableItems[j].setForeground(foregroundColor);
     tableItems[j].setBackground(backgroundColor);
