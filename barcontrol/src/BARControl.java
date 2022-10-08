@@ -4140,8 +4140,8 @@ if (false) {
         label.setLayoutData(new TableLayoutData(0,2,TableLayoutData.W));
 
         widgetTLSMode = Widgets.newOptionMenu(subComposite);
-        Widgets.setOptionMenuItems(widgetTLSMode,new Object[]{BARControl.tr("try"  ),BARServer.TLSModes.TRY,
-                                                              BARControl.tr("none" ),BARServer.TLSModes.NONE,
+        Widgets.setOptionMenuItems(widgetTLSMode,new Object[]{BARControl.tr("none" ),BARServer.TLSModes.NONE,
+                                                              BARControl.tr("try"  ),BARServer.TLSModes.TRY,
                                                               BARControl.tr("force"),BARServer.TLSModes.FORCE
                                                              }
                                   );
