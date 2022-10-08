@@ -4903,6 +4903,7 @@ class Dialogs
 
       /** update file list
        * @param table table widget
+       * @param imageDirectory, imageFile directory/file image (Note: required due to initialize+final)
        * @param path path
        * @param selectName name to select or null
        */
@@ -4983,6 +4984,7 @@ class Dialogs
 
       /** update file list
        * @param table table widget
+       * @param imageDirectory, imageFile directory/file image (Note: required due to initialize+final)
        * @param path path
        */
       public void updateFileList(Table table, final Image imageDirectory, final Image imageFile, T path)
