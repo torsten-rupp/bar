@@ -4440,317 +4440,58 @@ class Dialogs
                                              final ListDirectory<T> listDirectory
                                             )
   {
-    /** dialog data
-     */
-    class Data
+    // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' images/directory.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
+    final byte[] IMAGE_DIRECTORY_DATA_ARRAY =
     {
-      boolean showHidden;
-    }
+      (byte)0x89,(byte)0x50,(byte)0x4e,(byte)0x47,(byte)0x0d,(byte)0x0a,(byte)0x1a,(byte)0x0a,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x0d,(byte)0x49,(byte)0x48,(byte)0x44,(byte)0x52,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x10,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x0c,(byte)0x02,(byte)0x03,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x16,(byte)0x89,(byte)0xd5,(byte)0x12,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x01,(byte)0x73,(byte)0x52,(byte)0x47,(byte)0x42,(byte)0x00,(byte)0xae,(byte)0xce,(byte)0x1c,
+      (byte)0xe9,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x09,(byte)0x50,(byte)0x4c,(byte)0x54,(byte)0x45,
+      (byte)0x00,(byte)0xff,(byte)0xff,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0xf0,(byte)0xff,(byte)0x80,
+      (byte)0xfc,(byte)0x46,(byte)0xa8,(byte)0x94,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x01,(byte)0x74,
+      (byte)0x52,(byte)0x4e,(byte)0x53,(byte)0x00,(byte)0x40,(byte)0xe6,(byte)0xd8,(byte)0x66,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x01,(byte)0x62,(byte)0x4b,(byte)0x47,(byte)0x44,(byte)0x00,(byte)0x88,
+      (byte)0x05,(byte)0x1d,(byte)0x48,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x09,(byte)0x70,(byte)0x48,
+      (byte)0x59,(byte)0x73,(byte)0x00,(byte)0x00,(byte)0x0b,(byte)0x13,(byte)0x00,(byte)0x00,(byte)0x0b,
+      (byte)0x13,(byte)0x01,(byte)0x00,(byte)0x9a,(byte)0x9c,(byte)0x18,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x07,(byte)0x74,(byte)0x49,(byte)0x4d,(byte)0x45,(byte)0x07,(byte)0xdc,(byte)0x02,(byte)0x0b,
+      (byte)0x0b,(byte)0x12,(byte)0x02,(byte)0x9e,(byte)0x46,(byte)0x5c,(byte)0x8b,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x23,(byte)0x49,(byte)0x44,(byte)0x41,(byte)0x54,(byte)0x08,(byte)0xd7,(byte)0x63,
+      (byte)0x60,(byte)0x0c,(byte)0x61,(byte)0x60,(byte)0x60,(byte)0x60,(byte)0x5b,(byte)0x09,(byte)0x24,
+      (byte)0xa4,(byte)0x56,(byte)0x39,(byte)0x30,(byte)0x30,(byte)0x84,(byte)0x86,(byte)0x86,(byte)0x3a,
+      (byte)0x30,(byte)0x64,(byte)0xad,(byte)0x5a,(byte)0x45,(byte)0x88,(byte)0x00,(byte)0xa9,(byte)0x03,
+      (byte)0x00,(byte)0xdc,(byte)0x39,(byte)0x12,(byte)0x79,(byte)0xf5,(byte)0x66,(byte)0x35,(byte)0x0f,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x49,(byte)0x45,(byte)0x4e,(byte)0x44,(byte)0xae,
+      (byte)0x42,(byte)0x60,(byte)0x82
+    };
 
-    /** file comparator
-    */
-    class FileComparator<T extends File> implements Comparator<T>
+    // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' images/file.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
+    final byte[] IMAGE_FILE_DATA_ARRAY =
     {
-      // Note: enum in non-static inner classes are not possible in Java, thus use the old way...
-      private final static int SORTMODE_NONE     = 0;
-      private final static int SORTMODE_NAME     = 1;
-      private final static int SORTMODE_TYPE     = 2;
-      private final static int SORTMODE_MODIFIED = 3;
-      private final static int SORTMODE_SIZE     = 4;
-
-      private int sortMode;
-
-      /** create file data comparator
-       * @param sortMode sort mode
-       */
-      FileComparator(int sortMode)
-      {
-        this.sortMode = sortMode;
-      }
-
-      /** set sort mode
-       * @param sortMode sort mode
-       */
-      public void setSortMode(int sortMode)
-      {
-        this.sortMode = sortMode;
-      }
-
-      /** compare file tree data
-       * @param file1, file2 file data to compare
-       * @return -1 iff file1 < file2,
-                  0 iff file1 = file2,
-                  1 iff file1 > file2
-       */
-      public int compare(T file1, T file2)
-      {
-        int result;
-        if     (file1.isDirectory())
-        {
-          if   (file2.isDirectory()) result = 0;
-          else                       result = -1;
-        }
-        else
-        {
-          if   (file2.isDirectory()) result = 1;
-          else                       result = 0;
-        }
-        int nextSortMode = sortMode;
-        while ((result == 0) && (nextSortMode != SORTMODE_NONE))
-        {
-          switch (nextSortMode)
-          {
-            case SORTMODE_NONE:
-              break;
-            case SORTMODE_NAME:
-              result = file1.getName().compareTo(file2.getName());
-              nextSortMode = SORTMODE_MODIFIED;
-              break;
-            case SORTMODE_TYPE:
-              if     (file1.isDirectory())
-              {
-                if   (file2.isDirectory()) result = 0;
-                else                       result = 1;
-              }
-              else
-              {
-                if   (file2.isDirectory()) result = -1;
-                else                       result = 0;
-              }
-              nextSortMode = SORTMODE_NAME;
-              break;
-            case SORTMODE_MODIFIED:
-              if      (file1.lastModified() < file2.lastModified()) result = -1;
-              else if (file1.lastModified() > file2.lastModified()) result =  1;
-              else                                                  result =  0;
-              nextSortMode = SORTMODE_SIZE;
-              break;
-            case SORTMODE_SIZE:
-              if      (file1.length() < file2.length()) result = -1;
-              else if (file1.length() > file2.length()) result =  1;
-              else                                      result =  0;
-              nextSortMode = SORTMODE_NONE;
-              break;
-          }
-        }
-
-        return result;
-      }
-
-      /** convert data to string
-       * @return string
-       */
-      public String toString()
-      {
-        return "FileComparator {"+sortMode+"}";
-      }
-    }
-
-    /** updater
-    */
-    class Updater
-    {
-      private Cursor            CURSOR_WAIT;
-
-      private Shell             dialog;
-      private FileComparator<T> fileComparator;
-      private ListDirectory<T>  listDirectory;
-      private SimpleDateFormat  simpleDateFormat;
-      private Pattern           fileFilterPattern;
-      private boolean           showHidden;
-      private boolean           showFiles;
-
-      /** create update file list
-       * @param listDirectory list directory
-       * @param fileComparator file comparator
-       */
-      public Updater(Shell dialog, FileComparator<T> fileComparator, ListDirectory<T> listDirectory, boolean showFiles)
-      {
-        this.CURSOR_WAIT       = new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT);
-
-        this.dialog            = dialog;
-        this.fileComparator    = fileComparator;
-        this.listDirectory     = listDirectory;
-        this.simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        this.fileFilterPattern = null;
-        this.showHidden        = false;
-        this.showFiles         = showFiles;
-      }
-
-      /** update shortcut list
-       * @param widgetShortcutList shortcut list widget
-       * @param shortcutList shortcuts
-       */
-      public void updateShortcutList(List widgetShortcutList, ArrayList<T> shortcutList)
-      {
-        if (!widgetShortcutList.isDisposed())
-        {
-          widgetShortcutList.removeAll();
-          for (T file : shortcutList)
-          {
-            widgetShortcutList.add(file.getAbsolutePath());
-          }
-        }
-      }
-
-      /** update file list
-       * @param table table widget
-       * @param path path
-       * @param selectName name to select or null
-       */
-      public void updateFileList(Table table, T path, String selectName)
-      {
-        if (!table.isDisposed())
-        {
-          {
-            if (!dialog.isDisposed())
-            {
-              dialog.setCursor(CURSOR_WAIT);
-            }
-          }
-          try
-          {
-            table.removeAll();
-
-            if (listDirectory.open(path))
-            {
-              // update list
-              T file;
-              while ((file = listDirectory.getNext()) != null)
-              {
-                if (   (showHidden || !listDirectory.isHidden(file))
-                    && (showFiles || listDirectory.isDirectory(file))
-                    && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
-                   )
-                {
-                  // find insert index
-                  int index = 0;
-                  TableItem tableItems[] = table.getItems();
-                  while (   (index < tableItems.length)
-                         && (fileComparator.compare(file,(T)tableItems[index].getData()) > 0)
-                        )
-                  {
-                    index++;
-                  }
-
-                  // insert item
-                  TableItem tableItem = new TableItem(table,SWT.NONE,index);
-                  tableItem.setData(file);
-                  tableItem.setText(0,file.getName());
-                  if (file.isDirectory()) tableItem.setText(1,tr("directory"));
-//TODO:
-//                  else if file.isSymbolicLink())tableItem.setText(1,tr("directory"));
-                  else                    tableItem.setText(1,tr("file"));
-                  tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
-                  if (file.isDirectory()) tableItem.setText(3,"");
-                  else                    tableItem.setText(3,Long.toString(file.length()));
-                }
-              }
-              listDirectory.close();
-
-              // select name
-              if (selectName != null)
-              {
-                int index = 0;
-                for (TableItem tableItem : table.getItems())
-                {
-                  if (((File)tableItem.getData()).getName().equals(selectName))
-                  {
-                    table.select(index);
-                    break;
-                  }
-                  index++;
-                }
-              }
-            }
-          }
-          finally
-          {
-            if (!dialog.isDisposed())
-            {
-              dialog.setCursor((Cursor)null);
-            }
-          }
-        }
-      }
-
-      /** update file list
-       * @param table table widget
-       * @param path path
-       */
-      public void updateFileList(Table table, T path)
-      {
-        updateFileList(table,path,(String)null);
-      }
-
-      /** set filter
-       * @param filter glob filter string
-       */
-      public void setFileFilter(String fileFilter)
-      {
-        this.showHidden = showHidden;
-
-        // convert glob-pattern => regular expression
-        StringBuilder buffer = new StringBuilder();
-        int i = 0;
-        while (i < fileFilter.length())
-        {
-          char ch = fileFilter.charAt(i);
-          switch (ch)
-          {
-            case '\\':
-              i++;
-              buffer.append(ch);
-              if (i < fileFilter.length())
-              {
-                buffer.append(fileFilter.charAt(i));
-              }
-              break;
-            case '*':
-              buffer.append(".*");
-              break;
-            case '?':
-              buffer.append(".");
-              break;
-            case '.':
-            case '+':
-            case '(':
-            case ')':
-            case '[':
-            case ']':
-            case '{':
-            case '}':
-            case '^':
-            case '&':
-              buffer.append('\\');
-              buffer.append(ch);
-              break;
-            default:
-              buffer.append(ch);
-          }
-          i++;
-        }
-
-        // compile regualar expression
-        fileFilterPattern = Pattern.compile(buffer.toString());
-      }
-
-      /** set show hidden
-       * @param showHidden true to show hidden files, too
-       */
-      public void setShowHidden(boolean showHidden)
-      {
-        this.showHidden = showHidden;
-      }
-
-      /** set show files
-       * @param showFiles true to show files, too
-       */
-      public void setShowFiles(boolean showFiles)
-      {
-        this.showFiles = showFiles;
-      }
-    }
+      (byte)0x89,(byte)0x50,(byte)0x4e,(byte)0x47,(byte)0x0d,(byte)0x0a,(byte)0x1a,(byte)0x0a,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x0d,(byte)0x49,(byte)0x48,(byte)0x44,(byte)0x52,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x0c,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x0c,(byte)0x02,(byte)0x03,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x2b,(byte)0x1b,(byte)0xb4,(byte)0x74,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x01,(byte)0x73,(byte)0x52,(byte)0x47,(byte)0x42,(byte)0x00,(byte)0xae,(byte)0xce,(byte)0x1c,
+      (byte)0xe9,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x09,(byte)0x50,(byte)0x4c,(byte)0x54,(byte)0x45,
+      (byte)0xff,(byte)0xff,(byte)0xff,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0xff,(byte)0xff,(byte)0xf3,
+      (byte)0x77,(byte)0x59,(byte)0xc3,(byte)0x64,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x01,(byte)0x74,
+      (byte)0x52,(byte)0x4e,(byte)0x53,(byte)0x00,(byte)0x40,(byte)0xe6,(byte)0xd8,(byte)0x66,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x01,(byte)0x62,(byte)0x4b,(byte)0x47,(byte)0x44,(byte)0x00,(byte)0x88,
+      (byte)0x05,(byte)0x1d,(byte)0x48,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x09,(byte)0x70,(byte)0x48,
+      (byte)0x59,(byte)0x73,(byte)0x00,(byte)0x00,(byte)0x0b,(byte)0x13,(byte)0x00,(byte)0x00,(byte)0x0b,
+      (byte)0x13,(byte)0x01,(byte)0x00,(byte)0x9a,(byte)0x9c,(byte)0x18,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x07,(byte)0x74,(byte)0x49,(byte)0x4d,(byte)0x45,(byte)0x07,(byte)0xdb,(byte)0x01,(byte)0x0b,
+      (byte)0x01,(byte)0x21,(byte)0x06,(byte)0x3a,(byte)0x72,(byte)0x32,(byte)0x1c,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x19,(byte)0x49,(byte)0x44,(byte)0x41,(byte)0x54,(byte)0x08,(byte)0xd7,(byte)0x63,
+      (byte)0x10,(byte)0x0d,(byte)0x75,(byte)0x60,(byte)0x90,(byte)0x5a,(byte)0x05,(byte)0xc2,(byte)0x21,
+      (byte)0x40,(byte)0xbc,(byte)0x04,(byte)0x2f,(byte)0x16,(byte)0x0d,(byte)0x0d,(byte)0x01,(byte)0x00,
+      (byte)0x50,(byte)0x65,(byte)0x0e,(byte)0xc5,(byte)0x87,(byte)0x85,(byte)0xab,(byte)0x0c,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x49,(byte)0x45,(byte)0x4e,(byte)0x44,(byte)0xae,(byte)0x42,
+      (byte)0x60,(byte)0x82
+    };
 
     // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' folderUp.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
     final byte[] IMAGE_FOLDER_UP_DATA_ARRAY =
@@ -5001,6 +4742,323 @@ class Dialogs
       (byte)0xae,(byte)0x42,(byte)0x60,(byte)0x82
     };
 
+    final Image IMAGE_DIRECTORY;
+    final Image IMAGE_FILE;
+    final Image IMAGE_FOLDER_UP;
+    final Image IMAGE_FOLDER_NEW;
+    final Image IMAGE_DELETE;
+
+    /** dialog data
+     */
+    class Data
+    {
+      boolean showHidden;
+    }
+
+    /** file comparator
+    */
+    class FileComparator<T extends File> implements Comparator<T>
+    {
+      // Note: enum in non-static inner classes are not possible in Java, thus use the old way...
+      private final static int SORTMODE_NONE     = 0;
+      private final static int SORTMODE_NAME     = 1;
+      private final static int SORTMODE_TYPE     = 2;
+      private final static int SORTMODE_MODIFIED = 3;
+      private final static int SORTMODE_SIZE     = 4;
+
+      private int sortMode;
+
+      /** create file data comparator
+       * @param sortMode sort mode
+       */
+      FileComparator(int sortMode)
+      {
+        this.sortMode = sortMode;
+      }
+
+      /** set sort mode
+       * @param sortMode sort mode
+       */
+      public void setSortMode(int sortMode)
+      {
+        this.sortMode = sortMode;
+      }
+
+      /** compare file tree data
+       * @param file1, file2 file data to compare
+       * @return -1 iff file1 < file2,
+                  0 iff file1 = file2,
+                  1 iff file1 > file2
+       */
+      public int compare(T file1, T file2)
+      {
+        int result;
+        if     (file1.isDirectory())
+        {
+          if   (file2.isDirectory()) result = 0;
+          else                       result = -1;
+        }
+        else
+        {
+          if   (file2.isDirectory()) result = 1;
+          else                       result = 0;
+        }
+        int nextSortMode = sortMode;
+        while ((result == 0) && (nextSortMode != SORTMODE_NONE))
+        {
+          switch (nextSortMode)
+          {
+            case SORTMODE_NONE:
+              break;
+            case SORTMODE_NAME:
+              result = file1.getName().compareTo(file2.getName());
+              nextSortMode = SORTMODE_MODIFIED;
+              break;
+            case SORTMODE_TYPE:
+              if     (file1.isDirectory())
+              {
+                if   (file2.isDirectory()) result = 0;
+                else                       result = 1;
+              }
+              else
+              {
+                if   (file2.isDirectory()) result = -1;
+                else                       result = 0;
+              }
+              nextSortMode = SORTMODE_NAME;
+              break;
+            case SORTMODE_MODIFIED:
+              if      (file1.lastModified() < file2.lastModified()) result = -1;
+              else if (file1.lastModified() > file2.lastModified()) result =  1;
+              else                                                  result =  0;
+              nextSortMode = SORTMODE_SIZE;
+              break;
+            case SORTMODE_SIZE:
+              if      (file1.length() < file2.length()) result = -1;
+              else if (file1.length() > file2.length()) result =  1;
+              else                                      result =  0;
+              nextSortMode = SORTMODE_NONE;
+              break;
+          }
+        }
+
+        return result;
+      }
+
+      /** convert data to string
+       * @return string
+       */
+      public String toString()
+      {
+        return "FileComparator {"+sortMode+"}";
+      }
+    }
+
+    /** updater
+    */
+    class Updater
+    {
+      private Cursor            CURSOR_WAIT;
+
+      private Shell             dialog;
+      private FileComparator<T> fileComparator;
+      private ListDirectory<T>  listDirectory;
+      private SimpleDateFormat  simpleDateFormat;
+      private Pattern           fileFilterPattern;
+      private boolean           showHidden;
+      private boolean           showFiles;
+
+      /** create update file list
+       * @param listDirectory list directory
+       * @param fileComparator file comparator
+       */
+      public Updater(Shell dialog, FileComparator<T> fileComparator, ListDirectory<T> listDirectory, boolean showFiles)
+      {
+        this.CURSOR_WAIT       = new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT);
+
+        this.dialog            = dialog;
+        this.fileComparator    = fileComparator;
+        this.listDirectory     = listDirectory;
+        this.simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        this.fileFilterPattern = null;
+        this.showHidden        = false;
+        this.showFiles         = showFiles;
+      }
+
+      /** update shortcut list
+       * @param widgetShortcutList shortcut list widget
+       * @param shortcutList shortcuts
+       */
+      public void updateShortcutList(List widgetShortcutList, ArrayList<T> shortcutList)
+      {
+        if (!widgetShortcutList.isDisposed())
+        {
+          widgetShortcutList.removeAll();
+          for (T file : shortcutList)
+          {
+            widgetShortcutList.add(file.getAbsolutePath());
+          }
+        }
+      }
+
+      /** update file list
+       * @param table table widget
+       * @param path path
+       * @param selectName name to select or null
+       */
+      public void updateFileList(Table table, final Image imageDirectory, final Image imageFile, T path, String selectName)
+      {
+        if (!table.isDisposed())
+        {
+          {
+            if (!dialog.isDisposed())
+            {
+              dialog.setCursor(CURSOR_WAIT);
+            }
+          }
+          try
+          {
+            table.removeAll();
+
+            if (listDirectory.open(path))
+            {
+              // update list
+              T file;
+              while ((file = listDirectory.getNext()) != null)
+              {
+                if (   (showHidden || !listDirectory.isHidden(file))
+                    && (showFiles || listDirectory.isDirectory(file))
+                    && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
+                   )
+                {
+                  // find insert index
+                  int index = 0;
+                  TableItem tableItems[] = table.getItems();
+                  while (   (index < tableItems.length)
+                         && (fileComparator.compare(file,(T)tableItems[index].getData()) > 0)
+                        )
+                  {
+                    index++;
+                  }
+
+                  // insert item
+                  TableItem tableItem = new TableItem(table,SWT.NONE,index);
+                  tableItem.setData(file);
+                  tableItem.setText(0,file.getName());
+                  if (file.isDirectory()) tableItem.setImage(0,imageDirectory);
+//                  else if file.isSymbolicLink())tableItem.setText(0,IMAGE_DIRECTORY;
+                  else                    tableItem.setImage(0,imageFile);
+                  tableItem.setText(1,simpleDateFormat.format(new Date(file.lastModified())));
+                  if (file.isDirectory()) tableItem.setText(2,"");
+                  else                    tableItem.setText(2,Long.toString(file.length()));
+                }
+              }
+              listDirectory.close();
+
+              // select name
+              if (selectName != null)
+              {
+                int index = 0;
+                for (TableItem tableItem : table.getItems())
+                {
+                  if (((File)tableItem.getData()).getName().equals(selectName))
+                  {
+                    table.select(index);
+                    break;
+                  }
+                  index++;
+                }
+              }
+            }
+          }
+          finally
+          {
+            if (!dialog.isDisposed())
+            {
+              dialog.setCursor((Cursor)null);
+            }
+          }
+        }
+      }
+
+      /** update file list
+       * @param table table widget
+       * @param path path
+       */
+      public void updateFileList(Table table, final Image imageDirectory, final Image imageFile, T path)
+      {
+        updateFileList(table,imageDirectory,imageFile,path,(String)null);
+      }
+
+      /** set filter
+       * @param filter glob filter string
+       */
+      public void setFileFilter(String fileFilter)
+      {
+        this.showHidden = showHidden;
+
+        // convert glob-pattern => regular expression
+        StringBuilder buffer = new StringBuilder();
+        int i = 0;
+        while (i < fileFilter.length())
+        {
+          char ch = fileFilter.charAt(i);
+          switch (ch)
+          {
+            case '\\':
+              i++;
+              buffer.append(ch);
+              if (i < fileFilter.length())
+              {
+                buffer.append(fileFilter.charAt(i));
+              }
+              break;
+            case '*':
+              buffer.append(".*");
+              break;
+            case '?':
+              buffer.append(".");
+              break;
+            case '.':
+            case '+':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case '{':
+            case '}':
+            case '^':
+            case '&':
+              buffer.append('\\');
+              buffer.append(ch);
+              break;
+            default:
+              buffer.append(ch);
+          }
+          i++;
+        }
+
+        // compile regualar expression
+        fileFilterPattern = Pattern.compile(buffer.toString());
+      }
+
+      /** set show hidden
+       * @param showHidden true to show hidden files, too
+       */
+      public void setShowHidden(boolean showHidden)
+      {
+        this.showHidden = showHidden;
+      }
+
+      /** set show files
+       * @param showFiles true to show files, too
+       */
+      public void setShowFiles(boolean showFiles)
+      {
+        this.showFiles = showFiles;
+      }
+    }
+
     String      result;
     Pane        pane;
     int         row1,row2;
@@ -5014,12 +5072,17 @@ class Dialogs
     if (!parentShell.isDisposed())
     {
       // init images
-      final Image IMAGE_FOLDER_UP;
-      final Image IMAGE_FOLDER_NEW;
-      final Image IMAGE_DELETE;
       try
       {
         ByteArrayInputStream inputStream;
+
+        inputStream = new ByteArrayInputStream(IMAGE_DIRECTORY_DATA_ARRAY);
+        IMAGE_DIRECTORY = new Image(parentShell.getDisplay(),new ImageData(inputStream));
+        inputStream.close();
+
+        inputStream = new ByteArrayInputStream(IMAGE_FILE_DATA_ARRAY);
+        IMAGE_FILE = new Image(parentShell.getDisplay(),new ImageData(inputStream));
+        inputStream.close();
 
         inputStream = new ByteArrayInputStream(IMAGE_FOLDER_UP_DATA_ARRAY);
         IMAGE_FOLDER_UP = new Image(parentShell.getDisplay(),new ImageData(inputStream));
@@ -5150,9 +5213,8 @@ class Dialogs
             TableColumn tableColumn = (TableColumn)selectionEvent.widget;
 
             if      (tableColumn == widgetFileList.getColumn(0)) fileComparator.setSortMode(FileComparator.SORTMODE_NAME    );
-            else if (tableColumn == widgetFileList.getColumn(1)) fileComparator.setSortMode(FileComparator.SORTMODE_TYPE    );
-            else if (tableColumn == widgetFileList.getColumn(2)) fileComparator.setSortMode(FileComparator.SORTMODE_MODIFIED);
-            else if (tableColumn == widgetFileList.getColumn(3)) fileComparator.setSortMode(FileComparator.SORTMODE_SIZE    );
+            else if (tableColumn == widgetFileList.getColumn(1)) fileComparator.setSortMode(FileComparator.SORTMODE_MODIFIED);
+            else if (tableColumn == widgetFileList.getColumn(2)) fileComparator.setSortMode(FileComparator.SORTMODE_SIZE    );
             Widgets.sortTableColumn(widgetFileList,tableColumn,fileComparator);
           }
         };
@@ -5161,13 +5223,6 @@ class Dialogs
         tableColumn.setText(Dialogs.tr("Name"));
         tableColumn.setData(new TableLayoutData(0,0,TableLayoutData.WE,0,0,0,0,600,SWT.DEFAULT));
         tableColumn.setResizable(true);
-        tableColumn.addSelectionListener(selectionListener);
-
-        tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText(Dialogs.tr("Type"));
-        tableColumn.setData(new TableLayoutData(0,1,TableLayoutData.NONE));
-        tableColumn.setWidth(50);
-        tableColumn.setResizable(false);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
@@ -5311,6 +5366,8 @@ class Dialogs
           widgetPath.setData(file);
 
           updater.updateFileList(widgetFileList,
+                                 IMAGE_DIRECTORY,
+                                 IMAGE_FILE,
                                  file,
                                  (widgetName != null) ? widgetName.getText() : null
                                 );
@@ -5355,6 +5412,8 @@ class Dialogs
 
             // update list
             updater.updateFileList(widgetFileList,
+                                   IMAGE_DIRECTORY,
+                                   IMAGE_FILE,
                                    parentFile,
                                    (widgetName != null) ? widgetName.getText() : null
                                   );
@@ -5394,6 +5453,8 @@ class Dialogs
               listDirectory.mkdir(newDirectory);
 
               updater.updateFileList(widgetFileList,
+                                     IMAGE_DIRECTORY,
+                                     IMAGE_FILE,
                                      file,
                                      newSubDirectory
                                     );
@@ -5448,6 +5509,8 @@ class Dialogs
               listDirectory.delete(deleteFile);
 
               updater.updateFileList(widgetFileList,
+                                     IMAGE_DIRECTORY,
+                                     IMAGE_FILE,
                                      file
                                     );
             }
@@ -5482,6 +5545,8 @@ class Dialogs
 
               // update list
               updater.updateFileList(widgetFileList,
+                                     IMAGE_DIRECTORY,
+                                     IMAGE_FILE,
                                      (T)widgetPath.getData(),
                                      (widgetName != null) ? widgetName.getText() : null
                                     );
@@ -5550,6 +5615,8 @@ class Dialogs
 
               // update list
               updater.updateFileList(widgetFileList,
+                                     IMAGE_DIRECTORY,
+                                     IMAGE_FILE,
                                      (T)widgetPath.getData(),
                                      (widgetName != null) ? widgetName.getText() : null
                                     );
@@ -5630,29 +5697,34 @@ class Dialogs
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            if (widgetName != null)
-            {
-              Widgets.setFocus(widgetName);
-            }
-            else
-            {
-              Widgets.setFocus(widgetDone);
-            }
+            String filter = widgetFilter.getText();
+            if (filter.isEmpty()) filter = "*";
+
+            widgetFilter.setText(filter);
+
+            updater.setFileFilter(widgetFilter.getText());
+            updater.updateFileList(widgetFileList,
+                                   IMAGE_DIRECTORY,
+                                   IMAGE_FILE,
+                                   (T)widgetPath.getData(),
+                                   (widgetName != null) ? widgetName.getText() : null
+                                  );
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            int index = widgetFilter.getSelectionIndex();
-            if (index >= 0)
-            {
-              widgetFilter.setText(fileExtensions[index*2+1]);
+            String filter = widgetFilter.getText();
+            if (filter.isEmpty()) filter = "*";
 
-              updater.setFileFilter(widgetFilter.getText());
-              updater.updateFileList(widgetFileList,
-                                     (T)widgetPath.getData(),
-                                     (widgetName != null) ? widgetName.getText() : null
-                                    );
-            }
+            widgetFilter.setText(filter);
+
+            updater.setFileFilter(widgetFilter.getText());
+            updater.updateFileList(widgetFileList,
+                                   IMAGE_DIRECTORY,
+                                   IMAGE_FILE,
+                                   (T)widgetPath.getData(),
+                                   (widgetName != null) ? widgetName.getText() : null
+                                  );
           }
         });
       }
@@ -5669,6 +5741,8 @@ class Dialogs
           {
             updater.setShowHidden(widgetShowHidden.getSelection());
             updater.updateFileList(widgetFileList,
+                                   IMAGE_DIRECTORY,
+                                   IMAGE_FILE,
                                    (T)widgetPath.getData(),
                                    (widgetName != null) ? widgetName.getText() : null
                                   );
@@ -5846,6 +5920,8 @@ class Dialogs
       if (!widgetPath.getText().isEmpty())
       {
         updater.updateFileList(widgetFileList,
+                               IMAGE_DIRECTORY,
+                               IMAGE_FILE,
                                (T)widgetPath.getData(),
                                (widgetName != null) ? widgetName.getText() : null
                               );
