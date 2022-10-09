@@ -93,6 +93,7 @@ typedef struct
         gnutls_certificate_credentials_t credentials;
         gnutls_dh_params_t               dhParams;
         gnutls_session_t                 session;
+        bool                             verifiedCertificate;
       } gnuTLS;
     #endif /* HAVE_GNU_TLS */
   };
@@ -364,21 +365,40 @@ INLINE bool Network_isConnected(SocketHandle *socketHandle)
 #endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Network_hasTLS
-* Purpose: check if TLS connected
+* Name   : Network_isTLS
+* Purpose: check if TLS connection
 * Input  : socketHandle - socket handle
 * Output : -
-* Return : TRUE iff TLS connected
+* Return : TRUE iff TLS connection
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Network_hasTLS(SocketHandle *socketHandle);
+INLINE bool Network_isTLS(SocketHandle *socketHandle);
 #if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
-INLINE bool Network_hasTLS(SocketHandle *socketHandle)
+INLINE bool Network_isTLS(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
 
   return socketHandle->type == SOCKET_TYPE_TLS;
+}
+#endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Network_isTLS
+* Purpose: check if TLS connection
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : TRUE iff TLS connection
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Network_isInsecureTLS(SocketHandle *socketHandle);
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
+INLINE bool Network_isInsecureTLS(SocketHandle *socketHandle)
+{
+  assert(socketHandle != NULL);
+
+  return (socketHandle->type == SOCKET_TYPE_TLS) && !socketHandle->gnuTLS.verifiedCertificate;
 }
 #endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 

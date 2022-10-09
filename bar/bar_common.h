@@ -46,7 +46,7 @@
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE            32
 #define DEFAULT_SERVER_PORT                       38523
 #ifdef HAVE_GNU_TLS
-  #define DEFAULT_TLS_SERVER_PORT                 38524
+  #define DEFAULT_TLS_SERVER_PORT                 0
   #define DEFAULT_TLS_SERVER_CA_FILE              "certs/bar-ca.pem"
   #define DEFAULT_TLS_SERVER_CERTIFICATE_FILE     "certs/bar-server-cert.pem"
   #define DEFAULT_TLS_SERVER_KEY_FILE             "private/bar-server-key.pem"

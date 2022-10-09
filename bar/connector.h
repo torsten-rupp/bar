@@ -235,24 +235,46 @@ INLINE bool Connector_isShutdown(const ConnectorInfo *connectorInfo)
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Connector_isConnected
-* Purpose: check if connector is connected
+* Name   : Connector_isTLS
+* Purpose: check if TLS connection
 * Input  : connectorInfo - connector info
 * Output : -
-* Return : TRUE iff connected or authorized
+* Return : TRUE iff TLS connection
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Connector_hasTLS(const ConnectorInfo *connectorInfo);
+INLINE bool Connector_isTLS(const ConnectorInfo *connectorInfo);
 #if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
-INLINE bool Connector_hasTLS(const ConnectorInfo *connectorInfo)
+INLINE bool Connector_isTLS(const ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
   return    (   (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
              || (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED)
             )
-         && ServerIO_hasTLS(&connectorInfo->io);
+         && ServerIO_isTLS(&connectorInfo->io);
+}
+#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Connector_isInsecureTLS
+* Purpose: check if insecure TLS connection
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : TRUE iff insecure TLS connection
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Connector_isInsecureTLS(const ConnectorInfo *connectorInfo);
+#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
+INLINE bool Connector_isInsecureTLS(const ConnectorInfo *connectorInfo)
+{
+  assert(connectorInfo != NULL);
+
+  return    (   (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
+             || (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED)
+            )
+         && ServerIO_isInsecureTLS(&connectorInfo->io);
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 

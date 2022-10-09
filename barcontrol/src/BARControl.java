@@ -2021,6 +2021,7 @@ public class BARControl
   // --------------------------- variables --------------------------------
   // images
   private static Image IMAGE_LOCK;
+  private static Image IMAGE_LOCK_INSECURE;
 
   private static I18n      i18n;
   private static Display   display;
@@ -2389,9 +2390,9 @@ public class BARControl
     System.out.println("         --ca-file=<file name>                      - certificate authority file name (PEM format)");
     System.out.println("         --cert-file=<file name>                    - certificate file name (PEM format)");
     System.out.println("         --key-file=<file name>                     - key file name (default: ");
-    System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
-    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
-    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME);
+    System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME+" or ");
+    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME+" or ");
+    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME);
     System.out.println("                                                      )" );
     System.out.println("         --no-tls                                   - no TLS connection");
     System.out.println("         --force-tls                                - force TLS connection");
@@ -3091,8 +3092,9 @@ if (false) {
        
         if (BARServer.isTLSConnection())
         {
-          bounds = IMAGE_LOCK.getBounds();
-          gc.drawImage(IMAGE_LOCK,
+          Image image = BARServer.isInsecureTLSConnection() ? IMAGE_LOCK_INSECURE : IMAGE_LOCK;
+          bounds = image.getBounds();
+          gc.drawImage(image,
                        widget.getBounds().width-bounds.width,
                        bounds.height/2-2
                       );
@@ -6212,7 +6214,8 @@ Dprintf.dprintf("still not supported");
         display = new Display();
 
         // get images
-        IMAGE_LOCK = Widgets.loadImage(display,"lock.png");
+        IMAGE_LOCK          = Widgets.loadImage(display,"lock.png");
+        IMAGE_LOCK_INSECURE = Widgets.loadImage(display,"lockInsecure.png");
 
         boolean connectedFlag = false;
 

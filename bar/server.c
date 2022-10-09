@@ -1230,16 +1230,17 @@ LOCAL void pairingThreadCode(void)
   /***********************************************************************\
   * Name   : updateSlaveState
   * Purpose: update slave state in job
-  * Input  : slaveNode  - slave node
-  *          slaveState - slave state
-  *          slaveTLS   - TRUE iff slave TLS connection
+  * Input  : slaveNode        - slave node
+  *          slaveState       - slave state
+  *          slaveTLS         - TRUE iff slave TLS connection
+  *          slaveInsecureTLS - TRUE iff insecure slave TLS connection
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS);
-  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS)
+  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS, bool slaveInsecureTLS);
+  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS, bool slaveInsecureTLS)
   {
     JobNode *jobNode;
 
@@ -1252,8 +1253,9 @@ LOCAL void pairingThreadCode(void)
             && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
            )
         {
-          jobNode->slaveState = slaveState;
-          jobNode->slaveTLS   = slaveTLS;
+          jobNode->slaveState       = slaveState;
+          jobNode->slaveTLS         = slaveTLS;
+          jobNode->slaveInsecureTLS = slaveInsecureTLS;
         }
       }
     }
@@ -1291,7 +1293,7 @@ LOCAL void pairingThreadCode(void)
               Connector_disconnect(&slaveNode->connectorInfo);
 
               // update slave state in job
-              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE);
+              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE,FALSE);
 
               // log info
               if (slaveNode->authorizedFlag)
@@ -1433,14 +1435,16 @@ LOCAL void pairingThreadCode(void)
                     {
                       updateSlaveState(slaveNode,
                                        SLAVE_STATE_PAIRED,
-                                       Connector_hasTLS(&slaveNode->connectorInfo)
+                                       Connector_isTLS(&slaveNode->connectorInfo),
+                                       Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                       );
                     }
                     else
                     {
                       updateSlaveState(slaveNode,
                                        SLAVE_STATE_WRONG_PROTOCOL_VERSION,
-                                       Connector_hasTLS(&slaveNode->connectorInfo)
+                                       Connector_isTLS(&slaveNode->connectorInfo),
+                                       Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                       );
                     }
                   }
@@ -1448,7 +1452,8 @@ LOCAL void pairingThreadCode(void)
                   {
                     updateSlaveState(slaveNode,
                                      SLAVE_STATE_WRONG_MODE,
-                                     Connector_hasTLS(&slaveNode->connectorInfo)
+                                     Connector_isTLS(&slaveNode->connectorInfo),
+                                     Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                     );
                   }
                 }
@@ -1457,14 +1462,16 @@ LOCAL void pairingThreadCode(void)
               {
                 updateSlaveState(slaveNode,
                                  SLAVE_STATE_ONLINE,
-                                 Connector_hasTLS(&slaveNode->connectorInfo)
+                                 Connector_isTLS(&slaveNode->connectorInfo),
+                                 Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                 );
               }
               else
               {
                 updateSlaveState(slaveNode,
                                  SLAVE_STATE_OFFLINE,
-                                 FALSE
+                                 FALSE,  // slaveTLS
+                                 FALSE  // slaveInsecureTLS
                                 );
               }
 

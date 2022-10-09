@@ -450,7 +450,7 @@ NYI: how to do certificate verification?
   }
 
 #if 0
-NYI: how to enable client authentication?
+NYI: how to verify certifcate?
   result = gnutls_certificate_verify_peers2(socketHandle->gnuTLS.session,&status);
   if (result != GNUTLS_E_SUCCESS)
   {
@@ -459,6 +459,8 @@ NYI: how to enable client authentication?
     gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
     return ERRORX_(TLS_HANDSHAKE,result,"%s",gnutls_strerror(result));
   }
+#else
+  socketHandle->gnuTLS.verifiedCertificate = FALSE;
 #endif /* 0 */
 
   return ERROR_NONE;
