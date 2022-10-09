@@ -372,12 +372,13 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 * Name   : receiveData
 * Purpose: receive data
 * Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or NO_WAIT
 * Output : -
 * Return : TRUE if received data, FALSE on disconnect
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool receiveData(ServerIO *serverIO)
+LOCAL bool receiveData(ServerIO *serverIO, long timeout)
 {
   uint  maxBytes;
   ulong readBytes;
@@ -410,7 +411,7 @@ LOCAL bool receiveData(ServerIO *serverIO)
         (void)Network_receive(&serverIO->network.socketHandle,
                               &serverIO->inputBuffer[serverIO->inputBufferLength],
                               maxBytes,
-                              NO_WAIT,
+                              timeout,
                               &readBytes
                              );
 //fprintf(stderr,"%s, %d: received socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
@@ -609,7 +610,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
 //fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
     while (!getLine(serverIO))
     {
-      receiveData(serverIO);
+      receiveData(serverIO,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG));
     }
 
     // parse
@@ -638,9 +639,13 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
           continue;
         }
 
-        error      = (errorCode != ERROR_CODE_NONE) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
-        resultFlag = TRUE;
+        error      = ERROR_NONE;
       }
+      else
+      {
+        error      = ERRORF_(errorCode,"%s",String_cString(data));
+      }
+      resultFlag = TRUE;
     }
     else
     {
@@ -1860,7 +1865,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
-  return receiveData(serverIO);
+  return receiveData(serverIO,NO_WAIT);
 }
 
 bool ServerIO_getCommand(ServerIO  *serverIO,
