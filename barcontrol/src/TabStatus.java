@@ -169,6 +169,7 @@ class JobData implements Comparable<JobData>
   int          slaveHostPort;
   SlaveStates  slaveState;
   boolean      slaveTLS;
+  boolean      slaveInsecureTLS;
   ArchiveTypes archiveType;
   long         archivePartSize;
   String       deltaCompressAlgorithm;
@@ -191,6 +192,7 @@ class JobData implements Comparable<JobData>
    * @param slaveHostPort slave host port
    * @param slaveState slave state
    * @param slaveTLS true iff TLS connection established
+   * @param slaveInsecureTLS true iff insecure TLS connection established
    * @param archiveType archive type
    * @param archivePartSize archive part size
    * @param deltaCompressAlgorithm delta compress algorithm
@@ -209,6 +211,7 @@ class JobData implements Comparable<JobData>
           int          slaveHostPort,
           SlaveStates  slaveState,
           boolean      slaveTLS,
+          boolean      slaveInsecureTLS,
           ArchiveTypes archiveType,
           long         archivePartSize,
           String       deltaCompressAlgorithm,
@@ -228,6 +231,7 @@ class JobData implements Comparable<JobData>
     this.slaveHostPort          = slaveHostPort;
     this.slaveState             = slaveState;
     this.slaveTLS               = slaveTLS;
+    this.slaveInsecureTLS       = slaveInsecureTLS;
     this.archiveType            = archiveType;
     this.archivePartSize        = archivePartSize;
     this.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -327,7 +331,7 @@ class JobData implements Comparable<JobData>
   @Override
   public String toString()
   {
-    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+":"+slaveHostPort+"', "+slaveTLS+", "+archiveType+"}";
+    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+":"+slaveHostPort+"', "+slaveTLS+", "+slaveInsecureTLS+", "+archiveType+"}";
   }
 };
 
@@ -879,6 +883,7 @@ public class TabStatus
 
   // images
   private final Image            IMAGE_LOCK;
+  private final Image            IMAGE_LOCK_INSECURE;
 
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -968,7 +973,8 @@ public class TabStatus
     COLOR_ABORTED = new Color(null,0xC0,0xC0,0xC0);
 
     // get images
-    IMAGE_LOCK = Widgets.loadImage(display,"lock.png");
+    IMAGE_LOCK          = Widgets.loadImage(display,"lock.png");
+    IMAGE_LOCK_INSECURE = Widgets.loadImage(display,"lockInsecure.png");
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
@@ -2448,6 +2454,7 @@ public class TabStatus
                                    int                 slaveHostPort          = valueMap.getInt    ("slaveHostPort",0                     );
                                    JobData.SlaveStates slaveState             = valueMap.getEnum   ("slaveState",JobData.SlaveStates.class);
                                    boolean             slaveTLS               = valueMap.getBoolean("slaveTLS",false                      );
+                                   boolean             slaveInsecureTLS       = valueMap.getBoolean("slaveInsecureTLS",true               );
                                    ArchiveTypes        archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class      );
                                    long                archivePartSize        = valueMap.getLong   ("archivePartSize"                     );
 //TODO: enum?                                                                                      
@@ -2473,6 +2480,7 @@ public class TabStatus
                                      jobData.slaveHostPort          = slaveHostPort;
                                      jobData.slaveState             = slaveState;
                                      jobData.slaveTLS               = slaveTLS;
+                                     jobData.slaveInsecureTLS       = slaveInsecureTLS;
                                      jobData.archiveType            = archiveType;
                                      jobData.archivePartSize        = archivePartSize;
                                      jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -2493,6 +2501,7 @@ public class TabStatus
                                                            slaveHostPort,
                                                            slaveState,
                                                            slaveTLS,
+                                                           slaveInsecureTLS,
                                                            archiveType,
                                                            archivePartSize,
                                                            deltaCompressAlgorithm,
@@ -2551,7 +2560,10 @@ public class TabStatus
                                           jobData.formatLastExecutedDateTime(),
                                           jobData.formatEstimatedRestTime()
                                          );
-                  if (jobData.slaveTLS) tableItem.setImage(2,IMAGE_LOCK);
+                  if (jobData.slaveTLS)
+                  {
+                    tableItem.setImage(2,jobData.slaveInsecureTLS ? IMAGE_LOCK_INSECURE : IMAGE_LOCK);
+                  }
 
                   // keep table item
                   removeTableItemSet.remove(tableItem);
@@ -2574,7 +2586,10 @@ public class TabStatus
                                                       jobData.formatLastExecutedDateTime(),
                                                       jobData.formatEstimatedRestTime()
                                                      );
-                  if (jobData.slaveTLS) tableItem.setImage(2,IMAGE_LOCK);
+                  if (jobData.slaveTLS)
+                  {
+                    tableItem.setImage(2,jobData.slaveInsecureTLS ? IMAGE_LOCK_INSECURE : IMAGE_LOCK);
+                  }
                   tableItem.setData(jobData);
                 }
 

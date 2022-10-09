@@ -226,6 +226,7 @@ typedef struct JobNode
 //TODO: required?
   SlaveStates         slaveState;
   bool                slaveTLS;                         // TRUE if slave TLS connection established
+  bool                slaveInsecureTLS;                 // TRUE if insecure slave TLS connection established
 
   StatusInfo          statusInfo;
 

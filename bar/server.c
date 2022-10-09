@@ -1230,16 +1230,17 @@ LOCAL void pairingThreadCode(void)
   /***********************************************************************\
   * Name   : updateSlaveState
   * Purpose: update slave state in job
-  * Input  : slaveNode  - slave node
-  *          slaveState - slave state
-  *          slaveTLS   - TRUE iff slave TLS connection
+  * Input  : slaveNode        - slave node
+  *          slaveState       - slave state
+  *          slaveTLS         - TRUE iff slave TLS connection
+  *          slaveInsecureTLS - TRUE iff insecure slave TLS connection
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS);
-  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS)
+  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS, bool slaveInsecureTLS);
+  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS, bool slaveInsecureTLS)
   {
     JobNode *jobNode;
 
@@ -1252,8 +1253,9 @@ LOCAL void pairingThreadCode(void)
             && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
            )
         {
-          jobNode->slaveState = slaveState;
-          jobNode->slaveTLS   = slaveTLS;
+          jobNode->slaveState       = slaveState;
+          jobNode->slaveTLS         = slaveTLS;
+          jobNode->slaveInsecureTLS = slaveInsecureTLS;
         }
       }
     }
@@ -1291,7 +1293,7 @@ LOCAL void pairingThreadCode(void)
               Connector_disconnect(&slaveNode->connectorInfo);
 
               // update slave state in job
-              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE);
+              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE,FALSE);
 
               // log info
               if (slaveNode->authorizedFlag)
@@ -1433,14 +1435,16 @@ LOCAL void pairingThreadCode(void)
                     {
                       updateSlaveState(slaveNode,
                                        SLAVE_STATE_PAIRED,
-                                       Connector_hasTLS(&slaveNode->connectorInfo)
+                                       Connector_isTLS(&slaveNode->connectorInfo),
+                                       Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                       );
                     }
                     else
                     {
                       updateSlaveState(slaveNode,
                                        SLAVE_STATE_WRONG_PROTOCOL_VERSION,
-                                       Connector_hasTLS(&slaveNode->connectorInfo)
+                                       Connector_isTLS(&slaveNode->connectorInfo),
+                                       Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                       );
                     }
                   }
@@ -1448,7 +1452,8 @@ LOCAL void pairingThreadCode(void)
                   {
                     updateSlaveState(slaveNode,
                                      SLAVE_STATE_WRONG_MODE,
-                                     Connector_hasTLS(&slaveNode->connectorInfo)
+                                     Connector_isTLS(&slaveNode->connectorInfo),
+                                     Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                     );
                   }
                 }
@@ -1457,14 +1462,16 @@ LOCAL void pairingThreadCode(void)
               {
                 updateSlaveState(slaveNode,
                                  SLAVE_STATE_ONLINE,
-                                 Connector_hasTLS(&slaveNode->connectorInfo)
+                                 Connector_isTLS(&slaveNode->connectorInfo),
+                                 Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                 );
               }
               else
               {
                 updateSlaveState(slaveNode,
                                  SLAVE_STATE_OFFLINE,
-                                 FALSE
+                                 FALSE,  // slaveTLS
+                                 FALSE  // slaveInsecureTLS
                                 );
               }
 
@@ -2881,12 +2888,9 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
 
         if (persistenceNode != NULL)
         {
-          if (   TRUE//((lastPersistenceNode == NULL) || (age > lastPersistenceNode->maxAge))
-              && (   (persistenceNode->maxAge == AGE_FOREVER)           // assign if persistence is forever
-                  || (age <= persistenceNode->maxAge)                   // assign if age is in persistence age range
-                  || (   (nextPersistenceNode == NULL)                  // assign to last existing persistence
-                     )
-                 )
+          if (   (persistenceNode->maxAge == AGE_FOREVER)           // assign if persistence is forever
+              || (age <= persistenceNode->maxAge)                   // assign if age is in persistence age range
+              || (nextPersistenceNode == NULL)                      // assign to last existing persistence
              )
           {
             jobEntityNode->persistenceNode = persistenceNode;
@@ -6219,11 +6223,6 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   #ifdef HAVE_GNU_TLS
-    if (!Configuration_isCertificateAvailable(&globalOptions.serverCA))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
-      return;
-    }
     if (!Configuration_isCertificateAvailable(&globalOptions.serverCert))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
@@ -21723,8 +21722,7 @@ Errors Server_socket(void)
   }
   if (globalOptions.serverTLSPort != 0)
   {
-    if (   Configuration_isCertificateAvailable(&globalOptions.serverCA)
-        && Configuration_isCertificateAvailable(&globalOptions.serverCert)
+    if (   Configuration_isCertificateAvailable(&globalOptions.serverCert)
         && Configuration_isKeyAvailable(&globalOptions.serverKey)
        )
     {
@@ -21758,7 +21756,6 @@ Errors Server_socket(void)
     }
     else
     {
-      if (!Configuration_isCertificateAvailable(&globalOptions.serverCA)) printWarning("no certificate authority data (bar-ca.pem file) - TLS server not started");
       if (!Configuration_isCertificateAvailable(&globalOptions.serverCert)) printWarning("no certificate data (bar-server-cert.pem file) - TLS server not started");
       if (!Configuration_isKeyAvailable(&globalOptions.serverKey)) printWarning("no key data (bar-server-key.pem file) - TLS server not started");
     }
@@ -22056,51 +22053,18 @@ Errors Server_socket(void)
             error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
             if (error == ERROR_NONE)
             {
-              // start SSL
-              #ifdef HAVE_GNU_TLS
-                error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
-                                         NETWORK_TLS_TYPE_SERVER,
-                                         globalOptions.serverCA.data,
-                                         globalOptions.serverCA.length,
-                                         globalOptions.serverCert.data,
-                                         globalOptions.serverCert.length,
-                                         globalOptions.serverKey.data,
-                                         globalOptions.serverKey.length
-                                        );
-              if (error != ERROR_NONE)
+              SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                printError("cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
-                           String_cString(clientNode->clientInfo.io.network.name),
-                           clientNode->clientInfo.io.network.port,
-                           Error_getText(error)
-                          );
-                deleteClient(clientNode);
-                AutoFree_cleanup(&autoFreeList);
-                return FALSE;
-              }
-            #else /* HAVE_GNU_TLS */
-              printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!",
-                         String_cString(clientNode->clientInfo.io.network.name),
-                         clientNode->clientInfo.io.network.port,
-                         Error_getText(error)
-                        );
-              deleteClient(clientNode);
-              AutoFree_cleanup(&autoFreeList);
-              return FALSE;
-            #endif /* HAVE_GNU_TLS */
+                // append to list of connected clients
+                List_append(&clientList,clientNode);
 
-            SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-            {
-              // append to list of connected clients
-              List_append(&clientList,clientNode);
-
-              // find authorization fail node
-              clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
-                                                                       authorizationFailNode,
-                                                                       String_equals(authorizationFailNode->clientName,
-                                                                                     clientNode->clientInfo.io.network.name
-                                                                                    )
-                                                                      );
+                // find authorization fail node
+                clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                         authorizationFailNode,
+                                                                         String_equals(authorizationFailNode->clientName,
+                                                                                       clientNode->clientInfo.io.network.name
+                                                                                      )
+                                                                        );
 
                 clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
                 if (clientWaitRestTime > 0)

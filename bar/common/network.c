@@ -307,10 +307,11 @@ or
 * Purpose: init SSL encryption on socket
 * Input  : socketHandle - socket handle
 *          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
-*          caData       - TLS CA data or NULL (PEM encoded)
-*          caLength     - TSL CA data length
-*          cert         - TLS cerificate or NULL (PEM encoded)
-*          certLength   - TSL cerificate data length
+*          caData       - TLS certificate authority data or NULL (PEM
+*                         encoded)
+*          caLength     - TSL certificate authority data length
+*          cert         - TLS certificate or NULL (PEM encoded)
+*          certLength   - TSL certificate data length
 *          key          - TLS key or NULL (PEM encoded)
 *          keyLength    - TSL key data length
 * Output : -
@@ -332,8 +333,8 @@ LOCAL Errors initSSL(SocketHandle    *socketHandle,
   int            result;
 
   assert(socketHandle != NULL);
-  assert(caData != NULL);
-  assert(caLength > 0);
+//  assert(caData != NULL);
+//  assert(caLength > 0);
   assert(certData != NULL);
   assert(certLength > 0);
   assert(keyData != NULL);
@@ -352,7 +353,7 @@ UNUSED_VARIABLE(caLength);
   }
 
   #ifdef GNUTLS_DEBUG
-    fprintf(stderr,"DEBUG GNU TLS: CA:\n"); write(STDERR_FILENO,caData,caLength); fprintf(stderr,"\n");
+    fprintf(stderr,"DEBUG GNU TLS: certificate authority:\n"); write(STDERR_FILENO,caData,caLength); fprintf(stderr,"\n");
     fprintf(stderr,"DEBUG GNU TLS: certificate:\n"); write(STDERR_FILENO,certData,certLength); fprintf(stderr,"\n");
     fprintf(stderr,"DEBUG GNU TLS: key %d:\n",keyLength); write(STDERR_FILENO,keyData,keyLength); fprintf(stderr,"\n");
   #endif /* GNUTLS_DEBUG */
@@ -450,7 +451,7 @@ NYI: how to do certificate verification?
   }
 
 #if 0
-NYI: how to enable client authentication?
+NYI: how to verify certifcate?
   result = gnutls_certificate_verify_peers2(socketHandle->gnuTLS.session,&status);
   if (result != GNUTLS_E_SUCCESS)
   {
@@ -459,6 +460,8 @@ NYI: how to enable client authentication?
     gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
     return ERRORX_(TLS_HANDSHAKE,result,"%s",gnutls_strerror(result));
   }
+#else
+  socketHandle->gnuTLS.verifiedCertificate = FALSE;
 #endif /* 0 */
 
   return ERROR_NONE;
@@ -627,6 +630,7 @@ Errors Network_connect(SocketHandle *socketHandle,
   switch (socketType)
   {
     case SOCKET_TYPE_PLAIN:
+    case SOCKET_TYPE_TLS:
       {
         // get host IP address
         #if   defined(HAVE_GETHOSTBYNAME_R)
@@ -684,9 +688,6 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
       }
-      break;
-    case SOCKET_TYPE_TLS:
-      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -893,6 +894,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
 
         // init SSL
         error = initSSL(socketHandle,
+// TODO: parameter?
                         NETWORK_TLS_TYPE_SERVER,
                         caData,
                         caLength,
@@ -1531,17 +1533,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
     case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
       {
-        gnutls_x509_crt_t cert;
-        gnutls_datum_t    datum;
-        time_t            certActivationTime,certExpireTime;
-        char              buffer[64];
-
-        // check if all key files exists
-        if (caData == NULL)
-        {
-          disconnectDescriptor(serverSocketHandle->handle);
-          return ERROR_NO_TLS_CA;
-        }
+        // check if certificate/key exists
         if (certData == NULL)
         {
           disconnectDescriptor(serverSocketHandle->handle);
@@ -1554,67 +1546,14 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         }
 
         // check if certificate is valid
-        if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
+        error = validateCertificate(certData,certLength);
+        if (error != ERROR_NONE)
         {
           disconnectDescriptor(serverSocketHandle->handle);
-          return ERROR_INVALID_TLS_CERTIFICATE;
+          return error;
         }
-        datum.data = (void*)certData;
-        datum.size = certLength;
-        if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
-        {
-          gnutls_x509_crt_deinit(cert);
-          disconnectDescriptor(serverSocketHandle->handle);
-          return ERROR_INVALID_TLS_CERTIFICATE;
-        }
-        certActivationTime = gnutls_x509_crt_get_activation_time(cert);
-        if (certActivationTime != (time_t)(-1))
-        {
-          if (time(NULL) < certActivationTime)
-          {
-            gnutls_x509_crt_deinit(cert);
-            disconnectDescriptor(serverSocketHandle->handle);
-            return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,FALSE,DATE_TIME_FORMAT_LOCALE));
-          }
-        }
-        certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
-        if (certExpireTime != (time_t)(-1))
-        {
-          if (time(NULL) > certExpireTime)
-          {
-            gnutls_x509_crt_deinit(cert);
-            disconnectDescriptor(serverSocketHandle->handle);
-            return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,FALSE,DATE_TIME_FORMAT_LOCALE));
-          }
-        }
-#if 0
-NYI: how to do certificate verification?
-gnutls_x509_crt_t ca;
-gnutls_x509_crt_init(&ca);
-data=Xread_file("/etc/ssl/certs/bar-ca.pem",&size);
-d.data=data,d.size=size;
-fprintf(stderr,"%s,%d: import=%d\n",__FILE__,__LINE__,gnutls_x509_crt_import(ca,&d,GNUTLS_X509_FMT_PEM));
 
-        if (gnutls_x509_crt_verify(cert,&ca,1,0,&verify));
-
-or
-
-        result = gnutls_certificate_set_x509_trust_file(serverSocketHandle->gnuTLSCredentials,
-                                                        caFileName,
-                                                        GNUTLS_X509_FMT_PEM
-                                                       );
-        if (result < 0)
-        {
-          gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
-          gnutls_x509_crt_deinit(cert);
-          disconnectDescriptor(serverSocketHandle->handle);
-          return ERROR_INVALID_TLS_CA;
-        }
-        gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
-#endif /* 0 */
-        gnutls_x509_crt_deinit(cert);
-
-        // store CA, certificate, key for connect requests
+        // store certificate authority, certificate, key for connect requests
         serverSocketHandle->caData     = caData;
         serverSocketHandle->caLength   = caLength;
         serverSocketHandle->certData   = certData;

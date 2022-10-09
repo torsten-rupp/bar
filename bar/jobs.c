@@ -1251,6 +1251,7 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->jobState                         = JOB_STATE_NONE;
   jobNode->slaveState                       = SLAVE_STATE_OFFLINE;
   jobNode->slaveTLS                         = FALSE;
+  jobNode->slaveInsecureTLS                 = FALSE;
 
   initStatusInfo(&jobNode->statusInfo);
 
@@ -1330,6 +1331,7 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->jobState                         = JOB_STATE_NONE;
   newJobNode->slaveState                       = SLAVE_STATE_OFFLINE;
   newJobNode->slaveTLS                         = FALSE;
+  newJobNode->slaveInsecureTLS                 = FALSE;
 
   initStatusInfo(&newJobNode->statusInfo);
 

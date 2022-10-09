@@ -405,17 +405,17 @@ INLINE bool ServerIO_isConnected(const ServerIO *serverIO)
 #endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : ServerIO_isConnected
-* Purpose: check if connected
+* Name   : ServerIO_isTLS
+* Purpose: check if TLS connection
 * Input  : serverIO - server i/o
 * Output : -
-* Return : TRUE iff connected
+* Return : TRUE iff TLS connection
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool ServerIO_hasTLS(const ServerIO *serverIO);
+INLINE bool ServerIO_isTLS(const ServerIO *serverIO);
 #if defined(NDEBUG) || defined(__SERVER_IO_IMPLEMENTATION__)
-INLINE bool ServerIO_hasTLS(const ServerIO *serverIO)
+INLINE bool ServerIO_isTLS(const ServerIO *serverIO)
 {
   bool hasTLS;
 
@@ -427,7 +427,7 @@ INLINE bool ServerIO_hasTLS(const ServerIO *serverIO)
     case SERVER_IO_TYPE_NONE:
       break;
     case SERVER_IO_TYPE_NETWORK:
-      hasTLS = Network_hasTLS(&serverIO->network.socketHandle);
+      hasTLS = Network_isTLS(&serverIO->network.socketHandle);
       break;
     case SERVER_IO_TYPE_BATCH:
       break;
@@ -441,6 +441,45 @@ INLINE bool ServerIO_hasTLS(const ServerIO *serverIO)
   return hasTLS;
 }
 #endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : ServerIO_isInsecureTLS
+* Purpose: check if insecure TLS connection
+* Input  : serverIO - server i/o
+* Output : -
+* Return : TRUE iff insecure TLS connection
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool ServerIO_isInsecureTLS(const ServerIO *serverIO);
+#if defined(NDEBUG) || defined(__SERVER_IO_IMPLEMENTATION__)
+INLINE bool ServerIO_isInsecureTLS(const ServerIO *serverIO)
+{
+  bool hasTLS;
+
+  assert(serverIO != NULL);
+
+  hasTLS = FALSE;
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      hasTLS = Network_isInsecureTLS(&serverIO->network.socketHandle);
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+
+  return hasTLS;
+}
+#endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
+
 
 // ----------------------------------------------------------------------
 

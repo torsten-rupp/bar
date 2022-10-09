@@ -406,7 +406,7 @@ public class Settings
   // --------------------------- constants --------------------------------
   static final String DEFAULT_SERVER_NAME                 = "localhost";
   static final int    DEFAULT_SERVER_PORT                 = 38523;
-  static final int    DEFAULT_SERVER_TLS_PORT             = 38524;
+  static final int    DEFAULT_SERVER_TLS_PORT             = 0;
   static final String DEFAULT_BARCONTROL_CONFIG_FILE_NAME = System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.cfg";
 
   static final int    MAX_SERVER_HISTORY = 10;

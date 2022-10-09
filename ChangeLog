@@ -1,4 +1,6 @@
 2022-09-09 0.22a
+  * disabled TLS port by default (TLS also work on
+    standard port)
   * support TLS connections to slaves
   * fixed add newest entry if no entry exists
   * bar-index: fixed clean orphaned
