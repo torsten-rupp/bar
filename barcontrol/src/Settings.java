@@ -445,8 +445,6 @@ public class Settings
   public static LinkedHashSet<Server>          servers                         = new LinkedHashSet<Server>();
   @SettingValue(name="server-ca-file")
   public static String                         serverCAFileName                = null;
-  @SettingValue(name="server-cert-file")
-  public static String                         serverCertificateFileName       = null;
   @SettingValue(name="server-key-file")
   public static String                         serverKeyFileName               = null;
   @SettingValue(name="no-tls")

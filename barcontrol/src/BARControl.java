@@ -2020,6 +2020,7 @@ public class BARControl
 
   // --------------------------- variables --------------------------------
   // images
+  private static Image IMAGE_ERROR;
   private static Image IMAGE_LOCK;
   private static Image IMAGE_LOCK_INSECURE;
 
@@ -2608,7 +2609,6 @@ if (false) {
    * @param port server port
    * @param tlsPort server TLS port
    * @param caFileName server certificate authority file
-   * @param certificateFileName server certificate file
    * @param keyFileName server key file
    * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
@@ -2618,7 +2618,6 @@ if (false) {
                        int                port,
                        int                tlsPort,
                        String             caFileName,
-                       String             certificateFileName,
                        String             keyFileName,
                        BARServer.TLSModes tlsMode,
                        boolean            insecureTLS,
@@ -2656,7 +2655,6 @@ if (false) {
                         port,
                         tlsPort,
                         caFileName,
-                        certificateFileName,
                         keyFileName,
                         tlsMode,
                         insecureTLS,
@@ -2666,6 +2664,30 @@ if (false) {
     finally
     {
       if (busyDialog != null) busyDialog.close();
+    }
+  }
+
+  /** reconnect
+   * @param tlsMode TLS mode; see BARServer.TLSModes
+   * @param insecureTLS true to allow insecure TLS
+   */
+  private void reconnect(BARServer.TLSModes tlsMode, boolean insecureTLS)
+    throws ConnectionError,CommunicationError
+  {
+    connect(loginData.name,
+            loginData.port,
+            loginData.tlsPort,
+            Settings.serverCAFileName,
+            Settings.serverKeyFileName,
+            tlsMode,
+            insecureTLS,
+            loginData.password
+           );
+
+    // show warning if no TLS connection established
+    if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+    {
+      Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
     }
   }
 
@@ -2742,7 +2764,13 @@ if (false) {
                 {
                   if (!shell.isDisposed())
                   {
-                    switch (Dialogs.select(shell,"Warning","Class/JAR file '"+file.getName()+"' changed. Is is recommended to restart BARControl now.",new String[]{"Restart","Remind me again in 5min","Ignore"},0))
+                    switch (Dialogs.select(shell,
+                                           BARControl.tr("Warning"),
+                                           BARControl.tr("Class/JAR file ''{0}'' changed. Is is recommended to restart BARControl now.",file.getName()),
+                                           new String[]{"Restart","Remind me again in 5min","Ignore"},
+                                           0
+                                          )
+                           )
                     {
                       case 0:
                         // send close event with restart
@@ -3402,6 +3430,22 @@ if (false) {
         }
       });
 
+      Widgets.addMenuItemSeparator(menu,Settings.hasExpertRole());
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W',Settings.hasExpertRole());
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          ServerSettings.serverSettings(shell);
+        }
+      });
+
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clear stored passwords on server"),SWT.NONE,Settings.hasExpertRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -3420,22 +3464,6 @@ if (false) {
           {
             Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n{0}",exception.getMessage()));
           }
-        }
-      });
-
-      Widgets.addMenuItemSeparator(menu,Settings.hasExpertRole());
-
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W',Settings.hasExpertRole());
-      menuItem.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          ServerSettings.serverSettings(shell);
         }
       });
 
@@ -3544,6 +3572,114 @@ if (false) {
           }
         });
       }
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Set certificate authority (CA)")+"\u2026",SWT.NONE);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          String fileName = Dialogs.file(shell,
+                                         Dialogs.FileDialogTypes.OPEN,
+                                         BARControl.tr("Select certificate authority (CA) file"),
+                                         Settings.serverCAFileName,
+                                         new String[]{BARControl.tr("Certificate files PEM"),"*.pem",
+                                                      BARControl.tr("Certificate files"),"*.crt",
+                                                      BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                     },
+                                         "*.pem",
+                                         BARControl.listDirectory
+                                        );
+          if (fileName != null)
+          {
+            Settings.serverCAFileName = fileName;
+            if (Dialogs.confirm(shell,BARControl.tr("Reconnect to server with new certificate authority?")))
+            {
+              boolean reconnected           = false;
+              String  reconnectErrorMessage = null;
+
+              if (!reconnected)
+              {
+                // try reconnect with existing TLS settings
+                try
+                {
+                  reconnect(BARServer.TLSModes.FORCE,false);
+                  
+                  Settings.serverNoTLS       = false;
+                  Settings.serverForceTLS    = true;
+                  Settings.serverInsecureTLS = false;
+
+                  reconnected = true;
+                }
+                catch (ConnectionError error)
+                {
+                  reconnectErrorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  reconnectErrorMessage = error.getMessage();
+                }
+              }
+
+              if (!reconnected)
+              {
+                switch (Dialogs.select(shell,
+                                       BARControl.tr("Reconnection fail"),
+                                       IMAGE_ERROR,
+                                       (reconnectErrorMessage != null)
+                                         ? reconnectErrorMessage
+                                         : BARControl.tr("Reconnect with new certificate authority fail"),
+                                       new String[]
+                                       {
+                                         BARControl.tr("Try with insecure TLS (SSL)"),
+                                         BARControl.tr("Cancel")
+                                       },
+                                       0
+                                      )
+                       )
+                {
+                  case 0:
+                    // try reconnect with insecure TLS
+                    try
+                    {
+                      reconnect(BARServer.TLSModes.FORCE,true);
+
+                      Settings.serverNoTLS       = false;
+                      Settings.serverForceTLS    = true;
+                      Settings.serverInsecureTLS = true;
+                      
+                      reconnected = true;
+                    }
+                    catch (ConnectionError error)
+                    {
+                      reconnectErrorMessage = error.getMessage();
+                    }
+                    catch (CommunicationError error)
+                    {
+                      reconnectErrorMessage = error.getMessage();
+                    }
+                    break;
+                  case 1:
+                    return;
+                }
+              }
+
+              if (!reconnected)
+              {
+                Dialogs.error(shell,
+                              (reconnectErrorMessage != null)
+                                ? BARControl.tr("Reconnect with new certificate authority fail:\n\n{0}",reconnectErrorMessage)
+                                : BARControl.tr("Reconnect with new certificate authority fail")
+                             );
+              }
+            }
+          }
+        }
+      });
 
       Widgets.addMenuItemSeparator(menu);
 
@@ -3823,7 +3959,6 @@ if (false) {
                   loginData.port,
                   loginData.tlsPort,
                   Settings.serverCAFileName,
-                  Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
                   loginData.tlsMode,
                   Settings.serverInsecureTLS,
@@ -3886,7 +4021,6 @@ if (false) {
                   loginData.port,
                   loginData.tlsPort,
                   Settings.serverCAFileName,
-                  Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
                   loginData.tlsMode,
                   Settings.serverInsecureTLS,
@@ -4814,7 +4948,6 @@ if (false) {
                   loginData.port,
                   loginData.tlsPort,
                   Settings.serverCAFileName,
-                  Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
                   loginData.tlsMode,
                   Settings.serverInsecureTLS,
@@ -4837,17 +4970,32 @@ if (false) {
       {
         if (loginData.tlsMode == BARServer.TLSModes.FORCE)
         {
-          final Image IMAGE = Widgets.loadImage(new Shell().getDisplay(),"error.png");
-
           if (!Settings.serverInsecureTLS)
           {
+            // get last received certificate as extended message (limit line length to 80 characters)
+            String extendedMessage[];
+            if (BARServer.getServerCertificate() != null)
+            {
+              extendedMessage = StringUtils.splitArray(BARServer.getServerCertificate().toString(),'\n');
+              for (int i = 0; i < extendedMessage.length; i++)
+              {
+                if (extendedMessage[i].length() > 80) extendedMessage[i] = extendedMessage[i].substring(0,80)+"\u2026";
+              }
+            }
+            else
+            {
+              extendedMessage = null;
+            }
+
             // try again with insecure TLS/without TLS
             switch (Dialogs.select(new Shell(),
                                    BARControl.tr("Connection fail"),
-                                   IMAGE,
+                                   IMAGE_ERROR,
                                    (connectErrorMessage != null)
-                                     ? BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage
+                                     ? connectErrorMessage
                                      : BARControl.tr("Connection fail"),
+                                   BARControl.tr("Certificate:"),
+                                   extendedMessage,
                                    new String[]
                                    {
                                      BARControl.tr("Try with insecure TLS (SSL)"),
@@ -4866,7 +5014,6 @@ if (false) {
                                     loginData.port,
                                     loginData.tlsPort,
                                     (String)null,  // caFileName
-                                    (String)null,  // certificateFileName
                                     (String)null,  // keyFileName
                                     loginData.tlsMode,
                                     true, // insecureTLS,
@@ -4891,7 +5038,6 @@ if (false) {
                                     loginData.port,
                                     loginData.tlsPort,
                                     (String)null,  // caFileName
-                                    (String)null,  // certificateFileName
                                     (String)null,  // keyFileName
                                     BARServer.TLSModes.NONE,
                                     false, // insecureTLS,
@@ -4918,9 +5064,9 @@ if (false) {
             // try again without TLS
             switch (Dialogs.select(new Shell(),
                                    BARControl.tr("Connection fail"),
-                                   IMAGE,
+                                   IMAGE_ERROR,
                                    (connectErrorMessage != null)
-                                     ? BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage
+                                     ? connectErrorMessage
                                      : BARControl.tr("Connection fail"),
                                    new String[]
                                    {
@@ -4939,7 +5085,6 @@ if (false) {
                                     loginData.port,
                                     loginData.tlsPort,
                                     (String)null,  // caFileName
-                                    (String)null,  // certificateFileName
                                     (String)null,  // keyFileName
                                     BARServer.TLSModes.NONE,
                                     false, // insecureTLS,
@@ -5086,7 +5231,6 @@ if (false) {
                   loginData.port,
                   loginData.tlsPort,
                   Settings.serverCAFileName,
-                  Settings.serverCertificateFileName,
                   Settings.serverKeyFileName,
                   loginData.tlsMode,
                   Settings.serverInsecureTLS,
@@ -6214,6 +6358,7 @@ Dprintf.dprintf("still not supported");
         display = new Display();
 
         // get images
+        IMAGE_ERROR         = Widgets.loadImage(display,"error.png");
         IMAGE_LOCK          = Widgets.loadImage(display,"lock.png");
         IMAGE_LOCK_INSECURE = Widgets.loadImage(display,"lockInsecure.png");
 
