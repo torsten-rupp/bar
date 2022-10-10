@@ -26,7 +26,7 @@ BEGIN {
   next;
 }
 /^[0-9]+ VERSION/ {
-  send($1,1,0,"major=6 minor=0 mode=MASTER");
+  send($1,1,0,"major=7 minor=0 mode=MASTER");
   next;
 }
 /^[0-9]+ GET name=PATH_SEPARATOR/ {
@@ -60,14 +60,15 @@ BEGIN {
                state=DONE \
                slaveHostName='' \
                slaveHostPort=0 \
-               slaveHostForceSSL=no \
+               slaveTLSMode=none \
                slaveState=OFFLINE \
+               slaveTLS=no \
                archiveType=FULL \
-               archivePartSize=1000000 \
+               archivePartSize=1073741824 \
                deltaCompressAlgorithm=none \
                byteCompressAlgorithm=none \
-               cryptAlgorithm=none \
-               cryptType=symmetic \
+               cryptAlgorithm=AES256 \
+               cryptType=asymmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
                lastErrorMessage='' estimatedRestTime=0 \
@@ -76,18 +77,19 @@ BEGIN {
                master='' \
                name='home-webdav' \
                state=NONE \
-               slaveHostName='' \
+               slaveHostName='webdav-server' \
                slaveHostPort=0 \
-               slaveHostForceSSL=no \
-               slaveState=OFFLINE \
+               slaveTLSMode=force \
+               slaveState=PAIRED \
+               slaveTLS=yes \
                archiveType=FULL \
-               archivePartSize=1000000 \
+               archivePartSize=0 \
                deltaCompressAlgorithm=none \
                byteCompressAlgorithm=none \
                cryptAlgorithm=none \
-               cryptType=symmetic \
+               cryptType=symmetric \
                cryptPasswordMode=ask \
-               lastExecutedDateTime=0 \
+               lastExecutedDateTime=1665331796 \
                lastErrorMessage='' estimatedRestTime=0 \
               ");
   send($1,0,0,"jobUUID=3 \
@@ -96,17 +98,18 @@ BEGIN {
                state=RUNNING \
                slaveHostName='' \
                slaveHostPort=0 \
-               slaveHostForceSSL=no \
+               slaveTLSMode=none \
                slaveState=OFFLINE \
+               slaveTLS=no \
                archiveType=FULL \
-               archivePartSize=1000000 \
+               archivePartSize=2147483648 \
                deltaCompressAlgorithm=none \
-               byteCompressAlgorithm=none \
+               byteCompressAlgorithm=lzma9 \
                cryptAlgorithm=none \
-               cryptType=symmetic \
+               cryptType=symmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
-               lastErrorMessage='' estimatedRestTime=0 \
+               lastErrorMessage='' estimatedRestTime=3921 \
               ");
   send($1,0,0,"jobUUID=4 \
                master='' \
@@ -114,14 +117,15 @@ BEGIN {
                state=NONE \
                slaveHostName='' \
                slaveHostPort=0 \
-               slaveHostForceSSL=no \
+               slaveTLSMode=none \
                slaveState=OFFLINE \
+               slaveTLS=no \
                archiveType=FULL \
-               archivePartSize=1000000 \
+               archivePartSize=1073741824 \
                deltaCompressAlgorithm=none \
                byteCompressAlgorithm=none \
                cryptAlgorithm=none \
-               cryptType=symmetic \
+               cryptType=symmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
                lastErrorMessage='' estimatedRestTime=0 \
@@ -132,14 +136,15 @@ BEGIN {
                state=NONE \
                slaveHostName='' \
                slaveHostPort=0 \
-               slaveHostForceSSL=no \
+               slaveTLSMode=none \
                slaveState=OFFLINE \
+               slaveTLS=no \
                archiveType=FULL \
-               archivePartSize=1000000 \
+               archivePartSize=1073741824 \
                deltaCompressAlgorithm=none \
-               byteCompressAlgorithm=none \
-               cryptAlgorithm=none \
-               cryptType=symmetic \
+               byteCompressAlgorithm=zstd1 \
+               cryptAlgorithm=AES256 \
+               cryptType=symmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
                lastErrorMessage='' estimatedRestTime=0 \
@@ -150,14 +155,15 @@ BEGIN {
                state=WAITING \
                slaveHostName='' \
                slaveHostPort=0 \
-               slaveHostForceSSL=no \
+               slaveTLSMode=none \
                slaveState=OFFLINE \
+               slaveTLS=no \
                archiveType=FULL \
-               archivePartSize=1000000 \
+               archivePartSize=0 \
                deltaCompressAlgorithm=none \
                byteCompressAlgorithm=none \
-               cryptAlgorithm=none \
-               cryptType=symmetic \
+               cryptAlgorithm=AES256 \
+               cryptType=symmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
                lastErrorMessage='' estimatedRestTime=0 \
@@ -363,19 +369,19 @@ BEGIN {
   next;
 }
 /^[0-9]+ INDEX_UUID_LIST/ {
-  send($1,0,0,"uuidId=49 jobUUID=c3254f37-77a9-49e4-a89a-a42b9bfe999d name='home' lastExecutedDateTime=1582360203 lastErrorMessage='' totalSize=16300722702 totalEntryCount=129056 totalEntrySize=56126801090");
-  send($1,0,0,"uuidId=49 jobUUID=c3254f37-77a9-49e4-a89a-a42b9bfe999d name='projects-hd' lastExecutedDateTime=1582370203 lastErrorMessage='' totalSize=16300722702 totalEntryCount=129056 totalEntrySize=56126801090");
-  send($1,0,0,"uuidId=81 jobUUID=a4cf9808-6a0c-482a-a9c1-4afb1deb0113 name='projects-webdav' lastExecutedDateTime=1582371051 lastErrorMessage='' totalSize=9287385764 totalEntryCount=100554 totalEntrySize=39621108735");
-  send($1,0,0,"uuidId=113 jobUUID=405a50b0-e9cf-41ab-833e-91024c2237cb name='mail' lastExecutedDateTime=1582342028 lastErrorMessage='' totalSize=2669529474 totalEntryCount=55571 totalEntrySize=3729023628");
-  send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 name='system-hd' lastExecutedDateTime=1582342898 lastErrorMessage='' totalSize=879566294 totalEntryCount=34860 totalEntrySize=6319439693");
-  send($1,0,0,"uuidId=161 jobUUID=46105e1f-0d6d-48de-ba91-03d7d6e6d60e name='pictures' lastExecutedDateTime=1582355795 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=d65bf4f4-c284-425c-8eb9-84b169411e2e name='projects-deltanetworks' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=c86619cf-0f28-42f3-8426-e82b24d6463e name='projects-webdav-gmx' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=315c21f9-7659-4f97-a672-6eaef4d9d8d2 name='projects-continuous' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=4d55e653-a54c-4b1d-810b-7326bac39df4 name='system-dvd' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=338d03b0-7b0c-4a55-a927-c62a69eced1e name='virtualbox' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=3d048506-31b8-4e57-bc40-8c0486ab48d5 name='4share' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"uuidId=0 jobUUID=313de035-a8a1-4a93-b56a-46936cfd9982 name='home-music' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=49 jobUUID=c3254f37-77a9-49e4-a89a-a42b9bfe999d name='home' lastExecutedDateTime=1582360203 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=16300722702 totalEntryCount=129056 totalEntrySize=56126801090");
+  send($1,0,0,"uuidId=49 jobUUID=c3254f37-77a9-49e4-a89a-a42b9bfe999d name='projects-hd' lastExecutedDateTime=1582370203 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=16300722702 totalEntryCount=129056 totalEntrySize=56126801090");
+  send($1,0,0,"uuidId=81 jobUUID=a4cf9808-6a0c-482a-a9c1-4afb1deb0113 name='projects-webdav' lastExecutedDateTime=1582371051 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=9287385764 totalEntryCount=100554 totalEntrySize=39621108735");
+  send($1,0,0,"uuidId=113 jobUUID=405a50b0-e9cf-41ab-833e-91024c2237cb name='mail' lastExecutedDateTime=1582342028 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=2669529474 totalEntryCount=55571 totalEntrySize=3729023628");
+  send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 name='system-hd' lastExecutedDateTime=1582342898 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=879566294 totalEntryCount=34860 totalEntrySize=6319439693");
+  send($1,0,0,"uuidId=161 jobUUID=46105e1f-0d6d-48de-ba91-03d7d6e6d60e name='pictures' lastExecutedDateTime=1582355795 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=d65bf4f4-c284-425c-8eb9-84b169411e2e name='projects-deltanetworks' lastExecutedDateTime=0 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=c86619cf-0f28-42f3-8426-e82b24d6463e name='projects-webdav-gmx' lastExecutedDateTime=0 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=315c21f9-7659-4f97-a672-6eaef4d9d8d2 name='projects-continuous' lastExecutedDateTime=0 lastErrorMessage='' lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=4d55e653-a54c-4b1d-810b-7326bac39df4 name='system-dvd' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 lastErrorCode=0 lastErrorData='' totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=338d03b0-7b0c-4a55-a927-c62a69eced1e name='virtualbox' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 lastErrorCode=0 lastErrorData='' totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=3d048506-31b8-4e57-bc40-8c0486ab48d5 name='4share' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 lastErrorCode=0 lastErrorData='' totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"uuidId=0 jobUUID=313de035-a8a1-4a93-b56a-46936cfd9982 name='home-music' lastExecutedDateTime=0 lastErrorMessage='' totalSize=0 lastErrorCode=0 lastErrorData='' totalEntryCount=0 totalEntrySize=0");
   send($1,1,0);
   next;
 }

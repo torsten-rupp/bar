@@ -515,6 +515,7 @@ public class Settings
   // debug
   public static int                            debugLevel                      = 0;
   public static boolean                        debugIgnoreProtocolVersion      = false;
+  public static boolean                        debugFakeTLSFlag                = false;
   public static boolean                        debugQuitServerFlag             = false;
 
   // server name
