@@ -1,4 +1,5 @@
 /***********************************************************************\
+/***********************************************************************\
 *
 * $Revision: 1564 $
 * $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
@@ -2897,6 +2898,8 @@ class Dialogs
    * @param title title string
    * @param image image
    * @param message confirmation message
+   * @param extendedMessageTitle extended message title or null
+   * @param extendedMessage extended message or null
    * @param texts array with texts
    * @param helpTexts help texts or null
    * @param enabled array with enabled flags
@@ -2910,6 +2913,8 @@ class Dialogs
                            String                    title,
                            Image                     image,
                            String                    message,
+                           String                    extendedMessageTitle,
+                           String[]                  extendedMessage,
                            String[]                  texts,
                            String[]                  helpTexts,
                            boolean[]                 enabled,
@@ -2920,6 +2925,7 @@ class Dialogs
   {
     Composite composite,subComposite;
     Label     label;
+    Text      text;
     Button    button;
 
     assert((helpTexts == null) || (helpTexts.length == texts.length));
@@ -2955,7 +2961,26 @@ class Dialogs
               // message
               label = new Label(subComposite,SWT.LEFT|SWT.WRAP);
               label.setText(message);
-              label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4)); row++;
+              label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4));
+              row++;
+            }
+            
+            if (extendedMessage != null)
+            {
+              if (extendedMessageTitle != null)
+              {
+                // extended message title
+                label = new Label(subComposite,SWT.LEFT|SWT.WRAP);
+                label.setText(extendedMessageTitle);
+                label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4));
+                row++;
+              }
+
+              // extended message
+              text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
+              text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
+              text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,120));
+              row++;
             }
 
             // buttons
@@ -3066,11 +3091,11 @@ class Dialogs
           {
             int textWidth = 0;
             GC gc = new GC(composite);
-            for (String text : texts)
+            for (String text_ : texts)
             {
-              if (text != null)
+              if (text_ != null)
               {
-                textWidth = Math.max(textWidth,gc.textExtent(text).x);
+                textWidth = Math.max(textWidth,gc.textExtent(text_).x);
               }
             }
             gc.dispose();
@@ -3136,6 +3161,36 @@ class Dialogs
    * @param parentShell parent shell
    * @param showAgainFieldFlag show again field updater or null
    * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param extendedMessageTitle extended message title or null
+   * @param extendedMessage extended message or null
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1) or -1
+   */
+  public static int select(Shell                     parentShell,
+                           final BooleanFieldUpdater showAgainFieldFlag,
+                           String                    title,
+                           Image                     image,
+                           String                    message,
+                           String                    extendedMessageTitle,
+                           String[]                  extendedMessage,
+                           String[]                  texts,
+                           String[]                  helpTexts,
+                           boolean[]                 enabled,
+                           int                       defaultValue
+                          )
+  {
+    return select(parentShell,showAgainFieldFlag,title,image,message,extendedMessageTitle,extendedMessage,texts,helpTexts,enabled,(String)null,(String)null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
    * @param message confirmation message
    * @param texts array with texts
    * @param helpTexts help texts or null
@@ -3159,7 +3214,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,helpTexts,enabled,okText,cancelText,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,(String)null,(String[])null,texts,helpTexts,enabled,okText,cancelText,defaultValue);
   }
 
   /** select dialog
@@ -3186,7 +3241,7 @@ class Dialogs
                            String    cancelText,
                            int       defaultValue)
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,(String)null,(String[])null,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3213,7 +3268,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,(String)null,(String[])null,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3239,7 +3294,7 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,image,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,image,message,(String)null,(String[])null,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3265,7 +3320,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,(String)null,(String[])null,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3289,7 +3344,7 @@ class Dialogs
                            int       defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,(String)null,(String[])null,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3313,7 +3368,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,(String)null,(String[])null,texts,helpTexts,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3337,7 +3392,7 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,image,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,image,message,(String)null,(String[])null,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3361,7 +3416,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,IMAGE,message,(String)null,(String[])null,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3383,7 +3438,7 @@ class Dialogs
                            int       defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,(String)null,(String[])null,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3405,7 +3460,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,(String)null,(String[])null,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3454,6 +3509,32 @@ class Dialogs
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
     return select(parentShell,showAgainFieldFlag,title,IMAGE,message,texts,helpTexts,(boolean[])null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
+   * @param extendedMessageTitle extended message title or null
+   * @param extendedMessage extended message or null
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell    parentShell,
+                           String   title,
+                           Image    image,
+                           String   message,
+                           String   extendedMessageTitle,
+                           String[] extendedMessage,
+                           String[] texts,
+                           String[] helpTexts,
+                           int      defaultValue
+                          )
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,extendedMessageTitle,extendedMessage,texts,helpTexts,(boolean[])null,defaultValue);
   }
 
   /** select dialog
@@ -3549,6 +3630,31 @@ class Dialogs
    * @param title title string
    * @param image image
    * @param message confirmation message
+   * @param extendedMessageTitle extended message title or null
+   * @param extendedMessage extended message or null
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell    parentShell,
+                           String   title,
+                           Image    image,
+                           String   message,
+                           String   extendedMessageTitle,
+                           String[] extendedMessage,
+                           String[] texts,
+                           int      defaultValue
+                          )
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,image,message,extendedMessageTitle,extendedMessage,texts,(String[])null,(boolean[])null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param image image
+   * @param message confirmation message
    * @param texts array with texts
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
@@ -3585,7 +3691,31 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
-    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,texts,(String[])null,(boolean[])null,okText,cancelText,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,(String)null,(String[])null,texts,(String[])null,(boolean[])null,okText,cancelText,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param extendedMessageTitle extended message title or null
+   * @param extendedMessage extended message or null
+   * @param texts array with texts
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell    parentShell,
+                           String   title,
+                           String   message,
+                           String   extendedMessageTitle,
+                           String[] extendedMessage,
+                           String[] texts,
+                           int      defaultValue
+                          )
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return select(parentShell,(BooleanFieldUpdater)null,title,IMAGE,message,extendedMessageTitle,extendedMessage,texts,(String[])null,(boolean[])null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -4929,7 +5059,7 @@ class Dialogs
               {
                 if (   (showHidden || !listDirectory.isHidden(file))
                     && (showFiles || listDirectory.isDirectory(file))
-                    && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
+                    && ((fileFilterPattern == null) || listDirectory.isDirectory(file) || fileFilterPattern.matcher(file.getName()).matches())
                    )
                 {
                   // find insert index
@@ -4947,7 +5077,8 @@ class Dialogs
                   tableItem.setData(file);
                   tableItem.setText(0,file.getName());
                   if (file.isDirectory()) tableItem.setImage(0,imageDirectory);
-//                  else if file.isSymbolicLink())tableItem.setText(0,IMAGE_DIRECTORY;
+// TODO:
+//                  else if file.isSymbolicLink()) tableItem.setText(0,imageLink);
                   else                    tableItem.setImage(0,imageFile);
                   tableItem.setText(1,simpleDateFormat.format(new Date(file.lastModified())));
                   if (file.isDirectory()) tableItem.setText(2,"");
@@ -5699,7 +5830,8 @@ class Dialogs
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            String filter = widgetFilter.getText();
+            Combo  widget = (Combo)selectionEvent.widget;
+            String filter = widget.getText();
             if (filter.isEmpty()) filter = "*";
 
             widgetFilter.setText(filter);
@@ -5715,18 +5847,22 @@ class Dialogs
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            String filter = widgetFilter.getText();
-            if (filter.isEmpty()) filter = "*";
+            Combo  widget = (Combo)selectionEvent.widget;
+            int index = widget.getSelectionIndex();
+            if (index >= 0)
+            {
+              String filter = fileExtensions[index*2+1];
 
-            widgetFilter.setText(filter);
+              widgetFilter.setText(filter);
 
-            updater.setFileFilter(widgetFilter.getText());
-            updater.updateFileList(widgetFileList,
-                                   IMAGE_DIRECTORY,
-                                   IMAGE_FILE,
-                                   (T)widgetPath.getData(),
-                                   (widgetName != null) ? widgetName.getText() : null
-                                  );
+              updater.setFileFilter(widgetFilter.getText());
+              updater.updateFileList(widgetFileList,
+                                     IMAGE_DIRECTORY,
+                                     IMAGE_FILE,
+                                     (T)widgetPath.getData(),
+                                     (widgetName != null) ? widgetName.getText() : null
+                                    );
+            }
           }
         });
       }

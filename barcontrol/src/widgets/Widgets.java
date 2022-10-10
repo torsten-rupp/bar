@@ -5271,7 +5271,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Combo widget = (Combo)selectionEvent.widget;
-        setField(data,field,widget.getSelection());
+        setField(data,field,widget.getSelectionIndex());
       }
     });
 

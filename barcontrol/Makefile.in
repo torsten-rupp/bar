@@ -106,8 +106,8 @@ CLASSPATH                = $(subst $() $(),:,classes $(SWT_JARS) $(JLINE_JARS) $
 
 ENVIRONMENT              = SWT_GTK3=0
 
-BARCONTROL_OPTIONS       = --config=/tmp/barcontrol.cfg --key-file=../bar-key.pem --ca-file=../bar-ca.pem --role=expert
-BARCONTROL_SLAVE_OPTIONS = --config=/tmp/barcontrol.cfg --key-file=../bar-key.pem --ca-file=../bar-ca.pem --role=expert
+BARCONTROL_OPTIONS       = --config=/tmp/barcontrol.cfg --ca-file=../bar-ca.pem --role=expert
+BARCONTROL_SLAVE_OPTIONS = --config=/tmp/barcontrol.cfg --ca-file=../bar-ca.pem --role=expert
 
 #---------------------------------- commands----------------------------------
 
