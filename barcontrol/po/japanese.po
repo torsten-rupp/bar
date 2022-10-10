@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-09 17:32+0200\n"
+"POT-Creation-Date: 2022-10-10 03:11+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -2142,47 +2142,47 @@ msgstr ""
 msgid "''{0}:{1}'': {2}"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2519 src/BARServer.java:3125
+#: src/BARServer.java:2521 src/BARServer.java:3127
 #, fuzzy, java-format
 msgid "input/output error: {0}"
 msgstr "タスクを一時停止できません（エラー: {0}）"
 
-#: src/BARServer.java:3879 src/BARServer.java:3905
+#: src/BARServer.java:3881 src/BARServer.java:3907
 #, fuzzy
 msgid "Password encryption fail"
 msgstr "接続ミス"
 
-#: src/BARServer.java:5031 src/BARServer.java:5153
+#: src/BARServer.java:5033 src/BARServer.java:5155
 msgid "No result from server"
 msgstr ""
 
-#: src/BARServer.java:5037
+#: src/BARServer.java:5039
 msgid "Invalid response from server: expected SESSION"
 msgstr ""
 
-#: src/BARServer.java:5041
+#: src/BARServer.java:5043
 msgid "Invalid response from server: expected parameters"
 msgstr ""
 
-#: src/BARServer.java:5046
+#: src/BARServer.java:5048
 msgid "No session id"
 msgstr ""
 
-#: src/BARServer.java:5115
+#: src/BARServer.java:5117
 #, fuzzy
 msgid "Init password cipher fail"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARServer.java:5161
+#: src/BARServer.java:5163
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:5169
+#: src/BARServer.java:5171
 msgid "Invalid response from server: no command id"
 msgstr ""
 
-#: src/BARServer.java:5181
+#: src/BARServer.java:5183
 msgid "Invalid response from server: parameters"
 msgstr ""
 

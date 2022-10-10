@@ -2370,7 +2370,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static boolean isTLSConnection()
   {
-    return socket instanceof SSLSocket;
+    return (socket instanceof SSLSocket) || Settings.debugFakeTLSFlag;
   }
 
   /** check if insecure TLS connection
@@ -2479,9 +2479,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     buffer.append(name);
     buffer.append(':');
     buffer.append(port);
-    if (socket instanceof SSLSocket)
+    if (isTLSConnection())
     {
-      buffer.append(" (TLS)");
+      buffer.append(" (TLS");
+      if (isInsecureTLSConnection()) buffer.append(" insecure");
+      buffer.append(")");
     }
 
     return buffer.toString();
@@ -4532,7 +4534,7 @@ throw new Error("NYI");
   {
     try
     {
-      
+
       certificate.checkValidity();
 
       for (String alias : Collections.list(keyStore.aliases()))

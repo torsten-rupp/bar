@@ -1963,7 +1963,6 @@ public class BARControl
     new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
-    new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
     new Option("--no-tls",                       null,Options.Types.BOOLEAN,    "serverNoTLS"),
     new Option("--force-tls",                    null,Options.Types.BOOLEAN,    "serverForceTLS"),
@@ -2008,6 +2007,7 @@ public class BARControl
 
     new Option("--debug",                        "-d",Options.Types.INCREMENT,  "debugLevel"),
     new Option("--debug-ignore-protocol-version",null,Options.Types.BOOLEAN,    "debugIgnoreProtocolVersion"),
+    new Option("--debug-fake-tls",               null,Options.Types.BOOLEAN,    "debugFakeTLSFlag"),
     new Option("--debug-quit-server",            null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
     // deprecated
@@ -2388,8 +2388,7 @@ public class BARControl
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --password=<password>                      - server password (use with care!)");
     System.out.println("         --ca-file=<file name>                      - certificate authority file name (PEM format)");
-    System.out.println("         --cert-file=<file name>                    - certificate file name (PEM format)");
-    System.out.println("         --key-file=<file name>                     - key file name (default: ");
+    System.out.println("         --key-file=<file name>                     - key file name (JKS format, default: ");
     System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME+" or ");
     System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME+" or ");
     System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME);
@@ -2443,6 +2442,7 @@ public class BARControl
       System.out.println("");
       System.out.println("         -d|--debug                                 - enable debug mode");
       System.out.println("         --debug-ignore-protocol-version            - ignore protocol version");
+      System.out.println("         --debug-fake-tls                           - fake TLS connections");
       System.out.println("         --debug-quit-server                        - send quit-command to server");
     }
   }
@@ -3089,7 +3089,7 @@ if (false) {
         TabFolder widget = (TabFolder)paintEvent.widget;
         GC        gc     = paintEvent.gc;
         Rectangle bounds;
-       
+
         if (BARServer.isTLSConnection())
         {
           Image image = BARServer.isInsecureTLSConnection() ? IMAGE_LOCK_INSECURE : IMAGE_LOCK;
