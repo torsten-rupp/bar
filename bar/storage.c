@@ -580,7 +580,8 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                           privateKeyLength,
                             SOCKET_FLAG_NONE
                           | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                          | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                          | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                          30*MS_PER_SECOND
                          );
   if (error != ERROR_NONE)
   {

@@ -73,6 +73,7 @@ ERROR CONNECT_FAIL
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR CONNECT_TIMEOUT                  TR("connect timeout")
 ERROR DISCONNECTED                     TR("disconnected")
 
 ERROR TOO_MANY_CONNECTIONS             TR("too many concurrent connections")

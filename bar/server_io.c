@@ -915,7 +915,8 @@ bool ServerIO_parseAction(const char      *actionText,
                           0,     // publicKeyLength
                           NULL,  // keyData
                           0,  // keyLength
-                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY,
+                          30*MS_PER_SECOND
                          );
   if (error != ERROR_NONE)
   {
@@ -1063,7 +1064,8 @@ bool ServerIO_parseAction(const char      *actionText,
                                  certData,
                                  certLength,
                                  keyData,
-                                 keyLength
+                                 keyLength,
+                                 30*MS_PER_SECOND
                                 );
         if (error != ERROR_NONE)
         {
@@ -1105,7 +1107,8 @@ bool ServerIO_parseAction(const char      *actionText,
                                certData,
                                certLength,
                                keyData,
-                               keyLength
+                               keyLength,
+                               30*MS_PER_SECOND
                               );
       if (error != ERROR_NONE)
       {
@@ -1185,7 +1188,8 @@ bool ServerIO_parseAction(const char      *actionText,
   // connect client
   error = Network_accept(&serverIO->network.socketHandle,
                          serverSocketHandle,
-                         SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+                         SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY,
+                         30*MS_PER_SECOND
                         );
   if (error != ERROR_NONE)
   {

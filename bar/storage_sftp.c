@@ -1192,7 +1192,8 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
                               storageInfo->sftp.privateKey.length,
                                 SOCKET_FLAG_NONE
                               | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                              30*MS_PER_SECOND
                              );
       if (error == ERROR_NONE)
       {
@@ -1251,7 +1252,8 @@ LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiv
                               storageInfo->sftp.privateKey.length,
                                 SOCKET_FLAG_NONE
                               | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                              30*MS_PER_SECOND
                              );
       if (error == ERROR_NONE)
       {
@@ -1312,7 +1314,8 @@ LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString a
                               storageInfo->sftp.privateKey.length,
                                 SOCKET_FLAG_NONE
                               | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                              30*MS_PER_SECOND
                              );
       if (error == ERROR_NONE)
       {
@@ -1439,7 +1442,8 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                             storageHandle->storageInfo->sftp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
@@ -1604,7 +1608,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                             storageHandle->storageInfo->sftp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
@@ -2174,7 +2179,8 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
                             storageInfo->sftp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error == ERROR_NONE)
     {
@@ -2229,7 +2235,8 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                             storageInfo->sftp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error == ERROR_NONE)
     {
@@ -2291,7 +2298,8 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
                               storageInfo->sftp.privateKey.length,
                                 SOCKET_FLAG_NONE
                               | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                              30*MS_PER_SECOND
                              );
       if (error == ERROR_NONE)
       {
@@ -2473,7 +2481,8 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
                             sshServer.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
