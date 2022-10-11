@@ -692,7 +692,8 @@ LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archive
                             storageInfo->scp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
@@ -757,7 +758,8 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
                             storageInfo->scp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
@@ -826,7 +828,8 @@ LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString ar
                             storageInfo->scp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
@@ -955,7 +958,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                             storageHandle->storageInfo->scp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {
@@ -1066,7 +1070,8 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                             storageHandle->storageInfo->scp.privateKey.length,
                               SOCKET_FLAG_NONE
                             | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
                            );
     if (error != ERROR_NONE)
     {

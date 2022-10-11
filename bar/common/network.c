@@ -164,6 +164,61 @@ LOCAL void disconnect(SocketHandle *socketHandle)
   socketHandle->isConnected = FALSE;
 }
 
+/***********************************************************************\
+* Name   : setNonBlocking
+* Purpose: set non-blocking i/o
+* Input  : socketDescriptor - socket descriptor
+*          enabled          - TRUE for non-blocking i/o, false otherwise
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors setNonBlocking(int socketDescriptor, bool enabled)
+{
+  #if   defined(PLATFORM_LINUX)
+    long   flags;
+  #elif defined(PLATFORM_WINDOWS)
+    u_long n;
+  #endif /* define(PLATFORM_...) */
+  
+  assert(socketDescriptor != -1);
+
+  #if  defined(PLATFORM_LINUX)
+    flags = fcntl(socketDescriptor,F_GETFL,0);
+    if (flags == -1)
+    {
+      return ERROR_(IO,errno);
+    }
+    if (enabled)
+    {
+      flags |= O_NONBLOCK;
+    }
+    else
+    {
+      flags &= ~O_NONBLOCK;
+    }
+    if (fcntl(socketDescriptor,F_SETFL,flags) == -1)
+    {
+      return ERROR_(IO,errno);
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    n = enable ? 1 : 0;
+    (void)ioctlsocket(socketDescriptor,FIONBIO,&n);
+  #endif /* PLATFORM_... */
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : _
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #ifdef GNUTLS_DEBUG
 LOCAL void gnuTLSLog(int level, const char *s)
 {
@@ -303,30 +358,23 @@ or
 }
 
 /***********************************************************************\
-* Name   : initSSL
-* Purpose: init SSL encryption on socket
-* Input  : socketHandle - socket handle
-*          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
-*          caData       - TLS certificate authority data or NULL (PEM
-*                         encoded)
-*          caLength     - TSL certificate authority data length
-*          cert         - TLS certificate or NULL (PEM encoded)
-*          certLength   - TSL certificate data length
-*          key          - TLS key or NULL (PEM encoded)
-*          keyLength    - TSL key data length
+* Name   : initTLS
+* Purpose: initialise TLS/SSL session
+* Input  : -
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initSSL(SocketHandle    *socketHandle,
+LOCAL Errors initTLS(SocketHandle    *socketHandle,
                      NetworkTLSTypes tlsType,
                      const void      *caData,
                      uint            caLength,
                      const void      *certData,
                      uint            certLength,
                      const void      *keyData,
-                     uint            keyLength
+                     uint            keyLength,
+                     long            timeout
                     )
 {
   gnutls_datum_t caDatum,certDatum,keyDatum;
@@ -437,6 +485,10 @@ NYI: how to do certificate verification?
 
   // do handshake
   gnutls_transport_set_int(socketHandle->gnuTLS.session,socketHandle->handle);
+  if (timeout != WAIT_FOREVER)
+  {
+    gnutls_handshake_set_timeout(socketHandle->gnuTLS.session,timeout);
+  }
   do
   {
     result = gnutls_handshake(socketHandle->gnuTLS.session);
@@ -604,7 +656,8 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         publicKeyLength,
                        const void   *privateKeyData,
                        uint         privateKeyLength,
-                       SocketFlags  socketFlags
+                       SocketFlags  socketFlags,
+                       long         timeout
                       )
 {
   #if   defined(HAVE_GETHOSTBYNAME_R)
@@ -614,13 +667,15 @@ Errors Network_connect(SocketHandle *socketHandle,
   #elif defined(HAVE_GETHOSTBYNAME)
   #endif /* HAVE_GETHOSTBYNAME* */
   struct hostent     *hostAddressEntry;
-  #ifdef PLATFORM_LINUX
-    in_addr_t          ipAddress;
-  #else /* not PLATFORM_LINUX */
-    unsigned long      ipAddress;
-  #endif /* PLATFORM_LINUX */
+  #if   defined(PLATFORM_LINUX)
+    in_addr_t     ipAddress;
+  #elif defined(PLATFORM_WINDOWS)
+    unsigned long ipAddress;
+  #endif /* define(PLATFORM_...) */
   struct sockaddr_in socketAddress;
   int                socketDescriptor;
+  SignalMask         signalMask;
+  uint               events;
   Errors             error;
 
   assert(socketHandle != NULL);
@@ -668,22 +723,52 @@ Errors Network_connect(SocketHandle *socketHandle,
           return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(hostName));
         }
 
-        // connect
+        // create socket
         socketDescriptor = socket(AF_INET,SOCK_STREAM,0);
         if (socketDescriptor == -1)
         {
           return ERRORX_(CONNECT_FAIL,errno,"%E",errno);
         }
+
+        // connect
+        error = setNonBlocking(socketDescriptor,TRUE);
+        if (error != ERROR_NONE)
+        {
+          disconnectDescriptor(socketDescriptor);
+          return error;
+        }
+
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_addr.s_addr = ipAddress;
         socketAddress.sin_port        = htons(hostPort);
-        if (connect(socketDescriptor,
-                    (struct sockaddr*)&socketAddress,
-                    sizeof(socketAddress)
-                   ) != 0
+        if (   (connect(socketDescriptor,
+                        (struct sockaddr*)&socketAddress,
+                        sizeof(socketAddress)
+                       ) != 0
+               )
+            && (errno != EINPROGRESS)
            )
         {
           error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+          disconnectDescriptor(socketDescriptor);
+          return error;
+        }
+        
+        MISC_SIGNAL_MASK_CLEAR(signalMask);
+        #ifdef HAVE_SIGALRM
+          MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
+        #endif /* HAVE_SIGALRM */
+        events = Misc_waitHandle(socketDescriptor,&signalMask,HANDLE_EVENT_OUTPUT,timeout);
+        if ((events & HANDLE_EVENT_OUTPUT) == 0)
+        {
+          error = ERROR_CONNECT_TIMEOUT;
+          disconnectDescriptor(socketDescriptor);
+          return error;
+        }
+
+        error = setNonBlocking(socketDescriptor,FALSE);
+        if (error != ERROR_NONE)
+        {
           disconnectDescriptor(socketDescriptor);
           return error;
         }
@@ -790,7 +875,8 @@ Errors Network_connect(SocketHandle *socketHandle,
                                    publicKeyLength,
                                    privateKeyData,
                                    privateKeyLength,
-                                   socketFlags
+                                   socketFlags,
+                                   timeout
                                   );
 }
 
@@ -807,7 +893,8 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                  uint         publicKeyLength,
                                  const void   *privateKeyData,
                                  uint         privateKeyLength,
-                                 SocketFlags  socketFlags
+                                 SocketFlags  socketFlags,
+                                 long         timeout
                                 )
 {
   #ifdef HAVE_SSH2
@@ -829,21 +916,23 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
     case SOCKET_TYPE_PLAIN:
       {
         #if  defined(PLATFORM_LINUX)
-          long   flags;
-          int    n;
+          int n;
         #elif defined(PLATFORM_WINDOWS)
-          u_long n;
         #endif /* PLATFORM_... */
 
         if (socketFlags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
-          #if  defined(PLATFORM_LINUX)
-            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
+          if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
+          {
+            error = setNonBlocking(socketDescriptor,TRUE);
+            if (error != ERROR_NONE)
             {
-              flags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
+              disconnectDescriptor(socketDescriptor);
+              return error;
             }
+          }
+          #if   defined(PLATFORM_LINUX)
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               n = 1;
@@ -855,11 +944,6 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
-            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
-            {
-              n = 1;
-              ioctlsocket(socketHandle->handle,FIONBIO,&n);
-            }
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               n = 1;
@@ -893,7 +977,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         }
 
         // init SSL
-        error = initSSL(socketHandle,
+        error = initTLS(socketHandle,
 // TODO: parameter?
                         NETWORK_TLS_TYPE_SERVER,
                         caData,
@@ -901,7 +985,8 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                         certData,
                         certLength,
                         privateKeyData,
-                        privateKeyLength
+                        privateKeyLength,
+                        timeout
                        );
         if (error != ERROR_NONE)
         {
@@ -927,10 +1012,8 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
       #ifdef HAVE_SSH2
       {
         #if  defined(PLATFORM_LINUX)
-          long       flags;
-          int        n;
+          int n;
         #elif defined(PLATFORM_WINDOWS)
-          u_long     n;
         #endif /* PLATFORM_... */
         int result;
 
@@ -1056,24 +1139,25 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
 #endif /* 0 */
         if (socketFlags != SOCKET_FLAG_NONE)
         {
-          // enable non-blocking
-          #if  defined(PLATFORM_LINUX)
-            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
+          // enable/disable non-blocking
+          if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
+          {
+            error = setNonBlocking(socketHandle->handle,TRUE);
+            if (error != ERROR_NONE)
             {
-              flags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
+              disconnectDescriptor(socketHandle->handle);
+              return error;
             }
+          }
+
+          // enable/disable alive
+          #if  defined(PLATFORM_LINUX)
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
-            if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
-            {
-              n = 1;
-              ioctlsocket(socketHandle->handle,FIONBIO,&n);
-            }
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
@@ -1609,15 +1693,11 @@ Errors Network_startTLS(SocketHandle    *socketHandle,
                         const void      *certData,
                         uint            certLength,
                         const void      *keyData,
-                        uint            keyLength
+                        uint            keyLength,
+                        long            timeout
                        )
 {
   #ifdef HAVE_GNU_TLS
-    #if  defined(PLATFORM_LINUX)
-      long               flags;
-    #elif defined(PLATFORM_WINDOWS)
-      u_long             n;
-    #endif /* PLATFORM_... */
     Errors error;
   #endif /* HAVE_GNU_TLS */
 
@@ -1648,39 +1728,32 @@ Errors Network_startTLS(SocketHandle    *socketHandle,
     // temporary disable non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
-      #if  defined(PLATFORM_LINUX)
-        flags = fcntl(socketHandle->handle,F_GETFL,0);
-        (void)fcntl(socketHandle->handle,F_SETFL,flags & ~O_NONBLOCK);
-      #elif defined(PLATFORM_WINDOWS)
-        n = 0;
-        (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
-      #endif /* PLATFORM_... */
+      error = setNonBlocking(socketHandle->handle,FALSE);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
     }
 
     // init SSL
-    error = initSSL(socketHandle,tlsType,caData,caLength,certData,certLength,keyData,keyLength);
+    error = initTLS(socketHandle,tlsType,caData,caLength,certData,certLength,keyData,keyLength,timeout);
     if (error != ERROR_NONE)
     {
-      #if  defined(PLATFORM_LINUX)
-        flags = fcntl(socketHandle->handle,F_GETFL,0);
-        (void)fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
-      #elif defined(PLATFORM_WINDOWS)
-        n = 1;
-        (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
-      #endif /* PLATFORM_... */
+      if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
+      {
+        (void)setNonBlocking(socketHandle->handle,TRUE);
+      }
       return error;
     }
 
     // re-enable temporary non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
-      #if  defined(PLATFORM_LINUX)
-        flags = fcntl(socketHandle->handle,F_GETFL,0);
-        (void)fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
-      #elif defined(PLATFORM_WINDOWS)
-        n = 1;
-        (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
-      #endif /* PLATFORM_... */
+      error = setNonBlocking(socketHandle->handle,TRUE);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
     }
 
     socketHandle->type = SOCKET_TYPE_TLS;
@@ -1708,7 +1781,8 @@ int Network_getServerSocket(const ServerSocketHandle *serverSocketHandle)
 
 Errors Network_accept(SocketHandle             *socketHandle,
                       const ServerSocketHandle *serverSocketHandle,
-                      SocketFlags              socketFlags
+                      SocketFlags              socketFlags,
+                      long                     timeout
                      )
 {
   struct sockaddr_in socketAddress;
@@ -1718,11 +1792,6 @@ Errors Network_accept(SocketHandle             *socketHandle,
     int                socketAddressLength;
   #endif /* PLATFORM_... */
   Errors             error;
-  #if  defined(PLATFORM_LINUX)
-    long               flags;
-  #elif defined(PLATFORM_WINDOWS)
-    u_long             n;
-  #endif /* PLATFORM_... */
 
 //unsigned int status;
 
@@ -1751,14 +1820,15 @@ Errors Network_accept(SocketHandle             *socketHandle,
     case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
         // init SSL
-        error = initSSL(socketHandle,
+        error = initTLS(socketHandle,
                         NETWORK_TLS_TYPE_SERVER,
                         serverSocketHandle->caData,
                         serverSocketHandle->caLength,
                         serverSocketHandle->certData,
                         serverSocketHandle->certLength,
                         serverSocketHandle->keyData,
-                        serverSocketHandle->keyLength
+                        serverSocketHandle->keyLength,
+                        timeout
                        );
         if (error != ERROR_NONE)
         {
@@ -1787,13 +1857,12 @@ Errors Network_accept(SocketHandle             *socketHandle,
   if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
     // enable non-blocking
-    #if  defined(PLATFORM_LINUX)
-      flags = fcntl(socketHandle->handle,F_GETFL,0);
-      fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
-    #elif defined(PLATFORM_WINDOWS)
-      n = 1;
-      ioctlsocket(socketHandle->handle,FIONBIO,&n);
-    #endif /* PLATFORM_... */
+    error = setNonBlocking(serverSocketHandle->handle,TRUE);
+    if (error != ERROR_NONE)
+    {
+      disconnectDescriptor(serverSocketHandle->handle);
+      return error;
+    }
   }
 
   socketHandle->isConnected = TRUE;
@@ -2080,11 +2149,7 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
                       )
 {
   #ifdef HAVE_SSH2
-    #if  defined(PLATFORM_LINUX)
-      long   flags;
-    #elif defined(PLATFORM_WINDOWS)
-      u_long n;
-    #endif /* PLATFORM_... */
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(networkExecuteHandle != NULL);
@@ -2119,13 +2184,13 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
     }
 
     // enable non-blocking
-    #if  defined(PLATFORM_LINUX)
-      flags = fcntl(socketHandle->handle,F_GETFL,0);
-      fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
-    #elif defined(PLATFORM_WINDOWS)
-      n = 1;
-      ioctlsocket(socketHandle->handle,FIONBIO,&n);
-    #endif /* PLATFORM_... */
+    error = setNonBlocking(socketHandle->handle,TRUE);
+    if (error != ERROR_NONE)
+    {
+      libssh2_channel_close(networkExecuteHandle->channel);
+      libssh2_channel_wait_closed(networkExecuteHandle->channel);
+      return error;
+    }
     libssh2_channel_set_blocking(networkExecuteHandle->channel,0);
 
     // disable stderr if not requested

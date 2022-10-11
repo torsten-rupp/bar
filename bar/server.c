@@ -6245,7 +6245,8 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
                                globalOptions.serverCert.data,
                                globalOptions.serverCert.length,
                                globalOptions.serverKey.data,
-                               globalOptions.serverKey.length
+                               globalOptions.serverKey.length,
+                               30*MS_PER_SECOND
                               );
       if (error != ERROR_NONE)
       {
