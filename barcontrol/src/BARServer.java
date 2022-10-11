@@ -108,6 +108,7 @@ class ConnectionError extends Error
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
+  public String extendedMessage[];
 
   // ------------------------ native functions ----------------------------
 
@@ -115,10 +116,41 @@ class ConnectionError extends Error
 
   /** create new connection error
    * @param message message
+   * @param extendedMessage extended message or null
+   */
+  ConnectionError(String message, String extendedMessage[])
+  {
+    super(message);
+
+    this.extendedMessage = extendedMessage;
+  }
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  ConnectionError(String message, String extendedMessage)
+  {
+    super(message);
+
+    this.extendedMessage = (extendedMessage != null)
+                             ? StringUtils.splitArray(extendedMessage,'\n')
+                             : null;
+  }
+
+  /** create new connection error
+   * @param message message
    */
   ConnectionError(String message)
   {
-    super(message);
+    this(message,(String[])null);
+  }
+  
+  /**_get extended message
+   * return extended message
+   */
+  public String[] getExtendedMessage()
+  {
+    return extendedMessage;
   }
 }
 
@@ -129,17 +161,64 @@ class CommunicationError extends Error
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
+  public String extendedMessage[];
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(String message, String extendedMessage[])
+  {
+    super(message);
+    
+    this.extendedMessage = extendedMessage;
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(String message, String extendedMessage)
+  {
+    super(message);
+
+    this.extendedMessage = (extendedMessage != null)
+                             ? StringUtils.splitArray(extendedMessage,'\n')
+                             : null;
+  }
 
   /** create new communication error
    * @param message message
    */
   CommunicationError(String message)
   {
-    super(message);
+    this(message,(String[])null);
+  }
+
+  /** create new communication error
+   * @param exception BAR exception
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(Exception exception, String extendedMessage[])
+  {
+    super(exception);
+
+    this.extendedMessage = extendedMessage;
+  }
+
+  /** create new communication error
+   * @param exception BAR exception
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(Exception exception, String extendedMessage)
+  {
+    this(exception);
+
+    this.extendedMessage = StringUtils.splitArray(extendedMessage,'\n');
   }
 
   /** create new communication error
@@ -147,7 +226,15 @@ class CommunicationError extends Error
    */
   CommunicationError(Exception exception)
   {
-    super(exception);
+    this(exception,(String[])null);
+  }
+
+  /**_get extended message
+   * return extended message
+   */
+  public String[] getExtendedMessage()
+  {
+    return extendedMessage;
   }
 }
 
@@ -1532,7 +1619,7 @@ public class BARServer
   private static Key                         passwordKey;
   private static Modes                       mode;
 
-  private static X509Certificate             lastClientCertificate;
+  private static X509Certificate             lastServerCertificate;
   private static Socket                      socket = null;
   private static boolean                     insecureTLS = false;
   private static BufferedWriter              output;
@@ -2182,7 +2269,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if (socket == null)
     {
-      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage);
+      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage,(lastServerCertificate != null) ? lastServerCertificate.toString() : null);
       else                                throw new ConnectionError(BARControl.tr("no server ports specified"));
     }
 
@@ -2372,14 +2459,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static boolean isInsecureTLSConnection()
   {
     return (socket instanceof SSLSocket) && insecureTLS;
-  }
-
-  /** get server certificate
-   * @return certificate or null
-   */
-  public static Certificate getServerCertificate()
-  {
-    return lastClientCertificate;
   }
 
   /** check if master-mode
@@ -4662,7 +4741,7 @@ throw new Error("NYI");
     final X509TrustManager oldX509TrustManager[] = new X509TrustManager[]{null};
 
     // X509 trust manager wrapper to get received certificate
-    lastClientCertificate = null;
+    lastServerCertificate = null;
     X509TrustManager newX509TrustManager = new X509TrustManager()
     {
       @Override
@@ -4682,7 +4761,7 @@ throw new Error("NYI");
       public void checkServerTrusted(java.security.cert.X509Certificate[] certificateChain, String authType)
         throws CertificateException
       {
-        lastClientCertificate = certificateChain[0];
+        lastServerCertificate = certificateChain[0];
         oldX509TrustManager[0].checkServerTrusted(certificateChain,authType);
       }
     };
