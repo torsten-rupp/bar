@@ -108,6 +108,7 @@ class ConnectionError extends Error
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
+  public String extendedMessage[];
 
   // ------------------------ native functions ----------------------------
 
@@ -115,10 +116,42 @@ class ConnectionError extends Error
 
   /** create new connection error
    * @param message message
+   * @param extendedMessage extended message or null
+   */
+  ConnectionError(String message, String extendedMessage[])
+  {
+    super(message);
+
+    this.extendedMessage = extendedMessage;
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  ConnectionError(String message, String extendedMessage)
+  {
+    super(message);
+
+    this.extendedMessage = (extendedMessage != null)
+                             ? StringUtils.splitArray(extendedMessage,'\n')
+                             : null;
+  }
+
+  /** create new connection error
+   * @param message message
    */
   ConnectionError(String message)
   {
-    super(message);
+    this(message,(String[])null);
+  }
+  
+  /**_get extended message
+   * return extended message
+   */
+  public String[] getExtendedMessage()
+  {
+    return extendedMessage;
   }
 }
 
@@ -129,17 +162,64 @@ class CommunicationError extends Error
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
+  public String extendedMessage[];
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(String message, String extendedMessage[])
+  {
+    super(message);
+    
+    this.extendedMessage = extendedMessage;
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(String message, String extendedMessage)
+  {
+    super(message);
+
+    this.extendedMessage = (extendedMessage != null)
+                             ? StringUtils.splitArray(extendedMessage,'\n')
+                             : null;
+  }
 
   /** create new communication error
    * @param message message
    */
   CommunicationError(String message)
   {
-    super(message);
+    this(message,(String[])null);
+  }
+
+  /** create new communication error
+   * @param exception BAR exception
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(Exception exception, String extendedMessage[])
+  {
+    super(exception);
+
+    this.extendedMessage = extendedMessage;
+  }
+
+  /** create new communication error
+   * @param exception BAR exception
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(Exception exception, String extendedMessage)
+  {
+    this(exception);
+
+    this.extendedMessage = StringUtils.splitArray(extendedMessage,'\n');
   }
 
   /** create new communication error
@@ -147,7 +227,15 @@ class CommunicationError extends Error
    */
   CommunicationError(Exception exception)
   {
-    super(exception);
+    this(exception,(String[])null);
+  }
+
+  /**_get extended message
+   * return extended message
+   */
+  public String[] getExtendedMessage()
+  {
+    return extendedMessage;
   }
 }
 
@@ -1532,7 +1620,7 @@ public class BARServer
   private static Key                         passwordKey;
   private static Modes                       mode;
 
-  private static X509Certificate             lastClientCertificate;
+  private static X509Certificate             lastServerCertificate;
   private static Socket                      socket = null;
   private static boolean                     insecureTLS = false;
   private static BufferedWriter              output;
@@ -1638,13 +1726,13 @@ public class BARServer
             SSLSocket sslSocket   = null;
             try
             {
-              SSLSocketFactory sslSocketFactory = getSocketFactory(caFile,
-                                                                   javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead()
-                                                                     ? javaKeystoreFile
-                                                                     : null,
-                                                                   insecureTLS,
-                                                                   ""
-                                                                  );
+              SSLSocketFactory sslSocketFactory = getSSLSocketFactory(caFile,
+                                                                      javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead()
+                                                                        ? javaKeystoreFile
+                                                                        : null,
+                                                                      insecureTLS,
+                                                                      ""
+                                                                     );
 
               // create plain socket
               plainSocket = new Socket(name,port);
@@ -1776,13 +1864,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             SSLSocket sslSocket = null;
             try
             {
-              SSLSocketFactory sslSocketFactory = getSocketFactory(caFile,
-                                                                   javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead()
-                                                                     ? javaKeystoreFile
-                                                                     : null,
-                                                                   insecureTLS,
-                                                                   ""
-                                                                  );
+              SSLSocketFactory sslSocketFactory = getSSLSocketFactory(caFile,
+                                                                      javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead()
+                                                                        ? javaKeystoreFile
+                                                                        : null,
+                                                                      insecureTLS,
+                                                                      ""
+                                                                     );
 
               // create TLS (SSL) socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
@@ -2182,7 +2270,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if (socket == null)
     {
-      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage);
+      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage,(lastServerCertificate != null) ? lastServerCertificate.toString() : null);
       else                                throw new ConnectionError(BARControl.tr("no server ports specified"));
     }
 
@@ -2372,14 +2460,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static boolean isInsecureTLSConnection()
   {
     return (socket instanceof SSLSocket) && insecureTLS;
-  }
-
-  /** get server certificate
-   * @return certificate or null
-   */
-  public static Certificate getServerCertificate()
-  {
-    return lastClientCertificate;
   }
 
   /** check if master-mode
@@ -4577,17 +4657,16 @@ throw new Error("NYI");
   /** create TLS (SSL) socket factory with PEM files
    * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
    * @param certificateAuthorityFile certificate authority PEM file
-   * @param certificateFile certificate PEM file
    * @param javaKeystoreFile Java keystore file (JKS only) or null
    * @param insecureTLS  TRUE to accept insecure TLS connections (no certificates check)
    * @param password password or null
    * @return socket factory
    */
-  private static SSLSocketFactory getSocketFactory(File    certificateAuthorityFile,
-                                                   File    javaKeystoreFile,
-                                                   boolean insecureTLS,
-                                                   String  password
-                                                  )
+  private static SSLSocketFactory getSSLSocketFactory(File          certificateAuthorityFile,
+                                                      File          javaKeystoreFile,
+                                                      final boolean insecureTLS,
+                                                      String        password
+                                                     )
     throws KeyManagementException,NoSuchAlgorithmException,KeyStoreException,UnrecoverableKeyException,IOException,CertificateException
   {
     char[]                passwordChars;
@@ -4662,31 +4741,45 @@ throw new Error("NYI");
     final X509TrustManager oldX509TrustManager[] = new X509TrustManager[]{null};
 
     // X509 trust manager wrapper to get received certificate
-    lastClientCertificate = null;
+    lastServerCertificate = null;
     X509TrustManager newX509TrustManager = new X509TrustManager()
     {
       @Override
-      public java.security.cert.X509Certificate[] getAcceptedIssuers()
+      public X509Certificate[] getAcceptedIssuers()
       {
-        return oldX509TrustManager[0].getAcceptedIssuers();
+        if (!insecureTLS)
+        {
+          return oldX509TrustManager[0].getAcceptedIssuers();
+        }
+        else
+        {
+          return new X509Certificate[0];
+        }
       }
 
       @Override
-      public void checkClientTrusted(java.security.cert.X509Certificate[] certificateChain, String authType)
+      public void checkClientTrusted(X509Certificate[] certificateChain, String authType)
         throws CertificateException
       {
-        oldX509TrustManager[0].checkClientTrusted(certificateChain,authType);
+        if (!insecureTLS)
+        {
+          oldX509TrustManager[0].checkClientTrusted(certificateChain,authType);
+        }
       }
 
       @Override
-      public void checkServerTrusted(java.security.cert.X509Certificate[] certificateChain, String authType)
+      public void checkServerTrusted(X509Certificate[] certificateChain, String authType)
         throws CertificateException
       {
-        lastClientCertificate = certificateChain[0];
-        oldX509TrustManager[0].checkServerTrusted(certificateChain,authType);
+        lastServerCertificate = certificateChain[0];
+        if (!insecureTLS)
+        {
+          oldX509TrustManager[0].checkServerTrusted(certificateChain,authType);
+        }
       }
     };
 
+    // replace existing X509 trust manager with wrapper
     for (int i = 0; i < trustManagers.length; i++)
     {
       if (trustManagers[i] instanceof X509TrustManager)

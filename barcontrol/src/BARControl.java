@@ -3672,7 +3672,7 @@ if (false) {
               {
                 Dialogs.error(shell,
                               (reconnectErrorMessage != null)
-                                ? BARControl.tr("Reconnect with new certificate authority fail:\n\n{0}",reconnectErrorMessage)
+                                ? reconnectErrorMessage
                                 : BARControl.tr("Reconnect with new certificate authority fail")
                              );
               }
@@ -4476,9 +4476,6 @@ if (false) {
 
           if (menuItem.getSelection())
           {
-            boolean connectedFlag         = false;
-            String  connectErrorMessage[] = new String[]{null};
-
             // try to connect to server with current credentials
             BARServer.TLSModes tlsMode;
             if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
@@ -4492,10 +4489,10 @@ if (false) {
                                       (!server.password.isEmpty()) ? server.password : "",
                                       Settings.role
                                      );
-            connectedFlag = login(loginData,
-                                  false  // loginDialogFlag
-                                 );
-            if (connectedFlag)
+            if (login(loginData,
+                      false  // loginDialogFlag
+                     )
+               )
             {
               updateServerMenu();
 
@@ -4924,8 +4921,9 @@ if (false) {
   private boolean login(LoginData loginData, boolean loginDialogFlag)
   {
     boolean retryFlag;
-    boolean connectedFlag       = false;
-    String  connectErrorMessage = null;
+    boolean connectedFlag                 = false;
+    String  connectErrorMessage           = null;
+    String  connectErrorExtendedMessage[] = null;
 
     if (loginDialogFlag)
     {
@@ -4958,11 +4956,13 @@ if (false) {
         }
         catch (ConnectionError error)
         {
-          connectErrorMessage = error.getMessage();
+          connectErrorMessage         = error.getMessage();
+          connectErrorExtendedMessage = error.getExtendedMessage();
         }
         catch (CommunicationError error)
         {
-          connectErrorMessage = error.getMessage();
+          connectErrorMessage         = error.getMessage();
+          connectErrorExtendedMessage = error.getExtendedMessage();
         }
       }
 
@@ -4972,30 +4972,15 @@ if (false) {
         {
           if (!Settings.serverInsecureTLS)
           {
-            // get last received certificate as extended message (limit line length to 80 characters)
-            String extendedMessage[];
-            if (BARServer.getServerCertificate() != null)
-            {
-              extendedMessage = StringUtils.splitArray(BARServer.getServerCertificate().toString(),'\n');
-              for (int i = 0; i < extendedMessage.length; i++)
-              {
-                if (extendedMessage[i].length() > 80) extendedMessage[i] = extendedMessage[i].substring(0,80)+"\u2026";
-              }
-            }
-            else
-            {
-              extendedMessage = null;
-            }
-
             // try again with insecure TLS/without TLS
             switch (Dialogs.select(new Shell(),
                                    BARControl.tr("Connection fail"),
                                    IMAGE_ERROR,
+                                   BARControl.tr("Certificate:"),
+                                   connectErrorExtendedMessage,
                                    (connectErrorMessage != null)
                                      ? connectErrorMessage
                                      : BARControl.tr("Connection fail"),
-                                   BARControl.tr("Certificate:"),
-                                   extendedMessage,
                                    new String[]
                                    {
                                      BARControl.tr("Try with insecure TLS (SSL)"),
@@ -5008,6 +4993,8 @@ if (false) {
             {
               case 0:
                 // try to connect to server with insecure TLS/SSL
+                connectErrorMessage         = null;
+                connectErrorExtendedMessage = null;
                 try
                 {
                   BARServer.connect(loginData.name,
@@ -5023,15 +5010,19 @@ if (false) {
                 }
                 catch (ConnectionError error)
                 {
-                  connectErrorMessage = error.getMessage();
+                  connectErrorMessage         = error.getMessage();
+                  connectErrorExtendedMessage = error.getExtendedMessage();
                 }
                 catch (CommunicationError error)
                 {
-                  connectErrorMessage = error.getMessage();
+                  connectErrorMessage         = error.getMessage();
+                  connectErrorExtendedMessage = error.getExtendedMessage();
                 }
                 break;
               case 1:
                 // try to connect to server without TLS/SSL
+                connectErrorMessage         = null;
+                connectErrorExtendedMessage = null;
                 try
                 {
                   BARServer.connect(loginData.name,
@@ -5079,6 +5070,8 @@ if (false) {
             {
               case 0:
                 // try to connect to server without TLS/SSL
+                connectErrorMessage         = null;
+                connectErrorExtendedMessage = null;
                 try
                 {
                   BARServer.connect(loginData.name,
@@ -5113,8 +5106,9 @@ if (false) {
       {
         // show error dialog
         Dialogs.error(new Shell(),
+        connectErrorExtendedMessage,
                       (connectErrorMessage != null)
-                        ? BARControl.tr("Connection fail")+":\n\n"+connectErrorMessage
+                        ? connectErrorMessage
                         : BARControl.tr("Connection fail")
                      );
 
