@@ -1076,6 +1076,9 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
 
   result = FALSE;
 
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
+
   if (storageSpecifier1->type == storageSpecifier2->type)
   {
     switch (storageSpecifier1->type)
