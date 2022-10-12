@@ -3824,7 +3824,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo, long timeout)
     String_delete(hostName);
     return error;
   }
-//fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(uuid),String_cString(encryptedUUID));
+//fprintf(stderr,"%s, %d: uuid=%s encryptedUUID=%s\n",__FILE__,__LINE__,String_cString(instanceUUID),String_cString(encryptedUUID));
 //assert(ServerIO_decryptString(&connectorInfo->io,string,SERVER_IO_ENCRYPT_TYPE_RSA,encryptedUUID)==ERROR_NONE); fprintf(stderr,"%s, %d: dectecryp encryptedUUID: %s\n",__FILE__,__LINE__,String_cString(string));
 
   // authorize with UUID

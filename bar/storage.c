@@ -580,7 +580,8 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                           privateKeyLength,
                             SOCKET_FLAG_NONE
                           | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                          | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                          | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                          30*MS_PER_SECOND
                          );
   if (error != ERROR_NONE)
   {
@@ -1074,6 +1075,9 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier2);
 
   result = FALSE;
+
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   if (storageSpecifier1->type == storageSpecifier2->type)
   {

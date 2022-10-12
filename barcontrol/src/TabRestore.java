@@ -7531,9 +7531,9 @@ Dprintf.dprintf("");
         this.assignToEntityIndexDataMap = assignToEntityIndexDataMap;
       }
     }
-    catch (Exception exception)
+    catch (Throwable throwable)
     {
-      BARControl.logThrowable(exception);
+      BARControl.logThrowable(throwable);
     }
   }
 

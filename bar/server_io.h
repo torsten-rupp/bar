@@ -725,7 +725,7 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 * Purpose: execute server command
 * Input  : serverIO              - server i/o
 *          debugLevel            - debug level
-*          timeout               - timeout [ms] or WAIT_FOREVER
+*          timeout               - timeout [ms] or WAIT_FOREVER/NO_WAIT
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function
 *          format                - format string
@@ -807,7 +807,7 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
 * Name   : ServerIO_waitResults
 * Purpose: wait for results
 * Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or WAIT_FOREVER
+*          timeout  - timeout [ms] or WAIT_FOREVER/NO_WAIT
 *          ids      - command ids to wait for
 *          idCount  - number of command ids
 * Output : index         - id index [0..idCount-1] (can be NULL)
@@ -830,7 +830,7 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
 * Name   : ServerIO_waitResult
 * Purpose: wait for result
 * Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or WAIT_FOREVER
+*          timeout  - timeout [ms] or WAIT_FOREVER/NO_WAIT
 *          id       - command id to wait for
 * Output : completedFlag - TRUE iff completed (can be NULL)
 *          resultMap     - result map (can be NULL)
@@ -851,7 +851,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 * Name   : ServerIO_clientAction
 * Purpose: execute client action
 * Input  : serverIO      - server i/o
-*          timeout       - timeout [ms] or WAIT_FOREVER
+*          timeout       - timeout [ms] or WAIT_FOREVER/NO_WAIT
 *          resultMap     - result
 *          actionCommand - action command
 *          format        - optional arguments for action command
