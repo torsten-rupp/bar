@@ -813,9 +813,9 @@ public class TabJobs
           }
         }
       }
-      catch (Exception exception)
+      catch (Throwable throwable)
       {
-        BARControl.logThrowable(exception);
+        BARControl.logThrowable(throwable);
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
