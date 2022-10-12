@@ -372,7 +372,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 * Name   : receiveData
 * Purpose: receive data
 * Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or NO_WAIT
+*          timeout  - timeout [ms] or WAIT_FOREVER/NO_WAIT
 * Output : -
 * Return : TRUE if received data, FALSE on disconnect
 * Notes  : -
@@ -602,79 +602,80 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
 
   // init variables
   data = String_new();
+  Misc_initTimeout(&timeoutInfo,timeout);
 
   resultFlag = FALSE;
-  Misc_initTimeout(&timeoutInfo,timeout);
   do
   {
 //fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
-    while (!getLine(serverIO))
+    while (   !getLine(serverIO)
+           && !Misc_isTimeout(&timeoutInfo)
+          )
     {
       receiveData(serverIO,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG));
     }
 
-    // parse
-    if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,id,completedFlag,&errorCode,data))
+    if (getLine(serverIO))
     {
-      // command results: <id> <complete flag> <error code> <data>
-      #ifndef NDEBUG
-        if (globalOptions.debug.serverLevel >= 1)
-        {
-          fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",*id,*completedFlag,errorCode,String_cString(data));
-        }
-      #endif /* not DEBUG */
-
-      // get result
-      if (errorCode == ERROR_CODE_NONE)
+      // parse
+      if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,id,completedFlag,&errorCode,data))
       {
-        if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-        {
-          // parse error -> discard
-          #ifndef NDEBUG
-            if (globalOptions.debug.serverLevel >= 1)
-            {
-              fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
-            }
-          #endif /* not DEBUG */
-          continue;
-        }
+        // command results: <id> <complete flag> <error code> <data>
+        #ifndef NDEBUG
+          if (globalOptions.debug.serverLevel >= 1)
+          {
+            fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",*id,*completedFlag,errorCode,String_cString(data));
+          }
+        #endif /* not DEBUG */
 
-        error      = ERROR_NONE;
+        // get result
+        if (errorCode == ERROR_CODE_NONE)
+        {
+          if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+          {
+            // parse error -> discard
+            #ifndef NDEBUG
+              if (globalOptions.debug.serverLevel >= 1)
+              {
+                fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
+              }
+            #endif /* not DEBUG */
+            continue;
+          }
+
+          error      = (errorCode != ERROR_CODE_NONE) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
+          resultFlag = TRUE;
+        }
       }
       else
       {
-        error      = ERRORF_(errorCode,"%s",String_cString(data));
-      }
-      resultFlag = TRUE;
-    }
-    else
-    {
-      // unknown
-      #ifndef NDEBUG
-        if (globalOptions.debug.serverLevel >= 1)
-        {
-          fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
-          STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
+        // unknown
+        #ifndef NDEBUG
+          if (globalOptions.debug.serverLevel >= 1)
           {
-            if (iswprint(codepoint))
+            fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
+            STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
             {
-              fprintf(stderr,"%s",charUTF8(codepoint));
+              if (iswprint(codepoint))
+              {
+                fprintf(stderr,"%s",charUTF8(codepoint));
+              }
             }
+            fprintf(stderr,"\n");
           }
-          fprintf(stderr,"\n");
-        }
-      #endif /* not DEBUG */
-    }
+        #endif /* not DEBUG */
+      }
 
-    // done line
-    doneLine(serverIO);
+      // done line
+      doneLine(serverIO);
+    }
   }
   while (   !resultFlag
          && !Misc_isTimeout(&timeoutInfo)
         );
-  Misc_doneTimeout(&timeoutInfo);
 
   // free resources
+  Misc_doneTimeout(&timeoutInfo);
   String_delete(data);
 
   return error;
@@ -704,16 +705,18 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
                                  va_list                       arguments
                                 )
 {
-  uint      id;
-  Errors    error;
-  bool      completedFlag;
-  StringMap resultMap;
+  uint        id;
+  Errors      error;
+  TimeoutInfo timeoutInfo;
+  bool        completedFlag;
+  StringMap   resultMap;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
-  error = ERROR_UNKNOWN;
+  // init variables
+  Misc_initTimeout(&timeoutInfo,timeout);
 
   // send command
   error = vsendCommand(serverIO,
@@ -724,15 +727,16 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
                       );
   if (error != ERROR_NONE)
   {
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
-  // wait for results
+  // wait for result
   resultMap = StringMap_new();
   do
   {
     error = receiveResult(serverIO,
-                          timeout,
+                          Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
                           &id,
                           &completedFlag,
                           resultMap
@@ -742,18 +746,28 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
       error = commandResultFunction(resultMap,commandResultUserData);
     }
   }
-  while ((error == ERROR_NONE) && !completedFlag);
+  while (   (error == ERROR_NONE)
+         && !completedFlag
+         && !Misc_isTimeout(&timeoutInfo)
+        );
   StringMap_delete(resultMap);
 
   #ifndef NDEBUG
-    if (error != ERROR_NONE)
+    if (globalOptions.debug.serverLevel >= 1)
     {
-      if (globalOptions.debug.serverLevel >= 1)
+      if      (error != ERROR_NONE)
       {
         fprintf(stderr,"DEBUG: execute command %u: '%s' fail: %s\n",id,format,Error_getText(error));
       }
+      else if (Misc_isTimeout(&timeoutInfo))
+      {
+        fprintf(stderr,"DEBUG: timeout execute command %u: '%s'\n",id,format);
+      }
     }
   #endif /* not DEBUG */
+
+  // free resources
+  Misc_doneTimeout(&timeoutInfo);
 
   return error;
 }
@@ -1035,18 +1049,21 @@ bool ServerIO_parseAction(const char      *actionText,
   }
   String_doneTokenizer(&stringTokenizer);
 
-  // set public key
-  if (!Crypt_setPublicKeyModulusExponent(&serverIO->publicKey,n,e))
+  if (!String_isEmpty(n) && !String_isEmpty(e))
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    Network_disconnect(&serverIO->network.socketHandle);
-    doneIO(serverIO);
-    return ERROR_INVALID_KEY;
+    // set public key
+    if (!Crypt_setPublicKeyModulusExponent(&serverIO->publicKey,n,e))
+    {
+      String_delete(e);
+      String_delete(n);
+      String_delete(encryptTypes);
+      String_delete(id);
+      StringMap_delete(argumentMap);
+      String_delete(line);
+      Network_disconnect(&serverIO->network.socketHandle);
+      doneIO(serverIO);
+      return ERROR_INVALID_KEY;
+    }
   }
 
   switch (tlsMode)
@@ -1055,8 +1072,8 @@ bool ServerIO_parseAction(const char      *actionText,
       break;
     case TLS_MODE_TRY:
       error = syncExecuteCommand(serverIO,
-                                 SERVER_IO_DEBUG_LEVEL,
-                                 SERVER_IO_TIMEOUT,
+                                 1,  // debug level
+                                 30*MS_PER_SECOND,
                                  CALLBACK_(NULL,NULL),  // commandResultFunction
                                  "START_TLS"
                                 );
@@ -1088,8 +1105,8 @@ bool ServerIO_parseAction(const char      *actionText,
       break;
     case TLS_MODE_FORCE:
       error = syncExecuteCommand(serverIO,
-                                 SERVER_IO_DEBUG_LEVEL,
-                                 SERVER_IO_TIMEOUT,
+                                 1,  // debug level
+                                 30*MS_PER_SECOND,
                                  CALLBACK_(NULL,NULL),  // commandResultFunction
                                  "START_TLS"
                                 );

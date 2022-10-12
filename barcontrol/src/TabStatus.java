@@ -139,6 +139,7 @@ class JobData implements Comparable<JobData>
           case ONLINE:                 buffer.append("("+BARControl.tr("wait pairing")          +")"); break;
           case WRONG_MODE:             buffer.append("("+BARControl.tr("wrong mode")            +")"); break;
           case WRONG_PROTOCOL_VERSION: buffer.append("("+BARControl.tr("wrong protocol version")+")"); break;
+          case PAIRED:                                                                                 break;
         }
       }
       else
@@ -149,6 +150,7 @@ class JobData implements Comparable<JobData>
           case ONLINE:                 buffer.append(BARControl.tr("wait pairing"));           break;
           case WRONG_MODE:             buffer.append(BARControl.tr("wrong mode"));             break;
           case WRONG_PROTOCOL_VERSION: buffer.append(BARControl.tr("wrong protocol version")); break;
+          case PAIRED:                                                                         break;
         }
       }
     }
