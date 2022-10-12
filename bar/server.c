@@ -3340,7 +3340,11 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                      NULL,  // indexIds
                                      0,  // indexIdCount
                                      INDEX_TYPE_SET_ALL,
-                                     INDEX_STATE_SET_ALL,
+                                       SET_VALUE(INDEX_STATE_NONE)
+                                     | SET_VALUE(INDEX_STATE_OK)
+                                     | SET_VALUE(INDEX_STATE_CREATE)
+                                     | SET_VALUE(INDEX_STATE_UPDATE_REQUESTED)
+                                     | SET_VALUE(INDEX_STATE_UPDATE),
                                      INDEX_MODE_SET_ALL,
                                      NULL,  // hostName
                                      NULL,  // userName
@@ -3434,132 +3438,147 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                          CALLBACK_(NULL,NULL),  // isAbortedFunction
                                          NULL  // logHandle
                                         );
-                if (moveError == ERROR_NONE)
+                if (Storage_exists(&fromStorageInfo,NULL))
                 {
-                  moveError = Storage_init(&toStorageInfo,
-                                           NULL,  // masterIO
-                                           moveToStorageSpecifier,
-                                           jobOptions,
-                                           &maxToBandWidthList,
-                                           SERVER_CONNECTION_PRIORITY_LOW,
-                                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
-                                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
-                                           CALLBACK_(NULL,NULL),  // isPauseFunction
-                                           CALLBACK_(NULL,NULL),  // isAbortedFunction
-                                           NULL  // logHandle
-                                          );
-                  if (moveError == ERROR_NONE)
+                  if (error == ERROR_NONE)
                   {
-                    // get unique move-to name
-                    File_setFileName(moveToArchivePath,moveToPath);
-                    File_appendFileName(moveToArchivePath,baseName);
-                    if (Storage_exists(&toStorageInfo,moveToArchivePath))
-                    {
-                      String prefixFileName,postfixFileName;
-                      long   index;
-                      uint   n;
-
-                      // rename new archive
-                      prefixFileName  = String_new();
-                      postfixFileName = String_new();
-                      index = String_findLastChar(baseName,STRING_END,'.');
-                      if (index >= 0)
-                      {
-                        String_sub(prefixFileName,baseName,STRING_BEGIN,index);
-                        String_sub(postfixFileName,baseName,index,STRING_END);
-                      }
-                      else
-                      {
-                        String_set(prefixFileName,baseName);
-                      }
-                      n = 0;
-                      do
-                      {
-                        File_setFileName(moveToArchivePath,moveToPath);
-                        File_appendFileName(moveToArchivePath,prefixFileName);
-                        String_appendFormat(moveToArchivePath,"-%u",n);
-                        String_append(moveToArchivePath,postfixFileName);
-                        n++;
-                      }
-                      while (Storage_exists(&toStorageInfo,moveToArchivePath));
-                      String_delete(postfixFileName);
-                      String_delete(prefixFileName);
-                    }
-
-                    // copy storage
-                    moveError = Storage_copy(&fromStorageInfo,
-                                             storageSpecifier.archiveName,
-                                             &toStorageInfo,
-                                             moveToArchivePath,
-                                             size,
-                                             CALLBACK_INLINE(bool,(uint64 doneBytes, uint64 totalBytes, void *userData),
-                                             {
-                                               bool result;
-
-                                               UNUSED_VARIABLE(userData);
-
-                                               if (transferInfoFunction != NULL)
-                                               {
-                                                 transferInfoFunction(storageId,
-                                                                      storageName,
-                                                                      doneBytes,
-                                                                      totalBytes,
-                                                                      doneCount,
-                                                                      doneSize,
-                                                                      totalStorageCount,
-                                                                      totalStorageSize,
-                                                                      transferInfoUserData
-                                                                     );
-                                               }
-
-                                               if (isAbortedFunction != NULL)
-                                               {
-                                                 result = !isAbortedFunction(isAbortedUserData);
-                                               }
-                                               else
-                                               {
-                                                 result = TRUE;
-                                               }
-
-                                               return result;
-                                             },NULL),
-                                             CALLBACK_(isAbortedFunction,isAbortedUserData)
+                    moveError = Storage_init(&toStorageInfo,
+                                             NULL,  // masterIO
+                                             moveToStorageSpecifier,
+                                             jobOptions,
+                                             &maxToBandWidthList,
+                                             SERVER_CONNECTION_PRIORITY_LOW,
+                                             CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                                             CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                                             CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                                             CALLBACK_(NULL,NULL),  // isPauseFunction
+                                             CALLBACK_(NULL,NULL),  // isAbortedFunction
+                                             NULL  // logHandle
                                             );
-
-                    // update index
+  fprintf(stderr,"%s:%d: moveError=%s\n",__FILE__,__LINE__,Error_getText(moveError));
                     if (moveError == ERROR_NONE)
                     {
-                      moveError = Index_updateStorage(indexHandle,
-                                                      storageId,
-                                                      NULL,  // hostName,
-                                                      NULL,  // userName,
-                                                      Storage_getName(storageName,moveToStorageSpecifier,moveToArchivePath),
-                                                      0LL,  // dateTime,
-                                                      size,
-                                                      NULL,  // comment,
-                                                      FALSE  // updateNewest
-                                                     );
-                    }
-
-                    // delete original storage
-                    if (moveError == ERROR_NONE)
-                    {
-                      moveError = Storage_delete(&fromStorageInfo,
-                                                 storageSpecifier.archiveName
-                                                );
-                      if (moveError != ERROR_NONE)
+                      // get unique move-to name
+                      File_setFileName(moveToArchivePath,moveToPath);
+                      File_appendFileName(moveToArchivePath,baseName);
+                      if (Storage_exists(&toStorageInfo,moveToArchivePath))
                       {
-                        (void)Storage_delete(&toStorageInfo,moveToArchivePath);
+                        String prefixFileName,postfixFileName;
+                        long   index;
+                        uint   n;
+
+                        // rename new archive
+                        prefixFileName  = String_new();
+                        postfixFileName = String_new();
+                        index = String_findLastChar(baseName,STRING_END,'.');
+                        if (index >= 0)
+                        {
+                          String_sub(prefixFileName,baseName,STRING_BEGIN,index);
+                          String_sub(postfixFileName,baseName,index,STRING_END);
+                        }
+                        else
+                        {
+                          String_set(prefixFileName,baseName);
+                        }
+                        n = 0;
+                        do
+                        {
+                          File_setFileName(moveToArchivePath,moveToPath);
+                          File_appendFileName(moveToArchivePath,prefixFileName);
+                          String_appendFormat(moveToArchivePath,"-%u",n);
+                          String_append(moveToArchivePath,postfixFileName);
+                          n++;
+                        }
+                        while (Storage_exists(&toStorageInfo,moveToArchivePath));
+                        String_delete(postfixFileName);
+                        String_delete(prefixFileName);
                       }
+
+                      // copy storage
+                      moveError = Storage_copy(&fromStorageInfo,
+                                               storageSpecifier.archiveName,
+                                               &toStorageInfo,
+                                               moveToArchivePath,
+                                               size,
+                                               CALLBACK_INLINE(bool,(uint64 doneBytes, uint64 totalBytes, void *userData),
+                                               {
+                                                 bool result;
+
+                                                 UNUSED_VARIABLE(userData);
+
+                                                 if (transferInfoFunction != NULL)
+                                                 {
+                                                   transferInfoFunction(storageId,
+                                                                        storageName,
+                                                                        doneBytes,
+                                                                        totalBytes,
+                                                                        doneCount,
+                                                                        doneSize,
+                                                                        totalStorageCount,
+                                                                        totalStorageSize,
+                                                                        transferInfoUserData
+                                                                       );
+                                                 }
+
+                                                 if (isAbortedFunction != NULL)
+                                                 {
+                                                   result = !isAbortedFunction(isAbortedUserData);
+                                                 }
+                                                 else
+                                                 {
+                                                   result = TRUE;
+                                                 }
+
+                                                 return result;
+                                               },NULL),
+                                               CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                              );
+  fprintf(stderr,"%s:%d: moveError=%s\n",__FILE__,__LINE__,Error_getText(moveError));
+
+                      // update index
+                      if (moveError == ERROR_NONE)
+                      {
+                        moveError = Index_updateStorage(indexHandle,
+                                                        storageId,
+                                                        NULL,  // hostName,
+                                                        NULL,  // userName,
+                                                        Storage_getName(storageName,moveToStorageSpecifier,moveToArchivePath),
+                                                        0LL,  // dateTime,
+                                                        size,
+                                                        NULL,  // comment,
+                                                        FALSE  // updateNewest
+                                                       );
+                      }
+
+                      // delete original storage
+                      if (moveError == ERROR_NONE)
+                      {
+                        moveError = Storage_delete(&fromStorageInfo,
+                                                   storageSpecifier.archiveName
+                                                  );
+                        if (moveError != ERROR_NONE)
+                        {
+                          (void)Storage_delete(&toStorageInfo,moveToArchivePath);
+                        }
+                      }
+
+                      // done storage
+                      Storage_done(&toStorageInfo);
                     }
 
                     // done storage
-                    Storage_done(&toStorageInfo);
+                    Storage_done(&fromStorageInfo);
                   }
-
-                  // done storage
-                  Storage_done(&fromStorageInfo);
+                }
+                else
+                {
+                  // set index state: error
+                  (void)Index_setStorageState(indexHandle,
+                                              storageId,
+                                              INDEX_STATE_ERROR,
+                                              0LL,  // lastCheckedDateTime
+                                              "file not found"
+                                             );
                 }
               }
             }
@@ -3696,7 +3715,11 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                            NULL,  // indexIds
                                            0,  // indexIdCount
                                            INDEX_TYPE_SET_ALL,
-                                           INDEX_STATE_SET_ALL,
+                                             SET_VALUE(INDEX_STATE_NONE)
+                                           | SET_VALUE(INDEX_STATE_OK)
+                                           | SET_VALUE(INDEX_STATE_CREATE)
+                                           | SET_VALUE(INDEX_STATE_UPDATE_REQUESTED)
+                                           | SET_VALUE(INDEX_STATE_UPDATE),
                                            INDEX_MODE_SET_ALL,
                                            NULL,  // hostName
                                            NULL,  // userName
@@ -3846,7 +3869,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ERROR,
-                   "Fail to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
+                   "Failed to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
                    Index_getDatabaseId(moveToEntityId),
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(moveToArchiveType),
