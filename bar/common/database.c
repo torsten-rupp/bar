@@ -10695,11 +10695,22 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
+// TODO:
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
         break;
-      case DATABASE_TYPE_POSTGRESQL:
+      case DATABASE_TYPE_POSTGRESQL:        
         #if defined(HAVE_POSTGRESQL)
+        {
+          PGcancel *pgCancel;
+          
+          pgCancel = PQgetCancel(databaseHandle->postgresql.handle);
+          if (pgCancel != NULL)
+          {
+            (void)PQcancel(pgCancel,NULL,0);
+            PQfreeCancel(pgCancel);
+          }
+        }
         #else /* HAVE_POSTGRESQL */
         #endif /* HAVE_POSTGRESQL */
         break;
