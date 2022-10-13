@@ -3939,7 +3939,9 @@ if (false) {
    */
   private boolean tryReconnect(String message)
   {
-    boolean connectedFlag = false;
+    boolean connectedFlag                 = false;
+    String  connectErrorMessage           = null;
+    String  connectErrorExtendedMessage[] = null;
 
     // try to reconnect
     if (Dialogs.confirmError(new Shell(),
@@ -3950,125 +3952,9 @@ if (false) {
                             )
        )
     {
-      // try to connect to last server
-      while (!connectedFlag)
-      {
-        try
-        {
-          connect(loginData.name,
-                  loginData.port,
-                  loginData.tlsPort,
-                  Settings.serverCAFileName,
-                  Settings.serverKeyFileName,
-                  loginData.tlsMode,
-                  Settings.serverInsecureTLS,
-                  loginData.password
-                 );
-
-          updateServerMenu();
-
-          // notify new server
-          Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-
-          connectedFlag = true;
-        }
-        catch (ConnectionError error)
-        {
-          if (!Dialogs.confirmError(new Shell(),
-                                    BARControl.tr("Connection fail"),
-                                    error.getMessage(),
-                                    BARControl.tr("Try again"),
-                                    BARControl.tr("Cancel")
-                                   )
-             )
-          {
-            quitFlag = true;
-            break;
-          }
-        }
-        catch (CommunicationError error)
-        {
-          if (!Dialogs.confirmError(new Shell(),
-                                    BARControl.tr("Connection fail"),
-                                    error.getMessage(),
-                                    BARControl.tr("Try again"),
-                                    BARControl.tr("Cancel")
-                                   )
-             )
-          {
-            quitFlag = true;
-            break;
-          }
-        }
-
-        // show warning if no TLS connection established
-        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
-        {
-          Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
-        }
-      }
-
-      // try to connect to new server
-      while (   !connectedFlag
-             && getLoginData(loginData,false)
-             && ((loginData.port != 0) || (loginData.tlsPort != 0))
-            )
-      {
-        // try to connect to server
-        try
-        {
-          connect(loginData.name,
-                  loginData.port,
-                  loginData.tlsPort,
-                  Settings.serverCAFileName,
-                  Settings.serverKeyFileName,
-                  loginData.tlsMode,
-                  Settings.serverInsecureTLS,
-                  loginData.password
-                 );
-
-          updateServerMenu();
-
-          // notify new server
-          Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-
-          connectedFlag = true;
-        }
-        catch (ConnectionError error)
-        {
-          if (!Dialogs.confirmError(new Shell(),
-                                    BARControl.tr("Connection fail"),
-                                    error.getMessage(),
-                                    BARControl.tr("Try again"),
-                                    BARControl.tr("Cancel")
-                                   )
-             )
-          {
-            quitFlag = true;
-            break;
-          }
-        }
-        catch (CommunicationError error)
-        {
-          if (!Dialogs.confirmError(new Shell(),
-                                    BARControl.tr("Connection fail"),
-                                    error.getMessage(),
-                                    BARControl.tr("Try again"),
-                                    BARControl.tr("Cancel")
-                                   )
-             )
-          {
-            quitFlag = true;
-            break;
-          }
-        }
-
-        // show warning if no TLS connection established
-        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
-        {
-          Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
-        }
-      }
+      connectedFlag = login(loginData,
+                            false  // loginDialogFlag
+                           );
     }
 
     // refresh or stop if not connected
