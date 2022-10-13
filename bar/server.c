@@ -21018,9 +21018,18 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   // signal quit
   clientInfo->quitFlag = TRUE;
 
-  // wait for commands
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    // abort all index commands
+    LIST_ITERATE(&clientInfo->commandInfoList,commandInfoNode)
+    {
+      if (commandInfoNode->indexHandle != NULL)
+      {
+        Index_interrupt(commandInfoNode->indexHandle);
+      }
+    }
+
+    // wait for commands done
     while (!List_isEmpty(&clientInfo->commandInfoList))
     {
       Semaphore_waitModified(&clientInfo->lock,WAIT_FOREVER);
@@ -21037,15 +21046,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
         Job_abort(jobNode);
         jobNode->masterIO = NULL;
       }
-    }
-  }
-
-  // abort all running index operations
-  LIST_ITERATE(&clientInfo->commandInfoList,commandInfoNode)
-  {
-    if (commandInfoNode->indexHandle != NULL)
-    {
-      Index_interrupt(commandInfoNode->indexHandle);
     }
   }
 
