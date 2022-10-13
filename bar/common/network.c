@@ -203,7 +203,7 @@ LOCAL Errors setNonBlocking(int socketDescriptor, bool enabled)
       return ERROR_(IO,errno);
     }
   #elif defined(PLATFORM_WINDOWS)
-    n = enable ? 1 : 0;
+    n = enabled ? 1 : 0;
     (void)ioctlsocket(socketDescriptor,FIONBIO,&n);
   #endif /* PLATFORM_... */
 
