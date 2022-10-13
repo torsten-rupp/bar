@@ -4952,6 +4952,7 @@ throw new Error("NYI");
     final X509TrustManager oldX509TrustManager[] = new X509TrustManager[]{null};
 
     // X509 trust manager wrapper to get received certificate
+Dprintf.dprintf("clear last");
     lastServerCertificate = null;
     X509TrustManager newX509TrustManager = new X509TrustManager()
     {
