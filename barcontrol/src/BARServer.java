@@ -117,10 +117,11 @@ class ConnectionError extends Error
   /** create new connection error
    * @param message message
    * @param extendedMessage extended message or null
+   * @param cause cause or null
    */
-  ConnectionError(String message, String extendedMessage[])
+  ConnectionError(String message, String extendedMessage[], Throwable cause)
   {
-    super(message);
+    super(message,cause);
 
     this.extendedMessage = extendedMessage;
   }
@@ -129,9 +130,19 @@ class ConnectionError extends Error
    * @param message message
    * @param extendedMessage extended message or null
    */
-  ConnectionError(String message, String extendedMessage)
+  ConnectionError(String message, String extendedMessage[])
   {
-    super(message);
+    this(message,extendedMessage,(Throwable)null);
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   * @param cause cause or null
+   */
+  ConnectionError(String message, String extendedMessage, Throwable cause)
+  {
+    super(message,cause);
 
     this.extendedMessage = (extendedMessage != null)
                              ? StringUtils.splitArray(extendedMessage,'\n')
@@ -140,12 +151,30 @@ class ConnectionError extends Error
 
   /** create new connection error
    * @param message message
+   * @param extendedMessage extended message or null
+   */
+  ConnectionError(String message, String extendedMessage)
+  {
+    this(message,extendedMessage,(Throwable)null);
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param cause cause or null
+   */
+  ConnectionError(String message, Throwable cause)
+  {
+    this(message,(String[])null,cause);
+  }
+  
+  /** create new connection error
+   * @param message message
    */
   ConnectionError(String message)
   {
-    this(message,(String[])null);
+    this(message,(Throwable)null);
   }
-  
+
   /**_get extended message
    * return extended message
    */
@@ -171,10 +200,11 @@ class CommunicationError extends Error
   /** create new connection error
    * @param message message
    * @param extendedMessage extended message or null
+   * @param cause cause or null
    */
-  CommunicationError(String message, String extendedMessage[])
+  CommunicationError(String message, String extendedMessage[], Throwable cause)
   {
-    super(message);
+    super(message,cause);
     
     this.extendedMessage = extendedMessage;
   }
@@ -183,13 +213,41 @@ class CommunicationError extends Error
    * @param message message
    * @param extendedMessage extended message or null
    */
-  CommunicationError(String message, String extendedMessage)
+  CommunicationError(String message, String extendedMessage[])
   {
-    super(message);
+    this(message,extendedMessage,(Throwable)null);
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   * @param cause cause or null
+   */
+  CommunicationError(String message, String extendedMessage, Throwable cause)
+  {
+    super(message,cause);
 
     this.extendedMessage = (extendedMessage != null)
                              ? StringUtils.splitArray(extendedMessage,'\n')
                              : null;
+  }
+
+  /** create new connection error
+   * @param message message
+   * @param extendedMessage extended message or null
+   */
+  CommunicationError(String message, String extendedMessage)
+  {
+    this(message,extendedMessage,(Throwable)null);
+  }
+
+  /** create new communication error
+   * @param message message
+   * @param cause cause or null
+   */
+  CommunicationError(String message, Throwable cause)
+  {
+    this(message,(String[])null,cause);
   }
 
   /** create new communication error
@@ -197,7 +255,7 @@ class CommunicationError extends Error
    */
   CommunicationError(String message)
   {
-    this(message,(String[])null);
+    this(message,(Throwable)null);
   }
 
   /** create new communication error
@@ -1664,6 +1722,7 @@ public class BARServer
                              boolean            insecureTLS,
                              String             password
                             )
+    throws ConnectionError
   {
     /** key data
      */
@@ -1707,7 +1766,7 @@ public class BARServer
                              );
 
     // connect to server: first try TLS, then plain
-    String connectErrorMessage = null;
+    ConnectionError connectionError = null;
     if (   (socket == null)
         && (port != 0)
         && ((tlsMode == TLSModes.TRY) || (tlsMode == TLSModes.FORCE))
@@ -1796,43 +1855,77 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage()));
+              }
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage()));
+              }
             }
             catch (SSLHandshakeException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                      (lastServerCertificate != null)
+                                                        ? lastServerCertificate.toString()
+                                                        : null
+                                                     );
+              }
             }
             catch (SSLException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+              }
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage()));
+              }
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port)));
+              }
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port)));
+              }
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port)));
+              }
             }
             catch (IOException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.reniceIOException(exception).getMessage());
+              }
             }
             catch (Exception exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(exception.getMessage());
+              }
             }
             finally
             {
@@ -1918,39 +2011,70 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage()));
+              }
             }
             catch (SSLHandshakeException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                      (lastServerCertificate != null)
+                                                        ? lastServerCertificate.toString()
+                                                        : null
+                                                     );
+              }
             }
             catch (SSLException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+              }
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage()));
+              }
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}''refused",name,Integer.toString(tlsPort));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}''refused",name,Integer.toString(tlsPort)));
+              }
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage()));
+              }
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort)));
+              }
             }
             catch (IOException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.reniceIOException(exception).getMessage());
+              }
             }
             catch (Exception exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(exception.getMessage());
+              }
             }
             finally
             {
@@ -2052,43 +2176,77 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             catch (BARException exception)
             {
               try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage()));
+              }
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage()));
+              }
             }
             catch (SSLHandshakeException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                      (lastServerCertificate != null)
+                                                        ? lastServerCertificate.toString()
+                                                        : null
+                                                     );
+              }
             }
             catch (SSLException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+              }
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage()));
+              }
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port)));
+              }
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port)));
+              }
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port)));
+              }
             }
             catch (IOException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.reniceIOException(exception).getMessage());
+              }
             }
             catch (Exception exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(exception.getMessage());
+              }
             }
             finally
             {
@@ -2171,39 +2329,70 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage()));
+              }
             }
             catch (SSLHandshakeException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                      (lastServerCertificate != null)
+                                                        ? lastServerCertificate.toString()
+                                                        : null
+                                                     );
+              }
             }
             catch (SSLException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+              }
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage()));
+              }
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(tlsPort));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(tlsPort)));
+              }
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(tlsPort));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(tlsPort)));
+              }
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort));
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort)));
+              }
             }
             catch (IOException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(BARControl.reniceIOException(exception).getMessage());
+              }
             }
             catch (Exception exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
+              if (connectionError == null)
+              {
+                connectionError = new ConnectionError(exception.getMessage());
+              }
             }
             finally
             {
@@ -2241,23 +2430,38 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (SocketTimeoutException exception)
       {
-        connectErrorMessage = exception.getMessage();
+        if (connectionError == null)
+        {
+          connectionError = new ConnectionError(exception.getMessage());
+        }
       }
       catch (ConnectException exception)
       {
-        connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
+        if (connectionError == null)
+        {
+          connectionError = new ConnectionError(BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port)));
+        }
       }
       catch (NoRouteToHostException exception)
       {
-        connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
+        if (connectionError == null)
+        {
+          connectionError = new ConnectionError(BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port)));
+        }
       }
       catch (UnknownHostException exception)
       {
-        connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
+        if (connectionError == null)
+        {
+          connectionError = new ConnectionError(BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port)));
+        }
       }
       catch (Exception exception)
       {
-        connectErrorMessage = exception.getMessage();
+        if (connectionError == null)
+        {
+          connectionError = new ConnectionError(exception.getMessage());
+        }
       }
       finally
       {
@@ -2270,8 +2474,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if (socket == null)
     {
-      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage,(lastServerCertificate != null) ? lastServerCertificate.toString() : null);
-      else                                throw new ConnectionError(BARControl.tr("no server ports specified"));
+      if   ((tlsPort != 0) || (port!= 0))
+      { 
+        throw connectionError;
+      }
+      else
+      {
+        throw new ConnectionError(BARControl.tr("no server ports specified"));
+      }
     }
 
     // authorize, get version/file separator
@@ -4779,7 +4989,7 @@ throw new Error("NYI");
       }
     };
 
-    // replace existing X509 trust manager with wrapper
+    // replace existing X509 trust manager with wrapped trust manager to store received certificate
     for (int i = 0; i < trustManagers.length; i++)
     {
       if (trustManagers[i] instanceof X509TrustManager)
