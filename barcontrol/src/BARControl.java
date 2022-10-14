@@ -2388,7 +2388,7 @@ public class BARControl
     System.out.println("         -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --password=<password>                      - server password (use with care!)");
-    System.out.println("         --ca-file=<file name>                      - addition trusted certificate authority file name (PEM format)");
+    System.out.println("         --ca-file=<file name>                      - additional trusted certificate authority file name (PEM format)");
     System.out.println("         --keystore-file=<file name>                - keystore file name (JKS format, default: ");
     System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_KEYSTORE_FILE_NAME+" or ");
     System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_KEYSTORE_FILE_NAME+" or ");
@@ -3573,7 +3573,7 @@ if (false) {
         });
       }
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Set certificate authority (CA)")+"\u2026",SWT.NONE);
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Set additional certificate authority (CA)")+"\u2026",SWT.NONE);
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override

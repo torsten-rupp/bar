@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-14 01:48+0200\n"
+"POT-Creation-Date: 2022-10-14 09:40+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -347,7 +347,7 @@ msgstr ""
 
 #: src/BARControl.java:3576
 #, fuzzy
-msgid "Set certificate authority (CA)"
+msgid "Set additional certificate authority (CA)"
 msgstr "ソースファイル選択"
 
 #: src/BARControl.java:3588
