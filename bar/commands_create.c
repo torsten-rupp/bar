@@ -92,8 +92,8 @@ typedef struct
 {
   StorageInfo                 storageInfo;                          // storage info
   IndexHandle                 *indexHandle;
-  const char                  *jobUUID;                             // unique job id to store or NULL
-  const char                  *scheduleUUID;                        // unique schedule id to store or NULL
+  const char                  *jobUUID;                             // job UUID to store or NULL
+  const char                  *entityUUID;                          // entity UUID to store or NULL
   ArchiveTypes                archiveType;                          // archive type to create
   const char                  *scheduleTitle;                       // schedule title or NULL
   const char                  *customText;                          // custom text or NULL
@@ -253,8 +253,8 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
 *          indexHandle                - index handle
-*          jobUUID                    - unique job id to store or NULL
-*          scheduleUUID               - unique schedule id to store or NULL
+*          jobUUID                    - job UUID to store or NULL
+*          entityUUID                 - entity UUID to store or NULL
 *          scheduleTitle              - schedule title
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
@@ -284,7 +284,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           IndexHandle        *indexHandle,
                           const char         *jobUUID,
-                          const char         *scheduleUUID,
+                          const char         *entityUUID,
                           const char         *scheduleTitle,
                           ArchiveTypes       archiveType,
                           const EntryList    *includeEntryList,
@@ -306,7 +306,7 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
   // init variables
   createInfo->indexHandle                          = indexHandle;
   createInfo->jobUUID                              = jobUUID;
-  createInfo->scheduleUUID                         = scheduleUUID;
+  createInfo->entityUUID                           = entityUUID;
   createInfo->includeEntryList                     = includeEntryList;
   createInfo->excludePatternList                   = excludePatternList;
   createInfo->customText                           = customText;
@@ -1566,7 +1566,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         error = Continuous_initList(&databaseStatementHandle,
                                     &continuousDatabaseHandle,
                                     createInfo->jobUUID,
-                                    createInfo->scheduleUUID
+                                    createInfo->entityUUID
                                    );
         if (error == ERROR_NONE)
         {
@@ -2476,7 +2476,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
              && !isAborted(createInfo)
              && Continuous_getEntry(&continuousDatabaseHandle,
                                     createInfo->jobUUID,
-                                    createInfo->scheduleUUID,
+                                    createInfo->entityUUID,
                                     NULL,  // databaseId
                                     name
                                    )
@@ -4091,7 +4091,7 @@ Misc_udelay(1000*1000);
 * Input  : storageInfo          - storage info
 *          uuidId               - index UUID id
 *          jobUUID              - job UUID
-*          scheduleUUID         - schedule UUID
+*          entityUUID           - entity UUID
 *          entityId             - index entity id
 *          storageId            - index storage id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
@@ -4107,7 +4107,7 @@ Misc_udelay(1000*1000);
 LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           IndexId      uuidId,
                           ConstString  jobUUID,
-                          ConstString  scheduleUUID,
+                          ConstString  entityUUID,
                           IndexId      entityId,
                           IndexId      storageId,
                           int          partNumber,
@@ -4126,7 +4126,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   assert(createInfo != NULL);
 
   UNUSED_VARIABLE(jobUUID);
-  UNUSED_VARIABLE(scheduleUUID);
+  UNUSED_VARIABLE(entityUUID);
 
   // get archive file name (expand macros)
   archiveName = String_new();
@@ -4237,7 +4237,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                      INDEX_ID_ANY,  // uuidId
                                      INDEX_ID_ANY,  // entityId
                                      jobUUID,
-                                     NULL,  // scheduleUUID,
+                                     NULL,  // entityUUID
                                      NULL,  // indexIds
                                      0,   // indexIdCount
                                      INDEX_TYPE_SET_ALL,
@@ -4265,9 +4265,9 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       }
       while (Index_getNextStorage(&indexQueryHandle,
                                   &uuidId,
-                                  NULL,  // jobUUID,
+                                  NULL,  // jobUUID
                                   &entityId,
-                                  NULL,  // scheduleUUID
+                                  NULL,  // entityUUID
                                   NULL,  // hostName
                                   NULL,  // userName
                                   NULL,  // comment
@@ -4450,8 +4450,8 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                      indexHandle,
                                      INDEX_ID_ANY,  // uuidId
                                      INDEX_ID_ANY,  // entityId
-                                     NULL,  // jobUUID,
-                                     NULL,  // scheduleUUID,
+                                     NULL,  // jobUUID
+                                     NULL,  // entityUUID
                                      NULL,  // indexIds
                                      0,   // indexIdCount
                                      INDEX_TYPE_SET_ALL,
@@ -4481,7 +4481,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                   &uuidId,
                                   NULL,  // jobUUID,
                                   &entityId,
-                                  NULL,  // scheduleUUID
+                                  NULL,  // entityUUID
                                   NULL,  // hostName
                                   NULL,  // userName
                                   NULL,  // comment
@@ -5031,8 +5031,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         storageMsg.archiveName,
                                         NULL,  // uuidId
                                         NULL,  // entityId
-                                        NULL,  // jobUUID,
-                                        NULL,  // scheduleUUID,
+                                        NULL,  // jobUUID
+                                        NULL,  // entityUUID
                                         &storageId,
                                         NULL,  // createdDateTime
                                         NULL,  // size
@@ -5147,8 +5147,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            createInfo->indexHandle,
                                            storageMsg.uuidId,
                                            INDEX_ID_ANY, // entityId
-                                           NULL,  // jobUUID,
-                                           NULL,  // scheduleUUID,
+                                           NULL,  // jobUUID
+                                           NULL,  // entityUUID
                                            NULL,  // indexIds
                                            0,  // indexIdCount
                                            INDEX_TYPE_SET_ALL,
@@ -5171,9 +5171,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             }
             while (Index_getNextStorage(&indexQueryHandle,
                                         NULL,  // uuidId
-                                        NULL,  // job UUID
+                                        NULL,  // jobUUID
                                         &existingEntityId,
-                                        NULL,  // schedule UUID
+                                        NULL,  // entityUUID
                                         NULL,  // hostName
                                         NULL,  // userName
                                         NULL,  // comment
@@ -7761,7 +7761,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
 Errors Command_create(ServerIO                     *masterIO,
                       const char                   *jobUUID,
-                      const char                   *scheduleUUID,
+                      const char                   *entityUUID,
                       const char                   *scheduleTitle,
                       ArchiveTypes                 archiveType,
                       ConstString                  storageName,
@@ -7863,7 +7863,7 @@ Errors Command_create(ServerIO                     *masterIO,
   initCreateInfo(&createInfo,
                  Index_isAvailable() ? &indexHandle : NULL,
                  jobUUID,
-                 scheduleUUID,
+                 entityUUID,
                  scheduleTitle,
                  archiveType,
                  includeEntryList,
@@ -8011,7 +8011,7 @@ Errors Command_create(ServerIO                     *masterIO,
     // get/create index job UUID
     error = Index_findUUID(&indexHandle,
                            jobUUID,
-                           NULL,  // scheduleUUID
+                           NULL,  // entityUUID
                            &uuidId,
                            NULL,  // executionCountNormal,
                            NULL,  // executionCountFull,
@@ -8046,7 +8046,7 @@ Errors Command_create(ServerIO                     *masterIO,
     // create new index entity
     error = Index_newEntity(&indexHandle,
                             jobUUID,
-                            scheduleUUID,
+                            entityUUID,
                             String_cString(hostName),
                             String_cString(userName),
                             archiveType,
@@ -8080,7 +8080,7 @@ Errors Command_create(ServerIO                     *masterIO,
                          uuidId,
                          entityId,
                          jobUUID,
-                         scheduleUUID,
+                         entityUUID,
                          &jobOptions->deltaSourceList,
                          archiveType,
                          jobOptions->dryRun,

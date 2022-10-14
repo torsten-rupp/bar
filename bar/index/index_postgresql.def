@@ -27,6 +27,7 @@ CREATE INDEX ON uuids (jobUUID);
 CREATE TABLE IF NOT EXISTS entities(
   id                        BIGSERIAL PRIMARY KEY NOT NULL,
   jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
+// TODO: rename to entityUUID
   scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
   hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
   userName                  TEXT,
@@ -336,6 +337,7 @@ CREATE INDEX ON specialEntries (storageId);
 CREATE TABLE IF NOT EXISTS history(
   id                BIGSERIAL PRIMARY KEY,
   jobUUID           VARCHAR(${UUID_LENGTH}) NOT NULL,
+// TODO: rename to entityUUID
   scheduleUUID      TEXT,
   hostName          TEXT,
   userName          TEXT,

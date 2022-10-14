@@ -1156,8 +1156,8 @@ LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
 * Name   : getAggregateInfo
 * Purpose: get aggregate info for job/sched7ule
 * Input  : aggregateInfo - aggregate info variable
-*          jobUUID       - job UUID
-*          scheduleUUID  - schedule UUID or NULL
+*          jobUUID    - job UUID
+*          entityUUID - entity UUID or NULL
 * Output : aggregateInfo - aggregate info
 * Return : -
 * Notes  : -
@@ -1165,7 +1165,7 @@ LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
 
 LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                             ConstString   jobUUID,
-                            ConstString   scheduleUUID
+                            ConstString   entityUUID
                            )
 {
   assert(aggregateInfo != NULL);
@@ -1193,7 +1193,7 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   {
     (void)Index_findUUID(&indexHandle,
                          String_cString(jobUUID),
-                         String_cString(scheduleUUID),
+                         String_cString(entityUUID),
                          NULL,  // uuidId
                          &aggregateInfo->executionCount.normal,
                          &aggregateInfo->executionCount.full,
@@ -5135,6 +5135,7 @@ LOCAL void jobThreadCode(void)
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
   uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
   TextMacros       (textMacros,9);
@@ -5477,10 +5478,13 @@ LOCAL void jobThreadCode(void)
             case JOB_TYPE_NONE:
               break;
             case JOB_TYPE_CREATE:
+              // create new entity UUID
+              Misc_getUUID(entityUUID);
+
               // create archive
               jobNode->runningInfo.error = Command_create(jobNode->masterIO,
                                                           String_cString(jobUUID),
-                                                          String_cString(scheduleUUID),
+                                                          String_cString(entityUUID),
 //TODO:
 NULL,//                                                        scheduleTitle,
                                                           archiveType,
@@ -5530,6 +5534,9 @@ NULL,//                                                        scheduleTitle,
     else
     {
       // slave job -> send to slave and run on slave machine
+
+      // create new entity UUID
+      Misc_getUUID(entityUUID);
 
       // check if connected
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -5720,7 +5727,7 @@ NULL,//                                                        scheduleTitle,
           {
             error = Index_newHistory(&indexHandle,
                                      jobUUID,
-                                     scheduleUUID,
+                                     entityUUID,
                                      hostName,
                                      NULL,  // userName
                                      archiveType,
@@ -5752,7 +5759,7 @@ NULL,//                                                        scheduleTitle,
           {
             error = Index_newHistory(&indexHandle,
                                      jobUUID,
-                                     scheduleUUID,
+                                     entityUUID,
                                      hostName,
                                      NULL,  // userName
                                      archiveType,
@@ -5784,7 +5791,7 @@ NULL,//                                                        scheduleTitle,
           {
             error = Index_newHistory(&indexHandle,
                                      jobUUID,
-                                     scheduleUUID,
+                                     entityUUID,
                                      hostName,
                                      NULL,  // userName
                                      archiveType,
@@ -5849,7 +5856,7 @@ NULL,//                                                        scheduleTitle,
                     );
     getAggregateInfo(&scheduleAggregateInfo,
                      jobNode->job.uuid,
-                     scheduleUUID
+                     entityUUID
                     );
 
     // done job
@@ -15674,7 +15681,7 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get jobUUID, schedule UUID, hostName, userName, archive type
+  // get entityId, moveTo
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
@@ -18164,6 +18171,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+// TODO: entityUUID?
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   hostName = String_new();
   StringMap_getString(argumentMap,"hostName",hostName,NULL);

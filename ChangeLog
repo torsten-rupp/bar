@@ -1,4 +1,15 @@
-2022-09-09 0.22a
+2022-09-16 0.22a
+  * disabled TLS port by default (TLS also work on
+    standard port)
+  * fixed/renamed archive meta field "scheduleUUID":
+    become a unique entity UUID to be able to find all
+    archive belonging to a backup set.
+    Note: if needed, e. g. for re-import to the index,
+    run the command 'convert' with option --new-entity-uuid
+    to assign an UUID to all archives of an entity
+  * support TLS connections to slaves
+  * fixed option --job
+  * fixed convert multiple archives
   * fixed add newest entry if no entry exists
   * bar-index: fixed clean orphaned
   * fixed rename entry on restore: use file name instead

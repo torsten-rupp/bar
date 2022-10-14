@@ -50,9 +50,8 @@
 * Name   : Command_create
 * Purpose: create archive
 * Input  : masterIO                     - master i/o or NULL
-*          jobUUID                      - unique job id to store or NULL
-*          scheduleUUID                 - unique schedule id to store or
-*                                         NULL
+*          jobUUID                      - job UUID to store or NULL
+*          entityUUID                   - entity UUID to store or NULL
 *          scheduleTitle                - schedule title
 *          archiveType                  - archive type; see
 *                                         ArchiveTypes (normal/full/
@@ -92,7 +91,7 @@
 
 Errors Command_create(ServerIO                     *masterIO,
                       const char                   *jobUUID,
-                      const char                   *scheduleUUID,
+                      const char                   *entityUUID,
                       const char                   *scheduleTitle,
                       ArchiveTypes                 archiveType,
                       ConstString                  storageName,

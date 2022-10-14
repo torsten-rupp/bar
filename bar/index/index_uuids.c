@@ -356,7 +356,7 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
 
 Errors Index_findUUID(IndexHandle  *indexHandle,
                       const char   *findJobUUID,
-                      const char   *findScheduleUUID,
+                      const char   *findEntityUUID,
                       IndexId      *uuidId,
                       uint         *executionCountNormal,
                       uint         *executionCountFull,
@@ -465,8 +465,8 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
 
                             DATABASE_FILTER_BOOL   (stringIsEmpty(findJobUUID)),
                             DATABASE_FILTER_CSTRING(findJobUUID),
-                            DATABASE_FILTER_BOOL   (stringIsEmpty(findScheduleUUID)),
-                            DATABASE_FILTER_CSTRING(findScheduleUUID)
+                            DATABASE_FILTER_BOOL   (stringIsEmpty(findEntityUUID)),
+                            DATABASE_FILTER_CSTRING(findEntityUUID)
                           ),
                           "uuids.id",
                           NULL,  // orderBy
@@ -505,9 +505,9 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
 
                                       return ERROR_NONE;
                                     },NULL),
-                                    "INDEX_FIND_UUID jobUUID=%'s scheduleUUID=%'s",
-                                    findJobUUID,
-                                    (findScheduleUUID != NULL) ? findScheduleUUID : ""
+                                    "INDEX_FIND_UUID jobUUID=%'s entityUUID=%'s",
+                                    findEntityUUID,
+                                    (findEntityUUID != NULL) ? findEntityUUID : ""
                                    );
   }
   assert((error != ERROR_NONE) || (uuidId == NULL) || !INDEX_ID_IS_NONE(*uuidId));
@@ -519,7 +519,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
                            IndexId     uuidId,
 //TODO: remove?
                            ConstString jobUUID,
-                           ConstString scheduleUUID,
+                           ConstString entityUUID,
                            ConstString name,
                            uint64      *lastExecutedDateTime,
                            uint        *totalEntityCount,
@@ -555,7 +555,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
 
   Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
-  Database_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID='%S'",scheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID='%S'",entityUUID);
   Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
 
   INDEX_DOX(error,

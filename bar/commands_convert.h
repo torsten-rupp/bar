@@ -43,7 +43,7 @@
 * Purpose: convert archive and file system content
 * Input  : archiveFileNameList     - list with archive files
 *          newJobUUID              - new job UUID or NULL
-*          newScheduleUUID         - new schedule UUID or NULL
+*          newEntityUUID           - new entity UUID or NULL
 *          newCreatedDateTime      - new created date/time or 0
 *          newJobOptions           - new job options
 *          getNamePasswordFunction - get password call back
@@ -56,7 +56,7 @@
 
 Errors Command_convert(const StringList        *archiveFileNameList,
                        const char              *newJobUUID,
-                       const char              *newScheduleUUID,
+                       const char              *newEntityUUID,
                        uint64                  newCreatedDateTime,
                        JobOptions              *newJobOptions,
                        GetNamePasswordFunction getNamePasswordFunction,
