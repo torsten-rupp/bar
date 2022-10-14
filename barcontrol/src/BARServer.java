@@ -68,10 +68,14 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NullCipher;
 
+//import javax.net.ssl.HandshakeCompletedListener;
+//import javax.net.ssl.HandshakeCompletedEvent;
 import javax.net.ssl.KeyManagerFactory;
+//import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+//import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -1521,7 +1525,7 @@ public class BARServer
   public final static String            DEFAULT_CA_FILE_NAME          = "bar-ca.pem";           // default certificate authority file name
   public final static String            DEFAULT_CERTIFICATE_FILE_NAME = "bar-server-cert.pem";  // default certificate file name
   public final static String            DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
-  public final static String            DEFAULT_JAVA_KEYSTORE_FILE_NAME    = "bar.jks";              // default Java key file name
+  public final static String            DEFAULT_KEYSTORE_FILE_NAME    = "bar.jks";              // default Java key file name
 
   public static char                    filePathSeparator = '/';
 
@@ -1678,7 +1682,7 @@ public class BARServer
   private static Key                         passwordKey;
   private static Modes                       mode;
 
-  private static X509Certificate             lastServerCertificate;
+  private static X509Certificate             serverCertificateChain[] = null;
   private static Socket                      socket = null;
   private static boolean                     insecureTLS = false;
   private static BufferedWriter              output;
@@ -1707,7 +1711,7 @@ public class BARServer
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
    * @param caFileName server CA file name
-   * @param javaKeystoreFileName Java keystore file name (JKS only)
+   * @param keystoreFileName Java keystore file name (JKS only)
    * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password server password
@@ -1717,7 +1721,7 @@ public class BARServer
                              int                port,
                              int                tlsPort,
                              String             caFileName,
-                             String             javaKeystoreFileName,
+                             String             keystoreFileName,
                              BARServer.TLSModes tlsMode,
                              boolean            insecureTLS,
                              String             password
@@ -1729,14 +1733,14 @@ public class BARServer
     class KeyData
     {
       String caFileName;
-      String javaKeystoreFileName;
+      String keystoreFileName;
 
       KeyData(String caFileName,
-              String javaKeystoreFileName
+              String keystoreFileName
              )
       {
-        this.caFileName           = (caFileName           != null) ? caFileName           : DEFAULT_CA_FILE_NAME;
-        this.javaKeystoreFileName = (javaKeystoreFileName != null) ? javaKeystoreFileName : DEFAULT_JAVA_KEYSTORE_FILE_NAME;
+        this.caFileName       = (caFileName       != null) ? caFileName       : DEFAULT_CA_FILE_NAME;
+        this.keystoreFileName = (keystoreFileName != null) ? keystoreFileName : DEFAULT_KEYSTORE_FILE_NAME;
       }
     };
 
@@ -1750,19 +1754,19 @@ public class BARServer
     // get all possible certificate/key file names
     KeyData[] keyData_ = new KeyData[1+4];
     keyData_[0] = new KeyData(caFileName,
-                              javaKeystoreFileName
+                              keystoreFileName
                              );
     keyData_[1] = new KeyData(DEFAULT_CA_FILE_NAME,
-                              DEFAULT_JAVA_KEYSTORE_FILE_NAME
+                              DEFAULT_KEYSTORE_FILE_NAME
                              );
     keyData_[2] = new KeyData(System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_CA_FILE_NAME,
-                              System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_JAVA_KEYSTORE_FILE_NAME
+                              System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_KEYSTORE_FILE_NAME
                              );
     keyData_[3] = new KeyData(Config.CONFIG_DIR+File.separator+DEFAULT_CA_FILE_NAME,
-                              Config.CONFIG_DIR+File.separator+DEFAULT_JAVA_KEYSTORE_FILE_NAME
+                              Config.CONFIG_DIR+File.separator+DEFAULT_KEYSTORE_FILE_NAME
                              );
     keyData_[4] = new KeyData(Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_CA_FILE_NAME,
-                              Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_JAVA_KEYSTORE_FILE_NAME
+                              Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_KEYSTORE_FILE_NAME
                              );
 
     // connect to server: first try TLS, then plain
@@ -1777,8 +1781,8 @@ public class BARServer
       {
         if (keyData.caFileName != null)
         {
-          File caFile           = new File(keyData.caFileName);
-          File javaKeystoreFile = (keyData.javaKeystoreFileName != null) ? new File(keyData.javaKeystoreFileName) : null;
+          File caFile       = new File(keyData.caFileName);
+          File keystoreFile = (keyData.keystoreFileName != null) ? new File(keyData.keystoreFileName) : null;
           if (caFile.exists() && caFile.isFile() && caFile.canRead())
           {
             Socket    plainSocket = null;
@@ -1786,8 +1790,8 @@ public class BARServer
             try
             {
               SSLSocketFactory sslSocketFactory = getSSLSocketFactory(caFile,
-                                                                      javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead()
-                                                                        ? javaKeystoreFile
+                                                                      keystoreFile.exists() && keystoreFile.isFile() && keystoreFile.canRead()
+                                                                        ? keystoreFile
                                                                         : null,
                                                                       insecureTLS,
                                                                       ""
@@ -1816,7 +1820,37 @@ public class BARServer
 // TODO:
 //              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 //              sslSocket.setTcpNoDelay(true);
+
+/*
+// require Java 1.8
+SSLParameters sslParameters = sslSocket.getSSLParameters();
+sslParameters.setServerNames(Collections.singletonList(new SNIHostName("xxx")));
+sslSocket.setSSLParameters(sslParameters);
+/**/
+
+/*
+sslSocket.addHandshakeCompletedListener(new HandshakeCompletedListener()
+{
+  public void handshakeCompleted(HandshakeCompletedEvent event)
+  {
+System.out.println("xxxxxxxx");
+    try
+    {
+      for (Certificate c : event.getPeerCertificates())
+      {
+//        Dprintf.dprintf("c=%s",c);
+      }
+    }
+    catch (SSLPeerUnverifiedException exception)
+    {
+Dprintf.dprintf("exception=%s",exception);
+    }
+  }
+});
+/**/
               sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
+
+//javax.security.cert.X509Certificate ca[]=sslSocket.getSession().getPeerCertificateChain();Dprintf.dprintf("ca=%d",ca.length);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
@@ -1872,8 +1906,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (connectionError == null)
               {
                 connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (lastServerCertificate != null)
-                                                        ? lastServerCertificate.toString()
+                                                      (serverCertificateChain != null)
+                                                        ? serverCertificateChain[0].toString()
                                                         : null
                                                      );
               }
@@ -1950,16 +1984,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         if (keyData.caFileName != null)
         {
-          File caFile           = new File(keyData.caFileName);
-          File javaKeystoreFile = (keyData.javaKeystoreFileName != null) ? new File(keyData.javaKeystoreFileName) : null;
+          File caFile       = new File(keyData.caFileName);
+          File keystoreFile = (keyData.keystoreFileName != null) ? new File(keyData.keystoreFileName) : null;
           if (caFile.exists() && caFile.isFile() && caFile.canRead())
           {
             SSLSocket sslSocket = null;
             try
             {
               SSLSocketFactory sslSocketFactory = getSSLSocketFactory(caFile,
-                                                                      javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead()
-                                                                        ? javaKeystoreFile
+                                                                      keystoreFile.exists() && keystoreFile.isFile() && keystoreFile.canRead()
+                                                                        ? keystoreFile
                                                                         : null,
                                                                       insecureTLS,
                                                                       ""
@@ -2021,8 +2055,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (connectionError == null)
               {
                 connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (lastServerCertificate != null)
-                                                        ? lastServerCertificate.toString()
+                                                      (serverCertificateChain != null)
+                                                        ? serverCertificateChain[0].toString()
                                                         : null
                                                      );
               }
@@ -2096,10 +2130,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       // try to create TLS socket with JKS on plain socket+startSSL
       for (KeyData keyData : keyData_)
       {
-        if (keyData.javaKeystoreFileName != null)
+        if (keyData.keystoreFileName != null)
         {
-          File javaKeystoreFile = new File(keyData.javaKeystoreFileName);
-          if ((javaKeystoreFile != null) && javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead())
+          File keystoreFile = new File(keyData.keystoreFileName);
+          if ((keystoreFile != null) && keystoreFile.exists() && keystoreFile.isFile() && keystoreFile.canRead())
           {
             Socket    plainSocket = null;
             SSLSocket sslSocket   = null;
@@ -2107,10 +2141,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               // check if valid Java key store
               KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-              keystore.load(new FileInputStream(javaKeystoreFile),null);
+              keystore.load(new FileInputStream(keystoreFile),null);
 
               // set Java key store to use
-              System.setProperty("javax.net.ssl.trustStore",javaKeystoreFile.getAbsolutePath());
+              System.setProperty("javax.net.ssl.trustStore",keystoreFile.getAbsolutePath());
 
               SSLSocketFactory sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
@@ -2170,7 +2204,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key store+startSSL (key store: "+javaKeystoreFile.getPath()+")");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key store+startSSL (key store: "+keystoreFile.getPath()+")");
               break;
             }
             catch (BARException exception)
@@ -2193,8 +2227,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (connectionError == null)
               {
                 connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (lastServerCertificate != null)
-                                                        ? lastServerCertificate.toString()
+                                                      (serverCertificateChain != null)
+                                                        ? serverCertificateChain[0].toString()
                                                         : null
                                                      );
               }
@@ -2269,20 +2303,20 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       // try to create TLS socket with JKS
       for (KeyData keyData : keyData_)
       {
-        if (keyData.javaKeystoreFileName != null)
+        if (keyData.keystoreFileName != null)
         {
-          File javaKeystoreFile = new File(keyData.javaKeystoreFileName);
-          if ((javaKeystoreFile != null) && javaKeystoreFile.exists() && javaKeystoreFile.isFile() && javaKeystoreFile.canRead())
+          File keystoreFile = new File(keyData.keystoreFileName);
+          if ((keystoreFile != null) && keystoreFile.exists() && keystoreFile.isFile() && keystoreFile.canRead())
           {
             SSLSocket sslSocket = null;
             try
             {
               // check if valid Java key store
               KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-              keystore.load(new FileInputStream(javaKeystoreFile),null);
+              keystore.load(new FileInputStream(keystoreFile),null);
 
               // set Java key store to use
-              System.setProperty("javax.net.ssl.trustStore",javaKeystoreFile.getAbsolutePath());
+              System.setProperty("javax.net.ssl.trustStore",keystoreFile.getAbsolutePath());
 
               SSLSocketFactory sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
@@ -2324,7 +2358,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key store (key store: "+javaKeystoreFile.getPath()+")");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key store (key store: "+keystoreFile.getPath()+")");
               break;
             }
             catch (ConnectionError error)
@@ -2339,8 +2373,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               if (connectionError == null)
               {
                 connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (lastServerCertificate != null)
-                                                        ? lastServerCertificate.toString()
+                                                      (serverCertificateChain != null)
+                                                        ? serverCertificateChain[0].toString()
                                                         : null
                                                      );
               }
@@ -2566,7 +2600,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
    * @param caFileName server CA file name
-   * @param javaKeystoreFileName Java keystore file name (JKS only)
+   * @param keystoreFileName Java keystore file name (JKS only)
    * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password server password
@@ -2575,7 +2609,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              int                port,
                              int                tlsPort,
                              String             caFileName,
-                             String             javaKeystoreFileName,
+                             String             keystoreFileName,
                              BARServer.TLSModes tlsMode,
                              boolean            insecureTLS,
                              String             password
@@ -2586,7 +2620,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             port,
             tlsPort,
             caFileName,
-            javaKeystoreFileName,
+            keystoreFileName,
             tlsMode,
             insecureTLS,
             password
@@ -4867,14 +4901,13 @@ throw new Error("NYI");
   /** create TLS (SSL) socket factory with PEM files
    * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
    * @param certificateAuthorityFile certificate authority PEM file
-   * @param certificateFile certificate PEM file
-   * @param javaKeystoreFile Java keystore file (JKS only) or null
+   * @param keystoreFile Java keystore file (JKS only) or null
    * @param insecureTLS  TRUE to accept insecure TLS connections (no certificates check)
    * @param password password or null
    * @return socket factory
    */
   private static SSLSocketFactory getSSLSocketFactory(File          certificateAuthorityFile,
-                                                      File          javaKeystoreFile,
+                                                      File          keystoreFile,
                                                       final boolean insecureTLS,
                                                       String        password
                                                      )
@@ -4885,12 +4918,6 @@ throw new Error("NYI");
     X509CertificateHolder certificateHolder;
 
     passwordChars = (password != null) ? password.toCharArray() : new char[0];
-
-    // load certificate authority (CA)
-    pemParser = new PEMParser(new FileReader(certificateAuthorityFile));
-    certificateHolder = (X509CertificateHolder)pemParser.readObject();
-    pemParser.close();
-    X509Certificate certificateAuthority = certificateConverter.getCertificate(certificateHolder);
 
 // TODO: obsolete
     // load private key
@@ -4915,17 +4942,24 @@ throw new Error("NYI");
 
     // load default keystore
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    keyStore.load(new FileInputStream((javaKeystoreFile != null)
-                                        ? javaKeystoreFile
+    keyStore.load(new FileInputStream((keystoreFile != null)
+                                        ? keystoreFile
                                         : new File(System.getProperty("java.home"),"lib/security/cacerts".replace('/',File.separatorChar))
                                      ),null
                  );
 
 // TODO: load certificates from /etc/ssl/certs
 
-    // add trusted CA certificate used to authenticate server (if verified)
-    if (verifyCertificate(keyStore,certificateAuthority))
+    // additional trusted CA certificate used to authenticate server (if verified)
+    if (certificateAuthorityFile != null)
     {
+      // load certificate authority (CA)
+      pemParser = new PEMParser(new FileReader(certificateAuthorityFile));
+      certificateHolder = (X509CertificateHolder)pemParser.readObject();
+      pemParser.close();
+      X509Certificate certificateAuthority = certificateConverter.getCertificate(certificateHolder);
+
+      // add as trusted certificate
       keyStore.setEntry("ca-certificate",new KeyStore.TrustedCertificateEntry(certificateAuthority),null);
     }
 
@@ -4951,9 +4985,8 @@ throw new Error("NYI");
     
     final X509TrustManager oldX509TrustManager[] = new X509TrustManager[]{null};
 
-    // X509 trust manager wrapper to get received certificate
-Dprintf.dprintf("clear last");
-    lastServerCertificate = null;
+    // X509 trust manager wrapper to get received server certificate chain
+    serverCertificateChain = null;
     X509TrustManager newX509TrustManager = new X509TrustManager()
     {
       @Override
@@ -4983,7 +5016,9 @@ Dprintf.dprintf("clear last");
       public void checkServerTrusted(X509Certificate[] certificateChain, String authType)
         throws CertificateException
       {
-        lastServerCertificate = certificateChain[0];
+//Dprintf.dprintf("certificateChain=%d",certificateChain.length);
+//for (int i = 0; i < certificateChain.length; i++) Dprintf.dprintf("certificateChain[%d]=%s",i,certificateChain[i]);
+        serverCertificateChain = certificateChain;
         if (!insecureTLS)
         {
           oldX509TrustManager[0].checkServerTrusted(certificateChain,authType);
@@ -4991,7 +5026,7 @@ Dprintf.dprintf("clear last");
       }
     };
 
-    // replace existing X509 trust manager with wrapped trust manager to store received certificate
+    // replace existing X509 trust manager with wrapped trust manager to get received server certificate chain
     for (int i = 0; i < trustManagers.length; i++)
     {
       if (trustManagers[i] instanceof X509TrustManager)
