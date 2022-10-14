@@ -3673,7 +3673,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   do
   {
     // init variables
-    moveToEntityId = INDEX_ID_NONE;
+    moveToEntityId    = INDEX_ID_NONE;
+    moveToArchiveType = ARCHIVE_TYPE_NONE;
 
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {

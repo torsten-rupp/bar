@@ -1645,6 +1645,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 
 LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 {
+  Array            storageIds;
   Errors           error;
   IndexId          storageId;
   StorageSpecifier storageSpecifier;
@@ -1665,27 +1666,31 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
              );
 
   // init variables
+  Array_init(&storageIds,sizeof(IndexId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
 
   error = ERROR_NONE;
-  while (Index_findStorageByState(indexHandle,
-                                  INDEX_STATE_SET(INDEX_STATE_CREATE),
-                                  NULL,  // uuidId
-                                  NULL,  // jobUUID
-                                  NULL,  // entityId
-                                  NULL,  // scheduleUUID
-                                  &storageId,
-                                  storageName,
-                                  NULL,  // dateTime
-                                  NULL,  // size
-                                  NULL,  // indexMode
-                                  NULL,  // lastCheckedDateTime
-                                  NULL,  // errorMessage
-                                  NULL,  // totalEntryCount
-                                  NULL  // totalEntrySize
-                                 ) == ERROR_NONE
+  while (   (error == ERROR_NONE)
+         && (Index_findStorageByState(indexHandle,
+                                      INDEX_STATE_SET(INDEX_STATE_CREATE),
+                                      NULL,  // uuidId
+                                      NULL,  // jobUUID
+                                      NULL,  // entityId
+                                      NULL,  // scheduleUUID
+                                      &storageId,
+                                      storageName,
+                                      NULL,  // dateTime
+                                      NULL,  // size
+                                      NULL,  // indexMode
+                                      NULL,  // lastCheckedDateTime
+                                      NULL,  // errorMessage
+                                      NULL,  // totalEntryCount
+                                      NULL  // totalEntrySize
+                                     ) == ERROR_NONE
+            )
+         && !Array_contains(&storageIds,&storageId)
         )
   {
     // get printable name (if possible)
@@ -1705,17 +1710,20 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Deleted incomplete storage #%lld: '%s'",
+                  "Deleted incomplete storage #%"PRIi64": '%s'",
                   storageId,
                   String_cString(printableStorageName)
                  );
     }
+    
+    Array_append(&storageIds,&storageId);
   }
 
   // free resources
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
+  Array_done(&storageIds);
 
   if (error == ERROR_NONE)
   {
