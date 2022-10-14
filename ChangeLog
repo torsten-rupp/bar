@@ -29,6 +29,8 @@
   * fixed TLS connections: reading certificates
   * fixed TLS connection certificates verification: send
     certificate chain, verify certifcates
+  * added slave-tls-mode, slave-host-force-tls is now
+    deprecated
   * fixed auto-index: add move-to paths for search
   * BARConrol: fixed possible dead-lock in server
     communication
