@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-13 11:53+0200\n"
+"POT-Creation-Date: 2022-10-14 01:48+0200\n"
 "PO-Revision-Date: 2022-10-02 06:39+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -252,7 +252,7 @@ msgstr "Programm"
 msgid "Start"
 msgstr "Start"
 
-#: src/BARControl.java:3267 src/BARServer.java:1351 src/TabRestore.java:9350
+#: src/BARControl.java:3267 src/BARServer.java:1355 src/TabRestore.java:9350
 #: src/TabStatus.java:1485 src/TabStatus.java:2222 src/TabStatus.java:3275
 #: src/TabStatus.java:3409
 msgid "Abort"
@@ -467,7 +467,7 @@ msgstr "Server"
 msgid "TLS"
 msgstr "TLS"
 
-#: src/BARControl.java:4165 src/BARServer.java:1631 src/TabJobs.java:3028
+#: src/BARControl.java:4165 src/BARServer.java:1635 src/TabJobs.java:3028
 msgid "none"
 msgstr "keine"
 
@@ -480,7 +480,7 @@ msgid "force"
 msgstr ""
 
 #: src/BARControl.java:4175 src/BARControl.java:6112 src/BARControl.java:6136
-#: src/BARServer.java:1411 src/BARServer.java:1433 src/BARWidgets.java:2288
+#: src/BARServer.java:1415 src/BARServer.java:1437 src/BARWidgets.java:2288
 #: src/BARWidgets.java:2781 src/BARWidgets.java:3520
 #: src/ServerSettings.java:1410 src/ServerSettings.java:1755
 #: src/ServerSettings.java:4009
@@ -492,7 +492,7 @@ msgstr "Passwort"
 msgid "Login"
 msgstr "Login"
 
-#: src/BARControl.java:4432 src/BARControl.java:4489 src/BARServer.java:1552
+#: src/BARControl.java:4432 src/BARControl.java:4489 src/BARServer.java:1556
 msgid "Master"
 msgstr "Master"
 
@@ -708,7 +708,7 @@ msgstr "Letzte Ausführung"
 msgid "Estimated [s]"
 msgstr "Geschätzt [s]"
 
-#: src/BARControl.java:5454 src/BARServer.java:1604 src/TabStatus.java:2556
+#: src/BARControl.java:5454 src/BARServer.java:1608 src/TabStatus.java:2556
 #: src/TabStatus.java:2582
 msgid "suspended"
 msgstr "angehalten"
@@ -844,7 +844,7 @@ msgstr "Ermitteln der Wiederherstellungsliste fehlgeschlagen (Fehler: {0})"
 msgid "Please enter {0} login for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
 
-#: src/BARControl.java:6135 src/BARServer.java:1409 src/BARServer.java:1432
+#: src/BARControl.java:6135 src/BARServer.java:1413 src/BARServer.java:1436
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
@@ -967,7 +967,7 @@ msgstr "Verbindung fehlgeschlagen"
 msgid "connect timeout"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARException.java:375 src/BARServer.java:1202 src/TabStatus.java:104
+#: src/BARException.java:375 src/BARServer.java:1206 src/TabStatus.java:104
 msgid "disconnected"
 msgstr "nicht verbunden"
 
@@ -1830,26 +1830,26 @@ msgstr "Nebeninstanz nicht gekoppelt"
 msgid "instance is not a slave"
 msgstr "Instanz ist keine Nebeninstanz"
 
-#: src/BARServer.java:1037
+#: src/BARServer.java:1041
 #, java-format
 msgid "malformed command or result ''{0}''"
 msgstr "Ungültiger Befehl oder ungültiges Ergebnis ''{0}''"
 
-#: src/BARServer.java:1048
+#: src/BARServer.java:1052
 #, java-format
 msgid "Timeout reading data from server ''{0}''"
 msgstr "Zeitüberschreitung beim Lesen von Rechner ''{0}''"
 
-#: src/BARServer.java:1094
+#: src/BARServer.java:1098
 #, java-format
 msgid "Lost connection to server ''{0}''."
 msgstr "Verbindung zu Rechner ''{0}'' verloren."
 
-#: src/BARServer.java:1346 src/TabRestore.java:9348 src/TabStatus.java:3230
+#: src/BARServer.java:1350 src/TabRestore.java:9348 src/TabStatus.java:3230
 msgid "Confirmation"
 msgstr "Bestätigung"
 
-#: src/BARServer.java:1347
+#: src/BARServer.java:1351
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -1864,146 +1864,146 @@ msgstr ""
 "\n"
 "(Fehler: {1})"
 
-#: src/BARServer.java:1351
+#: src/BARServer.java:1355
 msgid "Skip"
 msgstr "Überspringen"
 
-#: src/BARServer.java:1351
+#: src/BARServer.java:1355
 msgid "Skip all"
 msgstr "Alle überspringen"
 
-#: src/BARServer.java:1408 src/BARServer.java:1431
+#: src/BARServer.java:1412 src/BARServer.java:1435
 msgid "Enter password"
 msgstr "Passwort eingeben"
 
-#: src/BARServer.java:1553 src/TabJobs.java:2841 src/TabJobs.java:7719
+#: src/BARServer.java:1557 src/TabJobs.java:2841 src/TabJobs.java:7719
 #: src/TabStatus.java:1060 src/TabStatus.java:1139
 msgid "Slave"
 msgstr "Slave"
 
-#: src/BARServer.java:1602 src/TabStatus.java:93
+#: src/BARServer.java:1606 src/TabStatus.java:93
 msgid "running"
 msgstr "wird ausgeführt"
 
-#: src/BARServer.java:1603
+#: src/BARServer.java:1607
 msgid "paused"
 msgstr "pausiert"
 
-#: src/BARServer.java:1632
+#: src/BARServer.java:1636
 msgid "create"
 msgstr "erstellen"
 
-#: src/BARServer.java:1633
+#: src/BARServer.java:1637
 msgid "restore"
 msgstr "wiederherstellen"
 
-#: src/BARServer.java:1634
+#: src/BARServer.java:1638
 msgid "update index"
 msgstr "Index aktualisieren"
 
-#: src/BARServer.java:1635
+#: src/BARServer.java:1639
 msgid "network"
 msgstr "Netzwerk"
 
-#: src/BARServer.java:1860 src/BARServer.java:1867 src/BARServer.java:2016
-#: src/BARServer.java:2181 src/BARServer.java:2188 src/BARServer.java:2334
+#: src/BARServer.java:1894 src/BARServer.java:1901 src/BARServer.java:2050
+#: src/BARServer.java:2215 src/BARServer.java:2222 src/BARServer.java:2368
 #, java-format
 msgid "connection to host ''{0}:{1}'' failed (error: {2})"
 msgstr "Verbindung zu Rechner ''{0}:{1}'' fehlgeschlagen (Fehler: {2})"
 
-#: src/BARServer.java:1874 src/BARServer.java:1885 src/BARServer.java:2023
-#: src/BARServer.java:2034 src/BARServer.java:2195 src/BARServer.java:2206
-#: src/BARServer.java:2341 src/BARServer.java:2352
+#: src/BARServer.java:1908 src/BARServer.java:1919 src/BARServer.java:2057
+#: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
+#: src/BARServer.java:2375 src/BARServer.java:2386
 #, java-format
 msgid "TLS/SSL failure: {0}"
 msgstr ""
 
-#: src/BARServer.java:1892 src/BARServer.java:2041 src/BARServer.java:2055
-#: src/BARServer.java:2213 src/BARServer.java:2359
+#: src/BARServer.java:1926 src/BARServer.java:2075 src/BARServer.java:2089
+#: src/BARServer.java:2247 src/BARServer.java:2393
 #, java-format
 msgid "host ''{0}:{1}'' unreachable (error: {2})"
 msgstr "Rechner ''{0}:{1}'' nicht erreichbar (Fehler: {2})"
 
-#: src/BARServer.java:1899 src/BARServer.java:2220 src/BARServer.java:2366
-#: src/BARServer.java:2442
+#: src/BARServer.java:1933 src/BARServer.java:2254 src/BARServer.java:2400
+#: src/BARServer.java:2476
 #, java-format
 msgid "connection to host ''{0}:{1}'' refused"
 msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
 
-#: src/BARServer.java:1906 src/BARServer.java:2227 src/BARServer.java:2373
-#: src/BARServer.java:2449
+#: src/BARServer.java:1940 src/BARServer.java:2261 src/BARServer.java:2407
+#: src/BARServer.java:2483
 #, java-format
 msgid "host ''{0}:{1}'' unreachable (error: no route to host)"
 msgstr ""
 "Rechner ''{0}:{1}'' nicht erreichbar (Fehler: kein Weiterleitung zum Rechner)"
 
-#: src/BARServer.java:1913 src/BARServer.java:2062 src/BARServer.java:2234
-#: src/BARServer.java:2380 src/BARServer.java:2456
+#: src/BARServer.java:1947 src/BARServer.java:2096 src/BARServer.java:2268
+#: src/BARServer.java:2414 src/BARServer.java:2490
 #, java-format
 msgid "unknown host ''{0}:{1}''"
 msgstr "Unbekannter Rechner ''{0}:{1}''"
 
-#: src/BARServer.java:2048
+#: src/BARServer.java:2082
 #, java-format
 msgid "connection to host ''{0}:{1}''refused"
 msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
 
-#: src/BARServer.java:2483
+#: src/BARServer.java:2517
 msgid "no server ports specified"
 msgstr "Keine Server-Portnummern angegeben"
 
-#: src/BARServer.java:2512
+#: src/BARServer.java:2546
 #, java-format
 msgid "Incompatible protocol version for ''{0}:{1}'': : expected {2}, got {3}"
 msgstr ""
 "Nicht kompatible Protokollversionen für''{0}:{1}'': erwartet {2}, vorhanden "
 "{3}"
 
-#: src/BARServer.java:2532 src/BARServer.java:2536
+#: src/BARServer.java:2566 src/BARServer.java:2570
 #, java-format
 msgid "''{0}:{1}'': {2}"
 msgstr "''{0}:{1}'': {2}"
 
-#: src/BARServer.java:2812 src/BARServer.java:3418
+#: src/BARServer.java:2846 src/BARServer.java:3452
 #, java-format
 msgid "input/output error: {0}"
 msgstr "Ein-/Ausgabe fehlgeschlagen: {0}"
 
-#: src/BARServer.java:4172 src/BARServer.java:4198
+#: src/BARServer.java:4206 src/BARServer.java:4232
 msgid "Password encryption fail"
 msgstr "Verschlüsselung von Schlüssel fehlgeschlagen"
 
-#: src/BARServer.java:5347 src/BARServer.java:5469
+#: src/BARServer.java:5382 src/BARServer.java:5504
 msgid "No result from server"
 msgstr "Keine Rückmeldung vom Server"
 
-#: src/BARServer.java:5353
+#: src/BARServer.java:5388
 msgid "Invalid response from server: expected SESSION"
 msgstr "Ungültige Rückmeldung von anderem Rechner: SESSION"
 
-#: src/BARServer.java:5357
+#: src/BARServer.java:5392
 msgid "Invalid response from server: expected parameters"
 msgstr "Ungültige Rückmeldung von anderem Rechner: Parameter erwartet"
 
-#: src/BARServer.java:5362
+#: src/BARServer.java:5397
 msgid "No session id"
 msgstr "Keine Sitzungs-Identifikation"
 
-#: src/BARServer.java:5431
+#: src/BARServer.java:5466
 msgid "Init password cipher fail"
 msgstr "Fehler bei Passwortinitialisierung"
 
-#: src/BARServer.java:5477
+#: src/BARServer.java:5512
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr "Ungültige Rückmeldung von anderem Rechner: unvollständig ''{0}''"
 
-#: src/BARServer.java:5485
+#: src/BARServer.java:5520
 msgid "Invalid response from server: no command id"
 msgstr ""
 "Ungültige Rückmeldung von anderem Rechner: keine Befehls-Identifikation"
 
-#: src/BARServer.java:5497
+#: src/BARServer.java:5532
 msgid "Invalid response from server: parameters"
 msgstr "Ungültige Rückmeldung von anderem Rechner: Parameter"
 

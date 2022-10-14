@@ -19,11 +19,14 @@
   * fixed continuous schedule: date+week days
   * fixed log message 'no server password set'
   * fixed TLS connections: reading certificates
+  * fixed TLS connection certificates verification: send
+    certificate chain, verify certifcates
   * fixed auto-index: add move-to paths for search
   * BARConrol: fixed possible dead-lock in server
     communication
   * BARControl: added option --insecure-tls, improved
     login dialogs
+  * BARControl: renamed option --key-file to --keystore-file
 
 2022-08-30 0.22
   * added support for external index database engines

@@ -1963,7 +1963,7 @@ public class BARControl
     new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
-    new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--keystore-file",                null,Options.Types.STRING,     "serverKeystoreFileName"),
     new Option("--no-tls",                       null,Options.Types.BOOLEAN,    "serverNoTLS"),
     new Option("--force-tls",                    null,Options.Types.BOOLEAN,    "serverForceTLS"),
     new Option("--insecure-tls",                 null,Options.Types.BOOLEAN,    "serverInsecureTLS"),
@@ -2388,11 +2388,11 @@ public class BARControl
     System.out.println("         -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --password=<password>                      - server password (use with care!)");
-    System.out.println("         --ca-file=<file name>                      - certificate authority file name (PEM format)");
-    System.out.println("         --key-file=<file name>                     - key file name (JKS format, default: ");
-    System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME+" or ");
-    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME+" or ");
-    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEYSTORE_FILE_NAME);
+    System.out.println("         --ca-file=<file name>                      - addition trusted certificate authority file name (PEM format)");
+    System.out.println("         --keystore-file=<file name>                - keystore file name (JKS format, default: ");
+    System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_KEYSTORE_FILE_NAME+" or ");
+    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_KEYSTORE_FILE_NAME+" or ");
+    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_KEYSTORE_FILE_NAME);
     System.out.println("                                                      )" );
     System.out.println("         --no-tls                                   - no TLS connection");
     System.out.println("         --force-tls                                - force TLS connection");
@@ -2521,13 +2521,13 @@ public class BARControl
     // check arguments
 //TODO: check PEM
 if (false) {
-    if ((Settings.serverKeyFileName != null) && !Settings.serverKeyFileName.isEmpty())
+    if ((Settings.serverKeystoreFileName != null) && !Settings.serverKeystoreFileName.isEmpty())
     {
       // check if PEM/JKS file is readable
       try
       {
         KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
-        keyStore.load(new java.io.FileInputStream(Settings.serverKeyFileName),null);
+        keyStore.load(new java.io.FileInputStream(Settings.serverKeystoreFileName),null);
       }
       catch (java.security.NoSuchAlgorithmException exception)
       {
@@ -2543,11 +2543,11 @@ if (false) {
       }
       catch (FileNotFoundException exception)
       {
-        throw new Error("Java Key Store (JKS) file '"+Settings.serverKeyFileName+"' not found");
+        throw new Error("Java Key Store (JKS) file '"+Settings.serverKeystoreFileName+"' not found");
       }
       catch (IOException exception)
       {
-        throw new Error("not a Java Key Store (JKS) file '"+Settings.serverKeyFileName+"'",exception);
+        throw new Error("not a Java Key Store (JKS) file '"+Settings.serverKeystoreFileName+"'",exception);
       }
     }
 }
@@ -2609,7 +2609,7 @@ if (false) {
    * @param port server port
    * @param tlsPort server TLS port
    * @param caFileName server certificate authority file
-   * @param keyFileName server key file
+   * @param keystoreFileName Java keystore file name (JKS only)
    * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password login password
@@ -2618,7 +2618,7 @@ if (false) {
                        int                port,
                        int                tlsPort,
                        String             caFileName,
-                       String             keyFileName,
+                       String             keystoreFileName,
                        BARServer.TLSModes tlsMode,
                        boolean            insecureTLS,
                        String             password
@@ -2655,7 +2655,7 @@ if (false) {
                         port,
                         tlsPort,
                         caFileName,
-                        keyFileName,
+                        keystoreFileName,
                         tlsMode,
                         insecureTLS,
                         password
@@ -2678,7 +2678,7 @@ if (false) {
             loginData.port,
             loginData.tlsPort,
             Settings.serverCAFileName,
-            Settings.serverKeyFileName,
+            Settings.serverKeystoreFileName,
             tlsMode,
             insecureTLS,
             loginData.password
@@ -4832,7 +4832,7 @@ if (false) {
                   loginData.port,
                   loginData.tlsPort,
                   Settings.serverCAFileName,
-                  Settings.serverKeyFileName,
+                  Settings.serverKeystoreFileName,
                   loginData.tlsMode,
                   Settings.serverInsecureTLS,
                   loginData.password
@@ -5111,7 +5111,7 @@ if (false) {
                   loginData.port,
                   loginData.tlsPort,
                   Settings.serverCAFileName,
-                  Settings.serverKeyFileName,
+                  Settings.serverKeystoreFileName,
                   loginData.tlsMode,
                   Settings.serverInsecureTLS,
                   loginData.password

@@ -682,6 +682,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   {
     error = ERROR_NETWORK_TIMEOUT_RECEIVE;
   }
+  assert(error != ERROR_UNKNOWN);
 
   // free resources
   Misc_doneTimeout(&timeoutInfo);

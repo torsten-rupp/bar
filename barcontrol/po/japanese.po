@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-13 11:53+0200\n"
+"POT-Creation-Date: 2022-10-14 01:48+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -258,7 +258,7 @@ msgstr "プログラム"
 msgid "Start"
 msgstr "スタート"
 
-#: src/BARControl.java:3267 src/BARServer.java:1351 src/TabRestore.java:9350
+#: src/BARControl.java:3267 src/BARServer.java:1355 src/TabRestore.java:9350
 #: src/TabStatus.java:1485 src/TabStatus.java:2222 src/TabStatus.java:3275
 #: src/TabStatus.java:3409
 msgid "Abort"
@@ -474,7 +474,7 @@ msgstr "サーバ"
 msgid "TLS"
 msgstr ""
 
-#: src/BARControl.java:4165 src/BARServer.java:1631 src/TabJobs.java:3028
+#: src/BARControl.java:4165 src/BARServer.java:1635 src/TabJobs.java:3028
 msgid "none"
 msgstr ""
 
@@ -487,7 +487,7 @@ msgid "force"
 msgstr ""
 
 #: src/BARControl.java:4175 src/BARControl.java:6112 src/BARControl.java:6136
-#: src/BARServer.java:1411 src/BARServer.java:1433 src/BARWidgets.java:2288
+#: src/BARServer.java:1415 src/BARServer.java:1437 src/BARWidgets.java:2288
 #: src/BARWidgets.java:2781 src/BARWidgets.java:3520
 #: src/ServerSettings.java:1410 src/ServerSettings.java:1755
 #: src/ServerSettings.java:4009
@@ -499,7 +499,7 @@ msgstr "パスワード"
 msgid "Login"
 msgstr "ログイン"
 
-#: src/BARControl.java:4432 src/BARControl.java:4489 src/BARServer.java:1552
+#: src/BARControl.java:4432 src/BARControl.java:4489 src/BARServer.java:1556
 msgid "Master"
 msgstr ""
 
@@ -723,7 +723,7 @@ msgstr "最終実行された"
 msgid "Estimated [s]"
 msgstr "予想時間"
 
-#: src/BARControl.java:5454 src/BARServer.java:1604 src/TabStatus.java:2556
+#: src/BARControl.java:5454 src/BARServer.java:1608 src/TabStatus.java:2556
 #: src/TabStatus.java:2582
 msgid "suspended"
 msgstr "中断された"
@@ -895,7 +895,7 @@ msgstr ""
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:6135 src/BARServer.java:1409 src/BARServer.java:1432
+#: src/BARControl.java:6135 src/BARServer.java:1413 src/BARServer.java:1436
 #, fuzzy, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
@@ -1043,7 +1043,7 @@ msgstr "接続ミス"
 msgid "connect timeout"
 msgstr "接続ミス"
 
-#: src/BARException.java:375 src/BARServer.java:1202 src/TabStatus.java:104
+#: src/BARException.java:375 src/BARServer.java:1206 src/TabStatus.java:104
 #, fuzzy
 msgid "disconnected"
 msgstr "接続ミス"
@@ -2090,26 +2090,26 @@ msgstr "接続ミス"
 msgid "instance is not a slave"
 msgstr "接続ミス"
 
-#: src/BARServer.java:1037
+#: src/BARServer.java:1041
 #, java-format
 msgid "malformed command or result ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:1048
+#: src/BARServer.java:1052
 #, java-format
 msgid "Timeout reading data from server ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:1094
+#: src/BARServer.java:1098
 #, java-format
 msgid "Lost connection to server ''{0}''."
 msgstr ""
 
-#: src/BARServer.java:1346 src/TabRestore.java:9348 src/TabStatus.java:3230
+#: src/BARServer.java:1350 src/TabRestore.java:9348 src/TabStatus.java:3230
 msgid "Confirmation"
 msgstr "確定"
 
-#: src/BARServer.java:1347
+#: src/BARServer.java:1351
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -2124,153 +2124,153 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/BARServer.java:1351
+#: src/BARServer.java:1355
 #, fuzzy
 msgid "Skip"
 msgstr "スキップ"
 
-#: src/BARServer.java:1351
+#: src/BARServer.java:1355
 #, fuzzy
 msgid "Skip all"
 msgstr "すべてマークアップする"
 
-#: src/BARServer.java:1408 src/BARServer.java:1431
+#: src/BARServer.java:1412 src/BARServer.java:1435
 #, fuzzy
 msgid "Enter password"
 msgstr "暗号化パスワード"
 
-#: src/BARServer.java:1553 src/TabJobs.java:2841 src/TabJobs.java:7719
+#: src/BARServer.java:1557 src/TabJobs.java:2841 src/TabJobs.java:7719
 #: src/TabStatus.java:1060 src/TabStatus.java:1139
 msgid "Slave"
 msgstr ""
 
-#: src/BARServer.java:1602 src/TabStatus.java:93
+#: src/BARServer.java:1606 src/TabStatus.java:93
 #, fuzzy
 msgid "running"
 msgstr "警告"
 
-#: src/BARServer.java:1603
+#: src/BARServer.java:1607
 #, fuzzy
 msgid "paused"
 msgstr "一時停止"
 
-#: src/BARServer.java:1632
+#: src/BARServer.java:1636
 #, fuzzy
 msgid "create"
 msgstr "作成された"
 
-#: src/BARServer.java:1633
+#: src/BARServer.java:1637
 #, fuzzy
 msgid "restore"
 msgstr "復元"
 
-#: src/BARServer.java:1634
+#: src/BARServer.java:1638
 #, fuzzy
 msgid "update index"
 msgstr "インデックスに追加"
 
-#: src/BARServer.java:1635
+#: src/BARServer.java:1639
 msgid "network"
 msgstr ""
 
-#: src/BARServer.java:1860 src/BARServer.java:1867 src/BARServer.java:2016
-#: src/BARServer.java:2181 src/BARServer.java:2188 src/BARServer.java:2334
+#: src/BARServer.java:1894 src/BARServer.java:1901 src/BARServer.java:2050
+#: src/BARServer.java:2215 src/BARServer.java:2222 src/BARServer.java:2368
 #, fuzzy, java-format
 msgid "connection to host ''{0}:{1}'' failed (error: {2})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1874 src/BARServer.java:1885 src/BARServer.java:2023
-#: src/BARServer.java:2034 src/BARServer.java:2195 src/BARServer.java:2206
-#: src/BARServer.java:2341 src/BARServer.java:2352
+#: src/BARServer.java:1908 src/BARServer.java:1919 src/BARServer.java:2057
+#: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
+#: src/BARServer.java:2375 src/BARServer.java:2386
 #, java-format
 msgid "TLS/SSL failure: {0}"
 msgstr ""
 
-#: src/BARServer.java:1892 src/BARServer.java:2041 src/BARServer.java:2055
-#: src/BARServer.java:2213 src/BARServer.java:2359
+#: src/BARServer.java:1926 src/BARServer.java:2075 src/BARServer.java:2089
+#: src/BARServer.java:2247 src/BARServer.java:2393
 #, fuzzy, java-format
 msgid "host ''{0}:{1}'' unreachable (error: {2})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1899 src/BARServer.java:2220 src/BARServer.java:2366
-#: src/BARServer.java:2442
+#: src/BARServer.java:1933 src/BARServer.java:2254 src/BARServer.java:2400
+#: src/BARServer.java:2476
 #, fuzzy, java-format
 msgid "connection to host ''{0}:{1}'' refused"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1906 src/BARServer.java:2227 src/BARServer.java:2373
-#: src/BARServer.java:2449
+#: src/BARServer.java:1940 src/BARServer.java:2261 src/BARServer.java:2407
+#: src/BARServer.java:2483
 #, fuzzy, java-format
 msgid "host ''{0}:{1}'' unreachable (error: no route to host)"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1913 src/BARServer.java:2062 src/BARServer.java:2234
-#: src/BARServer.java:2380 src/BARServer.java:2456
+#: src/BARServer.java:1947 src/BARServer.java:2096 src/BARServer.java:2268
+#: src/BARServer.java:2414 src/BARServer.java:2490
 #, fuzzy, java-format
 msgid "unknown host ''{0}:{1}''"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2048
+#: src/BARServer.java:2082
 #, fuzzy, java-format
 msgid "connection to host ''{0}:{1}''refused"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2483
+#: src/BARServer.java:2517
 #, fuzzy
 msgid "no server ports specified"
 msgstr "曜日設定切り替え。"
 
-#: src/BARServer.java:2512
+#: src/BARServer.java:2546
 #, java-format
 msgid "Incompatible protocol version for ''{0}:{1}'': : expected {2}, got {3}"
 msgstr ""
 
-#: src/BARServer.java:2532 src/BARServer.java:2536
+#: src/BARServer.java:2566 src/BARServer.java:2570
 #, fuzzy, java-format
 msgid "''{0}:{1}'': {2}"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2812 src/BARServer.java:3418
+#: src/BARServer.java:2846 src/BARServer.java:3452
 #, fuzzy, java-format
 msgid "input/output error: {0}"
 msgstr "タスクを一時停止できません（エラー: {0}）"
 
-#: src/BARServer.java:4172 src/BARServer.java:4198
+#: src/BARServer.java:4206 src/BARServer.java:4232
 #, fuzzy
 msgid "Password encryption fail"
 msgstr "接続ミス"
 
-#: src/BARServer.java:5347 src/BARServer.java:5469
+#: src/BARServer.java:5382 src/BARServer.java:5504
 msgid "No result from server"
 msgstr ""
 
-#: src/BARServer.java:5353
+#: src/BARServer.java:5388
 msgid "Invalid response from server: expected SESSION"
 msgstr ""
 
-#: src/BARServer.java:5357
+#: src/BARServer.java:5392
 msgid "Invalid response from server: expected parameters"
 msgstr ""
 
-#: src/BARServer.java:5362
+#: src/BARServer.java:5397
 msgid "No session id"
 msgstr ""
 
-#: src/BARServer.java:5431
+#: src/BARServer.java:5466
 #, fuzzy
 msgid "Init password cipher fail"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARServer.java:5477
+#: src/BARServer.java:5512
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:5485
+#: src/BARServer.java:5520
 msgid "Invalid response from server: no command id"
 msgstr ""
 
-#: src/BARServer.java:5497
+#: src/BARServer.java:5532
 msgid "Invalid response from server: parameters"
 msgstr ""
 

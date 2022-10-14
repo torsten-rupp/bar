@@ -3455,8 +3455,6 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                              CALLBACK_(NULL,NULL),  // isAbortedFunction
                                              NULL  // logHandle
                                             );
-  fprintf(stderr,"%s:%d: moveError=%s\n",__FILE__,__LINE__,Error_getText(moveError));
-                    if (moveError == ERROR_NONE)
                     {
                       // get unique move-to name
                       File_setFileName(moveToArchivePath,moveToPath);
@@ -3533,7 +3531,6 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                                },NULL),
                                                CALLBACK_(isAbortedFunction,isAbortedUserData)
                                               );
-  fprintf(stderr,"%s:%d: moveError=%s\n",__FILE__,__LINE__,Error_getText(moveError));
 
                       // update index
                       if (moveError == ERROR_NONE)
