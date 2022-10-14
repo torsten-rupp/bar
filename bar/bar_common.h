@@ -903,7 +903,7 @@ typedef struct
   int                         directoryStripCount;            // number of directories to strip in restore
   String                      destination;                    // destination for restore
   Owner                       owner;                          // restore owner
-  FilePermissions              permissions;                    // restore permissions
+  FilePermissions             permissions;                    // restore permissions
 
   PatternTypes                patternType;                    // pattern type
 
@@ -963,6 +963,8 @@ typedef struct
   bool                        skipUnreadableFlag;             // TRUE for skipping unreadable files
   bool                        errorCorrectionCodesFlag;       // TRUE iff error correction codes should be added
   bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
+
+  String                      newEntityUUID;                  // new entity UUID for covnert
 
   const char                  *saveConfigurationFileName;     // configuration save file name
   bool                        cleanConfigurationComments;     // clean configuration comments on save

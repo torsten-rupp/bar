@@ -636,6 +636,45 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseNewEntiryUUID
+* Purpose: command line option call back for new entity UUID
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseNewEntiryUUID(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if ((*(String*)variable) == NULL)
+  {
+    (*(String*)variable) = String_newCString(value);
+  }
+
+  if (value != NULL)
+  {
+    if (!stringMatch(value,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
+    {
+      stringSet(errorMessage,errorMessageSize,"not an UUID");
+      return FALSE;
+    }
+    String_setCString(*((String*)variable),value);
+  }
+  else
+  {
+    Misc_getUUID(*((String*)variable));
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseConfigFile
 * Purpose: command line option call back for parsing configuration file
 * Input  : -
@@ -7743,6 +7782,10 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
   CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,globalOptions.dryRun,                                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
+
+//  CMD_OPTION_STRING       ("new-entity-uuid",                   0,  2,0,globalOptions.newEntityUUID,                                                                                      "new entity uuid","uuid"                                                   ),
+//  CMD_OPTION_STRING       ("new-entity-uuid",                   0,  2,0,globalOptions.newEntityUUID,                                                                                      "new entity uuid","uuid"                                                   ),
+  CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  2,0,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
 
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                          0,6,                                                         "increment/set verbosity level"                                            ),

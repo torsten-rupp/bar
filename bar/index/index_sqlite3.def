@@ -25,6 +25,7 @@ CREATE INDEX ON uuids (jobUUID);
 CREATE TABLE IF NOT EXISTS entities(
   id                        INTEGER PRIMARY KEY,
   jobUUID                   TEXT NOT NULL,
+// TODO: rename to entityUUID
   scheduleUUID              TEXT NOT NULL DEFAULT '',
   hostName                  TEXT,
 //TODO: use
@@ -375,6 +376,7 @@ CREATE INDEX ON specialEntries (storageId);
 CREATE TABLE IF NOT EXISTS history(
   id                INTEGER PRIMARY KEY,
   jobUUID           TEXT NOT NULL,
+// TODO: rename to entityUUID
   scheduleUUID      TEXT,
   hostName          TEXT,
   userName          TEXT,

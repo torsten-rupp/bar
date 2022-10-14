@@ -54,7 +54,7 @@ typedef struct
   StorageInfo             sourceStorageInfo;
   StorageInfo             destinationStorageInfo;
   const char              *newJobUUID;
-  const char              *newScheduleUUID;
+  const char              *newEntityUUID;
   uint64                  newCreatedDateTime;
   const JobOptions        *newJobOptions;
   GetNamePasswordFunction getNamePasswordFunction;
@@ -144,7 +144,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Purpose: initialize convert info
 * Input  : convertInfo             - convert info variable
 *          newJobUUID              - new job UUID or NULL
-*          newScheduleUUID         - new schedule UUID or NULL
+*          newEntityUUID           - new entity UUID or NULL
 *          newCreatedDateTime      - new created date/time or 0
 *          newJobOptions           - new job options
 *          getNamePasswordFunction - get password call back
@@ -157,7 +157,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
 LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
                            const char              *newJobUUID,
-                           const char              *newScheduleUUID,
+                           const char              *newEntityUUID,
                            uint64                  newCreatedDateTime,
                            const JobOptions        *newJobOptions,
                            GetNamePasswordFunction getNamePasswordFunction,
@@ -170,7 +170,7 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
 
   // init variables
   convertInfo->newJobUUID              = newJobUUID;
-  convertInfo->newScheduleUUID         = newScheduleUUID;
+  convertInfo->newEntityUUID           = newEntityUUID;
   convertInfo->newCreatedDateTime      = newCreatedDateTime;
   convertInfo->newJobOptions           = newJobOptions;
   convertInfo->getNamePasswordFunction = getNamePasswordFunction;
@@ -237,7 +237,7 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 * Purpose: call back to store archive file
 * Input  : storageInfo          - storage info
 *          jobUUID              - job UUID id
-*          scheduleUUID         - schedule UUID id
+*          entityUUID           - entity UUID id
 *          entityId             - index entity id
 *          storageId            - index storage id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
@@ -253,7 +253,7 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           IndexId      uuidId,
                           ConstString  jobUUID,
-                          ConstString  scheduleUUID,
+                          ConstString  entityUUID,
                           IndexId      entityId,
                           IndexId      storageId,
                           int          partNumber,
@@ -274,7 +274,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(uuidId);
   UNUSED_VARIABLE(jobUUID);
-  UNUSED_VARIABLE(scheduleUUID);
+  UNUSED_VARIABLE(entityUUID);
   UNUSED_VARIABLE(entityId);
   UNUSED_VARIABLE(storageId);
   UNUSED_VARIABLE(partNumber);
@@ -294,6 +294,8 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   if (!MsgQueue_put(&convertInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
     freeStorageMsg(&storageMsg,NULL);
+    (void)File_delete(intermediateFileName,FALSE);
+    return ERROR_ABORTED;
   }
 
 //TODO
@@ -1659,7 +1661,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
 *          newJobUUID               - new job UUID or NULL
-*          newScheduleUUID          - new schedule UUID or NULL
+*          newEntityUUID            - new entity UUID or NULL
 *          newCreatedDateTime       - new created date/time or 0
 *          newJobOptions            - new job options or NULL
 * Output : -
@@ -1670,7 +1672,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
                               const char       *newJobUUID,
-                              const char       *newScheduleUUID,
+                              const char       *newEntityUUID,
                               uint64           newCreatedDateTime,
                               const JobOptions *newJobOptions
                              )
@@ -1679,7 +1681,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   String           hostName;
   String           userName;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
   ArchiveEntryInfo sourceArchiveEntryInfo;
   ArchiveTypes     archiveType;
   uint64           createdDateTime;
@@ -1700,7 +1702,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                                 hostName,
                                 userName,
                                 jobUUID,
-                                scheduleUUID,
+                                entityUUID,
                                 &archiveType,
                                 &createdDateTime,
                                 comment
@@ -1723,7 +1725,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   // set new job UUID, schedule UUOD, created date/time comment
   if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
   if (!stringIsEmpty(newJobUUID)) String_setCString(jobUUID,newJobUUID);
-  if (!stringIsEmpty(newScheduleUUID)) String_setCString(scheduleUUID,newScheduleUUID);
+  if (!stringIsEmpty(newEntityUUID)) String_setCString(entityUUID,newEntityUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
   if (CmdOption_isSet(&globalOptions.comment)) String_set(comment,newJobOptions->comment);
 
@@ -1734,7 +1736,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                                String_cString(hostName),
                                String_cString(userName),
                                String_cString(jobUUID),
-                               String_cString(scheduleUUID),
+                               String_cString(entityUUID),
                                archiveType,
                                createdDateTime,
                                String_cString(comment)
@@ -1922,7 +1924,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
           error = convertMetaEntry(&sourceArchiveHandle,
                                    &convertInfo->destinationArchiveHandle,
                                    convertInfo->newJobUUID,
-                                   convertInfo->newScheduleUUID,
+                                   convertInfo->newEntityUUID,
                                    convertInfo->newCreatedDateTime,
                                    convertInfo->newJobOptions
                                   );
@@ -2164,8 +2166,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                          INDEX_ID_NONE,  // uuidId,
                          INDEX_ID_NONE,  // entityId,
 // TODO:
-                         NULL,  // jobUUID,
-                         NULL,  // scheduleUUID,
+                         NULL,  // jobUUID
+                         NULL,  // entityUUID
 //TODO
                          NULL,  // deltaSourceList,
                          sourceArchiveHandle.archiveType,
@@ -2197,6 +2199,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
 //TODO: really required? If convert is done for each archive storage can be done as the final step without a separated thread
   // start storage thread
+  MsgQueue_reset(&convertInfo->storageMsgQueue);
   if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,convertInfo))
   {
     HALT_FATAL_ERROR("Cannot initialize storage thread!");
@@ -2258,21 +2261,6 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_META:
-#if 0
-        error = convertMetaEntry(&sourceArchiveHandle,
-                                 &convertInfo->destinationArchiveHandle,
-                                 convertInfo->newJobUUID,
-                                 convertInfo->newScheduleUUID,
-                                 convertInfo->newCreatedDateTime,
-                                 convertInfo->newJobOptions
-                                );
-        if (error != ERROR_NONE)
-        {
-          if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-          break;
-        }
-        break;
-#endif
       case ARCHIVE_ENTRY_TYPE_FILE:
       case ARCHIVE_ENTRY_TYPE_IMAGE:
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -2399,7 +2387,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
 Errors Command_convert(const StringList        *storageNameList,
                        const char              *newJobUUID,
-                       const char              *newScheduleUUID,
+                       const char              *newEntityUUID,
                        uint64                  newCreatedDateTime,
                        JobOptions              *newJobOptions,
                        GetNamePasswordFunction getNamePasswordFunction,
@@ -2434,7 +2422,7 @@ Errors Command_convert(const StringList        *storageNameList,
   // init convert info
   initConvertInfo(&convertInfo,
                   newJobUUID,
-                  newScheduleUUID,
+                  newEntityUUID,
                   newCreatedDateTime,
                   newJobOptions,
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),

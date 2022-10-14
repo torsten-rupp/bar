@@ -125,7 +125,6 @@ LOCAL String             lastOutputLine;
 
 /*---------------------------------------------------------------------*/
 
-LOCAL String             jobUUID;             // UUID of job to execute/convert
 LOCAL MountedList        mountedList;         // list of current mounts
 
 LOCAL Semaphore          logLock;
@@ -454,8 +453,6 @@ LOCAL Errors initAll(void)
   Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&mountedList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
 
-  jobUUID                                = String_new();
-
   Semaphore_init(&logLock,SEMAPHORE_TYPE_BINARY);
   logFile                                = NULL;
 
@@ -465,7 +462,6 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
   AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
-  AUTOFREE_ADD(&autoFreeList,jobUUID,{ String_delete(jobUUID); });
   AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
   AUTOFREE_ADD(&autoFreeList,&outputLineHandle,{ Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL); });
 
@@ -706,8 +702,6 @@ LOCAL void doneAll(void)
     freelocale(POSIXLocale);
   #endif /* HAVE_NEWLOCALE */
   Semaphore_done(&logLock);
-
-  String_delete(jobUUID);
 
   List_done(&mountedList);
   Semaphore_done(&mountedList.lock);
@@ -3051,37 +3045,44 @@ LOCAL Errors runBatch(void)
 /***********************************************************************\
 * Name   : runJob
 * Purpose: run job
-* Input  : jobUUID - UUID of job to execute
+* Input  : jobUUIDOrName - UUID or name of job to execute
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors runJob(ConstString jobUUIDName)
+LOCAL Errors runJob(ConstString jobUUIDOrName)
 {
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   const JobNode *jobNode;
   ArchiveTypes  archiveType;
   JobOptions    jobOptions;
+  StaticString  (entityUUID,MISC_UUID_STRING_LENGTH);
   Errors        error;
 
+  // read jobs (if possible)
+  (void)Job_rereadAll(globalOptions.jobsDirectory);
+
   // get job to execute
+  String_clear(jobUUID);
   archiveType = ARCHIVE_TYPE_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
   {
     // find job by name or UUID
     jobNode = NULL;
-    if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
-    if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
+    if (jobNode == NULL) jobNode = Job_findByName(jobUUIDOrName);
+    if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDOrName);
     if      (jobNode == NULL)
     {
       printError(_("cannot find job '%s'!"),
-                 String_cString(jobUUIDName)
+                 String_cString(jobUUIDOrName)
                 );
       Job_listUnlock();
-      return ERROR_CONFIG;
+      return ERROR_JOB_NOT_FOUND;
     }
 
     // get job data
+    String_set(jobUUID,jobNode->job.uuid);
     String_set(globalOptions.storageName,jobNode->job.storageName);
     EntryList_copy(&globalOptions.includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
     PatternList_copy(&globalOptions.excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
@@ -3095,15 +3096,17 @@ LOCAL Errors runJob(ConstString jobUUIDName)
   // start job execution
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
+  // create new entity UUID
+  Misc_getUUID(entityUUID);
+
   // create archive
   error = Command_create(NULL, // masterIO
-// TODO: use jobUUID?
                          #ifndef NDEBUG
-                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
-                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
+                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(entityUUID),
                          #else
-                           NULL,  // job UUID
-                           NULL,  // schedule UUID
+                           String_cString(jobUUID),
+                           String_cString(entityUUID),
                          #endif
                          NULL,  // scheduleTitle
                          archiveType,
@@ -3143,7 +3146,7 @@ LOCAL Errors runJob(ConstString jobUUIDName)
 
 LOCAL Errors runInteractive(int argc, const char *argv[])
 {
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (entityUUID,MISC_UUID_STRING_LENGTH);
   JobOptions   jobOptions;
   Errors       error;
 
@@ -3231,9 +3234,6 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 
   // interactive mode
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
-
-  // get new schedule UUID
-  Misc_getUUID(scheduleUUID);
 
   // init job options
   Job_initOptions(&jobOptions);
@@ -3324,15 +3324,17 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 
         if (error == ERROR_NONE)
         {
+          // create new entity UUID
+          Misc_getUUID(entityUUID);
+
           // create archive
           error = Command_create(NULL, // masterIO
-// TODO: use jobUUID?
                                  #ifndef NDEBUG
                                    (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
                                  #else
                                    NULL, // job UUID
                                  #endif
-                                 String_cString(scheduleUUID),
+                                 String_cString(entityUUID),
                                  NULL, // scheduleTitle
                                  globalOptions.archiveType,
                                  globalOptions.storageName,
@@ -3498,10 +3500,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                    );
             break;
           case COMMAND_CONVERT:
+            // create new entity UUID
+            Misc_getUUID(entityUUID);
+
             #ifndef NDEBUG
               error = Command_convert(&storageNameList,
-                                      (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
-                                      String_cString(scheduleUUID),
+                                      (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                                      String_cString(globalOptions.newEntityUUID),
                                       0LL,  // newCreatedDateTime
                                       &jobOptions,
                                       CALLBACK_(getPasswordFromConsole,NULL),
@@ -3509,8 +3514,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                      );
             #else
               error = Command_convert(&storageNameList,
-                                      String_cString(jobUUID),
-                                      String_cString(scheduleUUID),
+// TODO:
+NULL,//                                      String_cString(globalOptions.newEntityUUID),
+                                      String_cString(globalOptions.newEntityUUID),
                                       0LL,  // newCreatedDateTime
                                       &jobOptions,
                                       CALLBACK_(getPasswordFromConsole,NULL),
@@ -4260,40 +4266,6 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_INVALID_ARGUMENT;
   }
 
-  if (globalOptions.serverMode == SERVER_MODE_MASTER)
-  {
-    // read jobs (if possible)
-    (void)Job_rereadAll(globalOptions.jobsDirectory);
-
-    // get UUID of job to execute
-    if (!String_isEmpty(globalOptions.jobUUIDOrName))
-    {
-      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
-      {
-        // find job by name or UUID
-        jobNode = NULL;
-        if (jobNode == NULL) jobNode = Job_findByName(globalOptions.jobUUIDOrName);
-        if (jobNode == NULL) jobNode = Job_findByUUID(globalOptions.jobUUIDOrName);
-        if      (jobNode != NULL)
-        {
-          String_set(jobUUID,jobNode->job.uuid);
-        }
-        else if (String_matchCString(globalOptions.jobUUIDOrName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
-        {
-          String_set(jobUUID,globalOptions.jobUUIDOrName);
-        }
-        else
-        {
-          printError(_("cannot find job '%s'!"),
-                     String_cString(globalOptions.jobUUIDOrName)
-                    );
-          Job_listUnlock();
-          return ERROR_CONFIG;
-        }
-      }
-    }
-  }
-
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
@@ -4401,9 +4373,9 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     error = runBatch();
   }
-  else if (!String_isEmpty(jobUUID) && (globalOptions.command == COMMAND_NONE))
+  else if (!String_isEmpty(globalOptions.jobUUIDOrName) && (globalOptions.command == COMMAND_NONE))
   {
-    error = runJob(jobUUID);
+    error = runJob(globalOptions.jobUUIDOrName);
   }
   #ifndef NDEBUG
   else if (   globalOptions.debug.indexWaitOperationsFlag

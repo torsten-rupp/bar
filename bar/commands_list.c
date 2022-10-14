@@ -281,7 +281,7 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 * Input  : hostName               - host name
 *          userName               - user name
 *          jobUUID                - job UUID
-*          scheduleUUID           - schedule UUID
+*          entityUUID             - entity UUID
 *          archiveType            - archive type
 *          createdDateTime        - create date/time [s]
 *          comment                - comment
@@ -295,7 +295,7 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 LOCAL void printMetaInfo(ConstString          hostName,
                          ConstString          userName,
                          ConstString          jobUUID,
-                         ConstString          scheduleUUID,
+                         ConstString          entityUUID,
                          ArchiveTypes         archiveType,
                          uint64               createdDateTime,
                          ConstString          comment,
@@ -309,7 +309,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
   assert(hostName != NULL);
   assert(userName != NULL);
   assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(entityUUID != NULL);
   assert(comment != NULL);
 
   // init variables
@@ -317,13 +317,13 @@ LOCAL void printMetaInfo(ConstString          hostName,
 
   // print info
   printConsole(stdout,0,"\n");
-  printConsole(stdout,0,"Host name    : %s\n",String_cString(hostName));
-  printConsole(stdout,0,"User name    : %s\n",String_cString(userName));
-  printConsole(stdout,0,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
-  printConsole(stdout,0,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
-  printConsole(stdout,0,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
-  printConsole(stdout,0,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,FALSE,NULL)));
-  printConsole(stdout,0,"Signatures   : ");
+  printConsole(stdout,0,"Host name  : %s\n",String_cString(hostName));
+  printConsole(stdout,0,"User name  : %s\n",String_cString(userName));
+  printConsole(stdout,0,"Job UUID   : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
+  printConsole(stdout,0,"Entity UUID: %s\n",!String_isEmpty(entityUUID) ? String_cString(entityUUID) : "-");
+  printConsole(stdout,0,"Type       : %s\n",Archive_archiveTypeToString(archiveType));
+  printConsole(stdout,0,"Created at : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,FALSE,NULL)));
+  printConsole(stdout,0,"Signatures : ");
   switch (allCryptSignatureState)
   {
     case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,0,"none available\n"); break;
