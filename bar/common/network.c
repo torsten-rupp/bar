@@ -950,6 +950,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         #if  defined(PLATFORM_LINUX)
           int n;
         #elif defined(PLATFORM_WINDOWS)
+          int n;
         #endif /* PLATFORM_... */
 
         if (socketFlags != SOCKET_FLAG_NONE)
@@ -1046,6 +1047,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         #if  defined(PLATFORM_LINUX)
           int n;
         #elif defined(PLATFORM_WINDOWS)
+          int n;
         #endif /* PLATFORM_... */
         int result;
 
