@@ -1051,7 +1051,7 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<text>
-*            entityUUUID=<text>
+*            entityUUID=<text>
 *          Result:
 *            uuidId=<n>
 *            executionCountNormal=<n>
@@ -1094,9 +1094,14 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"entityUUUID",entityUUUID,NULL))
+// TODO: replace
+//  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL))
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL)
+&& !StringMap_getString(argumentMap,"scheduleUUID",entityUUUID,NULL)
+)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityUUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityUUID=<text>");
     return;
   }
 

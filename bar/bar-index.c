@@ -9281,7 +9281,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 DatabaseId uuidId;
                                                 DatabaseId entityId;
                                                 String     jobUUID;
-                                                String     scheduleUUID;
+                                                String     entityUUID;
                                                 String     name;
                                                 uint64     createdDateTime;
                                                 String     hostname;
