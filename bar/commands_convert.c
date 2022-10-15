@@ -801,10 +801,11 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive file entry '%s' (error: %s)",
-               String_cString(sourceArchiveHandle->printableStorageName),
+    printError("cannot create new archive file '%s' (error: %s)",
+               String_cString(fileName),
                Error_getText(error)
               );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
     File_doneExtendedAttributes(&fileExtendedAttributeList);
     String_delete(fileName);
     return error;
@@ -1025,10 +1026,11 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive image entry '%s' (error: %s)!",
-               String_cString(destinationArchiveHandle->printableStorageName),
+    printError("cannot create new archive image '%s' (error: %s)!",
+               String_cString(deviceName),
                Error_getText(error)
               );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
     String_delete(deviceName);
     return error;
   }
@@ -1183,8 +1185,8 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                    );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive directory entry '%s' (error: %s)",
-               String_cString(destinationArchiveHandle->printableStorageName),
+    printError("cannot create new archive directory '%s' (error: %s)",
+               String_cString(directoryName),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1298,10 +1300,11 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot create new archive link entry '%s' (error: %s)",
+    printError("cannot create new archive link '%s' (error: %s)",
                String_cString(linkName),
                Error_getText(error)
               );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
     File_doneExtendedAttributes(&fileExtendedAttributeList);
     String_delete(fileName);
     String_delete(linkName);
@@ -1454,8 +1457,18 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                    fragmentSize,
                                    archiveFlags
                                   );
-
-
+  if (error != ERROR_NONE)
+  {
+    printError("cannot create new archive hardlink '%s' (error: %s)",
+               String_cString(StringList_first(&fileNameList,NULL)),
+               Error_getText(error)
+              );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
+    StringList_done(&fileNameList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
   // convert archive and hard link content
   length = 0LL;
@@ -1608,8 +1621,8 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                  );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive special entry '%s' (error: %s)",
-               String_cString(destinationArchiveHandle->printableStorageName),
+    printError("cannot create new archive special '%s' (error: %s)",
+               String_cString(fileName),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1743,8 +1756,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive meta entry '%s' (error: %s)",
-               String_cString(destinationArchiveHandle->printableStorageName),
+    printError("cannot create new archive meta content (error: %s)",
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -2408,13 +2420,6 @@ Errors Command_convert(const StringList        *storageNameList,
 
   assert(storageNameList != NULL);
   assert(newJobOptions != NULL);
-
-  // check options
-  if (!Password_isEmpty(&newJobOptions->cryptPassword) && !Crypt_isEncrypted(newJobOptions->cryptAlgorithms[0]))
-  {
-    printError("crypt algorithm must be specified!");
-    return ERROR_INVALID_ARGUMENT;
-  }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);

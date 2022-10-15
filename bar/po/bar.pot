@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-14 10:38+0200\n"
+"POT-Creation-Date: 2022-10-15 02:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/rupp/tools/bar/bar/archive.c:6364
+#: /home/rupp/tools/bar/bar/archive.c:6358
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
@@ -26,7 +26,7 @@ msgstr ""
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_convert.c:2564
+#: /home/rupp/tools/bar/bar/commands_convert.c:2557
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
