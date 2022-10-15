@@ -1757,7 +1757,7 @@ Errors getPasswordFromConsole(String        name,
   {
     case RUN_MODE_INTERACTIVE:
       {
-        String title;
+        String title1,title2;
         String saveLine;
 
         SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -1765,23 +1765,25 @@ Errors getPasswordFromConsole(String        name,
           saveConsole(stdout,&saveLine);
 
           // input password
-          title = String_new();
+          title1 = String_new();
+          title2 = String_new();
           switch (passwordType)
           {
-            case PASSWORD_TYPE_CRYPT   : String_format(title,"Crypt password"); break;
-            case PASSWORD_TYPE_FTP     : String_format(title,"FTP password"); break;
-            case PASSWORD_TYPE_SSH     : String_format(title,"SSH password"); break;
-            case PASSWORD_TYPE_WEBDAV  : String_format(title,"WebDAV password"); break;
-            case PASSWORD_TYPE_DATABASE: String_format(title,"Database password"); break;
+            case PASSWORD_TYPE_CRYPT   : String_format(title1,"Crypt password"); break;
+            case PASSWORD_TYPE_FTP     : String_format(title1,"FTP password"); break;
+            case PASSWORD_TYPE_SSH     : String_format(title1,"SSH password"); break;
+            case PASSWORD_TYPE_WEBDAV  : String_format(title1,"WebDAV password"); break;
+            case PASSWORD_TYPE_DATABASE: String_format(title1,"Database password"); break;
           }
           if (!stringIsEmpty(text))
           {
-            String_appendFormat(title,_(" for '%s'"),text);
+            String_appendFormat(title1,_(" for '%s'"),text);
           }
-          if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
+          if (!Password_input(password,String_cString(title1),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
             restoreConsole(stdout,&saveLine);
-            String_delete(title);
+            String_delete(title2);
+            String_delete(title1);
             Semaphore_unlock(&consoleLock);
             error = ERROR_NO_CRYPT_PASSWORD;
             break;
@@ -1791,21 +1793,22 @@ Errors getPasswordFromConsole(String        name,
             // verify input password
             if ((text != NULL) && !stringIsEmpty(text))
             {
-              String_format(title,_("Verify password for '%s'"),text);
+              String_format(title2,_("Verify password for '%s'"),text);
             }
             else
             {
-              String_setCString(title,"Verify password");
+              String_setCString(title2,"Verify password");
             }
-            if (Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+            if (Password_inputVerify(password,String_cString(title2),PASSWORD_INPUT_MODE_ANY))
             {
               error = ERROR_NONE;
             }
             else
             {
-              printError(_("%s passwords are not equal!"),title);
+              printError(_("%s passwords are not equal!"),String_cString(title1));
               restoreConsole(stdout,&saveLine);
-              String_delete(title);
+              String_delete(title2);
+              String_delete(title1);
               Semaphore_unlock(&consoleLock);
               error = ERROR_CRYPT_PASSWORDS_MISMATCH;
               break;
@@ -1815,7 +1818,8 @@ Errors getPasswordFromConsole(String        name,
           {
             error = ERROR_NONE;
           }
-          String_delete(title);
+          String_delete(title2);
+          String_delete(title1);
 
           if (weakCheckFlag)
           {
@@ -4144,10 +4148,9 @@ LOCAL Errors runDebug(void)
 
 LOCAL Errors bar(int argc, const char *argv[])
 {
-  String         fileName;
-  Errors         error;
-  const JobNode  *jobNode;
-  bool           printInfoFlag;
+  String fileName;
+  Errors error;
+  bool   printInfoFlag;
 
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
