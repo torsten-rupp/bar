@@ -87,6 +87,7 @@ typedef enum
 typedef enum
 {
   CRYPT_KEY_DERIVE_NONE,
+
   CRYPT_KEY_DERIVE_SIMPLE,
   CRYPT_KEY_DERIVE_FUNCTION
 } CryptKeyDeriveTypes;
