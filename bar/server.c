@@ -3438,9 +3438,9 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                          CALLBACK_(NULL,NULL),  // isAbortedFunction
                                          NULL  // logHandle
                                         );
-                if (Storage_exists(&fromStorageInfo,NULL))
+                if (moveError == ERROR_NONE)
                 {
-                  if (error == ERROR_NONE)
+                  if (Storage_exists(&fromStorageInfo,NULL))
                   {
                     moveError = Storage_init(&toStorageInfo,
                                              NULL,  // masterIO
@@ -3455,6 +3455,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                              CALLBACK_(NULL,NULL),  // isAbortedFunction
                                              NULL  // logHandle
                                             );
+                    if (moveError == ERROR_NONE)
                     {
                       // get unique move-to name
                       File_setFileName(moveToArchivePath,moveToPath);
@@ -3562,20 +3563,20 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                       // done storage
                       Storage_done(&toStorageInfo);
                     }
-
-                    // done storage
-                    Storage_done(&fromStorageInfo);
                   }
-                }
-                else
-                {
-                  // set index state: error
-                  (void)Index_setStorageState(indexHandle,
-                                              storageId,
-                                              INDEX_STATE_ERROR,
-                                              0LL,  // lastCheckedDateTime
-                                              "file not found"
-                                             );
+                  else
+                  {
+                    // set index state: error
+                    (void)Index_setStorageState(indexHandle,
+                                                storageId,
+                                                INDEX_STATE_ERROR,
+                                                0LL,  // lastCheckedDateTime
+                                                "file not found"
+                                               );
+                  }
+
+                  // done storage
+                  Storage_done(&fromStorageInfo);
                 }
               }
             }
