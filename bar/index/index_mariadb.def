@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS uuids(
 CREATE TABLE IF NOT EXISTS entities(
   id                        BIGINT AUTO_INCREMENT PRIMARY KEY,
   jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
+// TODO: rename to entityUUID
   scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
   hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
 //TODO: use
@@ -410,6 +411,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 CREATE TABLE IF NOT EXISTS history(
   id                BIGINT AUTO_INCREMENT PRIMARY KEY,
   jobUUID           VARCHAR(${UUID_LENGTH}) NOT NULL,
+// TODO: rename to entityUUID
   scheduleUUID      TEXT,
   hostName          TEXT,
   userName          TEXT,

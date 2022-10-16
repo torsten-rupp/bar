@@ -302,7 +302,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'file' content of archive '%s' (error: %s)!",
+    printError("cannot read 'file' entry from storage '%s' (error: %s)!",
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -370,7 +370,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("cannot read file '%s' (error: %s)",
+      printError("cannot read content of 'file' entry '%s' (error: %s)",
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -396,8 +396,8 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("cannot read content of archive '%s' (error: %s)!",
-                   String_cString(archiveHandle->printableStorageName),
+        printError("cannot read content of 'file' entry '%s' (error: %s)!",
+                   String_cString(fileName),
                    Error_getText(error)
                   );
         break;
@@ -608,7 +608,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                 );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'image' content of archive '%s' (error: %s)!",
+    printError("cannot read 'image' content from storage '%s' (error: %s)!",
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -753,8 +753,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("cannot read content of archive '%s' (error: %s)!",
-                   String_cString(archiveHandle->printableStorageName),
+        printError("cannot read content from 'image' entry '%s' (error: %s)!",
+                   String_cString(deviceName),
                    Error_getText(error)
                   );
         break;
@@ -955,7 +955,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
                                     );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'directory' content of archive '%s' (error: %s)!",
+    printError("cannot read 'directory' entry from storage '%s' (error: %s)!",
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1080,7 +1080,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'link' content of archive '%s' (error: %s)!",
+    printError("cannot read 'link' entry from storage '%s' (error: %s)!",
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1272,7 +1272,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                    );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'hard link' content of archive '%s' (error: %s)!",
+    printError("cannot read 'hard link' entry from storage '%s' (error: %s)!",
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1401,8 +1401,8 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("cannot read content of archive '%s' (error: %s)!",
-                       String_cString(archiveHandle->printableStorageName),
+            printError("cannot read content of 'hard link' entry '%s' (error: %s)!",
+                       String_cString(StringList_first(&fileNameList,NULL)),
                        Error_getText(error)
                       );
             break;
@@ -1617,7 +1617,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                                   );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'special' content of archive '%s' (error: %s)!",
+    printError("cannot read 'special' entry from storage '%s' (error: %s)!",
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1770,6 +1770,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   // compare entries
   while (MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
+    assert(entryMsg.archiveHandle != NULL);
+    assert(entryMsg.archiveCryptInfo != NULL);
+
     if (   ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(compareInfo)
@@ -1790,7 +1793,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
                                   );
         if (error != ERROR_NONE)
         {
-          printError("cannot open archive '%s' (error: %s)!",
+          printError("cannot open storage '%s' (error: %s)!",
                      String_cString(entryMsg.archiveHandle->printableStorageName),
                      Error_getText(error)
                     );
@@ -1914,6 +1917,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   // discard processing all other entries
   while (MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
+    assert(entryMsg.archiveHandle != NULL);
+    assert(entryMsg.archiveCryptInfo != NULL);
+
     freeEntryMsg(&entryMsg,NULL);
   }
 
@@ -1991,7 +1997,7 @@ NULL, // masterSocketHandle
   // check if storage exists
   if (!Storage_exists(&storageInfo,archiveName))
   {
-    printError("archive not found '%s'!",
+    printError("storage not found '%s'!",
                String_cString(printableStorageName)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -2008,7 +2014,7 @@ NULL, // masterSocketHandle
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot open archive '%s' (error: %s)!",
+    printError("cannot open storage '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2033,7 +2039,7 @@ NULL, // masterSocketHandle
       else
       {
         // signature error
-        printError("cannot verify signatures '%s' (error: %s)!",
+        printError("cannot verify signatures of '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -2095,7 +2101,7 @@ NULL, // masterSocketHandle
                                        );
     if (error != ERROR_NONE)
     {
-      printError("cannot read next entry in archive '%s' (error: %s)!",
+      printError("cannot read next entry from storage '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );

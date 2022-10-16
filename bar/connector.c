@@ -1051,7 +1051,7 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<text>
-*            scheduleUUUID=<text>
+*            entityUUID=<text>
 *          Result:
 *            uuidId=<n>
 *            executionCountNormal=<n>
@@ -1074,7 +1074,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
 {
   Errors       error;
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (entityUUUID,MISC_UUID_STRING_LENGTH);
   IndexId      uuidId;
   uint         executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
   uint64       averageDurationNormal,averageDurationFull,averageDurationIncremental,averageDurationDifferential,averageDurationContinuous;
@@ -1088,15 +1088,20 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get jobUUID, scheduleUUID
+  // get jobUUID, entityUUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUUID,NULL))
+// TODO: replace
+//  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL))
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL)
+&& !StringMap_getString(argumentMap,"scheduleUUID",entityUUUID,NULL)
+)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityUUID=<text>");
     return;
   }
 
@@ -1105,7 +1110,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     // find job data
     error = Index_findUUID(indexHandle,
                            String_cString(jobUUID),
-                           String_cString(scheduleUUUID),
+                           String_cString(entityUUUID),
                            &uuidId,
                            &executionCountNormal,
                            &executionCountFull,

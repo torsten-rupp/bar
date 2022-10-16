@@ -110,7 +110,7 @@ typedef struct
 * Input  : storageInfo  - storage info
 *          uuidId       - UUID index id
 *          jobUUID      - job UUID or NULL
-*          scheduleUUID - schedule UUID or NULL
+*          entityUUID   - entity UUID or NULL
 *          entityId     - entity index id
 *          archiveType  - archive type
 *          storageId    - storage index id
@@ -125,7 +125,7 @@ typedef struct
 typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
                                      IndexId      uuidId,
                                      ConstString  jobUUID,
-                                     ConstString  scheduleUUID,
+                                     ConstString  entityUUID,
                                      IndexId      entityId,
                                      ArchiveTypes archiveType,
                                      IndexId      storageId,
@@ -139,7 +139,7 @@ typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
 * Input  : storageInfo  - storage info
 *          uuidId       - UUID index id
 *          jobUUID      - job UUID or NULL
-*          scheduleUUID - schedule UUID or NULL
+*          entityUUID   - entity UUID or NULL
 *          entityId     - entity index id
 *          archiveType  - archive type
 *          storageId    - storage index id
@@ -154,7 +154,7 @@ typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
 typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
                                      IndexId      uuidId,
                                      ConstString  jobUUID,
-                                     ConstString  scheduleUUID,
+                                     ConstString  entityUUID,
                                      IndexId      entityId,
                                      ArchiveTypes archiveType,
                                      IndexId      storageId,
@@ -186,7 +186,7 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 * Purpose: call back for simple test archive
 * Input  : storageInfo          - storage info
 *          jobUUID              - job UUID or NULL
-*          scheduleUUID         - schedule UUID or NULL
+*          entityUUID           - entity UUID or NULL
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
 *                                 for single part
 *          intermediateFileName - intermediate archive file name
@@ -199,7 +199,7 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 
 typedef Errors(*ArchiveTestFunction)(StorageInfo  *storageInfo,
                                      ConstString  jobUUID,
-                                     ConstString  scheduleUUID,
+                                     ConstString  entityUUID,
                                      int          partNumber,
                                      ConstString  intermediateFileName,
                                      uint64       intermediateFileSize,
@@ -212,7 +212,7 @@ typedef Errors(*ArchiveTestFunction)(StorageInfo  *storageInfo,
 * Input  : storageInfo          - storage info
 *          uuidId               - UUID index id
 *          jobUUID              - job UUID or NULL
-*          scheduleUUID         - schedule UUID or NULL
+*          entityUUID           - entity UUID or NULL
 *          entityId             - entity index id
 *          storageId            - storage index id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
@@ -228,7 +228,7 @@ typedef Errors(*ArchiveTestFunction)(StorageInfo  *storageInfo,
 typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
                                       IndexId      uuidId,
                                       ConstString  jobUUID,
-                                      ConstString  scheduleUUID,
+                                      ConstString  entityUUID,
                                       IndexId      entityId,
                                       IndexId      storageId,
                                       int          partNumber,
@@ -256,7 +256,7 @@ typedef struct
 
 // TODO: use datatype UUID
   String                   jobUUID;
-  String                   scheduleUUID;
+  String                   entityUUID;
 
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
@@ -695,8 +695,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          archiveName             - archive name (can be NULL)
 *          uuidId                  - UUID index id or INDEX_ID_NONE
 *          entityId                - entity index id or INDEX_ID_NONE
-*          jobUUID                 - unique job id or NULL
-*          scheduleUUID            - unique schedule id or NULL
+*          jobUUID                 - job UUID or NULL
+*          entityUUID              - entity UUID or NULL
 *          deltaSourceList         - delta source list or NULL
 *          archiveType             - archive type
 *          createdDateTime         - date/time created [s]
@@ -731,7 +731,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         IndexId                 uuidId,
                         IndexId                 entityId,
                         const char              *jobUUID,
-                        const char              *scheduleUUID,
+                        const char              *entityUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         bool                    dryRun,
@@ -763,7 +763,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           IndexId                 uuidId,
                           IndexId                 entityId,
                           const char              *jobUUID,
-                          const char              *scheduleUUID,
+                          const char              *entityUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           bool                    dryRun,
@@ -1005,7 +1005,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          userName         - user name (can be NULL)
 *          hostName         - host name (can be NULL)
 *          jobUUID          - job UUID (can be NULL)
-*          scheduleUUID     - schedule UUID (can be NULL)
+*          entityUUID       - entity UUID (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - create date/time [s]
 *          comment          - comment
@@ -1021,7 +1021,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                               const char       *userName,
                               const char       *hostName,
                               const char       *jobUUID,
-                              const char       *scheduleUUID,
+                              const char       *entityUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
                               const char       *comment
@@ -1035,7 +1035,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 const char       *userName,
                                 const char       *hostName,
                                 const char       *jobUUID,
-                                const char       *scheduleUUID,
+                                const char       *entityUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
                                 const char       *comment
@@ -1629,7 +1629,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *          hostName        - host name (can be NULL)
 *          userName        - user name (can be NULL)
 *          jobUUID         - job UUID (can be NULL)
-*          scheduleUUID    - schedule UUID (can be NULL)
+*          entityUUID      - entity UUID (can be NULL)
 *          archiveType     - archive type (can be NULL)
 *          createdDateTime - create date/time [s]
 *          comment         - comment
@@ -1645,7 +1645,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                String           hostName,
                                String           userName,
                                String           jobUUID,
-                               String           scheduleUUID,
+                               String           entityUUID,
                                ArchiveTypes     *archiveType,
                                uint64           *createdDateTime,
                                String           comment
@@ -1660,7 +1660,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                  String           hostName,
                                  String           userName,
                                  String           jobUUID,
-                                 String           scheduleUUID,
+                                 String           entityUUID,
                                  ArchiveTypes     *archiveType,
                                  uint64           *createdDateTime,
                                  String           comment

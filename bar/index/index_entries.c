@@ -635,6 +635,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -662,6 +663,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                            );
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       break;
     }
 
@@ -688,6 +690,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                              );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         break;
       }
     }
@@ -695,8 +698,9 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
     File_getDirectoryName(directoryName,directoryName);
   }
   String_delete(directoryName);
+if (error != ERROR_NONE) fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
-  return ERROR_NONE;
+  return error;
 }
 
 // ----------------------------------------------------------------------
@@ -5168,6 +5172,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                                name,
                                                size
                                               );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       if (error != ERROR_NONE)
       {
         return error;
@@ -5349,6 +5354,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                                name,
                                                0LL
                                               );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       if (error != ERROR_NONE)
       {
         return error;

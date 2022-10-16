@@ -420,7 +420,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
     while (Index_getNextEntity(&indexQueryHandle,
                                NULL,  // uuidId,
                                NULL,  // jobUUID,
-                               NULL,  // scheduleUUID,
+                               NULL,  // entityUUID,
                                &entityId,
                                NULL,  // archiveType,
                                NULL,  // createdDateTime,
@@ -506,7 +506,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                             NULL,  // uuidId
                             NULL,  // jobUUID
                             NULL,  // entityId
-                            NULL,  // scheduleUUID
+                            NULL,  // entityUUID
                             NULL,  // hostName
                             NULL,  // userName
                             NULL,  // archiveType
@@ -1684,7 +1684,7 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
                         uint64       findCreatedDate,
                         uint64       findCreatedTime,
                         String       jobUUID,
-                        String       scheduleUUID,
+                        String       entityUUID,
                         IndexId      *uuidId,
                         IndexId      *entityId,
                         ArchiveTypes *archiveType,
@@ -1733,7 +1733,7 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
                           if (uuidId           != NULL) (*uuidId)          = INDEX_ID_UUID(values[0].id);
                           if (jobUUID          != NULL) String_set(jobUUID,values[1].string);
                           if (entityId         != NULL) (*entityId)        = INDEX_ID_ENTITY(values[2].id);
-                          if (scheduleUUID     != NULL) String_set(scheduleUUID,values[3].string);
+                          if (entityUUID       != NULL) String_set(entityUUID,values[3].string);
                           if (createdDateTime  != NULL) (*createdDateTime) = values[4].id;
                           if (archiveType      != NULL) (*archiveType)     = values[5].u;
                           if (lastErrorMessage != NULL) String_set(lastErrorMessage,values[6].string);
@@ -1857,7 +1857,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                               IndexHandle          *indexHandle,
                               IndexId              uuidId,
                               ConstString          jobUUID,
-                              ConstString          scheduleUUID,
+                              ConstString          entityUUID,
                               ArchiveTypes         archiveType,
                               IndexStateSet        indexStateSet,
                               IndexModeSet         indexModeSet,
@@ -1898,7 +1898,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   Database_filterAppend(filterString,TRUE,"AND","entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
   Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
-  Database_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID=%'S",entityUUID);
   Database_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
   Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
   Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
@@ -2037,7 +2037,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          IndexId          *uuidId,
                          String           jobUUID,
-                         String           scheduleUUID,
+                         String           entityUUID,
                          IndexId          *entityId,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
@@ -2066,7 +2066,7 @@ if (lastErrorCode != NULL) (*lastErrorCode) = 0;
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatatabaseId,
-                           scheduleUUID,
+                           entityUUID,
                            createdDateTime,
                            archiveType,
 // TODO:                           lastErrorCode
@@ -2088,7 +2088,7 @@ if (lastErrorCode != NULL) (*lastErrorCode) = 0;
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
                        const char   *jobUUID,
-                       const char   *scheduleUUID,
+                       const char   *entityUUID,
                        const char   *hostName,
                        const char   *userName,
                        ArchiveTypes archiveType,
@@ -2161,7 +2161,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               (
                                 DATABASE_VALUE_KEY     ("uuidId",       uuidId),
                                 DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
-                                DATABASE_VALUE_CSTRING ("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
                                 DATABASE_VALUE_CSTRING ("hostName",     hostName),
                                 DATABASE_VALUE_CSTRING ("userName",     userName),
                                 DATABASE_VALUE_DATETIME("created",      createdDateTime),
@@ -2203,7 +2203,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                     },NULL),
                                     "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64" locked=%y",
                                     jobUUID,
-                                    (scheduleUUID != NULL) ? scheduleUUID : "",
+                                    (entityUUID != NULL) ? entityUUID : "",
                                     hostName,
                                     userName,
                                     Archive_archiveTypeToString(archiveType),
@@ -2222,7 +2222,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 Errors Index_updateEntity(IndexHandle  *indexHandle,
                           IndexId      entityId,
                           const char   *jobUUID,
-                          const char   *scheduleUUID,
+                          const char   *entityUUID,
                           const char   *hostName,
                           const char   *userName,
                           ArchiveTypes archiveType,
@@ -2252,7 +2252,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
-                                DATABASE_VALUE_CSTRING ("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
                                 DATABASE_VALUE_CSTRING ("hostName",     hostName),
                                 DATABASE_VALUE_CSTRING ("userName",     userName),
                                 DATABASE_VALUE_DATETIME("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
@@ -2280,7 +2280,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                                     CALLBACK_(NULL,NULL),
                                     "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64,
                                     jobUUID,
-                                    (scheduleUUID != NULL) ? scheduleUUID : "",
+                                    (entityUUID != NULL) ? entityUUID : "",
                                     hostName,
                                     userName,
                                     Archive_archiveTypeToString(archiveType),

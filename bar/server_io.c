@@ -605,6 +605,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   Misc_initTimeout(&timeoutInfo,timeout);
 
   resultFlag = FALSE;
+  error      = ERROR_UNKNOWN;
   do
   {
 //fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
@@ -643,13 +644,17 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
             continue;
           }
 
-          error      = (errorCode != ERROR_CODE_NONE) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
-          resultFlag = TRUE;
+          error = ERROR_NONE;
         }
+        else
+        {
+          error = ERRORF_(errorCode,"%s",String_cString(data));
+        }
+        resultFlag = TRUE;
       }
       else
       {
-        // unknown
+        // unknown -> ignore
         #ifndef NDEBUG
           if (globalOptions.debug.serverLevel >= 1)
           {
@@ -673,6 +678,11 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   while (   !resultFlag
          && !Misc_isTimeout(&timeoutInfo)
         );
+  if (!resultFlag && Misc_isTimeout(&timeoutInfo))
+  {
+    error = ERROR_NETWORK_TIMEOUT_RECEIVE;
+  }
+  assert(error != ERROR_UNKNOWN);
 
   // free resources
   Misc_doneTimeout(&timeoutInfo);

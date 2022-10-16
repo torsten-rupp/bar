@@ -1,4 +1,15 @@
-2022-09-09 0.22a
+2022-09-16 0.22a
+  * disabled TLS port by default (TLS also work on
+    standard port)
+  * fixed/renamed archive meta field "scheduleUUID":
+    become a unique entity UUID to be able to find all
+    archive belonging to a backup set.
+    Note: if needed, e. g. for re-import to the index,
+    run the command 'convert' with option --new-entity-uuid
+    to assign an UUID to all archives of an entity
+  * support TLS connections to slaves
+  * fixed option --job
+  * fixed convert multiple archives
   * fixed add newest entry if no entry exists
   * bar-index: fixed clean orphaned
   * fixed rename entry on restore: use file name instead
@@ -16,11 +27,17 @@
   * fixed continuous schedule: date+week days
   * fixed log message 'no server password set'
   * fixed TLS connections: reading certificates
+  * fixed TLS connection certificates verification: send
+    certificate chain, verify certifcates
+  * added slave-tls-mode, slave-host-force-tls is now
+    deprecated
   * fixed auto-index: add move-to paths for search
+  * fixed lost resources in --convert
   * BARConrol: fixed possible dead-lock in server
     communication
   * BARControl: added option --insecure-tls, improved
     login dialogs
+  * BARControl: renamed option --key-file to --keystore-file
 
 2022-08-30 0.22
   * added support for external index database engines

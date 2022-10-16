@@ -9061,26 +9061,26 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 
                          uuidId              = values[27].id;
 
-                         printf("  Id              : %"PRIi64"\n",entityId);
-                         printf("    Type          : %s\n",
+                         printf("  Id             : %"PRIi64"\n",entityId);
+                         printf("    Type         : %s\n",
                                 (type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS)
                                   ? TYPE_NAMES[type]
                                   : stringFormat(buffer,sizeof(buffer),"unknown (%d)",type)
                                );
-                         printf("    Job UUID      : %s\n",String_cString(values[ 2].string));
-                         printf("    Schedule UUID : %s\n",String_cString(values[ 3].string));
-                         printf("    Created       : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
+                         printf("    Job UUID     : %s\n",String_cString(values[ 2].string));
+                         printf("    Entity UUID  : %s\n",String_cString(values[ 3].string));
+                         printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
                          printf("\n");
-                         printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                         printf("    Total entries: %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
-                         printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                         printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
-                         printf("    Directories   : %lu\n",totalDirectoryCount);
-                         printf("    Links         : %lu\n",totalLinkCount);
-                         printf("    Hardlinks     : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
-                         printf("    Special       : %lu\n",totalSpecialCount);
+                         printf("    Files        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                         printf("    Images       : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                         printf("    Directories  : %lu\n",totalDirectoryCount);
+                         printf("    Links        : %lu\n",totalLinkCount);
+                         printf("    Hardlinks    : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                         printf("    Special      : %lu\n",totalSpecialCount);
                          printf("\n");
-                         printf("    UUID id       : %"PRIi64"\n",uuidId);
+                         printf("    UUID id      : %"PRIi64"\n",uuidId);
 
                          i      = 0;
                          prefix = "    Storage ids   : ";
@@ -9281,7 +9281,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 DatabaseId uuidId;
                                                 DatabaseId entityId;
                                                 String     jobUUID;
-                                                String     scheduleUUID;
+                                                String     entityUUID;
                                                 String     name;
                                                 uint64     createdDateTime;
                                                 String     hostname;
@@ -9313,7 +9313,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 uuidId              = values[ 1].id;
                                                 entityId            = values[ 2].id;
                                                 jobUUID             = values[ 3].string;
-                                                scheduleUUID        = values[ 4].string;
+                                                entityUUID          = values[ 4].string;
                                                 name                = values[ 5].string;
                                                 createdDateTime     = values[ 6].dateTime;
                                                 hostname            = values[ 7].string;
@@ -9335,38 +9335,38 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                 totalHardlinkSize   = values[23].u64;
                                                 totalSpecialCount   = values[24].u;
 
-                                                printf("  Id              : %"PRIi64"\n",id);
-                                                printf("    Name          : %s\n",String_cString(name));
-                                                printf("    Created       : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
-                                                printf("    Host name     : %s\n",String_cString(hostname));
-                                                printf("    User name     : %s\n",String_cString(userName));
-                                                printf("    Comment       : %s\n",String_cString(comment));
-                                                printf("    State         : %s\n",
+                                                printf("  Id             : %"PRIi64"\n",id);
+                                                printf("    Name         : %s\n",String_cString(name));
+                                                printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
+                                                printf("    Host name    : %s\n",String_cString(hostname));
+                                                printf("    User name    : %s\n",String_cString(userName));
+                                                printf("    Comment      : %s\n",String_cString(comment));
+                                                printf("    State        : %s\n",
                                                        (state <= INDEX_CONST_STATE_ERROR)
                                                          ? STATE_TEXT[state]
                                                          : stringFormat(buffer,sizeof(buffer),"unknown (%d)",state)
                                                       );
-                                                printf("    Mode          : %s\n",
+                                                printf("    Mode         : %s\n",
                                                        (mode <= INDEX_CONST_MODE_AUTO)
                                                          ? MODE_TEXT[mode]
                                                          : stringFormat(buffer,sizeof(buffer),"unknown (%d)",mode)
                                                       );
-                                                printf("    Last checked  : %s\n",(lastCheckedDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,FALSE,NULL) : "-");
-                                                printf("    Error message : %s\n",String_cString(message));
+                                                printf("    Last checked : %s\n",(lastCheckedDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,FALSE,NULL) : "-");
+                                                printf("    Error message: %s\n",String_cString(message));
                                                 printf("\n");
-                                                printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                                                printf("    Total entries: %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                                                 printf("\n");
-                                                printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                                                printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
-                                                printf("    Directories   : %lu\n",totalDirectoryCount);
-                                                printf("    Links         : %lu\n",totalLinkCount);
-                                                printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
-                                                printf("    Special       : %lu\n",totalSpecialCount);
+                                                printf("    Files        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                                                printf("    Images       : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                                                printf("    Directories  : %lu\n",totalDirectoryCount);
+                                                printf("    Links        : %lu\n",totalLinkCount);
+                                                printf("    Hardlinks    : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                                                printf("    Special      : %lu\n",totalSpecialCount);
                                                 printf("\n");
-                                                printf("    UUID id       : %"PRIi64"\n",uuidId);
-                                                printf("    Entity id     : %"PRIi64"\n",entityId);
-                                                printf("    Job UUID      : %s\n",String_cString(jobUUID));
-                                                printf("    Schedule UUID : %s\n",String_cString(scheduleUUID));
+                                                printf("    UUID id      : %"PRIi64"\n",uuidId);
+                                                printf("    Entity id    : %"PRIi64"\n",entityId);
+                                                printf("    Job UUID     : %s\n",String_cString(jobUUID));
+                                                printf("    Entity UUID  : %s\n",String_cString(entityUUID));
 
                                                 return ERROR_NONE;
                                               },NULL),

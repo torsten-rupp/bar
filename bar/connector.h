@@ -384,7 +384,7 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 * Input  : connectorInfo                - connector info
 *          jobName                      - job name
 *          jobUUID                      - job UUID
-*          scheduleUUID                 - schedule UUID
+*          entityUUID                   - entity UUID
 *          storageName                  - storage name
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
@@ -412,7 +412,7 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ConstString                  jobName,
                         ConstString                  jobUUID,
-                        ConstString                  scheduleUUID,
+                        ConstString                  entityUUID,
                         ConstString                  storageName,
                         const EntryList              *includeEntryList,
                         const PatternList            *excludePatternList,

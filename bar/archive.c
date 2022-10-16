@@ -1071,6 +1071,7 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
   archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType = cryptKeyDeriveType;
   Crypt_initSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
   Crypt_initKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
+fprintf(stderr,"%s:%d: %p %d\n",__FILE__,__LINE__,&archiveCryptInfoNode->archiveCryptInfo.cryptKey,archiveCryptInfoNode->archiveCryptInfo.cryptKey.dataLength);
   List_append(&archiveHandle->archiveCryptInfoList,archiveCryptInfoNode);
 
   // keep reference to current archive crypt info
@@ -2713,6 +2714,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
 #endif
 
   // init crypt
+fprintf(stderr,"%s:%d: %p %d\n",__FILE__,__LINE__,&archiveHandle->archiveCryptInfo->cryptKey,archiveHandle->archiveCryptInfo->cryptKey.dataLength);
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
@@ -2747,7 +2749,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
   Network_getHostName(chunkMetaEntry.hostName);
   Misc_getCurrentUserName(chunkMetaEntry.userName);
   String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
-  String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
+  String_set(chunkMetaEntry.entityUUID,archiveHandle->entityUUID);
   chunkMetaEntry.archiveType     = archiveHandle->archiveType;
   chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
   String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment);
@@ -3096,7 +3098,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         error = archiveHandle->archiveInitFunction(archiveHandle->storageInfo,
                                                    archiveHandle->uuidId,
                                                    archiveHandle->jobUUID,
-                                                   archiveHandle->scheduleUUID,
+                                                   archiveHandle->entityUUID,
                                                    archiveHandle->entityId,
                                                    archiveHandle->archiveType,
                                                    archiveHandle->storageId,
@@ -3246,7 +3248,7 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
   {
     error = archiveHandle->archiveTestFunction(archiveHandle->storageInfo,
                                                 archiveHandle->jobUUID,
-                                                archiveHandle->scheduleUUID,
+                                                archiveHandle->entityUUID,
                                                 partNumber,
                                                 intermediateFileName,
                                                 archiveSize,
@@ -3265,7 +3267,7 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
     error = archiveHandle->archiveStoreFunction(archiveHandle->storageInfo,
                                                 archiveHandle->uuidId,
                                                 archiveHandle->jobUUID,
-                                                archiveHandle->scheduleUUID,
+                                                archiveHandle->entityUUID,
                                                 archiveHandle->entityId,
                                                 storageId,
                                                 partNumber,
@@ -3286,7 +3288,7 @@ LOCAL Errors storeArchiveFile(ArchiveHandle *archiveHandle,
     error = archiveHandle->archiveDoneFunction(archiveHandle->storageInfo,
                                                archiveHandle->uuidId,
                                                archiveHandle->jobUUID,
-                                               archiveHandle->scheduleUUID,
+                                               archiveHandle->entityUUID,
                                                archiveHandle->entityId,
                                                archiveHandle->archiveType,
                                                storageId,
@@ -3880,7 +3882,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
-        // create archive file (if not already exists and open)
+        // create archive file (if not already created)
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -4516,7 +4518,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
-        // create archive file (if not already exists and open)
+        // create archive file (if not already created)
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -5193,7 +5195,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
-        // create archive file (if not already exists and open)
+        // create archive file (if not already created)
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -5885,7 +5887,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         IndexId                 uuidId,
                         IndexId                 entityId,
                         const char              *jobUUID,
-                        const char              *scheduleUUID,
+                        const char              *entityUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         bool                    dryRun,
@@ -5917,7 +5919,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           IndexId                 uuidId,
                           IndexId                 entityId,
                           const char              *jobUUID,
-                          const char              *scheduleUUID,
+                          const char              *entityUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           bool                    dryRun,
@@ -5970,7 +5972,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->entityId                = entityId;
 
   archiveHandle->jobUUID                 = String_newCString(jobUUID);
-  archiveHandle->scheduleUUID            = String_newCString(scheduleUUID);
+  archiveHandle->entityUUID              = String_newCString(entityUUID);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
@@ -6251,7 +6253,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->entityId                = INDEX_ID_NONE;
 
   archiveHandle->jobUUID                 = NULL;
-  archiveHandle->scheduleUUID            = NULL;
+  archiveHandle->entityUUID              = NULL;
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
@@ -6403,7 +6405,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->entityId                = INDEX_ID_NONE;
 
   archiveHandle->jobUUID                 = NULL;
-  archiveHandle->scheduleUUID            = NULL;
+  archiveHandle->entityUUID              = NULL;
 
   archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
@@ -6642,7 +6644,7 @@ UNUSED_VARIABLE(storageInfo);
   if (archiveHandle->cryptPassword != NULL) Password_delete(archiveHandle->cryptPassword);
   Semaphore_done(&archiveHandle->passwordLock);
   List_done(&archiveHandle->archiveCryptInfoList);
-  String_delete(archiveHandle->scheduleUUID);
+  String_delete(archiveHandle->entityUUID);
   String_delete(archiveHandle->jobUUID);
   String_delete(archiveHandle->userName);
   String_delete(archiveHandle->hostName);
@@ -7946,7 +7948,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -8195,7 +8197,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -8901,7 +8903,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -8973,7 +8975,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                               const char       *hostName,
                               const char       *userName,
                               const char       *jobUUID,
-                              const char       *scheduleUUID,
+                              const char       *entityUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
                               const char       *comment
@@ -8987,7 +8989,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 const char       *hostName,
                                 const char       *userName,
                                 const char       *jobUUID,
-                                const char       *scheduleUUID,
+                                const char       *entityUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
                                 const char       *comment
@@ -9088,7 +9090,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   String_setCString(archiveEntryInfo->meta.chunkMetaEntry.hostName,hostName);
   String_setCString(archiveEntryInfo->meta.chunkMetaEntry.userName,userName);
   String_setCString(archiveEntryInfo->meta.chunkMetaEntry.jobUUID,jobUUID);
-  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,scheduleUUID);
+  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.entityUUID,entityUUID);
   archiveEntryInfo->meta.chunkMetaEntry.archiveType     = archiveType;
   archiveEntryInfo->meta.chunkMetaEntry.createdDateTime = createdDateTime;
   String_setCString(archiveEntryInfo->meta.chunkMetaEntry.comment,comment);
@@ -9117,7 +9119,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -9427,7 +9429,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                String           hostName,
                                String           userName,
                                String           jobUUID,
-                               String           scheduleUUID,
+                               String           entityUUID,
                                ArchiveTypes     *archiveType,
                                uint64           *createdDateTime,
                                String           comment
@@ -9442,7 +9444,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                  String           hostName,
                                  String           userName,
                                  String           jobUUID,
-                                 String           scheduleUUID,
+                                 String           entityUUID,
                                  ArchiveTypes     *archiveType,
                                  uint64           *createdDateTime,
                                  String           comment
@@ -9683,7 +9685,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             if (hostName        != NULL) String_set(hostName,archiveEntryInfo->meta.chunkMetaEntry.hostName);
             if (userName        != NULL) String_set(userName,archiveEntryInfo->meta.chunkMetaEntry.userName);
             if (jobUUID         != NULL) String_set(jobUUID,archiveEntryInfo->meta.chunkMetaEntry.jobUUID);
-            if (scheduleUUID    != NULL) String_set(scheduleUUID,archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID);
+            if (entityUUID      != NULL) String_set(entityUUID,archiveEntryInfo->meta.chunkMetaEntry.entityUUID);
             if (archiveType     != NULL) (*archiveType) = archiveEntryInfo->meta.chunkMetaEntry.archiveType;
             if (createdDateTime != NULL) (*createdDateTime) = archiveEntryInfo->meta.chunkMetaEntry.createdDateTime;
             if (comment         != NULL) String_set(comment,archiveEntryInfo->meta.chunkMetaEntry.comment);
@@ -13224,7 +13226,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file (if not already exists and open)
+                // create archive file (if not already created)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
@@ -13371,7 +13373,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file (if not already exists and open)
+                // create archive file (if not already created)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle
                 );
                 if (tmpError != ERROR_NONE)
@@ -13602,7 +13604,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file (if not already exists and open)
+                // create archive file (if not already created)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
@@ -15229,7 +15231,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             hostName,userName;
   String             comment;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  StaticString       (entityUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
   uint64             createdDateTime;
 
@@ -15711,7 +15713,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         hostName,
                                         userName,
                                         jobUUID,
-                                        scheduleUUID,
+                                        entityUUID,
                                         &archiveType,
                                         &createdDateTime,
                                         comment
@@ -15727,7 +15729,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             error = Index_updateEntity(indexHandle,
                                        entityId,
                                        String_cString(jobUUID),
-                                       String_cString(scheduleUUID),
+                                       String_cString(entityUUID),
                                        String_cString(hostName),
                                        String_cString(userName),
                                        archiveType,
@@ -15740,14 +15742,14 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             error = Index_findEntity(indexHandle,
                                      INDEX_ID_NONE,  // findEntityIndexId
                                      jobUUID,
-                                     scheduleUUID,
+                                     entityUUID,
                                      hostName,
                                      archiveType,
 // TODO: add and use entityUUID
                                      Misc_extractDate(createdDateTime),
                                      0L,  // findCreatedTime
                                      NULL,  // jobUUID,
-                                     NULL,  // scheduleUUID,
+                                     NULL,  // entityUUID,
                                      NULL,  // uuidIndexId,
                                      &entityId,
                                      NULL,  // archiveType,
@@ -15762,7 +15764,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
               // create new entity
               error = Index_newEntity(indexHandle,
                                       String_cString(jobUUID),
-                                      String_cString(scheduleUUID),
+                                      String_cString(entityUUID),
                                       String_cString(hostName),
                                       String_cString(userName),
                                       archiveType,
