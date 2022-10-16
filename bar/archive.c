@@ -1071,6 +1071,7 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
   archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType = cryptKeyDeriveType;
   Crypt_initSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
   Crypt_initKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
+fprintf(stderr,"%s:%d: %p %d\n",__FILE__,__LINE__,&archiveCryptInfoNode->archiveCryptInfo.cryptKey,archiveCryptInfoNode->archiveCryptInfo.cryptKey.dataLength);
   List_append(&archiveHandle->archiveCryptInfoList,archiveCryptInfoNode);
 
   // keep reference to current archive crypt info
@@ -2713,6 +2714,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
 #endif
 
   // init crypt
+fprintf(stderr,"%s:%d: %p %d\n",__FILE__,__LINE__,&archiveHandle->archiveCryptInfo->cryptKey,archiveHandle->archiveCryptInfo->cryptKey.dataLength);
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
@@ -3880,7 +3882,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
-        // create archive file (if not already exists and open)
+        // create archive file (if not already created)
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -4516,7 +4518,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
-        // create archive file (if not already exists and open)
+        // create archive file (if not already created)
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -5193,7 +5195,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
-        // create archive file (if not already exists and open)
+        // create archive file (if not already created)
         error = createArchiveFile(archiveEntryInfo->archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -7946,7 +7948,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -8195,7 +8197,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -8901,7 +8903,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -9117,7 +9119,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
       return error;
     }
 
-    // create new archive file
+    // create new archive file (if not already created)
     error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -13224,7 +13226,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file (if not already exists and open)
+                // create archive file (if not already created)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
@@ -13371,7 +13373,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file (if not already exists and open)
+                // create archive file (if not already created)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle
                 );
                 if (tmpError != ERROR_NONE)
@@ -13602,7 +13604,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file (if not already exists and open)
+                // create archive file (if not already created)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {

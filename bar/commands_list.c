@@ -2604,7 +2604,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'file' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'file' entry from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2722,7 +2722,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'image' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'image' entry from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2820,7 +2820,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'directory' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'directory' entry from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2910,7 +2910,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'link' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'link' entry from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3015,7 +3015,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'hard link' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'hard link' entry from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3123,7 +3123,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'special' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'special' entry from storage '%s' (error: %s)!",
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3222,7 +3222,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'meta' content from storage '%s' (error: %s)!",
+                    printError("cannot read 'meta' entry from storage '%s' (error: %s)!",
                                Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
