@@ -38,6 +38,8 @@
   * BARControl: added option --insecure-tls, improved
     login dialogs
   * BARControl: renamed option --key-file to --keystore-file
+  * upgrade SQLite 3.39
+  * upgrade zlib 1.2.13
 
 2022-08-30 0.22
   * added support for external index database engines
