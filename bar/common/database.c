@@ -10702,6 +10702,8 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
       case DATABASE_TYPE_POSTGRESQL:        
         #if defined(HAVE_POSTGRESQL)
         {
+// TODO: called to often -> no progress?
+#if 0
           PGcancel *pgCancel;
           
           pgCancel = PQgetCancel(databaseHandle->postgresql.handle);
@@ -10710,6 +10712,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
             (void)PQcancel(pgCancel,NULL,0);
             PQfreeCancel(pgCancel);
           }
+#endif
         }
         #else /* HAVE_POSTGRESQL */
         #endif /* HAVE_POSTGRESQL */
