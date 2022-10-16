@@ -1071,7 +1071,6 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
   archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType = cryptKeyDeriveType;
   Crypt_initSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
   Crypt_initKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
-fprintf(stderr,"%s:%d: %p %d\n",__FILE__,__LINE__,&archiveCryptInfoNode->archiveCryptInfo.cryptKey,archiveCryptInfoNode->archiveCryptInfo.cryptKey.dataLength);
   List_append(&archiveHandle->archiveCryptInfoList,archiveCryptInfoNode);
 
   // keep reference to current archive crypt info
@@ -2714,7 +2713,6 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
 #endif
 
   // init crypt
-fprintf(stderr,"%s:%d: %p %d\n",__FILE__,__LINE__,&archiveHandle->archiveCryptInfo->cryptKey,archiveHandle->archiveCryptInfo->cryptKey.dataLength);
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
@@ -15738,15 +15736,14 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           }
           else
           {
-            // check if entity with given job UUID/schedule UUID/host name/archive type exists, otherwise create that entity
+            // check if entity with given job UUID/entity UUID/host name/archive type exists, otherwise create that entity
             error = Index_findEntity(indexHandle,
                                      INDEX_ID_NONE,  // findEntityIndexId
                                      jobUUID,
                                      entityUUID,
                                      hostName,
                                      archiveType,
-// TODO: add and use entityUUID
-                                     Misc_extractDate(createdDateTime),
+                                     0L,  // findCreatedDate
                                      0L,  // findCreatedTime
                                      NULL,  // jobUUID,
                                      NULL,  // entityUUID,
