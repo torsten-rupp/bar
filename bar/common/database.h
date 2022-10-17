@@ -309,6 +309,15 @@ typedef struct DatabaseNode
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
     pthread_mutex_t           lock;
+    struct
+    {
+// TODO: remove volatile
+      volatile ThreadId threadId;
+      #ifndef NDEBUG
+        volatile const char *fileName;
+        volatile ulong      lineNb;
+      #endif
+    }                         lockedBy;
   #endif /* DATABASE_LOCK_PER_INSTANCE */
   DatabaseSpecifier           databaseSpecifier;
   uint                        openCount;
