@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-14 09:40+0200\n"
-"PO-Revision-Date: 2022-10-02 06:39+0200\n"
+"POT-Creation-Date: 2022-10-18 15:42+0200\n"
+"PO-Revision-Date: 2022-10-18 15:44+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -216,6 +216,8 @@ msgstr ""
 msgid ""
 "Class/JAR file ''{0}'' changed. Is is recommended to restart BARControl now."
 msgstr ""
+"Klassen/JAR-Datei ''{0}'' hat sich geändert. Ein Neustart von BARControl "
+"wird empfohlen."
 
 #: src/BARControl.java:2991 src/BARControl.java:2995 src/BARControl.java:2999
 #, java-format
@@ -339,22 +341,18 @@ msgid "Expert"
 msgstr "Experte"
 
 #: src/BARControl.java:3576
-#, fuzzy
 msgid "Set additional certificate authority (CA)"
-msgstr "Keine TLS (SSL) Zertifikats-Authorisierungsdatei"
+msgstr "Zusätzliche Zertifikats-Autorisierungsdatei (CA)"
 
 #: src/BARControl.java:3588
-#, fuzzy
 msgid "Select certificate authority (CA) file"
-msgstr "Keine TLS (SSL) Zertifikats-Authorisierungsdatei"
+msgstr "Wähle Zertifikats-Autorisierungsdatei (CA) aus"
 
 #: src/BARControl.java:3590
-#, fuzzy
 msgid "Certificate files PEM"
-msgstr "BAR Zertifikatsdatei/Daten."
+msgstr "PEM Zertifikatsdatei"
 
 #: src/BARControl.java:3591
-#, fuzzy
 msgid "Certificate files"
 msgstr "Zertifikatsdatei Zertifizierungsstelle"
 
@@ -402,22 +400,19 @@ msgstr "Alle Dateien"
 
 #: src/BARControl.java:3600
 msgid "Reconnect to server with new certificate authority?"
-msgstr ""
+msgstr "Mit neuer Zertifikats Autorisierungsdatei verbinden?"
 
 #: src/BARControl.java:3631
-#, fuzzy
 msgid "Reconnection fail"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Neue Verbindung fehlgeschlagen"
 
 #: src/BARControl.java:3635 src/BARControl.java:3676
-#, fuzzy
 msgid "Reconnect with new certificate authority fail"
-msgstr "Keine TLS (SSL) Zertifikats-Authorisierungsdatei"
+msgstr "Verbindung mit neuer Zertifikats-Autorisierungsdatei fehlgeschlagen"
 
 #: src/BARControl.java:3638 src/BARControl.java:4872
-#, fuzzy
 msgid "Try with insecure TLS (SSL)"
-msgstr "Versuche ohne TLS/SSL"
+msgstr "Versuche ohne TLS (SSL)"
 
 #: src/BARControl.java:3639 src/BARControl.java:3951 src/BARControl.java:4246
 #: src/BARControl.java:4600 src/BARControl.java:4874 src/BARControl.java:4951
@@ -473,11 +468,11 @@ msgstr "keine"
 
 #: src/BARControl.java:4166 src/TabJobs.java:3029
 msgid "try"
-msgstr ""
+msgstr "versuchen"
 
 #: src/BARControl.java:4167 src/TabJobs.java:3030
 msgid "force"
-msgstr ""
+msgstr "erzwingen"
 
 #: src/BARControl.java:4175 src/BARControl.java:6112 src/BARControl.java:6136
 #: src/BARServer.java:1415 src/BARServer.java:1437 src/BARWidgets.java:2288
@@ -573,9 +568,8 @@ msgid "Connection fail"
 msgstr "Verbindung fehlgeschlagen"
 
 #: src/BARControl.java:4865
-#, fuzzy
 msgid "Certificate:"
-msgstr "Zertifikatsdatei Zertifizierungsstelle"
+msgstr "Zertifikat:"
 
 #: src/BARControl.java:4873 src/BARControl.java:4950
 msgid "Try without TLS (SSL)"
@@ -592,12 +586,11 @@ msgid "cannot connect to server (error: {0})"
 msgstr "Verbindung zum Server fehlgeschlagen (Fehler: {0})"
 
 #: src/BARControl.java:5129
-#, fuzzy
 msgid ""
 "Established a none-TLS connection only. Transmitted data may be vulnerable!"
 msgstr ""
-"Es wurde nur eine nicht verschlüsselte Verbindung aufgebaut.\n"
-"Die übertragenen Daten sind angreifbar!"
+"Es wurde nur eine nicht verschlüsselte Verbindung aufgebaut. Die "
+"übertragenen Daten sind angreifbar!"
 
 #: src/BARControl.java:5135
 msgid "Wait for pairing new master"
@@ -963,9 +956,8 @@ msgid "connect fail"
 msgstr "Verbindung fehlgeschlagen"
 
 #: src/BARException.java:372
-#, fuzzy
 msgid "connect timeout"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Zeitüberschreitung bei Verbindung"
 
 #: src/BARException.java:375 src/BARServer.java:1206 src/TabStatus.java:104
 msgid "disconnected"
@@ -1064,7 +1056,7 @@ msgstr "Kein SSH-Passwort"
 #: src/BARException.java:573 src/BARException.java:1039
 #, java-format
 msgid " for ''{0}''"
-msgstr "{0} Datensätze"
+msgstr "für ''{0}''"
 
 #: src/BARException.java:467
 msgid "invalid SSH password"
@@ -1677,7 +1669,6 @@ msgid "deprecated or ignored value"
 msgstr "veralteter oder ignorierter Wert"
 
 #: src/BARException.java:1254
-#, fuzzy
 msgid "authorization failed"
 msgstr "Authorisierungsfehler"
 
@@ -1742,9 +1733,8 @@ msgid "database connection lost"
 msgstr "Datenbankverbindung verloren"
 
 #: src/BARException.java:1370
-#, fuzzy
 msgid "database authorization failed"
-msgstr "Datenbank Authorisierungsfehler"
+msgstr "Datenbank Autorisierungsfehler"
 
 #: src/BARException.java:1373
 msgid "insufficient database version"
@@ -1915,8 +1905,8 @@ msgstr "Verbindung zu Rechner ''{0}:{1}'' fehlgeschlagen (Fehler: {2})"
 #: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
 #: src/BARServer.java:2375 src/BARServer.java:2386
 #, java-format
-msgid "TLS/SSL failure: {0}"
-msgstr ""
+msgid "TLS (SSL) failure: {0}"
+msgstr "TLS (SSL) Fehler: {0}"
 
 #: src/BARServer.java:1926 src/BARServer.java:2075 src/BARServer.java:2089
 #: src/BARServer.java:2247 src/BARServer.java:2393

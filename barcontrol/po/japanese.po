@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-14 09:40+0200\n"
+"POT-Creation-Date: 2022-10-18 15:42+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -2182,9 +2182,9 @@ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 #: src/BARServer.java:1908 src/BARServer.java:1919 src/BARServer.java:2057
 #: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
 #: src/BARServer.java:2375 src/BARServer.java:2386
-#, java-format
-msgid "TLS/SSL failure: {0}"
-msgstr ""
+#, fuzzy, java-format
+msgid "TLS (SSL) failure: {0}"
+msgstr "ソースファイル選択"
 
 #: src/BARServer.java:1926 src/BARServer.java:2075 src/BARServer.java:2089
 #: src/BARServer.java:2247 src/BARServer.java:2393

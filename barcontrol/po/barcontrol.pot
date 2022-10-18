@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-14 15:46+0200\n"
+"POT-Creation-Date: 2022-10-18 15:42+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1871,7 +1871,7 @@ msgstr ""
 #: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
 #: src/BARServer.java:2375 src/BARServer.java:2386
 #, java-format
-msgid "TLS/SSL failure: {0}"
+msgid "TLS (SSL) failure: {0}"
 msgstr ""
 
 #: src/BARServer.java:1926 src/BARServer.java:2075 src/BARServer.java:2089
