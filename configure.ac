@@ -4603,7 +4603,7 @@ AC_CONSTANT_VALUE([],
                   ],
                   [SQLITE_VERSION_NUMBER])
 if test $VERSION_SQLITE_NUMBER -lt 3038000; then
-  AC_ERROR([Required SQLite 3.38 (3024000) or newer - found $VERSION_SQLITE])
+  AC_ERROR([Required SQLite 3.38 (3038000) or newer - found $VERSION_SQLITE])
 fi
 AC_DEFINE_UNQUOTED(VERSION_SQLITE,"$VERSION_SQLITE",[sqlite version])
 
