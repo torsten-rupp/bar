@@ -5205,7 +5205,7 @@ if (false) {
           String jobUUID = getJobUUID(Settings.runJobName);
           if (jobUUID == null)
           {
-            printError(BARControl.tr("job ''{0}'' not found"),Settings.runJobName);
+            printError(BARControl.tr("job ''{0}'' not found",Settings.runJobName));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
