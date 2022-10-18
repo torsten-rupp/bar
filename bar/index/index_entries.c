@@ -635,7 +635,6 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -874,19 +873,19 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     return error;
   }
 
-  // purge file entries without fragments
+  // delete file entries without fragments
   ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
-    error = IndexCommon_purge(indexHandle,
-                              doneFlag,
-                              deletedCounter,
-                              "fileEntries",
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              )
-                             );
+    error = IndexCommon_delete(indexHandle,
+                               doneFlag,
+                               deletedCounter,
+                               "fileEntries",
+                               "id=?",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY(databaseId)
+                               )
+                              );
   }
   if (error != ERROR_NONE)
   {
@@ -914,19 +913,19 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     return error;
   }
 
-  // purge image entries without fragments
+  // delete image entries without fragments
   ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
-    error = IndexCommon_purge(indexHandle,
-                              doneFlag,
-                              deletedCounter,
-                              "imageEntries",
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              )
-                             );
+    error = IndexCommon_delete(indexHandle,
+                               doneFlag,
+                               deletedCounter,
+                               "imageEntries",
+                               "id=?",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY(databaseId)
+                               )
+                              );
   }
   if (error != ERROR_NONE)
   {
@@ -954,19 +953,19 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     return error;
   }
 
-  // purge hardlink entries without fragments
+  // delete hardlink entries without fragments
   ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
-    error = IndexCommon_purge(indexHandle,
-                              doneFlag,
-                              deletedCounter,
-                              "hardlinkEntries",
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(databaseId)
-                              )
-                             );
+    error = IndexCommon_delete(indexHandle,
+                               doneFlag,
+                               deletedCounter,
+                               "hardlinkEntries",
+                               "id=?",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY(databaseId)
+                               )
+                              );
   }
   if (error != ERROR_NONE)
   {
@@ -3126,6 +3125,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
+// TODO: use deleteSubEntry
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
@@ -3234,6 +3234,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
+// TODO: use deleteEntry
     error = Database_delete(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "entries",
