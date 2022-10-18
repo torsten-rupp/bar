@@ -877,7 +877,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
       }
 
       // purge skipped entries of entity
-      error = IndexCommon_purge(indexHandle,
+      error = IndexCommon_delete(indexHandle,
                                 doneFlag,
                                 deletedCounter,
                                 "skippedEntries",

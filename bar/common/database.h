@@ -302,22 +302,25 @@ typedef struct
   } DatabaseHistoryThreadInfo;
 #endif /* not NDEBUG */
 
+// locked by info
+typedef struct
+{
+// TODO: remove volatile
+  volatile ThreadId threadId;
+  #ifndef NDEBUG
+    volatile const char *fileName;
+    volatile ulong      lineNb;
+  #endif
+} DatabaseLockedBy;
+
 // database list
 typedef struct DatabaseNode
 {
   LIST_NODE_HEADER(struct DatabaseNode);
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
-    pthread_mutex_t           lock;
-    struct
-    {
-// TODO: remove volatile
-      volatile ThreadId threadId;
-      #ifndef NDEBUG
-        volatile const char *fileName;
-        volatile ulong      lineNb;
-      #endif
-    }                         lockedBy;
+    pthread_mutex_t             lock;
+    DatabaseLockedBy            lockedBy;
   #endif /* DATABASE_LOCK_PER_INSTANCE */
   DatabaseSpecifier           databaseSpecifier;
   uint                        openCount;
@@ -2466,8 +2469,8 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 *          tableName         - table name,
 *          columnName        - column name,
 *          flags             - insert flags; see DATABASE_FLAG__...
-*          ids               - ids array
-*          length            - length of array
+*          databaseIds       - database ids array
+*          databaseIdCount   - length of database ids array
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2478,8 +2481,8 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                             const char       *tableName,
                             const char       *columnName,
                             uint             flags,
-                            const DatabaseId ids[],
-                            ulong            length
+                            const DatabaseId databaseIds[],
+                            ulong            databaseIdCount
                            );
 
 /***********************************************************************\

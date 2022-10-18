@@ -595,7 +595,7 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
 
 /***********************************************************************\
 * Name   : purge
-* Purpose: purge with delay/check if index-usage
+* Purpose: delete with delay/check if index-usage
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag variable (can be NULL)
 *          deletedCounter - deleted entries count variable (can be NULL)
@@ -608,14 +608,38 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexCommon_purge(IndexHandle          *indexHandle,
-                         bool                 *doneFlag,
-                         ulong                *deletedCounter,
-                         const char           *tableName,
-                         const char           *filter,
-                         const DatabaseFilter filters[],
-                         uint                 filterCount
-                        );
+Errors IndexCommon_delete(IndexHandle          *indexHandle,
+                          bool                 *doneFlag,
+                          ulong                *deletedCounter,
+                          const char           *tableName,
+                          const char           *filter,
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
+                         );
+
+/***********************************************************************\
+* Name   : IndexCommon_deleteById
+* Purpose: delete entry in index
+* Input  : indexHandle       - index handle
+*          changedRowCount   - deleted entries count variable (can be NULL)
+*          tableName         - table name,
+*          columnName        - column name,
+*          ids               - ids array
+*          idCount           - length of ids array
+* Output : doneFlag       - set to FALSE if delete not completely done
+*          deletedCounter - updated deleted entries count
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexCommon_deleteById(IndexHandle      *indexHandle,
+                              bool             *doneFlag,
+                              ulong            *deletedCounter,
+                              const char       *tableName,
+                              const char       *columnName,
+                              const DatabaseId ids[],
+                              uint             idCount
+                             );
 
 // TODO: comment
 void IndexCommon_verify(IndexHandle *indexHandle,

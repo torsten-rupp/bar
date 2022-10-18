@@ -210,16 +210,9 @@ typedef struct
 LOCAL DatabaseList databaseList;
 #ifndef DATABASE_LOCK_PER_INSTANCE
   LOCAL pthread_mutexattr_t databaseLockAttribute;
-  LOCAL pthread_mutex_t     databaseLock;
-  LOCAL struct
-  {
-// TODO: remove volatile
-    volatile ThreadId    threadId;
-    #ifndef NDEBUG
-      volatile const char  *fileName;
-      volatile ulong       lineNb;
-    #endif
-  } databaseLockedBy;
+  LOCAL pthread_mutex_t     databaseLock;           // lock for lock/unlock
+// TODO: remove
+  LOCAL DatabaseLockedBy    databaseLockedBy;
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
 #ifndef NDEBUG
@@ -387,124 +380,147 @@ LOCAL DatabaseList databaseList;
 
 #ifdef DATABASE_LOCK_PER_INSTANCE
   #ifndef NDEBUG
-    #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
+    #define DATABASE_HANDLE_LOCK_INFO_SET(databaseHandle) \
       do \
       { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
-        if (__result == 0) \
-        { \
-          databaseHandle->databaseNode->databaseLockBy.threadId = Thread_getCurrentId(); \
-          databaseHandle->databaseNode->databaseLockBy.fileName = __FILE__; \
-          databaseHandle->databaseNode->databaseLockBy.lineNb   = __LINE__; \
-          ({ \
-            auto void __closure__(void); \
-            \
-            void __closure__(void)block; __closure__; \
-          })(); \
-          databaseHandle->databaseNode->databaseLockBy.threadId = THREAD_ID_NONE; \
-          databaseHandle->databaseNode->databaseLockBy.fileName = NULL; \
-          databaseHandle->databaseNode->databaseLockBy.lineNb   = 0; \
-          __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
-          assert(__result == 0); \
-        } \
-        UNUSED_VARIABLE(__result); \
+        databaseHandle->databaseNode->lockedBy.threadId = Thread_getCurrentId(); \
+        databaseHandle->databaseNode->lockedBy.fileName = __fileName__; \
+        databaseHandle->databaseNode->lockedBy.lineNb   = __lineNb__;
       } \
       while (0)
-    #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
+    #define DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle) \
       do \
       { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
-        if (__result == 0) \
-        { \
-          databaseHandle->databaseNode->databaseLockBy.threadId = Thread_getCurrentId(); \
-          databaseHandle->databaseNode->databaseLockBy.fileName = __FILE__; \
-          databaseHandle->databaseNode->databaseLockBy.lineNb   = __LINE__; \
-          result = ({ \
-                     auto typeof(result) __closure__(void); \
-                     \
-                     typeof(result) __closure__(void)block; __closure__; \
-                   })(); \
-          databaseHandle->databaseNode->databaseLockBy.threadId = THREAD_ID_NONE; \
-          databaseHandle->databaseNode->databaseLockBy.fileName = NULL; \
-          databaseHandle->databaseNode->databaseLockBy.lineNb   = 0; \
-          __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
-          assert(__result == 0); \
-        } \
-        else \
-        { \
-          result = ERROR_X(DATABASE,"lock fail"); \
-        } \
-        UNUSED_VARIABLE(__result); \
+        databaseHandle->databaseNode->lockedBy.threadId = THREAD_ID_NONE; \
+        databaseHandle->databaseNode->lockedBy.fileName = NULL; \
+        databaseHandle->databaseNode->lockedBy.lineNb   = 0;
       } \
       while (0)
-  #else /* NDEBUG */
-    #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
+  #else
+    #define DATABASE_HANDLE_LOCK_INFO_SET(databaseHandle) \
       do \
       { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
-        if (__result == 0) \
-        { \
-          databaseHandle->databaseNode->databaseLockBy.threadId = Thread_getCurrentId(); \
-          ({ \
-            auto void __closure__(void); \
-            \
-            void __closure__(void)block; __closure__; \
-          })(); \
-          databaseHandle->databaseNode->databaseLockBy.threadId = THREAD_ID_NONE; \
-          __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
-          assert(__result == 0); \
-        } \
-        UNUSED_VARIABLE(__result); \
+        databaseHandle->databaseNode->lockedBy.threadId = Thread_getCurrentId(); \
       } \
       while (0)
-    #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
+    #define DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle) \
       do \
       { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
-        if (__result == 0) \
-        { \
-          databaseHandle->databaseNode->databaseLockBy.threadId = Thread_getCurrentId(); \
-          result = ({ \
-                     auto typeof(result) __closure__(void); \
-                     \
-                     typeof(result) __closure__(void)block; __closure__; \
-                   })(); \
-          databaseHandle->databaseNode->databaseLockBy.threadId = THREAD_ID_NONE; \
-          __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
-          assert(__result == 0); \
-        } \
-        else \
-        { \
-          result = ERROR_X(DATABASE,"lock fail"); \
-        } \
-        UNUSED_VARIABLE(__result); \
+        databaseHandle->databaseNode->lockedBy.threadId = THREAD_ID_NONE; \
       } \
       while (0)
-  #endif /* NDEBUG */
+  #endif
+  #define DATABASE_HANDLE_LOCK_INFO_SAVE(databaseHandle,_lockedBy) \
+    do \
+    { \
+      _lockedBy = databaseHandle->databaseNode->lockedBy; \
+      DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle); \
+    } \
+    while (0)
+  #define DATABASE_HANDLE_LOCK_INFO_RESTORE(databaseHandle,_lockedBy) \
+    do \
+    { \
+      databaseHandle->databaseNode->lockedBy = _lockedBy; \
+    } \
+    while (0)
+#else /* not DATABASE_LOCK_PER_INSTANCE */
+  #ifndef NDEBUG
+    #define DATABASE_HANDLE_LOCK_INFO_SET(databaseHandle) \
+      do \
+      { \
+        databaseLockedBy.threadId = Thread_getCurrentId(); \
+        databaseLockedBy.fileName = __fileName__; \
+        databaseLockedBy.lineNb   = __lineNb__; \
+      } \
+      while (0)
+    #define DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle) \
+      do \
+      { \
+        databaseLockedBy.threadId = THREAD_ID_NONE; \
+        databaseLockedBy.fileName = NULL; \
+        databaseLockedBy.lineNb   = 0; \
+      } \
+      while (0)
+  #else
+    #define DATABASE_HANDLE_LOCK_INFO_SET(databaseHandle) \
+      do \
+      { \
+        databaseLockedBy.threadId = Thread_getCurrentId(); \
+      } \
+      while (0)
+    #define DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle) \
+      do \
+      { \
+        databaseLockedBy.threadId = THREAD_ID_NONE; \
+      } \
+      while (0)
+  #endif
+  #define DATABASE_HANDLE_LOCK_INFO_SAVE(databaseHandle,_lockedBy) \
+    do \
+    { \
+      _lockedBy = databaseLockedBy; \
+      DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle); \
+    } \
+    while (0)
+  #define DATABASE_HANDLE_LOCK_INFO_RESTORE(databaseHandle,_lockedBy) \
+    do \
+    { \
+      databaseLockedBy = _lockedBy; \
+    } \
+    while (0)
+#endif /* DATABASE_LOCK_PER_INSTANCE */
+
+#ifdef DATABASE_LOCK_PER_INSTANCE
+  #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
+    do \
+    { \
+      int __result; \
+      \
+      assert(databaseHandle != NULL); \
+      DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
+      assert(databaseHandle->databaseNode != NULL); \
+      \
+      __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
+      if (__result == 0) \
+      { \
+        ({ \
+          auto void __closure__(void); \
+          \
+          void __closure__(void)block; __closure__; \
+        })(); \
+        __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+        assert(__result == 0); \
+      } \
+      UNUSED_VARIABLE(__result); \
+    } \
+    while (0)
+  #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
+    do \
+    { \
+      int __result; \
+      \
+      assert(databaseHandle != NULL); \
+      DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
+      assert(databaseHandle->databaseNode != NULL); \
+      \
+      __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
+      if (__result == 0) \
+      { \
+        result = ({ \
+                   auto typeof(result) __closure__(void); \
+                   \
+                   typeof(result) __closure__(void)block; __closure__; \
+                 })(); \
+        __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+        assert(__result == 0); \
+      } \
+      else \
+      { \
+        result = ERROR_X(DATABASE,"lock fail"); \
+      } \
+      UNUSED_VARIABLE(__result); \
+    } \
+    while (0)
   #if   defined(PLATFORM_LINUX)
     #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
       ((databaseHandle)->databaseNode->lock.__data.__lock > 0)
@@ -514,125 +530,56 @@ LOCAL DatabaseList databaseList;
       TRUE
   #endif /* PLATFORM_... */
 #else /* not DATABASE_LOCK_PER_INSTANCE */
-  #ifndef NDEBUG
-    #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
-      do \
+  #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
+    do \
+    { \
+      int __result; \
+      \
+      assert(databaseHandle != NULL); \
+      DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
+      assert(databaseHandle->databaseNode != NULL); \
+      \
+      UNUSED_VARIABLE(databaseHandle); \
+      \
+      __result = pthread_mutex_lock(&databaseLock); \
+      if (__result == 0) \
       { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        UNUSED_VARIABLE(databaseHandle); \
-        \
-        __result = pthread_mutex_lock(&databaseLock); \
-        if (__result == 0) \
-        { \
-          databaseLockedBy.threadId = Thread_getCurrentId(); \
-          databaseLockedBy.fileName = __FILE__; \
-          databaseLockedBy.lineNb   = __LINE__; \
-          ({ \
-            auto void __closure__(void); \
-            \
-            void __closure__(void)block; __closure__; \
-          })(); \
-          databaseLockedBy.threadId = THREAD_ID_NONE; \
-          databaseLockedBy.fileName = NULL; \
-          databaseLockedBy.lineNb   = 0; \
-          __result = pthread_mutex_unlock(&databaseLock); \
-          assert(__result == 0); \
-        } \
-        UNUSED_VARIABLE(__result); \
+        ({ \
+          auto void __closure__(void); \
+          \
+          void __closure__(void)block; __closure__; \
+        })(); \
+        __result = pthread_mutex_unlock(&databaseLock); \
+        assert(__result == 0); \
       } \
-      while (0)
-    #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
-      do \
+      UNUSED_VARIABLE(__result); \
+    } \
+    while (0)
+  #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
+    do \
+    { \
+      int __result; \
+      \
+      assert(databaseHandle != NULL); \
+      DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
+      assert(databaseHandle->databaseNode != NULL); \
+      \
+      UNUSED_VARIABLE(databaseHandle); \
+      \
+      __result = pthread_mutex_lock(&databaseLock); \
+      if (__result == 0) \
       { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        UNUSED_VARIABLE(databaseHandle); \
-        \
-        __result = pthread_mutex_lock(&databaseLock); \
-        if (__result == 0) \
-        { \
-          databaseLockedBy.threadId = Thread_getCurrentId(); \
-          databaseLockedBy.fileName = __FILE__; \
-          databaseLockedBy.lineNb   = __LINE__; \
-          result = ({ \
-                     auto typeof(result) __closure__(void); \
-                     \
-                     typeof(result) __closure__(void)block; __closure__; \
-                   })(); \
-          databaseLockedBy.threadId = THREAD_ID_NONE; \
-          databaseLockedBy.fileName = NULL; \
-          databaseLockedBy.lineNb   = 0; \
-          __result = pthread_mutex_unlock(&databaseLock); \
-          assert(__result == 0); \
-        } \
-        UNUSED_VARIABLE(__result); \
+        result = ({ \
+                   auto typeof(result) __closure__(void); \
+                   \
+                   typeof(result) __closure__(void)block; __closure__; \
+                 })(); \
+        __result = pthread_mutex_unlock(&databaseLock); \
+        assert(__result == 0); \
       } \
-      while (0)
-  #else /* NDEBUG */
-    #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
-      do \
-      { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        UNUSED_VARIABLE(databaseHandle); \
-        \
-        __result = pthread_mutex_lock(&databaseLock); \
-        if (__result == 0) \
-        { \
-          databaseLockedBy.threadId = Thread_getCurrentId(); \
-          ({ \
-            auto void __closure__(void); \
-            \
-            void __closure__(void)block; __closure__; \
-          })(); \
-          databaseLockedBy.threadId = THREAD_ID_NONE; \
-          __result = pthread_mutex_unlock(&databaseLock); \
-          assert(__result == 0); \
-        } \
-        UNUSED_VARIABLE(__result); \
-      } \
-      while (0)
-    #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
-      do \
-      { \
-        int __result; \
-        \
-        assert(databaseHandle != NULL); \
-        DEBUG_CHECK_RESOURCE_TRACE(databaseHandle); \
-        assert(databaseHandle->databaseNode != NULL); \
-        \
-        UNUSED_VARIABLE(databaseHandle); \
-        \
-        __result = pthread_mutex_lock(&databaseLock); \
-        if (__result == 0) \
-        { \
-          databaseLockedBy.threadId = Thread_getCurrentId(); \
-          result = ({ \
-                     auto typeof(result) __closure__(void); \
-                     \
-                     typeof(result) __closure__(void)block; __closure__; \
-                   })(); \
-          databaseLockedBy.threadId = THREAD_ID_NONE; \
-          __result = pthread_mutex_unlock(&databaseLock); \
-          assert(__result == 0); \
-        } \
-        UNUSED_VARIABLE(__result); \
-      } \
-      while (0)
-  #endif /* NDEBUG */
+      UNUSED_VARIABLE(__result); \
+    } \
+    while (0)
   #if   defined(PLATFORM_LINUX)
     #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
       (databaseLock.__data.__lock > 0)
@@ -4748,7 +4695,10 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
     if (timeout != WAIT_FOREVER)
     {
       initTimeSpec(&timespec,timeout);
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,
+                                 databaseHandle->databaseNode->lock,
+                                 &timespec
+                                ) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
           HALT_INTERNAL_ERROR("database timeout %ums",timeout);
@@ -4764,7 +4714,10 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
     if (timeout != WAIT_FOREVER)
     {
       initTimeSpec(&timespec,timeout);
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,&databaseLock,&timespec) == ETIMEDOUT)
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,
+                                 &databaseLock,
+                                 &timespec
+                                ) == ETIMEDOUT)
       {
 //TODO
 if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,&databaseLock,&timespec) == 0)
@@ -4832,7 +4785,10 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
     if (timeout != WAIT_FOREVER)
     {
       initTimeSpec(&timespec,timeout);
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,
+                                 databaseHandle->databaseNode->lock,
+                                 &timespec
+                                ) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
           HALT_INTERNAL_ERROR("database timeout %lums",timeout);
@@ -4848,7 +4804,10 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
     if (timeout != WAIT_FOREVER)
     {
       initTimeSpec(&timespec,timeout);
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,&databaseLock,&timespec) == ETIMEDOUT)
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,
+                                 &databaseLock,
+                                 &timespec
+                                ) == ETIMEDOUT)
       {
 //TODO
 if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,&databaseLock,&timespec) == 0)
@@ -4900,7 +4859,8 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
                                           )
 #endif /* NDEBUG */
 {
-  struct timespec timespec;
+  struct timespec  timespec;
+  DatabaseLockedBy lockedBySave;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -4917,7 +4877,10 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
     if (timeout != WAIT_FOREVER)
     {
       getTime(&timespec,timeout);
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,
+                                 databaseHandle->databaseNode->lock,
+                                 &timespec
+                                ) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
           HALT_INTERNAL_ERROR("database timeout %lums",timeout);
@@ -4933,7 +4896,10 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
     if (timeout != WAIT_FOREVER)
     {
       getTime(&timespec,timeout);
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,&databaseLock,&timespec) == ETIMEDOUT)
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,
+                                 &databaseLock,
+                                 &timespec
+                                ) == ETIMEDOUT)
       {
         #ifdef DATABASE_DEBUG_TIMEOUT
           HALT_INTERNAL_ERROR("database timeout %lums",timeout);
@@ -11470,7 +11436,6 @@ Errors Database_getTriggerList(StringList     *triggerList,
 //TODO: how to handle lost triggers?
 #ifdef DATABASE_WAIT_TRIGGER_WORK_AROUND
   TimeoutInfo timeoutInfo;
-  ulong       t;
 #endif
 
   assert(databaseHandle != NULL);
@@ -11527,9 +11492,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
             {
               do
               {
-                t = Misc_getRestTimeout(&timeoutInfo,DT);
-
-                waitTriggerReadWrite(databaseHandle,t);
+                waitTriggerReadWrite(databaseHandle,Misc_getRestTimeout(&timeoutInfo,DT));
               }
               while (   isReadWriteLock(databaseHandle)
                      && !Misc_isTimeout(&timeoutInfo)
@@ -11660,10 +11623,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
             {
               do
               {
-                t = Misc_getRestTimeout(&timeoutInfo,DT);
-//fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),t);
-
-                waitTriggerRead(databaseHandle,t);
+                waitTriggerRead(databaseHandle,Misc_getRestTimeout(&timeoutInfo,DT));
               }
               while (   isReadLock(databaseHandle)
                      && !Misc_isTimeout(&timeoutInfo)
@@ -11716,9 +11676,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
             {
               do
               {
-                t = Misc_getRestTimeout(&timeoutInfo,DT);
-
-                waitTriggerReadWrite(databaseHandle,t);
+                waitTriggerReadWrite(databaseHandle,Misc_getRestTimeout(&timeoutInfo,DT));
               }
               while (   isReadWriteLock(databaseHandle)
                      && !Misc_isTimeout(&timeoutInfo)
@@ -16602,7 +16560,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
+               DATABASE_LOCK_TYPE_READ,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
   {
     return executePreparedStatement(&databaseStatementHandle,

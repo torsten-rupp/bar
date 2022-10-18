@@ -458,6 +458,7 @@ Errors IndexCommon_endInterruptableOperation(IndexHandle *indexHandle, bool *tra
 
 Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactionFlag, ulong time)
 {
+  bool   transactionSuspendFlag;
   Errors error;
 
   assert(indexHandle != NULL);
@@ -466,7 +467,9 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
 
   if (IndexCommon_isIndexInUse())
   {
-    if (transactionFlag != NULL)
+    transactionSuspendFlag = (*transactionFlag);
+
+    if (transactionSuspendFlag)
     {
       // temporary end transaction
       error = Index_endTransaction(indexHandle);
@@ -484,7 +487,7 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
       return ERROR_INTERRUPTED;
     }
 
-    if (transactionFlag != NULL)
+    if (transactionSuspendFlag)
     {
       // begin transaction
       error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
@@ -499,14 +502,14 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
   return ERROR_NONE;
 }
 
-Errors IndexCommon_purge(IndexHandle          *indexHandle,
-                         bool                 *doneFlag,
-                         ulong                *deletedCounter,
-                         const char           *tableName,
-                         const char           *filter,
-                         const DatabaseFilter filters[],
-                         uint                 filterCount
-                        )
+Errors IndexCommon_delete(IndexHandle          *indexHandle,
+                          bool                 *doneFlag,
+                          ulong                *deletedCounter,
+                          const char           *tableName,
+                          const char           *filter,
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
+                         )
 {
   #ifdef INDEX_DEBUG_PURGE
     uint64 t0;
@@ -514,6 +517,10 @@ Errors IndexCommon_purge(IndexHandle          *indexHandle,
 
   Errors error;
   ulong  changedRowCount;
+  bool   indexInUse;
+
+  assert(indexHandle != NULL);
+  assert(tableName != NULL);
 
 //fprintf(stderr,"%s, %d: purge (%d): %s %s\n",__FILE__,__LINE__,IndexCommon_isIndexInUse(),tableName,String_cString(filterString));
   error = ERROR_NONE;
@@ -532,14 +539,11 @@ Errors IndexCommon_purge(IndexHandle          *indexHandle,
                             filterCount,
                             SINGLE_STEP_PURGE_LIMIT
                            );
-    if (error == ERROR_NONE)
-    {
-      if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
-    }
+    if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
     #ifdef INDEX_DEBUG_PURGE
       if (changedRowCount > 0)
       {
-        fprintf(stderr,"%s, %d: error: %s, purged %lu entries from '%s': %llums\n",__FILE__,__LINE__,
+        fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %llums\n",__FILE__,__LINE__,
                 Error_getText(error),
                 changedRowCount,
                 tableName,
@@ -548,28 +552,75 @@ Errors IndexCommon_purge(IndexHandle          *indexHandle,
       }
     #endif
 //fprintf(stderr,"%s, %d: IndexCommon_isIndexInUse=%d\n",__FILE__,__LINE__,IndexCommon_isIndexInUse());
+    indexInUse = IndexCommon_isIndexInUse();
   }
   while (   (error == ERROR_NONE)
          && (changedRowCount > 0)
-         && !IndexCommon_isIndexInUse()
+         && !indexInUse
         );
   #ifdef INDEX_DEBUG_PURGE
     if (error == ERROR_INTERRUPTED)
     {
-      fprintf(stderr,"%s, %d: purge interrupted\n",__FILE__,__LINE__);
+      fprintf(stderr,"%s, %d: delete interrupted\n",__FILE__,__LINE__);
     }
   #endif
 
   // update done-flag
   if ((error == ERROR_NONE) && (doneFlag != NULL))
   {
-//fprintf(stderr,"%s, %d: exists check %s: %s c=%lu count=%d inuse=%d\n",__FILE__,__LINE__,tableName,String_cString(filterString),x,changedRowCount,IndexCommon_isIndexInUse());
-    if ((changedRowCount > 0) && IndexCommon_isIndexInUse())
+    if ((changedRowCount > 0) && indexInUse)
     {
-//fprintf(stderr,"%s, %d: clear done %d %d\n",__FILE__,__LINE__,changedRowCount,IndexCommon_isIndexInUse());
       (*doneFlag) = FALSE;
     }
-//fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,*doneFlag,IndexCommon_isIndexInUse());
+  }
+
+  return error;
+}
+
+Errors IndexCommon_deleteById(IndexHandle      *indexHandle,
+                              bool             *doneFlag,
+                              ulong            *deletedCounter,
+                              const char       *tableName,
+                              const char       *columnName,
+                              const DatabaseId ids[],
+                              uint             idCount
+                             )
+{
+  const uint INCREMENT_SIZE = 1024;
+
+  Errors               error;
+  ArraySegmentIterator arraySegmentIterator;
+  ulong                changedRowCount;
+  bool                 indexInUse;
+
+  assert(indexHandle != NULL);
+  assert(tableName != NULL);
+
+  error = ERROR_NONE;
+  ARRAY_SEGMENTX(&ids,arraySegmentIterator,INCREMENT_SIZE,(error == ERROR_NONE) && !indexInUse)
+  {
+    changedRowCount = 0;
+
+    error = Database_deleteByIds(&indexHandle->databaseHandle,
+                                 changedRowCount,
+                                 tableName,
+                                 columnName,
+                                 DATABASE_FLAG_NONE,
+                                 (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                 Array_segmentLength(&ids,&arraySegmentIterator)
+                                );
+    if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
+    
+    indexInUse =IndexCommon_isIndexInUse();
+  }
+  
+  // update done-flag
+  if ((error == ERROR_NONE) && (doneFlag != NULL))
+  {
+    if ((changedRowCount > 0) && indexInUse)
+    {
+      (*doneFlag) = FALSE;
+    }
   }
 
   return error;
