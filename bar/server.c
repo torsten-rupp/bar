@@ -354,7 +354,6 @@ LOCAL Thread                jobThread;                   // thread executing job
 LOCAL Thread                schedulerThread;             // thread for scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Thread                pairingThread;               // thread for pairing master/slaves
-LOCAL Semaphore             entityLock;                  // lock entities (could be automatic via update/auto/persistence threads+via GUI)
 LOCAL Semaphore             updateIndexThreadTrigger;
 LOCAL Thread                updateIndexThread;           // thread to add/update index
 LOCAL Semaphore             autoIndexThreadTrigger;
@@ -3013,6 +3012,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   uint64           totalEntitySize;
   char             string[64];
 
+  assert(indexHandle != NULL);
+
   // init variables
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   expiredJobName = String_new();
@@ -3099,6 +3100,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                       && (jobEntityNode->persistenceNode->minKeep != KEEP_ALL)
                       && (totalEntityCount > (uint)jobEntityNode->persistenceNode->minKeep)
                      )
+                  && !Index_isLockedEntity(indexHandle,jobEntityNode->entityId)
                   && !Array_contains(&entityIdArray,&jobEntityNode->entityId)
                  )
               {
@@ -3183,11 +3185,21 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     {
       Array_append(&entityIdArray,&expiredEntityId);
 
-      // mount devices
-      error = mountAll(&mountList);
+      // lock entity
       if (error == ERROR_NONE)
       {
-        // delete expired entity
+        error = Index_lockEntity(indexHandle,expiredEntityId);
+      }
+
+      // mount devices
+      if (error == ERROR_NONE)
+      {
+        error = mountAll(&mountList);
+      }
+
+      // delete expired entity
+      if (error == ERROR_NONE)
+      {
         plogMessage(NULL,  // logHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
@@ -3211,10 +3223,20 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
           Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
           error = ERROR_NONE;
         #endif /* SIMULATE_PURGE */
+      }
 
-        // unmount devices
+      // unmount devices
+      if (error == ERROR_NONE)
+      {
         (void)unmountAll(&mountList);
       }
+
+      // unlock entity
+      if (error == ERROR_NONE)
+      {
+        (void)Index_unlockEntity(indexHandle,expiredEntityId);
+      }
+
       if (error != ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle,
@@ -3258,7 +3280,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 * Purpose: move storages of entity to new destination
 * Input  : indexHandle            - index handle
 *          jobOptions             - job options
-*          moveEntityId           - entity id
+*          entityId               - entity id
 *          moveToStorageSpecifier - move-to storage specifier
 *          moveToPath             - move-to path
 *          transferInfoFunction   - transfer info function (can be NULL)
@@ -3272,7 +3294,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 
 LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                         const JobOptions       *jobOptions,
-                        IndexId                moveEntityId,
+                        IndexId                entityId,
                         const StorageSpecifier *moveToStorageSpecifier,
                         ConstString            moveToPath,
                         TransferInfoFunction   transferInfoFunction,
@@ -3297,6 +3319,12 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   uint64           size;
   StorageInfo      fromStorageInfo,toStorageInfo;
 
+  assert(indexHandle != NULL);
+  assert(jobOptions != NULL);
+  assert(moveToStorageSpecifier != NULL);
+  assert(moveToPath != NULL);
+  assert(Index_isLockedEntity(indexHandle,entityId));
+
   // init variables
   storageName       = String_new();
   Storage_initSpecifier(&storageSpecifier);
@@ -3307,308 +3335,317 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   List_init(&maxFromBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
   List_init(&maxToBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
 
-  // lock
-  error = ERROR_UNKNOWN;
-// TODO: do in command move to?
-  SEMAPHORE_LOCKED_DO(&entityLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  // get storage infos
+  error = Index_getStoragesInfos(indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 entityId,
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount
+                                 INDEX_TYPE_SET_ALL,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 &totalStorageCount,
+                                 &totalStorageSize,
+                                 NULL,  // totalEntryCount
+                                 NULL,  // totalEntrySize
+                                 NULL//&totalEntryContentSize
+                                );
+  if (error == ERROR_NONE)
   {
-    error = Index_getStoragesInfos(indexHandle,
+    // move storages
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
                                    INDEX_ID_ANY,  // uuidId
-                                   moveEntityId,
+                                   entityId,
                                    NULL,  // jobUUID
-                                   NULL,  // scheduleUUID
+                                   NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
                                    INDEX_TYPE_SET_ALL,
-                                   INDEX_STATE_SET_ALL,
+                                     SET_VALUE(INDEX_STATE_NONE)
+                                   | SET_VALUE(INDEX_STATE_OK)
+                                   | SET_VALUE(INDEX_STATE_CREATE)
+                                   | SET_VALUE(INDEX_STATE_UPDATE_REQUESTED)
+                                   | SET_VALUE(INDEX_STATE_UPDATE),
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
+                                   NULL,  // userName
                                    NULL,  // name
-                                   &totalStorageCount,
-                                   &totalStorageSize,
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
-                                   NULL//&totalEntryContentSize
+                                   INDEX_STORAGE_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error == ERROR_NONE)
     {
-      error = Index_initListStorages(&indexQueryHandle,
-                                     indexHandle,
-                                     INDEX_ID_ANY,  // uuidId
-                                     moveEntityId,
+      doneCount = 0;
+      doneSize  = 0LL;
+      while (   Index_getNextStorage(&indexQueryHandle,
+                                     NULL,  // uuidId
                                      NULL,  // jobUUID
-                                     NULL,  // scheduleUUID,
-                                     NULL,  // indexIds
-                                     0,  // indexIdCount
-                                     INDEX_TYPE_SET_ALL,
-                                       SET_VALUE(INDEX_STATE_NONE)
-                                     | SET_VALUE(INDEX_STATE_OK)
-                                     | SET_VALUE(INDEX_STATE_CREATE)
-                                     | SET_VALUE(INDEX_STATE_UPDATE_REQUESTED)
-                                     | SET_VALUE(INDEX_STATE_UPDATE),
-                                     INDEX_MODE_SET_ALL,
+                                     NULL,  // entityId
+                                     NULL,  // scheduleUUID
                                      NULL,  // hostName
                                      NULL,  // userName
-                                     NULL,  // name
-                                     INDEX_STORAGE_SORT_MODE_NONE,
-                                     DATABASE_ORDERING_NONE,
-                                     0LL,  // offset
-                                     INDEX_UNLIMITED
-                                    );
-      if (error == ERROR_NONE)
+                                     NULL,  // comment
+                                     NULL,  // createdDateTime
+                                     NULL,  // archiveType
+                                     &storageId,
+                                     storageName,
+                                     NULL,  // createdDateTime,
+                                     &size,  // size
+                                     NULL,  // indexState,
+                                     NULL,  // indexMode,
+                                     NULL,  // lastCheckedDateTime,
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
+                                    )
+             && (   (isAbortedFunction == NULL)
+                 || !isAbortedFunction(isAbortedUserData)
+                )
+            )
       {
-        doneCount = 0;
-        doneSize  = 0LL;
-        while (   Index_getNextStorage(&indexQueryHandle,
-                                       NULL,  // uuidId
-                                       NULL,  // jobUUID
-                                       NULL,  // entityId
-                                       NULL,  // scheduleUUID
-                                       NULL,  // hostName
-                                       NULL,  // userName
-                                       NULL,  // comment
-                                       NULL,  // createdDateTime
-                                       NULL,  // archiveType
-                                       &storageId,
-                                       storageName,
-                                       NULL,  // createdDateTime,
-                                       &size,  // size
-                                       NULL,  // indexState,
-                                       NULL,  // indexMode,
-                                       NULL,  // lastCheckedDateTime,
-                                       NULL,  // errorMessage
-                                       NULL,  // totalEntryCount
-                                       NULL  // totalEntrySize
-                                      )
-               && (   (isAbortedFunction == NULL)
-                   || !isAbortedFunction(isAbortedUserData)
-                  )
-              )
+        moveError = ERROR_NONE;
+
+        // update info
+        if (transferInfoFunction != NULL)
         {
-          moveError = ERROR_NONE;
+          transferInfoFunction(storageId,
+                               storageName,
+                               0LL,  // n
+                               0LL,  // size
+                               doneCount,
+                               doneSize,
+                               totalStorageCount,
+                               totalStorageSize,
+                               transferInfoUserData
+                              );
+        }
 
-          // update info
-          if (transferInfoFunction != NULL)
+        if (moveError == ERROR_NONE)
+        {
+          // parse name
+          moveError = Storage_parseName(&storageSpecifier,storageName);
+        }
+
+        if (moveError == ERROR_NONE)
+        {
+          // get new archive name
+          File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
+          File_setFileName(moveToArchivePath,moveToPath);
+          File_appendFileName(moveToArchivePath,baseName);
+
+          // check if path is or storage type are different
+          if (!Storage_equalSpecifiers(&storageSpecifier,
+                                       storageSpecifier.archiveName,
+                                       moveToStorageSpecifier,
+                                       moveToArchivePath
+                                      )
+             )
           {
-            transferInfoFunction(storageId,
-                                 storageName,
-                                 0LL,  // n
-                                 0LL,  // size
-                                 doneCount,
-                                 doneSize,
-                                 totalStorageCount,
-                                 totalStorageSize,
-                                 transferInfoUserData
-                                );
-          }
-
-          if (moveError == ERROR_NONE)
-          {
-            // parse name
-            moveError = Storage_parseName(&storageSpecifier,storageName);
-          }
-
-          if (moveError == ERROR_NONE)
-          {
-            // get new archive name
-            File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
-            File_setFileName(moveToArchivePath,moveToPath);
-            File_appendFileName(moveToArchivePath,baseName);
-
-            // check if path is or storage type are different
-            if (!Storage_equalSpecifiers(&storageSpecifier,
-                                         storageSpecifier.archiveName,
-                                         moveToStorageSpecifier,
-                                         moveToArchivePath
-                                        )
-               )
+            // init storages
+            if (moveError == ERROR_NONE)
             {
-              // init storages
+              moveError = Storage_init(&fromStorageInfo,
+                                       NULL,  // masterIO
+                                       &storageSpecifier,
+                                       jobOptions,
+                                       &maxFromBandWidthList,
+                                       SERVER_CONNECTION_PRIORITY_LOW,
+                                       CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                                       CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                                       CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                                       CALLBACK_(NULL,NULL),  // isPauseFunction
+                                       CALLBACK_(NULL,NULL),  // isAbortedFunction
+                                       NULL  // logHandle
+                                      );
               if (moveError == ERROR_NONE)
               {
-                moveError = Storage_init(&fromStorageInfo,
-                                         NULL,  // masterIO
-                                         &storageSpecifier,
-                                         jobOptions,
-                                         &maxFromBandWidthList,
-                                         SERVER_CONNECTION_PRIORITY_LOW,
-                                         CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
-                                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                                         CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
-                                         CALLBACK_(NULL,NULL),  // isPauseFunction
-                                         CALLBACK_(NULL,NULL),  // isAbortedFunction
-                                         NULL  // logHandle
-                                        );
-                if (moveError == ERROR_NONE)
+                if (Storage_exists(&fromStorageInfo,NULL))
                 {
-                  if (Storage_exists(&fromStorageInfo,NULL))
+                  moveError = Storage_init(&toStorageInfo,
+                                           NULL,  // masterIO
+                                           moveToStorageSpecifier,
+                                           jobOptions,
+                                           &maxToBandWidthList,
+                                           SERVER_CONNECTION_PRIORITY_LOW,
+                                           CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
+                                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                                           CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                                           CALLBACK_(NULL,NULL),  // isPauseFunction
+                                           CALLBACK_(NULL,NULL),  // isAbortedFunction
+                                           NULL  // logHandle
+                                          );
+                  if (moveError == ERROR_NONE)
                   {
-                    moveError = Storage_init(&toStorageInfo,
-                                             NULL,  // masterIO
-                                             moveToStorageSpecifier,
-                                             jobOptions,
-                                             &maxToBandWidthList,
-                                             SERVER_CONNECTION_PRIORITY_LOW,
-                                             CALLBACK_(NULL,NULL),  // storageUpdateStatusInfoFunction
-                                             CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                                             CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
-                                             CALLBACK_(NULL,NULL),  // isPauseFunction
-                                             CALLBACK_(NULL,NULL),  // isAbortedFunction
-                                             NULL  // logHandle
-                                            );
+                    // get unique move-to name
+                    File_setFileName(moveToArchivePath,moveToPath);
+                    File_appendFileName(moveToArchivePath,baseName);
+                    if (Storage_exists(&toStorageInfo,moveToArchivePath))
+                    {
+                      String prefixFileName,postfixFileName;
+                      long   index;
+                      uint   n;
+
+                      // rename new archive
+                      prefixFileName  = String_new();
+                      postfixFileName = String_new();
+                      index = String_findLastChar(baseName,STRING_END,'.');
+                      if (index >= 0)
+                      {
+                        String_sub(prefixFileName,baseName,STRING_BEGIN,index);
+                        String_sub(postfixFileName,baseName,index,STRING_END);
+                      }
+                      else
+                      {
+                        String_set(prefixFileName,baseName);
+                      }
+                      n = 0;
+                      do
+                      {
+                        File_setFileName(moveToArchivePath,moveToPath);
+                        File_appendFileName(moveToArchivePath,prefixFileName);
+                        String_appendFormat(moveToArchivePath,"-%u",n);
+                        String_append(moveToArchivePath,postfixFileName);
+                        n++;
+                      }
+                      while (Storage_exists(&toStorageInfo,moveToArchivePath));
+                      String_delete(postfixFileName);
+                      String_delete(prefixFileName);
+                    }
+
+                    // set new storage name
                     if (moveError == ERROR_NONE)
                     {
-                      // get unique move-to name
-                      File_setFileName(moveToArchivePath,moveToPath);
-                      File_appendFileName(moveToArchivePath,baseName);
-                      if (Storage_exists(&toStorageInfo,moveToArchivePath))
-                      {
-                        String prefixFileName,postfixFileName;
-                        long   index;
-                        uint   n;
-
-                        // rename new archive
-                        prefixFileName  = String_new();
-                        postfixFileName = String_new();
-                        index = String_findLastChar(baseName,STRING_END,'.');
-                        if (index >= 0)
-                        {
-                          String_sub(prefixFileName,baseName,STRING_BEGIN,index);
-                          String_sub(postfixFileName,baseName,index,STRING_END);
-                        }
-                        else
-                        {
-                          String_set(prefixFileName,baseName);
-                        }
-                        n = 0;
-                        do
-                        {
-                          File_setFileName(moveToArchivePath,moveToPath);
-                          File_appendFileName(moveToArchivePath,prefixFileName);
-                          String_appendFormat(moveToArchivePath,"-%u",n);
-                          String_append(moveToArchivePath,postfixFileName);
-                          n++;
-                        }
-                        while (Storage_exists(&toStorageInfo,moveToArchivePath));
-                        String_delete(postfixFileName);
-                        String_delete(prefixFileName);
-                      }
-
-                      // copy storage
-                      moveError = Storage_copy(&fromStorageInfo,
-                                               storageSpecifier.archiveName,
-                                               &toStorageInfo,
-                                               moveToArchivePath,
-                                               size,
-                                               CALLBACK_INLINE(bool,(uint64 doneBytes, uint64 totalBytes, void *userData),
-                                               {
-                                                 bool result;
-
-                                                 UNUSED_VARIABLE(userData);
-
-                                                 if (transferInfoFunction != NULL)
-                                                 {
-                                                   transferInfoFunction(storageId,
-                                                                        storageName,
-                                                                        doneBytes,
-                                                                        totalBytes,
-                                                                        doneCount,
-                                                                        doneSize,
-                                                                        totalStorageCount,
-                                                                        totalStorageSize,
-                                                                        transferInfoUserData
-                                                                       );
-                                                 }
-
-                                                 if (isAbortedFunction != NULL)
-                                                 {
-                                                   result = !isAbortedFunction(isAbortedUserData);
-                                                 }
-                                                 else
-                                                 {
-                                                   result = TRUE;
-                                                 }
-
-                                                 return result;
-                                               },NULL),
-                                               CALLBACK_(isAbortedFunction,isAbortedUserData)
-                                              );
-
-                      // update index
-                      if (moveError == ERROR_NONE)
-                      {
-                        moveError = Index_updateStorage(indexHandle,
-                                                        storageId,
-                                                        NULL,  // hostName,
-                                                        NULL,  // userName,
-                                                        Storage_getName(storageName,moveToStorageSpecifier,moveToArchivePath),
-                                                        0LL,  // dateTime,
-                                                        size,
-                                                        NULL,  // comment,
-                                                        FALSE  // updateNewest
-                                                       );
-                      }
-
-                      // delete original storage
-                      if (moveError == ERROR_NONE)
-                      {
-                        moveError = Storage_delete(&fromStorageInfo,
-                                                   storageSpecifier.archiveName
-                                                  );
-                        if (moveError != ERROR_NONE)
-                        {
-                          (void)Storage_delete(&toStorageInfo,moveToArchivePath);
-                        }
-                      }
-
-                      // done storage
-                      Storage_done(&toStorageInfo);
+                      moveError = Index_updateStorage(indexHandle,
+                                                      storageId,
+                                                      NULL,  // hostName,
+                                                      NULL,  // userName,
+                                                      Storage_getName(storageName,moveToStorageSpecifier,moveToArchivePath),
+                                                      0LL,  // dateTime,
+                                                      size,
+                                                      NULL,  // comment,
+                                                      FALSE  // updateNewest
+                                                     );
                     }
-                  }
-                  else
-                  {
-                    // set index state: error
-                    (void)Index_setStorageState(indexHandle,
-                                                storageId,
-                                                INDEX_STATE_ERROR,
-                                                0LL,  // lastCheckedDateTime
-                                                "file not found"
-                                               );
-                  }
 
-                  // done storage
-                  Storage_done(&fromStorageInfo);
+                    // copy storage
+                    moveError = Storage_copy(&fromStorageInfo,
+                                             storageSpecifier.archiveName,
+                                             &toStorageInfo,
+                                             moveToArchivePath,
+                                             size,
+                                             CALLBACK_INLINE(bool,(uint64 doneBytes, uint64 totalBytes, void *userData),
+                                             {
+                                               bool result;
+
+                                               UNUSED_VARIABLE(userData);
+
+                                               if (transferInfoFunction != NULL)
+                                               {
+                                                 transferInfoFunction(storageId,
+                                                                      storageName,
+                                                                      doneBytes,
+                                                                      totalBytes,
+                                                                      doneCount,
+                                                                      doneSize,
+                                                                      totalStorageCount,
+                                                                      totalStorageSize,
+                                                                      transferInfoUserData
+                                                                     );
+                                               }
+
+                                               if (isAbortedFunction != NULL)
+                                               {
+                                                 result = !isAbortedFunction(isAbortedUserData);
+                                               }
+                                               else
+                                               {
+                                                 result = TRUE;
+                                               }
+
+                                               return result;
+                                             },NULL),
+                                             CALLBACK_(isAbortedFunction,isAbortedUserData)
+                                            );
+
+                    if (moveError == ERROR_NONE)
+                    {
+                      // delete original storage
+                      moveError = Storage_delete(&fromStorageInfo,
+                                                 storageSpecifier.archiveName
+                                                );
+                      if (moveError != ERROR_NONE)
+                      {
+                        (void)Storage_delete(&toStorageInfo,moveToArchivePath);
+                      }
+                    }
+                    else
+                    {
+                      // revert storage name
+                      (void)Index_updateStorage(indexHandle,
+                                                storageId,
+                                                NULL,  // hostName,
+                                                NULL,  // userName,
+                                                Storage_getName(storageName,&storageSpecifier,NULL),
+                                                0LL,  // dateTime,
+                                                size,
+                                                NULL,  // comment,
+                                                FALSE  // updateNewest
+                                               );
+                    }
+
+                    // done storage
+                    Storage_done(&toStorageInfo);
+                  }
                 }
+                else
+                {
+                  // set index state: error
+                  (void)Index_setStorageState(indexHandle,
+                                              storageId,
+                                              INDEX_STATE_ERROR,
+                                              0LL,  // lastCheckedDateTime
+                                              "file not found"
+                                             );
+                }
+
+                // done storage
+                Storage_done(&fromStorageInfo);
               }
             }
           }
-
-          // update info
-          doneCount++;
-          doneSize += size;
-          if (transferInfoFunction != NULL)
-          {
-            transferInfoFunction(storageId,
-                                 storageName,
-                                 size,
-                                 size,
-                                 doneCount,
-                                 doneSize,
-                                 totalStorageCount,
-                                 totalStorageSize,
-                                 transferInfoUserData
-                                );
-          }
-
-          if (moveError != ERROR_NONE)
-          {
-            error = moveError;
-          }
         }
-        Index_doneList(&indexQueryHandle);
+
+        // update info
+        doneCount++;
+        doneSize += size;
+        if (transferInfoFunction != NULL)
+        {
+          transferInfoFunction(storageId,
+                               storageName,
+                               size,
+                               size,
+                               doneCount,
+                               doneSize,
+                               totalStorageCount,
+                               totalStorageSize,
+                               transferInfoUserData
+                              );
+        }
+
+        if (moveError != ERROR_NONE)
+        {
+          error = moveError;
+        }
       }
+      Index_doneList(&indexQueryHandle);
     }
   }
-  assert(error != ERROR_UNKNOWN);
 
   // free resources
   List_done(&maxToBandWidthList);
@@ -3813,6 +3850,12 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
       error = ERROR_NONE;
 
+      // lock entity
+      if (error == ERROR_NONE)
+      {
+        error = Index_lockEntity(indexHandle,moveToEntityId);
+      }
+
       // mount devices
       if (error == ERROR_NONE)
       {
@@ -3850,6 +3893,12 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
             (void)unmountAll(&jobNode->job.options.mountList);
           }
         }
+      }
+
+      // unlock entity
+      if (error == ERROR_NONE)
+      {
+        (void)Index_unlockEntity(indexHandle,moveToEntityId);
       }
 
       if (error == ERROR_NONE)
@@ -3940,26 +3989,23 @@ LOCAL void persistenceThreadCode(void)
       {
         error = ERROR_NONE;
 
-        SEMAPHORE_LOCKED_DO(&entityLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        // purge expired entities
+        if (error == ERROR_NONE)
         {
-          // purge expired entities
-          if (error == ERROR_NONE)
-          {
-            error = purgeExpiredEntities(&indexHandle,
-                                         NULL,  // jobUUID
-                                         ARCHIVE_TYPE_NONE
-                                        );
-          }
-
-          // move all entities to destination
-          if (error == ERROR_NONE)
-          {
-            error = moveAllEntities(&indexHandle);
-          }
-
-          // purge expired mounts
-          purgeMounts(FALSE);
+          error = purgeExpiredEntities(&indexHandle,
+                                       NULL,  // jobUUID
+                                       ARCHIVE_TYPE_NONE
+                                      );
         }
+
+        // move all entities to destination
+        if (error == ERROR_NONE)
+        {
+          error = moveAllEntities(&indexHandle);
+        }
+
+        // purge expired mounts
+        purgeMounts(FALSE);
 
         // sleep
         if (error == ERROR_NONE)
@@ -4255,7 +4301,7 @@ LOCAL void updateIndexThreadCode(void)
                         String_cString(printableStorageName)
                        );
 
-            // lock entity
+            // lock entity (if exists)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // lock
@@ -4357,7 +4403,7 @@ LOCAL void updateIndexThreadCode(void)
                          );
             }
 
-            // update infos, unlock entity (if exists)
+            // unlock entity (if exists)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // unlock
@@ -4627,143 +4673,140 @@ LOCAL void autoIndexThreadCode(void)
                            String_cString(printableStorageName)
                           );
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-                SEMAPHORE_LOCKED_DO(&entityLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                {
-                  (void)Storage_forAll(&storageSpecifier,
-                                       baseName,
-                                       String_cString(pattern),
-                                       CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
-                                       {
-                                         Errors error;
-                                         uint64 now;
+                (void)Storage_forAll(&storageSpecifier,
+                                     baseName,
+                                     String_cString(pattern),
+                                     CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                                     {
+                                       Errors error;
+                                       uint64 now;
 
-                                         assert(fileInfo != NULL);
+                                       assert(fileInfo != NULL);
 
-                                         UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(userData);
 
-                                         now = Misc_getCurrentDateTime();
+                                       now = Misc_getCurrentDateTime();
 //fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
 
-                                         // to avoid add/update on currently created archive, wait for min. 30min after creation
-                                         if (now > (fileInfo->timeLastChanged+30*60))
+                                       // to avoid add/update on currently created archive, wait for min. 30min after creation
+                                       if (now > (fileInfo->timeLastChanged+30*60))
+                                       {
+                                         error = Storage_parseName(&storageSpecifier,storageName);
+                                         if (error == ERROR_NONE)
                                          {
-                                           error = Storage_parseName(&storageSpecifier,storageName);
-                                           if (error == ERROR_NONE)
+                                           // check entry type and file name
+                                           switch (fileInfo->type)
                                            {
-                                             // check entry type and file name
-                                             switch (fileInfo->type)
-                                             {
-                                               case FILE_TYPE_FILE:
-                                               case FILE_TYPE_LINK:
-                                               case FILE_TYPE_HARDLINK:
-                                                 // get printable name
-                                                 Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+                                             case FILE_TYPE_FILE:
+                                             case FILE_TYPE_LINK:
+                                             case FILE_TYPE_HARDLINK:
+                                               // get printable name
+                                               Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
-                                                 // wait until index is unused
-                                                 while (   Index_isIndexInUse()
-                                                        && !isQuit()
-                                                       )
-                                                 {
-                                                   Misc_mdelay(5*MS_PER_SECOND);
-                                                 }
-                                                 if (isQuit())
-                                                 {
-                                                   return ERROR_NONE;
-                                                 }
+                                               // wait until index is unused
+                                               while (   Index_isIndexInUse()
+                                                      && !isQuit()
+                                                     )
+                                               {
+                                                 Misc_mdelay(5*MS_PER_SECOND);
+                                               }
+                                               if (isQuit())
+                                               {
+                                                 return ERROR_NONE;
+                                               }
 
-                                                 // get index id, request index update
-                                                 error = Index_findStorageByName(&indexHandle,
-                                                                                 &storageSpecifier,
-                                                                                 NULL,  // archiveName
-                                                                                 NULL,  // uuidId
-                                                                                 NULL,  // entityId
-                                                                                 NULL,  // jobUUID
-                                                                                 NULL,  // scheduleUUID
-                                                                                 &storageId,
-                                                                                 NULL,  // createdDateTime
-                                                                                 NULL,  // size
-                                                                                 &indexState,
-                                                                                 NULL,  // indexMode
-                                                                                 &lastCheckedDateTime,
-                                                                                 NULL,  // errorMessage
-                                                                                 NULL,  // totalEntryCount
-                                                                                 NULL  // totalEntrySize
-                                                                                );
-                                                 if      (error == ERROR_NONE)
-                                                 {
-                                                   // already in index -> check if modified/state
+                                               // get index id, request index update
+                                               error = Index_findStorageByName(&indexHandle,
+                                                                               &storageSpecifier,
+                                                                               NULL,  // archiveName
+                                                                               NULL,  // uuidId
+                                                                               NULL,  // entityId
+                                                                               NULL,  // jobUUID
+                                                                               NULL,  // scheduleUUID
+                                                                               &storageId,
+                                                                               NULL,  // createdDateTime
+                                                                               NULL,  // size
+                                                                               &indexState,
+                                                                               NULL,  // indexMode
+                                                                               &lastCheckedDateTime,
+                                                                               NULL,  // errorMessage
+                                                                               NULL,  // totalEntryCount
+                                                                               NULL  // totalEntrySize
+                                                                              );
+                                               if      (error == ERROR_NONE)
+                                               {
+                                                 // already in index -> check if modified/state
 //fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
-                                                   if      (fileInfo->timeModified > lastCheckedDateTime)
-                                                   {
-                                                     // modified -> request update index
-                                                     error = Index_setStorageState(&indexHandle,
-                                                                                   storageId,
-                                                                                   INDEX_STATE_UPDATE_REQUESTED,
-                                                                                   now,
-                                                                                   NULL  // errorMessage
-                                                                                  );
-                                                     if (error == ERROR_NONE)
-                                                     {
-                                                       plogMessage(NULL,  // logHandle,
-                                                                   LOG_TYPE_INDEX,
-                                                                   "INDEX",
-                                                                   "Auto requested update index for '%s'",
-                                                                   String_cString(printableStorageName)
-                                                                  );
-                                                     }
-                                                   }
-                                                   else if (indexState == INDEX_STATE_OK)
-                                                   {
-                                                     // set last checked date/time
-                                                     error = Index_setStorageState(&indexHandle,
-                                                                                   storageId,
-                                                                                   INDEX_STATE_OK,
-                                                                                   now,
-                                                                                   NULL  // errorMessage
-                                                                                  );
-                                                   }
-                                                 }
-                                                 else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+                                                 if      (fileInfo->timeModified > lastCheckedDateTime)
                                                  {
-                                                   // add to index
-                                                   error = Index_newStorage(&indexHandle,
-                                                                            INDEX_ID_NONE, // uuidId
-                                                                            INDEX_ID_NONE, // entityId
-                                                                            NULL,  // hostName
-                                                                            NULL,  // userName
-                                                                            storageName,
-                                                                            0LL,  // createdDateTime
-                                                                            0LL,  // size
-                                                                            INDEX_STATE_UPDATE_REQUESTED,
-                                                                            INDEX_MODE_AUTO,
-                                                                            NULL  // storageId
-                                                                           );
+                                                   // modified -> request update index
+                                                   error = Index_setStorageState(&indexHandle,
+                                                                                 storageId,
+                                                                                 INDEX_STATE_UPDATE_REQUESTED,
+                                                                                 now,
+                                                                                 NULL  // errorMessage
+                                                                                );
                                                    if (error == ERROR_NONE)
                                                    {
                                                      plogMessage(NULL,  // logHandle,
                                                                  LOG_TYPE_INDEX,
                                                                  "INDEX",
-                                                                 "Auto requested add index for '%s'",
+                                                                 "Auto requested update index for '%s'",
                                                                  String_cString(printableStorageName)
                                                                 );
                                                    }
                                                  }
-                                                 break;
-                                               default:
-                                                 break;
-                                             }
+                                                 else if (indexState == INDEX_STATE_OK)
+                                                 {
+                                                   // set last checked date/time
+                                                   error = Index_setStorageState(&indexHandle,
+                                                                                 storageId,
+                                                                                 INDEX_STATE_OK,
+                                                                                 now,
+                                                                                 NULL  // errorMessage
+                                                                                );
+                                                 }
+                                               }
+                                               else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+                                               {
+                                                 // add to index
+                                                 error = Index_newStorage(&indexHandle,
+                                                                          INDEX_ID_NONE, // uuidId
+                                                                          INDEX_ID_NONE, // entityId
+                                                                          NULL,  // hostName
+                                                                          NULL,  // userName
+                                                                          storageName,
+                                                                          0LL,  // createdDateTime
+                                                                          0LL,  // size
+                                                                          INDEX_STATE_UPDATE_REQUESTED,
+                                                                          INDEX_MODE_AUTO,
+                                                                          NULL  // storageId
+                                                                         );
+                                                 if (error == ERROR_NONE)
+                                                 {
+                                                   plogMessage(NULL,  // logHandle,
+                                                               LOG_TYPE_INDEX,
+                                                               "INDEX",
+                                                               "Auto requested add index for '%s'",
+                                                               String_cString(printableStorageName)
+                                                              );
+                                                 }
+                                               }
+                                               break;
+                                             default:
+                                               break;
                                            }
                                          }
-                                         else
-                                         {
-                                           error = ERROR_NONE;
-                                         }
+                                       }
+                                       else
+                                       {
+                                         error = ERROR_NONE;
+                                       }
 
-                                         return error;
-                                       },NULL),
-                                       CALLBACK_(NULL,NULL)
-                                      );
-                }
+                                       return error;
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL)
+                                    );
               }
             }
           }
@@ -15709,62 +15752,64 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
 // TODO: init specifier, support other types
   storageSpecifier.type = STORAGE_TYPE_FILESYSTEM;
 
-  // move storages of entity to new path
-  error = moveEntity(indexHandle,
-                     &jobOptions,
-                     entityId,
-                     &storageSpecifier,
-                     moveTo,
-                     CALLBACK_INLINE(void,
-                                     (IndexId     storageId,
-                                      ConstString storageName,
-                                      uint64      n,
-                                      uint64      size,
-                                      uint        doneCount,
-                                      uint64      doneSize,
-                                      uint        totalCount,
-                                      uint64      totalSize,
-                                      void        *userData
-                                     ),
-                     {
-                       UNUSED_VARIABLE(userData);
+  error = ERROR_NONE;
 
-                       ServerIO_sendResult(&clientInfo->io,
-                                           id,
-                                           FALSE,
-                                           ERROR_NONE,
-                                           "storageId=%"PRIi64" name=%S n=%"PRIu64" size=%"PRIu64" doneCount=%u doneSize=%"PRIu64" totalCount=%u totalSize=%"PRIu64,
-                                           storageId,
-                                           storageName,
-                                           n,
-                                           size,
-                                           doneCount,
-                                           doneSize,
-                                           totalCount,
-                                           totalSize
-                                          );
-                      },NULL),
-                      CALLBACK_INLINE(bool,(void *userData),
-                      {
-                        UNUSED_VARIABLE(userData);
-
-                        return isCommandAborted(clientInfo,id);
-                      },NULL)
-                     );
-  if (error != ERROR_NONE)
+  // lock entity
+  if (error == ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
-    Job_doneOptions(&jobOptions);
-    String_delete(moveTo);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
-    return;
+    error = Index_lockEntity(indexHandle,entityId);
   }
-  if (isQuit())
+
+  // move storages of entity to new path
+  if (error == ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
-    Job_doneOptions(&jobOptions);
-    String_delete(moveTo);
-    return;
+    error = moveEntity(indexHandle,
+                       &jobOptions,
+                       entityId,
+                       &storageSpecifier,
+                       moveTo,
+                       CALLBACK_INLINE(void,
+                                       (IndexId     storageId,
+                                        ConstString storageName,
+                                        uint64      n,
+                                        uint64      size,
+                                        uint        doneCount,
+                                        uint64      doneSize,
+                                        uint        totalCount,
+                                        uint64      totalSize,
+                                        void        *userData
+                                       ),
+                       {
+                         UNUSED_VARIABLE(userData);
+
+                         ServerIO_sendResult(&clientInfo->io,
+                                             id,
+                                             FALSE,
+                                             ERROR_NONE,
+                                             "storageId=%"PRIi64" name=%S n=%"PRIu64" size=%"PRIu64" doneCount=%u doneSize=%"PRIu64" totalCount=%u totalSize=%"PRIu64,
+                                             storageId,
+                                             storageName,
+                                             n,
+                                             size,
+                                             doneCount,
+                                             doneSize,
+                                             totalCount,
+                                             totalSize
+                                            );
+                        },NULL),
+                        CALLBACK_INLINE(bool,(void *userData),
+                        {
+                          UNUSED_VARIABLE(userData);
+
+                          return isCommandAborted(clientInfo,id);
+                        },NULL)
+                       );
+  }
+
+  // unlock entity
+  if (error == ERROR_NONE)
+  {
+    (void)Index_unlockEntity(indexHandle,entityId);
   }
 
   if (error != ERROR_NONE)
@@ -21593,7 +21638,6 @@ Errors Server_socket(void)
   List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   jobList.activeCount             = 0;
-  Semaphore_init(&entityLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                     = SERVER_STATE_RUNNING;
   pauseFlags.create               = FALSE;
@@ -21613,7 +21657,6 @@ Errors Server_socket(void)
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
-  AUTOFREE_ADD(&autoFreeList,&entityLock,{ Semaphore_done(&entityLock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
@@ -22428,7 +22471,6 @@ Errors Server_socket(void)
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
-  Semaphore_done(&entityLock);
   if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
   List_done(&authorizationFailList);
   List_done(&clientList);
@@ -22468,7 +22510,6 @@ Errors Server_batch(int inputDescriptor,
   List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   jobList.activeCount             = 0;
-  Semaphore_init(&entityLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
   serverState                     = SERVER_STATE_RUNNING;
   pauseFlags.create               = FALSE;
@@ -22684,7 +22725,6 @@ processCommand(&clientInfo,commandString);
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
-  Semaphore_done(&entityLock);
   List_done(&authorizationFailList);
   List_done(&clientList);
   Semaphore_done(&clientList.lock);

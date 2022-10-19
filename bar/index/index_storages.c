@@ -112,10 +112,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           (
                             DATABASE_VALUE_UINT("lockedCount", 0),
                           ),
-                          NULL,
-                          DATABASE_FILTERS
-                          (
-                          )
+                          DATABASE_FILTERS_NONE
                          );
 
     // clear state of deleted storages
@@ -1349,7 +1346,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
   Array                entryIds;
   ArrayIterator        arrayIterator;
   DatabaseId           entryId;
-  //bool                 transactionFlag;
+  bool                 transactionFlag;
   Errors               error;
   //bool                 doneFlag;
   //ArraySegmentIterator arraySegmentIterator;
@@ -1618,7 +1615,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
   #endif
 #endif
 
-  // collect file/image/diretory/link/hardlink/special entries to purge
+  // collect file/image/directory/link/hardlink/special entries to delete
   if (error == ERROR_NONE)
   {
     error = IndexEntry_collectIds(&entryIds,
@@ -1637,66 +1634,75 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                   );
   }
 
-  ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+  INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                    indexHandle,
+                                    transactionFlag,
   {
-    // delete entry if there exists no other fragments
-    if (!Database_existsValue(&indexHandle->databaseHandle,
-                              "entryFragments",
-                              DATABASE_FLAG_NONE,
-                              "id",
-                              "entryId=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(entryId)
-                              )
-                             )
-       )
+    ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
     {
-      // delete FTS entry
-      switch (Database_getType(&indexHandle->databaseHandle))
+      // delete entry if there exists no other fragments
+      if (!Database_existsValue(&indexHandle->databaseHandle,
+                                "entryFragments",
+                                DATABASE_FLAG_NONE,
+                                "id",
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(entryId)
+                                )
+                               )
+         )
       {
-        case DATABASE_TYPE_SQLITE3:
-          if (error == ERROR_NONE)
+        // delete FTS entry
+        if (error == ERROR_NONE)
+        {
+          switch (Database_getType(&indexHandle->databaseHandle))
           {
-            error = deleteFTSEntry(indexHandle,
-                                   progressInfo,
-                                   entryId
-                                  );
+            case DATABASE_TYPE_SQLITE3:
+              error = deleteFTSEntry(indexHandle,
+                                     progressInfo,
+                                     entryId
+                                    );
+              break;
+            case DATABASE_TYPE_MARIADB:
+              // nothing to do (using a view)
+              break;
+            case DATABASE_TYPE_POSTGRESQL:
+              error = deleteFTSEntry(indexHandle,
+                                    progressInfo,
+                                    entryId
+                                   );
+              break;
           }
-          break;
-        case DATABASE_TYPE_MARIADB:
-          // nothing to do (using a view)
-          break;
-        case DATABASE_TYPE_POSTGRESQL:
-          if (error == ERROR_NONE)
-          {
-            error = deleteFTSEntry(indexHandle,
-                                  progressInfo,
-                                  entryId
-                                 );
-          }
-          break;
+        }
+
+        // delete file/image/directory/link/hardlink/special entry
+        if (error == ERROR_NONE)
+        {
+          error = deleteSubEntry(indexHandle,
+                                 progressInfo,
+                                 entryId
+                                );
+        }
+
+        // delete entry
+        if (error == ERROR_NONE)
+        {
+          error = deleteEntry(indexHandle,
+                              progressInfo,
+                              entryId
+                             );
+        }
       }
 
-      // delete file/image/directory/link/hardlink/special entry
       if (error == ERROR_NONE)
       {
-        error = deleteSubEntry(indexHandle,
-                               progressInfo,
-                               entryId
-                              );
-      }
-
-      // delete entry
-      if (error == ERROR_NONE)
-      {
-        error = deleteEntry(indexHandle,
-                            progressInfo,
-                            entryId
-                           );
+        error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
       }
     }
-  }
+    
+    return error;
+  });
 
   // remove from newest entries
   if (error == ERROR_NONE)
