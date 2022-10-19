@@ -128,21 +128,21 @@ ERROR NO_SSH_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("no SSH password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
   }
 
 ERROR INVALID_SSH_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("invalid SSH password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
   }
 
 ERROR INVALID_SSH_PRIVATE_KEY
   stringSet(errorText,sizeof(errorText),TR("invalid SSH private key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
   }
 
 ERROR SSH_SESSION_FAIL                 TR("initialize SSH session fail")
@@ -150,7 +150,7 @@ ERROR SSH_AUTHENTICATION
   stringSet(errorText,sizeof(errorText),TR("SSH authentication fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
   }
 
 ERROR SSH
@@ -162,10 +162,10 @@ ERROR SSH
 
 // --- job --------------------------------------------------------------
 ERROR JOB_ALREADY_EXISTS
-  stringFormat(errorText,sizeof(errorText),TR("job '{0}' already exists"),ERROR_DATA);
+  stringFormat(errorText,sizeof(errorText),TR("job '{0}' already exists",ERROR_DATA));
 
 ERROR JOB_RUNNING
-  stringFormat(errorText,sizeof(errorText),TR("job '{0}' running"),ERROR_DATA);
+  stringFormat(errorText,sizeof(errorText),TR("job '{0}' running",ERROR_DATA));
 
 ERROR CREATE_JOB
   stringSet(errorText,sizeof(errorText),TR("create job fail"));
@@ -231,7 +231,7 @@ ERROR NO_WEBDAV_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("no WebDAV password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
   }
 
 ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
@@ -519,7 +519,7 @@ ERROR READ_DIRECTORY                   TR("read directory fail")
 ERROR FILE_EXISTS_
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR("file '%s' already exists"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR("file '%s' already exists",ERROR_DATA));
   }
   else
   {
@@ -637,7 +637,7 @@ ERROR NO_FILE_DATA
   stringSet(errorText,sizeof(errorText),TR("no file data entry"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
   }
 
 ERROR NO_DIRECTORY_ENTRY               TR("no directory entry")
