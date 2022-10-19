@@ -1581,6 +1581,8 @@ void Job_setScheduleModified(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
+  Job_updateNotifies(jobNode);
+
   jobNode->scheduleModifiedFlag = TRUE;
 }
 
