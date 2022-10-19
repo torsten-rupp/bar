@@ -1621,6 +1621,19 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
+* Name   : Index_isLockedEntity
+* Purpose: check if entity is locked
+* Input  : indexQueryHandle - index query handle
+*          entityId         - index id of entity
+* Return : TRUE iff entity is locked
+* Notes  : -
+\***********************************************************************/
+
+bool Index_isLockedEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         );
+
+/***********************************************************************\
 * Name   : Index_deleteEntity
 * Purpose: delete entity index including all entries for attached
 *          storages, files, image, directories, link, hard link,

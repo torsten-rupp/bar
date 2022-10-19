@@ -3271,6 +3271,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     (void)cleanUpIncompleteUpdate(&indexHandle);
     (void)cleanUpIncompleteCreate(&indexHandle);
     (void)IndexStorage_cleanUp(&indexHandle);
+    (void)IndexEntity_cleanUp(&indexHandle);
     (void)IndexUUID_cleanUp(&indexHandle);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
@@ -3640,7 +3641,9 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                totalEntityCount,
                                "entities",
                                "COUNT(entities.id)",
-                               "deletedFlag!=TRUE",
+                               "    lockCount=0 \
+                                AND deletedFlag!=TRUE \
+                               ",
                                DATABASE_FILTERS
                                (
                                ),
