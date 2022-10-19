@@ -1675,10 +1675,6 @@ LOCAL void schedulerThreadCode(void)
     }
   }
 
-  // write all modified jobs, re-read all job config files
-  Job_flushAll();
-  Job_rereadAll(globalOptions.jobsDirectory);
-
   Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD);
   List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
   executeScheduleDateTime = 0LL;

@@ -3064,9 +3064,6 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   StaticString  (entityUUID,MISC_UUID_STRING_LENGTH);
   Errors        error;
 
-  // read jobs (if possible)
-  (void)Job_rereadAll(globalOptions.jobsDirectory);
-
   // get job to execute
   String_clear(jobUUID);
   archiveType = ARCHIVE_TYPE_NONE;
@@ -4327,6 +4324,17 @@ LOCAL Errors bar(int argc, const char *argv[])
       return ERROR_NONE;
     }
   #endif /* NDEBUG */
+
+  // read all jobs
+  error = Job_rereadAll(globalOptions.jobsDirectory);
+  if (error != ERROR_NONE)
+  {
+    printError(_("cannot read jobs in '%s' (error: %s)!"),
+               String_cString(globalOptions.jobsDirectory),
+               Error_getText(error)
+              );
+    return error;
+  }
 
   // create temporary directory
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
