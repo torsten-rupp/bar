@@ -5555,7 +5555,18 @@ class Dialogs
                                  file,
                                  (widgetName != null) ? widgetName.getText() : null
                                 );
-          Widgets.setFocus(widgetFilter);
+          if      (widgetFilter != null)
+          {
+            Widgets.setFocus(widgetFilter);
+          }
+          else if (widgetName != null)
+          {
+            Widgets.setFocus(widgetName);
+          }
+          else
+          {
+            Widgets.setFocus(widgetDone);
+          }
         }
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
