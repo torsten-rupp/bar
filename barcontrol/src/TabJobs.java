@@ -9767,11 +9767,7 @@ throw new Error("NYI");
                                }
                               );
     }
-    catch (BARException exception)
-    {
-      // ignored
-    }
-    catch (IOException exception)
+    catch (Exception exception)
     {
       // ignored
     }
