@@ -8007,6 +8007,23 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   }
   printf("  Continuous      : %u\n",n);
 
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "lockedCount>0",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL  // group
+                           );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  printf("  Locked          : %u\n",n);
+
   printf("Storages:");
   if (verboseFlag)
   {
