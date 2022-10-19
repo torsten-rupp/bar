@@ -3309,10 +3309,11 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   uint64           totalStorageSize;
   IndexQueryHandle indexQueryHandle;
   Errors           moveError;
-  IndexId          storageId;
   uint             doneCount;
   uint64           doneSize;
+  IndexId          storageId;
   uint64           size;
+  IndexStates      indexState;
   StorageInfo      fromStorageInfo,toStorageInfo;
 
   assert(indexHandle != NULL);
@@ -3393,7 +3394,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                      storageName,
                                      NULL,  // createdDateTime,
                                      &size,  // size
-                                     NULL,  // indexState,
+                                     &indexState,
                                      NULL,  // indexMode,
                                      NULL,  // lastCheckedDateTime,
                                      NULL,  // errorMessage
@@ -3569,9 +3570,9 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                              CALLBACK_(isAbortedFunction,isAbortedUserData)
                                             );
 
+                    // delete original storage
                     if (moveError == ERROR_NONE)
                     {
-                      // delete original storage
                       moveError = Storage_delete(&fromStorageInfo,
                                                  storageSpecifier.archiveName
                                                 );
@@ -3579,6 +3580,18 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                       {
                         (void)Storage_delete(&toStorageInfo,moveToArchivePath);
                       }
+                    }
+
+                    // set last checked date/time or revert
+                    if (moveError == ERROR_NONE)
+                    {
+                      // set last checked date/time (ignore error)
+                      (void)Index_setStorageState(indexHandle,
+                                                  storageId,
+                                                  indexState,
+                                                  Misc_getCurrentDateTime(),
+                                                  NULL  // errorMessage
+                                                 );
                     }
                     else
                     {
@@ -3593,6 +3606,14 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                                 NULL,  // comment,
                                                 FALSE  // updateNewest
                                                );
+
+                      // set index state: error
+                      (void)Index_setStorageState(indexHandle,
+                                                  storageId,
+                                                  INDEX_STATE_ERROR,
+                                                  0LL,  // lastCheckedDateTime
+                                                  Error_getText(moveError)
+                                                 );
                     }
 
                     // done storage
@@ -4305,12 +4326,12 @@ LOCAL void updateIndexThreadCode(void)
             }
 
             // set state 'update'
-            Index_setStorageState(&indexHandle,
-                                  storageId,
-                                  INDEX_STATE_UPDATE,
-                                  0LL,  // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 );
+            (void)Index_setStorageState(&indexHandle,
+                                        storageId,
+                                        INDEX_STATE_UPDATE,
+                                        0LL,  // lastCheckedDateTime
+                                        NULL  // errorMessage
+                                       );
 
             // try to create index
             LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
@@ -4411,13 +4432,13 @@ LOCAL void updateIndexThreadCode(void)
           }
           else
           {
-            Index_setStorageState(&indexHandle,
-                                  storageId,
-                                  INDEX_STATE_ERROR,
-                                  0LL,
-                                  "Cannot initialise storage (error: %s)",
-                                  Error_getText(error)
-                                 );
+            (void)Index_setStorageState(&indexHandle,
+                                        storageId,
+                                        INDEX_STATE_ERROR,
+                                        0LL,
+                                        "Cannot initialise storage (error: %s)",
+                                        Error_getText(error)
+                                       );
           }
           Job_doneOptions(&jobOptions);
         }
