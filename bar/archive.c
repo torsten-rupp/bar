@@ -15724,6 +15724,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           if (!INDEX_ID_IS_NONE(entityId))
           {
             // update entity
+// TODO: do not update entity!
+#if 0
             error = Index_updateEntity(indexHandle,
                                        entityId,
                                        String_cString(jobUUID),
@@ -15733,6 +15735,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                        archiveType,
                                        createdDateTime
                                       );
+#endif
           }
           else
           {
