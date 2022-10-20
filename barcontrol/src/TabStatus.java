@@ -2554,7 +2554,9 @@ public class TabStatus
                                           (serverState == BARServer.States.RUNNING)
                                             ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
                                             : BARControl.tr("suspended"),
-                                          !jobData.slaveHostName.isEmpty() ? jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : "") : "",
+                                          !jobData.slaveHostName.isEmpty()
+                                            ? jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : "")
+                                            : "",
                                           jobData.archiveType.getText(),
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                           jobData.formatCompressAlgorithm(),

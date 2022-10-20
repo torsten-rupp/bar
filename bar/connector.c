@@ -175,25 +175,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
     return error;
   }
 
-//TODO
-  // start SSL
-#ifndef WERROR
-#warning TODO
-#endif
-#if 0
-  error = Connector_executeCommand(connectorInfo,
-                                   CONNECTOR_DEBUG_LEVEL,
-                                   CONNECTOR_COMMAND_TIMEOUT,
-                                   CALLBACK_(NULL,NULL),
-                                   "START_SSL"
-                                  );
-  if (error != ERROR_NONE)
-  {
-    ServerIO_disconnect(&connectorInfo->io);
-    return error;
-  }
-#endif
-
   // start connector thread
   if (!Thread_init(&connectorInfo->thread,"BAR connector",globalOptions.niceLevel,connectorThreadCode,connectorInfo))
   {

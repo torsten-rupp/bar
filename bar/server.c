@@ -4768,8 +4768,13 @@ LOCAL void autoIndexThreadCode(void)
                                                      plogMessage(NULL,  // logHandle,
                                                                  LOG_TYPE_INDEX,
                                                                  "INDEX",
-                                                                 "Auto requested update index for '%s'",
-                                                                 String_cString(printableStorageName)
+//                                                                 "Auto requested update index for '%s'",
+                                                                 "Auto requested update index for '%s' %llu %llu",
+//                                                                 String_cString(printableStorageName)
+                                                                 String_cString(printableStorageName),
+// TODO: remove
+fileInfo->timeModified,
+lastCheckedDateTime
                                                                 );
                                                    }
                                                  }
@@ -6298,6 +6303,7 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
 {
   #ifdef HAVE_GNU_TLS
     Errors error;
+    char   buffer[64];
   #endif /* HAVE_GNU_TLS */
 
   assert(clientInfo != NULL);
@@ -6335,6 +6341,12 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
       if (error != ERROR_NONE)
       {
         Network_disconnect(&clientInfo->io.network.socketHandle);
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Start TLS failed - disconnected %s (error: %s)",
+                   getClientInfoString(clientInfo,buffer,sizeof(buffer)),
+                   Error_getText(error)
+                  );
       }
     }
 
@@ -10544,7 +10556,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y slaveInsecureTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu",
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -10557,6 +10569,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                     ),
                           getSlaveStateText(jobNode->slaveState),
                           jobNode->slaveTLS,
+                          jobNode->slaveInsecureTLS,
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                      (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
                                                       || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
