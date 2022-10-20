@@ -5173,7 +5173,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                                name,
                                                size
                                               );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       if (error != ERROR_NONE)
       {
         return error;

@@ -1270,7 +1270,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
 
 .PHONY: run_slave runserver_slave rund_slave runserverd_slave
 run_slave runserver_slave: bar@EXEEXT@
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs-slave
 	touch /tmp/pairing
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=slave \
@@ -1284,7 +1284,7 @@ run_slave runserver_slave: bar@EXEEXT@
           $(OPTIONS)
 
 rund_slave runserverd_slave: bar-debug@EXEEXT@
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs-slave
 	touch /tmp/pairing
 	nice ./bar-debug@EXEEXT@ --daemon -D \
           --server-mode=slave \
@@ -1363,7 +1363,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           $(OPTIONS)
 
 rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs2
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
@@ -1469,6 +1469,7 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
 
 .PHONY: rundevd_wine rundevd_slave_wine
 rundevd_wine:
+	$(INSTALL) -d jobs
 	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
@@ -1481,6 +1482,7 @@ rundevd_wine:
           $(OPTIONS)
 
 rundevd_slave_wine:
+	$(INSTALL) -d jobs
 	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
@@ -1493,7 +1495,7 @@ rundevd_slave_wine:
           $(OPTIONS)
 
 rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs-slave
 	touch /tmp/pairing
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
@@ -1510,7 +1512,7 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
           $(OPTIONS)
 
 rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs-slave
 	touch /tmp/pairing
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
           --server-mode=slave \
@@ -1527,7 +1529,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           $(OPTIONS)
 
 rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs-slave
 	touch /tmp/pairing
 	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
@@ -1544,7 +1546,7 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           $(OPTIONS)
 
 rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
+	$(INSTALL) -d jobs-slave
 	touch /tmp/pairing
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=slave \
@@ -1613,7 +1615,7 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
           $(OPTIONS)
 
 rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
+	$(INSTALL) -d intermediate/jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --pid-file=/tmp/bar.pid \

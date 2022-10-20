@@ -2471,6 +2471,7 @@ public class TabStatus
                                    String              cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                   );
                                    long                lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                );
                                    long                estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                   );
+Dprintf.dprintf("%s: slaveTLS=%s slaveInsecureTLS=%s",name,slaveTLS,slaveInsecureTLS);
 
                                    JobData jobData = jobDataMap.get(jobUUID);
                                    if (jobData != null)
@@ -2554,7 +2555,9 @@ public class TabStatus
                                           (serverState == BARServer.States.RUNNING)
                                             ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
                                             : BARControl.tr("suspended"),
-                                          !jobData.slaveHostName.isEmpty() ? jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : "") : "",
+                                          !jobData.slaveHostName.isEmpty()
+                                            ? jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : "")
+                                            : "",
                                           jobData.archiveType.getText(),
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                           jobData.formatCompressAlgorithm(),
