@@ -141,6 +141,7 @@ LOCAL void disconnect(SocketHandle *socketHandle)
       break;
     case SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
+        gnutls_bye(socketHandle->gnuTLS.session,GNUTLS_SHUT_RDWR);
         gnutls_deinit(socketHandle->gnuTLS.session);
         gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
         gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
