@@ -1810,8 +1810,8 @@ char s[100];
 fprintf(stderr,"%s:%d: %s: %d %d %s\n",__FILE__,__LINE__,String_cString(jobScheduleNode->jobUUID),
 jobScheduleNode->archiveType,
 Continuous_isEntryAvailable(&continuousDatabaseHandle,
-                                                                    jobScheduleNode->jobUUID,
-                                                                    jobScheduleNode->scheduleUUID
+                                                                    String_cString(jobScheduleNode->jobUUID),
+                                                                    String_cString(jobScheduleNode->scheduleUUID)
                                                                    ),
 Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
 );
@@ -1850,8 +1850,8 @@ Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
                                                               + (uint64)jobScheduleNode->interval*S_PER_MINUTE)
                                                              )
                                      && Continuous_isEntryAvailable(&continuousDatabaseHandle,
-                                                                    jobScheduleNode->jobUUID,
-                                                                    jobScheduleNode->scheduleUUID
+                                                                    String_cString(jobScheduleNode->jobUUID),
+                                                                    String_cString(jobScheduleNode->scheduleUUID)
                                                                    )
                                     )
                             {
@@ -5550,9 +5550,10 @@ LOCAL void jobThreadCode(void)
               // create archive
               jobNode->runningInfo.error = Command_create(jobNode->masterIO,
                                                           String_cString(jobUUID),
-                                                          String_cString(entityUUID),
+                                                          String_cString(scheduleUUID),
 //TODO:
-NULL,//                                                        scheduleTitle,
+                                                          NULL,  // scheduleTitle,
+                                                          String_cString(entityUUID),
                                                           archiveType,
                                                           storageName,
                                                           &includeEntryList,

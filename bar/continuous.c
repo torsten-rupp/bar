@@ -749,6 +749,9 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
   NotifyInfo          *notifyInfo;
   UUIDNode            *uuidNode;
 
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
+
   // init variables
   StringList_init(&directoryList);
   name = String_new();
@@ -928,8 +931,8 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
   NotifyInfo         *notifyInfo;
   UUIDNode           *uuidNode;
 
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -982,8 +985,8 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
   ulong              length;
   UUIDNode           *uuidNode;
 
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -1050,8 +1053,8 @@ LOCAL void initNotifies(ConstString     name,
   ConstString     token;
 
   assert(name != NULL);
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
   assert(entryList != NULL);
 
   // init variables
@@ -1139,8 +1142,8 @@ LOCAL void purgeNotifies(const char *jobUUID, const char *scheduleUUID)
   ulong              length;
   UUIDNode           *uuidNode;
 
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -1279,8 +1282,10 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
 {
   Errors error;
 
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(initFlag);
+  assert(databaseHandle != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
   assert(name != NULL);
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
@@ -1342,6 +1347,8 @@ LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
                          DatabaseId     databaseId
                         )
 {
+  assert(initFlag);
+  assert(databaseHandle != NULL);
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_delete(databaseHandle,
@@ -1371,6 +1378,8 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
                              DatabaseId     databaseId
                             )
 {
+  assert(initFlag);
+  assert(databaseHandle != NULL);
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_update(databaseHandle,
@@ -1411,8 +1420,8 @@ LOCAL bool existsEntry(DatabaseHandle *databaseHandle,
 {
   assert(initFlag);
   assert(databaseHandle != NULL);
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
   assert(name != NULL);
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
@@ -2024,8 +2033,8 @@ void Continuous_done(void)
 }
 
 Errors Continuous_initNotify(ConstString     name,
-                             ConstString     jobUUID,
-                             ConstString     scheduleUUID,
+                             const char      *jobUUID,
+                             const char      *scheduleUUID,
                              ScheduleDate    date,
                              WeekDaySet      weekDaySet,
                              ScheduleTime    beginTime,
@@ -2035,16 +2044,16 @@ Errors Continuous_initNotify(ConstString     name,
 {
   InitNotifyMsg initNotifyMsg;
 
-  assert(!String_isEmpty(jobUUID));
-  assert(!String_isEmpty(scheduleUUID));
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
   assert(entryList != NULL);
 
   if (initFlag)
   {
     initNotifyMsg.type       = INIT;
     initNotifyMsg.name       = String_duplicate(name);
-    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
-    stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
+    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),jobUUID);
+    stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),scheduleUUID);
     initNotifyMsg.date       = date;
     initNotifyMsg.weekDaySet = weekDaySet;
     initNotifyMsg.beginTime  = beginTime;
@@ -2062,23 +2071,23 @@ Errors Continuous_initNotify(ConstString     name,
 }
 
 Errors Continuous_doneNotify(ConstString name,
-                             ConstString jobUUID,
-                             ConstString scheduleUUID
+                             const char  *jobUUID,
+                             const char  *scheduleUUID
                             )
 {
   InitNotifyMsg initNotifyMsg;
 
-  assert(!String_isEmpty(jobUUID));
-  assert(!String_isEmpty(scheduleUUID));
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   if (initFlag)
   {
     initNotifyMsg.type = DONE;
     initNotifyMsg.name = String_duplicate(name);
-    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
+    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),jobUUID);
     if (scheduleUUID != NULL)
     {
-      stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
+      stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),scheduleUUID);
     }
     else
     {
@@ -2130,8 +2139,8 @@ void Continuous_close(DatabaseHandle *databaseHandle)
 }
 
 Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
-                           ConstString    jobUUID,
-                           ConstString    scheduleUUID,
+                           const char     *jobUUID,
+                           const char     *scheduleUUID,
                            ScheduleTime   beginTime,
                            ScheduleTime   endTime,
                            ConstString    name
@@ -2142,8 +2151,8 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
 
   assert(initFlag);
   assert(databaseHandle != NULL);
-  assert(!String_isEmpty(jobUUID));
-  assert(!String_isEmpty(scheduleUUID));
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
   assert(!String_isEmpty(name));
 
   Misc_splitDateTime(Misc_getCurrentDateTime(),
@@ -2162,7 +2171,7 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                    )
      )
   {
-    error = addEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
+    error = addEntry(databaseHandle,jobUUID,scheduleUUID,name);
   }
   else
   {
@@ -2193,8 +2202,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
 
   assert(initFlag);
   assert(databaseHandle != NULL);
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
   assert(name != NULL);
 
 // TODO: lock required?
@@ -2269,8 +2278,8 @@ void Continuous_discardEntries(DatabaseHandle *databaseHandle,
 {
   assert(initFlag);
   assert(databaseHandle != NULL);
-  assert(jobUUID != NULL);
-  assert(scheduleUUID != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
 // TODO: lock required?
 //  BLOCK_DOX(result,
@@ -2297,13 +2306,14 @@ void Continuous_discardEntries(DatabaseHandle *databaseHandle,
 }
 
 bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
-                                 ConstString    jobUUID,
-                                 ConstString    scheduleUUID
+                                 const char     *jobUUID,
+                                 const char     *scheduleUUID
                                 )
 {
+  assert(initFlag);
   assert(databaseHandle != NULL);
-  assert(!String_isEmpty(jobUUID));
-  assert(!String_isEmpty(scheduleUUID));
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   return    initFlag
          && Database_existsValue(databaseHandle,
@@ -2317,9 +2327,9 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                                  ",
                                  DATABASE_FILTERS
                                  (
-                                   DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
-                                   DATABASE_FILTER_STRING(jobUUID),
-                                   DATABASE_FILTER_STRING(scheduleUUID),
+                                   DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
+                                   DATABASE_FILTER_CSTRING(jobUUID),
+                                   DATABASE_FILTER_CSTRING(scheduleUUID),
                                  )
                                 );
 }
@@ -2333,9 +2343,9 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
   Errors error;
 
   assert(initFlag);
-  assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
   assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   // prepare list
   error = Database_select(databaseStatementHandle,
@@ -2404,6 +2414,8 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
   uint       storedFlag;
 
   assert(databaseHandle != NULL);
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   name = String_new();
 

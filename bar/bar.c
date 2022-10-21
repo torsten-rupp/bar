@@ -3104,12 +3104,16 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   error = Command_create(NULL, // masterIO
                          #ifndef NDEBUG
                            (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
+                         #else
+                           jobUUID,
+                         #endif
+                         NULL,  // scheduleUUID
+                         NULL,  // scheduleTitle
+                         #ifndef NDEBUG
                            (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(entityUUID),
                          #else
-                           String_cString(jobUUID),
-                           String_cString(entityUUID),
+                           entityUUID,
                          #endif
-                         NULL,  // scheduleTitle
                          archiveType,
                          globalOptions.storageName,
                          &globalOptions.includeEntryList,
@@ -3335,8 +3339,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  #else
                                    NULL, // job UUID
                                  #endif
-                                 String_cString(entityUUID),
+                                 #ifndef NDEBUG
+                                   (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                                 #else
+                                   NULL, // schedule UUID
+                                 #endif
                                  NULL, // scheduleTitle
+                                 String_cString(entityUUID),
                                  globalOptions.archiveType,
                                  globalOptions.storageName,
                                  &globalOptions.includeEntryList,

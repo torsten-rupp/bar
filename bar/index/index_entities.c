@@ -791,6 +791,8 @@ Errors IndexEntity_cleanUp(IndexHandle *indexHandle)
 
   assert(indexHandle != NULL);
 
+UNUSED_VARIABLE(indexHandle);
+
   error = ERROR_NONE;
 
   return error;
