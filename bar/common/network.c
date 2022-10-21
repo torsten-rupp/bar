@@ -63,10 +63,6 @@
 
 #include "network.h"
 
-
-#include <gnutls/abstract.h>
-
-
 /****************** Conditional compilation switches *******************/
 
 #define _GNUTLS_DEBUG     // enable for GNU TLS debug output
@@ -216,18 +212,19 @@ LOCAL Errors setNonBlocking(int socketDescriptor, bool enabled)
 }
 
 /***********************************************************************\
-* Name   : _
-* Purpose:
-* Input  : -
+* Name   : gnuTLSLog
+* Purpose: GNU TLS log callback
+* Input  : level - level
+*          text  - text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef GNUTLS_DEBUG
-LOCAL void gnuTLSLog(int level, const char *s)
+LOCAL void gnuTLSLog(int level, const char *text)
 {
-  fprintf(stderr,"DEBUG GNU TLS %d: %s",level,s);
+  fprintf(stderr,"DEBUG GNU TLS %d: %s",level,text);
 }
 #endif /* GNUTLS_DEBUG */
 
@@ -447,9 +444,17 @@ fprintf(stderr,"%s:%d: t=%p %d\n",__FILE__,__LINE__,t,t->size); t++; fprintf(std
 /***********************************************************************\
 * Name   : initTLS
 * Purpose: initialise TLS/SSL session
-* Input  : -
+* Input  : socketHandle - socket handle
+*          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
+*          caData       - TLS CA data or NULL (PEM encoded)
+*          caLength     - TLS CA data length
+*          cert         - TLS cerificate or NULL (PEM encoded)
+*          certLength   - TLS cerificate data length
+*          key          - TLS private key or NULL (PEM encoded)
+*          keyLength    - TLS private key data length
+*          timeout      - timeout [ms] or WAIT_FOREVER/NO_WAIT
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -465,7 +470,7 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
                     )
 {
   #ifdef HAVE_GNU_TLS
-    gnutls_datum_t caDatum;
+//    gnutls_datum_t caDatum;
     byte           *certChainData;
     uint           certChainLength;
     gnutls_datum_t certChainDatum,keyDatum;
@@ -474,8 +479,6 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
   #endif /* HAVE_GNU_TLS */
 
   assert(socketHandle != NULL);
-//  assert(caData != NULL);
-//  assert(caLength > 0);
   assert(certData != NULL);
   assert(certLength > 0);
   assert(keyData != NULL);
@@ -504,7 +507,7 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
     }
 
 // TODO: not needed; server should send certificate chain with CA
-#if 1
+#if 0
     // add additional trusted certificate authority (if available)
     if ((caData != NULL) && (caLength > 0))
     {
@@ -520,16 +523,23 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
 #endif
 
     // init certificate chain: certificate+certificate authority (CA)
-    certChainLength = certLength+caLength+1;
-    certChainData   = (byte*)malloc(certChainLength);
+    certChainLength = certLength;
+    if ((caData != NULL) && (caLength > 0))
+    {
+      certChainLength += caLength;
+    }
+    certChainData = (byte*)malloc(certChainLength+1);
     if (certChainData == NULL)
     {
       gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
       return ERROR_INVALID_TLS_CERTIFICATE;
     }
     memCopyFast(&certChainData[0],certLength,certData,certLength);
-    memCopyFast(&certChainData[certLength],caLength,caData,caLength);
-    certChainData[certLength+caLength] = NUL;
+    if ((caData != NULL) && (caLength > 0))
+    {
+      memCopyFast(&certChainData[certLength],caLength,caData,caLength);
+    }
+    certChainData[certChainLength] = NUL;
 
     certChainDatum.data = (void*)certChainData;
     certChainDatum.size = certChainLength;
@@ -678,7 +688,6 @@ Errors Network_initAll(void)
     uint i;
   #endif /* HAVE_SSH2 */
   #ifdef HAVE_GNU_TLS
-    int result;
   #endif /* HAVE_GNU_TLS */
 
   #ifdef HAVE_SSH2

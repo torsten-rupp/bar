@@ -117,8 +117,8 @@ void Continuous_done(void);
 \***********************************************************************/
 
 Errors Continuous_initNotify(ConstString     name,
-                             ConstString     jobUUID,
-                             ConstString     scheduleUUID,
+                             const char      *jobUUID,
+                             const char      *scheduleUUID,
                              ScheduleDate    date,
                              WeekDaySet      weekDaySet,
                              ScheduleTime    beginTime,
@@ -137,8 +137,8 @@ Errors Continuous_initNotify(ConstString     name,
 \***********************************************************************/
 
 Errors Continuous_doneNotify(ConstString name,
-                             ConstString jobUUID,
-                             ConstString scheduleUUID
+                             const char  *jobUUID,
+                             const char  *scheduleUUID
                             );
 
 /***********************************************************************\
@@ -178,8 +178,8 @@ void Continuous_close(DatabaseHandle *databaseHandle);
 \***********************************************************************/
 
 Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
-                           ConstString    jobUUID,
-                           ConstString    scheduleUUID,
+                           const char     *jobUUID,
+                           const char     *scheduleUUID,
                            ScheduleTime   beginTime,
                            ScheduleTime   endTime,
                            ConstString    name
@@ -245,8 +245,8 @@ void Continuous_discardEntries(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
-                                 ConstString    jobUUID,
-                                 ConstString    scheduleUUID
+                                 const char     *jobUUID,
+                                 const char     *scheduleUUID
                                 );
 
 /***********************************************************************\

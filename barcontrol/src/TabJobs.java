@@ -8027,14 +8027,16 @@ public class TabJobs
             int index = table.getSelectionIndex();
             if (index >= 0)
             {
-              TableItem     tableItem    = table.getItem(index);
+              TableItem    tableItem    = table.getItem(index);
               ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
               try
               {
-                scheduleData.enabled = tableItem.getChecked();
-                BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
-
+                if (scheduleData.enabled != tableItem.getChecked())
+                {
+                  scheduleData.enabled = tableItem.getChecked();
+                  BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
+                }
               }
               catch (Exception exception)
               {
@@ -8090,7 +8092,7 @@ public class TabJobs
             if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
             {
               ScheduleData scheduleData = (ScheduleData)tableItem.getData();
-              Label         label;
+              Label        label;
 
               widgetScheduleTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
               widgetScheduleTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
@@ -14081,12 +14083,14 @@ throw new Error("NYI");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         widgetBeginHour = Widgets.newOptionMenu(subComposite);
+        widgetBeginHour.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetBeginHour.setToolTipText(BARControl.tr("Begin hour where continuous storage is active."));
         widgetBeginHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetBeginHour.setText(scheduleData.getBeginHour()); if (widgetBeginHour.getText().equals("")) widgetBeginHour.setText("*");
         Widgets.layout(widgetBeginHour,0,2,TableLayoutData.W);
 
         widgetBeginMinute = Widgets.newOptionMenu(subComposite);
+        widgetBeginMinute.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetBeginMinute.setToolTipText(BARControl.tr("Begin minute where continuous storage is active."));
         widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
         widgetBeginMinute.setText(scheduleData.getBeginMinute()); if (widgetBeginMinute.getText().equals("")) widgetBeginMinute.setText("*");
@@ -14096,12 +14100,14 @@ throw new Error("NYI");
         Widgets.layout(label,0,4,TableLayoutData.W);
 
         widgetEndHour = Widgets.newOptionMenu(subComposite);
+        widgetEndHour.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetEndHour.setToolTipText(BARControl.tr("End hour where continuous storage is active."));
         widgetEndHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetEndHour.setText(scheduleData.getEndHour()); if (widgetEndHour.getText().equals("")) widgetEndHour.setText("*");
         Widgets.layout(widgetEndHour,0,5,TableLayoutData.W);
 
         widgetEndMinute = Widgets.newOptionMenu(subComposite);
+        widgetEndMinute.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetEndMinute.setToolTipText(BARControl.tr("End minute where continuous storage is active."));
         widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
         widgetEndMinute.setText(scheduleData.getEndMinute()); if (widgetEndMinute.getText().equals("")) widgetEndMinute.setText("*");
@@ -14320,7 +14326,7 @@ throw new Error("NYI");
       int index = widgetScheduleTable.getSelectionIndex();
       if (index >= 0)
       {
-        TableItem     tableItem    = widgetScheduleTable.getItem(index);
+        TableItem    tableItem    = widgetScheduleTable.getItem(index);
         ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
         if (scheduleEdit(scheduleData,BARControl.tr("Edit schedule"),BARControl.tr("Save")))
@@ -14489,7 +14495,7 @@ throw new Error("NYI");
       int index = widgetScheduleTable.getSelectionIndex();
       if (index >= 0)
       {
-        TableItem    tableItem     = widgetScheduleTable.getItem(index);
+        TableItem    tableItem    = widgetScheduleTable.getItem(index);
         ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
         try

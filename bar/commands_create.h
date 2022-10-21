@@ -91,8 +91,9 @@
 
 Errors Command_create(ServerIO                     *masterIO,
                       const char                   *jobUUID,
-                      const char                   *entityUUID,
+                      const char                   *scheduleUUID,
                       const char                   *scheduleTitle,
+                      const char                   *entityUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
