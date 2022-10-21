@@ -1603,8 +1603,8 @@ void Job_flush(JobNode *jobNode)
         if (scheduleNode->enabled)
         {
           Continuous_initNotify(jobNode->name,
-                                jobNode->job.uuid,
-                                scheduleNode->uuid,
+                                String_cString(jobNode->job.uuid),
+                                String_cString(scheduleNode->uuid),
                                 scheduleNode->date,
                                 scheduleNode->weekDaySet,
                                 scheduleNode->beginTime,
@@ -1615,8 +1615,8 @@ void Job_flush(JobNode *jobNode)
         else
         {
           Continuous_doneNotify(jobNode->name,
-                                jobNode->job.uuid,
-                                scheduleNode->uuid
+                                String_cString(jobNode->job.uuid),
+                                String_cString(scheduleNode->uuid)
                                );
         }
       }
@@ -3116,8 +3116,8 @@ void Job_updateNotifies(const JobNode *jobNode)
       if (scheduleNode->enabled)
       {
         Continuous_initNotify(jobNode->name,
-                              jobNode->job.uuid,
-                              scheduleNode->uuid,
+                              String_cString(jobNode->job.uuid),
+                              String_cString(scheduleNode->uuid),
                               scheduleNode->date,
                               scheduleNode->weekDaySet,
                               scheduleNode->beginTime,
@@ -3128,8 +3128,8 @@ void Job_updateNotifies(const JobNode *jobNode)
       else
       {
         Continuous_doneNotify(jobNode->name,
-                              jobNode->job.uuid,
-                              scheduleNode->uuid
+                              String_cString(jobNode->job.uuid),
+                              String_cString(scheduleNode->uuid)
                              );
       }
     }

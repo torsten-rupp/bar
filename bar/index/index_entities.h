@@ -40,6 +40,17 @@
 #endif
 
 /***********************************************************************\
+* Name   : IndexEntity_cleanUp
+* Purpose: clean-up
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexEntity_cleanUp(IndexHandle *indexHandle);
+
+/***********************************************************************\
 * Name   : IndexEntity_purge
 * Purpose: delete entity
 * Input  : indexHandle    - index handle

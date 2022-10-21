@@ -638,7 +638,7 @@ Errors IndexCommon_deleteById(IndexHandle      *indexHandle,
                               const char       *tableName,
                               const char       *columnName,
                               const DatabaseId ids[],
-                              uint             idCount
+                              ulong            idCount
                              );
 
 // TODO: comment

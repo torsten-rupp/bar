@@ -583,37 +583,37 @@ Errors IndexCommon_deleteById(IndexHandle      *indexHandle,
                               const char       *tableName,
                               const char       *columnName,
                               const DatabaseId ids[],
-                              uint             idCount
+                              ulong            idCount
                              )
 {
   const uint INCREMENT_SIZE = 1024;
 
-  Errors               error;
-  ArraySegmentIterator arraySegmentIterator;
-  ulong                changedRowCount;
-  bool                 indexInUse;
+  Errors error;
+  ulong  i;
+  ulong  changedRowCount;
+  bool   indexInUse;
 
   assert(indexHandle != NULL);
   assert(tableName != NULL);
 
   error = ERROR_NONE;
-  ARRAY_SEGMENTX(&ids,arraySegmentIterator,INCREMENT_SIZE,(error == ERROR_NONE) && !indexInUse)
+  for (i = 0; i < idCount; i += INCREMENT_SIZE)
   {
     changedRowCount = 0;
 
     error = Database_deleteByIds(&indexHandle->databaseHandle,
-                                 changedRowCount,
+                                 &changedRowCount,
                                  tableName,
                                  columnName,
                                  DATABASE_FLAG_NONE,
-                                 (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                 Array_segmentLength(&ids,&arraySegmentIterator)
+                                 &ids[i],
+                                 MIN(idCount-i,INCREMENT_SIZE)
                                 );
     if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
-    
+
     indexInUse =IndexCommon_isIndexInUse();
   }
-  
+
   // update done-flag
   if ((error == ERROR_NONE) && (doneFlag != NULL))
   {

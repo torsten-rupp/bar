@@ -93,9 +93,10 @@ typedef struct
   StorageInfo                 storageInfo;                          // storage info
   IndexHandle                 *indexHandle;
   const char                  *jobUUID;                             // job UUID to store or NULL
+  const char                  *scheduleUUID;                        // schedule UUID or NULL
+  const char                  *scheduleTitle;                       // schedule title or NULL
   const char                  *entityUUID;                          // entity UUID to store or NULL
   ArchiveTypes                archiveType;                          // archive type to create
-  const char                  *scheduleTitle;                       // schedule title or NULL
   const char                  *customText;                          // custom text or NULL
   const EntryList             *includeEntryList;                    // list of included entries
   const PatternList           *excludePatternList;                  // list of exclude patterns
@@ -254,8 +255,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Input  : createInfo                 - create info variable
 *          indexHandle                - index handle
 *          jobUUID                    - job UUID to store or NULL
+*          scheduleUUID               - schedule UUID to store or NULL
+*          scheduleTitle              - schedule title or NULL
 *          entityUUID                 - entity UUID to store or NULL
-*          scheduleTitle              - schedule title
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
 *          includeEntryList           - include entry list
@@ -284,8 +286,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           IndexHandle        *indexHandle,
                           const char         *jobUUID,
-                          const char         *entityUUID,
+                          const char         *scheduleUUID,
                           const char         *scheduleTitle,
+                          const char         *entityUUID,
                           ArchiveTypes       archiveType,
                           const EntryList    *includeEntryList,
                           const PatternList  *excludePatternList,
@@ -306,12 +309,13 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
   // init variables
   createInfo->indexHandle                          = indexHandle;
   createInfo->jobUUID                              = jobUUID;
+  createInfo->scheduleUUID                         = scheduleUUID;
+// TODO: needed?
+  createInfo->scheduleTitle                        = scheduleTitle;
   createInfo->entityUUID                           = entityUUID;
   createInfo->includeEntryList                     = includeEntryList;
   createInfo->excludePatternList                   = excludePatternList;
   createInfo->customText                           = customText;
-// TODO: needed?
-  createInfo->scheduleTitle                        = scheduleTitle;
   createInfo->jobOptions                           = jobOptions;
   createInfo->createdDateTime                      = createdDateTime;
 
@@ -1566,7 +1570,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         error = Continuous_initList(&databaseStatementHandle,
                                     &continuousDatabaseHandle,
                                     createInfo->jobUUID,
-                                    createInfo->entityUUID
+                                    createInfo->scheduleUUID
                                    );
         if (error == ERROR_NONE)
         {
@@ -2476,7 +2480,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
              && !isAborted(createInfo)
              && Continuous_getEntry(&continuousDatabaseHandle,
                                     createInfo->jobUUID,
-                                    createInfo->entityUUID,
+                                    createInfo->scheduleUUID,
                                     NULL,  // databaseId
                                     name
                                    )
@@ -7761,8 +7765,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
 Errors Command_create(ServerIO                     *masterIO,
                       const char                   *jobUUID,
-                      const char                   *entityUUID,
+                      const char                   *scheduleUUID,
                       const char                   *scheduleTitle,
+                      const char                   *entityUUID,
                       ArchiveTypes                 archiveType,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
@@ -7863,8 +7868,9 @@ Errors Command_create(ServerIO                     *masterIO,
   initCreateInfo(&createInfo,
                  Index_isAvailable() ? &indexHandle : NULL,
                  jobUUID,
-                 entityUUID,
+                 scheduleUUID,
                  scheduleTitle,
+                 entityUUID,
                  archiveType,
                  includeEntryList,
                  excludePatternList,
