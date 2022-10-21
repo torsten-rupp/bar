@@ -75,12 +75,12 @@
   "INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));" \
   "" \
   "CREATE TABLE IF NOT EXISTS names(" \
-  "  id           INTEGER PRIMARY KEY," \
-  "  dateTime     INTEGER DEFAULT 0," \
-  "  jobUUID      TEXT NOT NULL," \
-  "  scheduleUUID TEXT NOT NULL," \
-  "  name         TEXT NOT NULL," \
-  "  storedFlag   INTEGER DEFAULT 0," \
+  "  id             INTEGER PRIMARY KEY," \
+  "  jobUUID        TEXT NOT NULL," \
+  "  scheduleUUID   TEXT NOT NULL," \
+  "  name           TEXT NOT NULL," \
+  "  storedDateTime INTEGER DEFAULT 0," \
+  "  storedFlag     INTEGER DEFAULT 0," \
   "  UNIQUE (jobUUID,scheduleUUID,name) " \
   ");" \
   "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID,scheduleUUID,name);"
@@ -1063,7 +1063,7 @@ LOCAL void initNotifies(ConstString     name,
 
   maxWatches = getMaxNotifyWatches();
 
-//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s time=%02d:%02d..%02d:%02d\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,initNotifyMsg.beginTime.hour,initNotifyMsg.beginTime.minute,initNotifyMsg.endTime.hour,initNotifyMsg.endTime.minute);
+//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s time=%02d:%02d..%02d:%02d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,beginTime.hour,beginTime.minute,endTime.hour,endTime.minute);
   plogMessage(NULL,  // logHandle
               LOG_TYPE_CONTINUOUS,
               LOG_PREFIX,"Start initialize watches for '%s'",
@@ -1297,7 +1297,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                           "names",
                           DATABASE_FLAG_NONE,
                           "    storedFlag=TRUE \
-                           AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                           AND (NOW()-?)>=UNIX_TIMESTAMP(storedDateTime) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -1388,8 +1388,8 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
                          DATABASE_FLAG_NONE,
                          DATABASE_VALUES
                          (
-                           DATABASE_VALUE     ("dateTime",  "NOW()"),
-                           DATABASE_VALUE_BOOL("storedFlag",TRUE)
+                           DATABASE_VALUE     ("storedDateTime","NOW()"),
+                           DATABASE_VALUE_BOOL("storedFlag",    TRUE)
                          ),
                          "id=?",
                          DATABASE_FILTERS
@@ -2237,7 +2237,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                      DATABASE_COLUMN_STRING("name")
                    ),
                    "    storedFlag=FALSE \
-                    AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                    AND (NOW()-?)>=UNIX_TIMESTAMP(storedDateTime) \
                     AND jobUUID=? \
                     AND scheduleUUID=? \
                    ",
@@ -2321,7 +2321,7 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                                  DATABASE_FLAG_NONE,
                                  "id",
                                  "    storedFlag=FALSE \
-                                  AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                                  AND (NOW()-?)>=UNIX_TIMESTAMP(storedDateTime) \
                                   AND jobUUID=? \
                                   AND scheduleUUID=? \
                                  ",
@@ -2358,7 +2358,7 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                             DATABASE_COLUMN_STRING("name")
                           ),
                           "    storedFlag=FALSE \
-                           AND (NOW()-?)>=UNIX_TIMESTAMP(dateTime) \
+                           AND (NOW()-?)>=UNIX_TIMESTAMP(storedDateTime) \
                            AND jobUUID=? \
                            AND scheduleUUID=? \
                           ",
@@ -2408,9 +2408,9 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                             const char     *scheduleUUID
                            )
 {
-  uint64     dateTime;
   DatabaseId databaseId;
   String     name;
+  uint64     storedDateTime;
   uint       storedFlag;
 
   assert(databaseHandle != NULL);
@@ -2428,12 +2428,12 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                        UNUSED_VARIABLE(userData);
                        UNUSED_VARIABLE(valueCount);
 
-                       databaseId = values[0].id;
-                       dateTime   = values[1].dateTime;
-                       String_set(name,values[2].string);
-                       storedFlag = values[3].b;
+                       databaseId     = values[0].id;
+                       String_set(name,values[1].string);
+                       storedDateTime = values[2].dateTime;
+                       storedFlag     = values[3].b;
 
-                       printf("#%ld: %lu %s %d\n",databaseId,dateTime,String_cString(name),storedFlag);
+                       printf("#%ld: %lu %s %d\n",databaseId,storedDateTime,String_cString(name),storedFlag);
 
                        return ERROR_NONE;
                      },NULL),
@@ -2446,8 +2446,8 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY     ("id"),
-                       DATABASE_COLUMN_DATETIME("dateTime"),
                        DATABASE_COLUMN_STRING  ("name"),
+                       DATABASE_COLUMN_DATETIME("storedDateTime"),
                        DATABASE_COLUMN_BOOL    ("storedFlag")
                      ),
                      "    (? OR jobUUID=?) \
