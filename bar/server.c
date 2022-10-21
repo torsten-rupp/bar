@@ -4768,13 +4768,8 @@ LOCAL void autoIndexThreadCode(void)
                                                      plogMessage(NULL,  // logHandle,
                                                                  LOG_TYPE_INDEX,
                                                                  "INDEX",
-//                                                                 "Auto requested update index for '%s'",
-                                                                 "Auto requested update index for '%s' %llu %llu",
-//                                                                 String_cString(printableStorageName)
-                                                                 String_cString(printableStorageName),
-// TODO: remove
-fileInfo->timeModified,
-lastCheckedDateTime
+                                                                 "Auto requested update index for '%s'",
+                                                                 String_cString(printableStorageName)
                                                                 );
                                                    }
                                                  }
