@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-21 16:24+0200\n"
+"POT-Creation-Date: 2022-10-24 12:55+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2495,7 +2495,7 @@ msgstr ""
 #: src/TabJobs.java:8995 src/TabJobs.java:10865 src/TabJobs.java:10909
 #: src/TabJobs.java:11263 src/TabJobs.java:11305 src/TabJobs.java:11818
 #: src/TabJobs.java:11864 src/TabJobs.java:12379 src/TabJobs.java:14263
-#: src/TabJobs.java:14393 src/TabJobs.java:15203 src/TabJobs.java:15244
+#: src/TabJobs.java:14393 src/TabJobs.java:15212 src/TabJobs.java:15253
 #: src/TabRestore.java:8687
 msgid "Add"
 msgstr ""
@@ -2527,7 +2527,7 @@ msgstr ""
 #: src/ServerSettings.java:1574 src/ServerSettings.java:1854
 #: src/ServerSettings.java:3227 src/TabJobs.java:10884 src/TabJobs.java:11281
 #: src/TabJobs.java:11845 src/TabJobs.java:12398 src/TabJobs.java:13594
-#: src/TabJobs.java:14332 src/TabJobs.java:15223
+#: src/TabJobs.java:14332 src/TabJobs.java:15232
 msgid "Save"
 msgstr ""
 
@@ -3938,12 +3938,12 @@ msgstr ""
 msgid "Total entities"
 msgstr ""
 
-#: src/TabJobs.java:8139 src/TabJobs.java:15351 src/TabRestore.java:4453
+#: src/TabJobs.java:8139 src/TabJobs.java:15360 src/TabRestore.java:4453
 #: src/TabRestore.java:4567
 msgid "Total entries"
 msgstr ""
 
-#: src/TabJobs.java:8149 src/TabJobs.java:8350 src/TabJobs.java:15341
+#: src/TabJobs.java:8149 src/TabJobs.java:8350 src/TabJobs.java:15350
 #: src/TabRestore.java:4443 src/TabRestore.java:4557
 msgid "Total size"
 msgstr ""
@@ -3989,7 +3989,7 @@ msgstr ""
 msgid "max. age"
 msgstr ""
 
-#: src/TabJobs.java:8348 src/TabJobs.java:15331 src/TabRestore.java:4536
+#: src/TabJobs.java:8348 src/TabJobs.java:15340 src/TabRestore.java:4536
 #: src/TabRestore.java:4945 src/TabRestore.java:5244
 msgid "Created"
 msgstr ""
@@ -4802,7 +4802,15 @@ msgid ""
 "  on WebDAV secure server\n"
 msgstr ""
 
-#: src/TabJobs.java:15115
+#: src/TabJobs.java:15053
+msgid "No max. keep set!"
+msgstr ""
+
+#: src/TabJobs.java:15059
+msgid "No max. age set!"
+msgstr ""
+
+#: src/TabJobs.java:15124
 #, java-format
 msgid ""
 "Cannot add persistence entry:\n"
@@ -4810,7 +4818,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15152
+#: src/TabJobs.java:15161
 #, java-format
 msgid ""
 "Cannot update persistence data:\n"
@@ -4818,7 +4826,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15184
+#: src/TabJobs.java:15193
 #, java-format
 msgid ""
 "Cannot remove persistence data:\n"
@@ -4826,50 +4834,50 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15203
+#: src/TabJobs.java:15212
 msgid "Add new persistence"
 msgstr ""
 
-#: src/TabJobs.java:15223
+#: src/TabJobs.java:15232
 msgid "Edit persistence"
 msgstr ""
 
-#: src/TabJobs.java:15244
+#: src/TabJobs.java:15253
 msgid "Clone persistence"
 msgstr ""
 
-#: src/TabJobs.java:15261
+#: src/TabJobs.java:15270
 #, java-format
 msgid "Remove {0} persistence {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabJobs.java:15310 src/TabRestore.java:4505 src/TabRestore.java:4678
+#: src/TabJobs.java:15319 src/TabRestore.java:4505 src/TabRestore.java:4678
 msgid "Entity id"
 msgstr ""
 
-#: src/TabJobs.java:15320 src/TabRestore.java:4525
+#: src/TabJobs.java:15329 src/TabRestore.java:4525
 msgid "Schedule UUID"
 msgstr ""
 
-#: src/TabJobs.java:15345 src/TabJobs.java:15365 src/TabRestore.java:4447
+#: src/TabJobs.java:15354 src/TabJobs.java:15374 src/TabRestore.java:4447
 #: src/TabRestore.java:4467 src/TabRestore.java:4561 src/TabRestore.java:4581
 #: src/TabRestore.java:4738 src/TabRestore.java:4983
 #, java-format
 msgid "{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})"
 msgstr ""
 
-#: src/TabJobs.java:15355 src/TabRestore.java:4457 src/TabRestore.java:4571
+#: src/TabJobs.java:15364 src/TabRestore.java:4457 src/TabRestore.java:4571
 #: src/TabRestore.java:4728 src/TabStatus.java:3573 src/TabStatus.java:3583
 #: src/TabStatus.java:3599
 #, java-format
 msgid "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15361 src/TabRestore.java:4463 src/TabRestore.java:4577
+#: src/TabJobs.java:15370 src/TabRestore.java:4463 src/TabRestore.java:4577
 msgid "Total entries size"
 msgstr ""
 
-#: src/TabJobs.java:15448
+#: src/TabJobs.java:15457
 #, java-format
 msgid ""
 "Cannot refresh entity index data:\n"
@@ -4877,7 +4885,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15480
+#: src/TabJobs.java:15489
 #, java-format
 msgid ""
 "Cannot remove entity index data:\n"
@@ -4885,7 +4893,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15516
+#: src/TabJobs.java:15525
 #, java-format
 msgid ""
 "Cannot delete entity:\n"
