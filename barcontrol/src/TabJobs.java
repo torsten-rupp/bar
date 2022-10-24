@@ -15048,8 +15048,17 @@ throw new Error("NYI");
         else                                            persistenceData.archiveType = ArchiveTypes.NORMAL;
         persistenceData.minKeep = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
         persistenceData.maxKeep = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
+        if (persistenceData.maxKeep == 0)
+        {
+          Dialogs.error(dialog,BARControl.tr("No max. keep set!"));
+          return;
+        }
         persistenceData.maxAge  = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
-
+        if (persistenceData.maxAge == 0)
+        {
+          Dialogs.error(dialog,BARControl.tr("No max. age set!"));
+          return;
+        }
 
         persistenceData.moveTo.type     = Widgets.getSelectedComboItem(widgetMoveToType,StorageTypes.FILESYSTEM);
         persistenceData.moveTo.fileName = widgetMoveToDirectory.getText();
