@@ -3080,7 +3080,10 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         {
           SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            Index_deleteStorage(&archiveHandle->indexHandle,archiveHandle->storageId);
+            (void)IndexStorage_purge(&archiveHandle->indexHandle,
+                                     archiveHandle->storageId,
+                                     NULL  // progressInfo
+                                    );
           }
         });
       }
@@ -15162,7 +15165,10 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
     {
       Index_unlockEntity(indexHandle,entityId);
     }
-    (void)Index_deleteStorage(indexHandle,storageId);
+    (void)IndexStorage_purge(indexHandle,
+                             storageId,
+                             NULL  // progressInfo
+                            );
     return error;
   }
 
@@ -15178,7 +15184,10 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   }
   else
   {
-    (void)Index_deleteStorage(indexHandle,storageId);
+    (void)IndexStorage_purge(indexHandle,
+                             storageId,
+                             NULL  // progressInfo
+                            );
   }
 
   // unlock entity (if exists)
@@ -15961,7 +15970,10 @@ Errors Archive_removeIndex(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
 
-  error = Index_deleteStorage(indexHandle,storageId);
+  error = IndexStorage_purge(indexHandle,
+                             storageId,
+                             NULL  // progressInfo
+                            );
   if (error != ERROR_NONE)
   {
     return error;

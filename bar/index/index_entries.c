@@ -843,10 +843,8 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
                            ulong       *deletedCounter
                           )
 {
-  Array         databaseIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
+  Array  databaseIds;
+  Errors error;
 
   assert(indexHandle != NULL);
 
@@ -874,19 +872,14 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   }
 
   // delete file entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
-  {
-    error = IndexCommon_delete(indexHandle,
-                               doneFlag,
-                               deletedCounter,
-                               "fileEntries",
-                               "id=?",
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_KEY(databaseId)
-                               )
-                              );
-  }
+  error = IndexCommon_deleteByIds(indexHandle,
+                                  doneFlag,
+                                  deletedCounter,
+                                  "fileEntries",
+                                  "id",
+                                  Array_cArray(&databaseIds),
+                                  Array_length(&databaseIds)
+                                 );
   if (error != ERROR_NONE)
   {
     Array_done(&databaseIds);
@@ -914,19 +907,14 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   }
 
   // delete image entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
-  {
-    error = IndexCommon_delete(indexHandle,
-                               doneFlag,
-                               deletedCounter,
-                               "imageEntries",
-                               "id=?",
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_KEY(databaseId)
-                               )
-                              );
-  }
+  error = IndexCommon_deleteByIds(indexHandle,
+                                  doneFlag,
+                                  deletedCounter,
+                                  "imageEntries",
+                                  "id",
+                                  Array_cArray(&databaseIds),
+                                  Array_length(&databaseIds)
+                                 );
   if (error != ERROR_NONE)
   {
     Array_done(&databaseIds);
@@ -954,19 +942,14 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   }
 
   // delete hardlink entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
-  {
-    error = IndexCommon_delete(indexHandle,
-                               doneFlag,
-                               deletedCounter,
-                               "hardlinkEntries",
-                               "id=?",
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_KEY(databaseId)
-                               )
-                              );
-  }
+  error = IndexCommon_deleteByIds(indexHandle,
+                                  doneFlag,
+                                  deletedCounter,
+                                  "hardlinkEntries",
+                                  "id",
+                                  Array_cArray(&databaseIds),
+                                  Array_length(&databaseIds)
+                                 );
   if (error != ERROR_NONE)
   {
     Array_done(&databaseIds);

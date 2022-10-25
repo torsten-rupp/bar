@@ -3729,10 +3729,11 @@ LOCAL Errors runDebug(void)
       return ERROR_ARCHIVE_NOT_FOUND;
     }
 
-    // delete storage
-    error = Index_deleteStorage(&indexHandle,
-                                storageId
-                               );
+    // purge storage
+    error = IndexStorage_purge(&indexHandle,
+                               storageId,
+                               NULL  // progressInfo
+                              );
     if (error != ERROR_NONE)
     {
       printError("cannot delete storage '%s' (error: %s)!",
@@ -3792,7 +3793,7 @@ LOCAL Errors runDebug(void)
     }
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
-    // delete storage if it exists
+    // purge storage if it exists
     if (   (Index_findStorageByName(&indexHandle,
                                     &storageSpecifier,
                                     globalOptions.debug.indexAddStorage,
@@ -3814,7 +3815,10 @@ LOCAL Errors runDebug(void)
         && (entityId == INDEX_ID_ENTITY(globalOptions.debug.indexEntityId))
        )
     {
-      error = Index_deleteStorage(&indexHandle,storageId);
+      error = IndexStorage_purge(&indexHandle,
+                                 storageId,
+                                 NULL  // progressInfo
+                                );
       if (error != ERROR_NONE)
       {
         printError("cannot delete storage '%s' (error: %s)!",

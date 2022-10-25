@@ -33,7 +33,7 @@
 //#define __INDEX_ID_TYPE_SAFE
 
 // switch on for debugging only!
-#define _INDEX_DEBUG_LOCK
+#define INDEX_DEBUG_LOCK
 #define _INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
@@ -46,6 +46,10 @@
 
 // index version
 #define INDEX_VERSION INDEX_CONST_VERSION
+
+// timeouts
+#define INDEX_TIMEOUT       ( 5L*60L*MS_PER_SECOND)   // index timeout [ms]
+#define INDEX_PURGE_TIMEOUT (    30L*MS_PER_SECOND)   // index purge timeout [ms]
 
 // max. limit value
 #define INDEX_UNLIMITED DATABASE_UNLIMITED
@@ -1908,18 +1912,19 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                           );
 
 /***********************************************************************\
-* Name   : Index_deleteStorage
-* Purpose: delete storage index including all entries for attached files,
-*          image, directories, link, hard link, special entries
+* Name   : Index_puergeStorage
+* Purpose: purge storage index including all entries for attached files,
+*          image, directories, link, hard link, special entries (mark
+*          as deleted)
 * Input  : indexQueryHandle - index query handle
 *          storageId        - index id of storage
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_deleteStorage(IndexHandle *indexHandle,
-                           IndexId     storageId
-                          );
+Errors Index_purgeStorage(IndexHandle *indexHandle,
+                          IndexId     storageId
+                         );
 
 /***********************************************************************\
 * Name   : Index_hasDeletedStorages

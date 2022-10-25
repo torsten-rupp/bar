@@ -979,7 +979,7 @@ LOCAL_INLINE void initTimeSpec(struct timespec *timespec, ulong timeout)
 #if 0
 /***********************************************************************\
 * Name   : debugPrint
-* Purpose: callback for debugPrint function (Unix epoch, UTC)
+* Purpose: callback for debugPrint function
 * Input  : context - SQLite3 context
 *          argc    - number of arguments
 *          argv    - argument array
@@ -1254,6 +1254,74 @@ LOCAL_INLINE void debugAddHistoryDatabaseThreadInfo(const char                  
 }
 
 /***********************************************************************\
+* Name   : debugGetLockedByInfo
+* Purpose: get locked-by info
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : locked by info string
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
+{
+  static char buffer[128];
+  uint        i;
+  long        index;
+
+  stringClear(buffer);
+  pthread_mutex_lock(&debugDatabaseLock);
+  {
+    if      (databaseHandle->databaseNode->transactionCount > 0)
+    {
+      index = stringFindReverseChar(databaseHandle->databaseNode->debug.transaction.fileName,FILE_PATH_SEPARATOR_CHAR);
+
+      stringFormat(buffer,sizeof(buffer),
+                   "transaction by '%s':%s:%s:%u",
+                   Thread_getName(databaseHandle->databaseNode->debug.transaction.threadId),
+                   Thread_getIdString(databaseHandle->databaseNode->debug.transaction.threadId),
+                   (index >= 0) ? &databaseHandle->databaseNode->debug.transaction.fileName[index] : databaseHandle->databaseNode->debug.transaction.fileName,
+                   databaseHandle->databaseNode->debug.transaction.lineNb
+                  );
+    }
+    else if (databaseHandle->databaseNode->readWriteCount > 0)
+    {
+      stringSet(buffer,sizeof(buffer),"read/write by");
+      for (i = 0; i < databaseHandle->databaseNode->readWriteCount; i++)
+      {
+        index = stringFindReverseChar(databaseHandle->databaseNode->debug.readWrites[i].fileName,FILE_PATH_SEPARATOR_CHAR);
+
+        stringFormatAppend(buffer,sizeof(buffer),
+                           " '%s':%s:%s:%u",
+                           Thread_getName(databaseHandle->databaseNode->debug.readWrites[i].threadId),
+                           Thread_getIdString(databaseHandle->databaseNode->debug.readWrites[i].threadId),
+                           (index >= 0) ? &databaseHandle->databaseNode->debug.readWrites[i].fileName[index] : databaseHandle->databaseNode->debug.readWrites[i].fileName,
+                           databaseHandle->databaseNode->debug.readWrites[i].lineNb
+                          );
+      }
+    }
+    else if (databaseHandle->databaseNode->readCount > 0)
+    {
+      stringSet(buffer,sizeof(buffer),"read by");
+      for (i = 0; i < databaseHandle->databaseNode->readCount; i++)
+      {
+        index = stringFindReverseChar(databaseHandle->databaseNode->debug.reads[i].fileName,FILE_PATH_SEPARATOR_CHAR);
+
+        stringFormatAppend(buffer,sizeof(buffer),
+                           " '%s':%s:%s:%u",
+                           Thread_getName(databaseHandle->databaseNode->debug.reads[i].threadId),
+                           Thread_getIdString(databaseHandle->databaseNode->debug.reads[i].threadId),
+                           (index >= 0) ? &databaseHandle->databaseNode->debug.reads[i].fileName[index] : databaseHandle->databaseNode->debug.reads[i].fileName,
+                           databaseHandle->databaseNode->debug.reads[i].lineNb
+                          );
+      }
+    }
+  }
+  pthread_mutex_unlock(&debugDatabaseLock);
+
+  return buffer;
+}
+
+/***********************************************************************\
 * Name   : debugPrintLockInfo
 * Purpose: print lock info
 * Input  : databaseNode - database node
@@ -1264,19 +1332,22 @@ LOCAL_INLINE void debugAddHistoryDatabaseThreadInfo(const char                  
 
 LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
 {
-  uint i;
+  String string;
+  uint   i;
 
   assert(databaseNode != NULL);
 
   pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
 
+  string = String_new();
+
   pthread_mutex_lock(&debugDatabaseLock);
   {
     pthread_mutex_lock(&debugConsoleLock);
     {
-      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseNode->databaseSpecifier.sqlite.fileName));
+      fprintf(stderr,"Database lock info '%s':\n",String_cString(Database_getPrintableName(string,&databaseNode->databaseSpecifier,NULL)));
       fprintf(stderr,
-              "  lock state summary: pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
+              "  pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
               databaseNode->pendingReadCount,
               databaseNode->readCount,
               databaseNode->pendingReadWriteCount,
@@ -1288,7 +1359,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
         if (!Thread_isNone(databaseNode->debug.reads[i].threadId))
         {
           fprintf(stderr,
-                  "    locked  r  thread '%s' (%s) at %s, %u\n",
+                  "    r  '%s' (%s) at %s, %u\n",
                   Thread_getName(databaseNode->debug.reads[i].threadId),
                   Thread_getIdString(databaseNode->debug.reads[i].threadId),
                   databaseNode->debug.reads[i].fileName,
@@ -1318,7 +1389,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
         if (!Thread_isNone(databaseNode->debug.readWrites[i].threadId))
         {
           fprintf(stderr,
-                  "    locked  rw thread '%s' (%s) at %s, %u\n",
+                  "    rw '%s' (%s) at %s, %u\n",
                   Thread_getName(databaseNode->debug.readWrites[i].threadId),
                   Thread_getIdString(databaseNode->debug.readWrites[i].threadId),
                   databaseNode->debug.readWrites[i].fileName,
@@ -1347,6 +1418,8 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
     pthread_mutex_unlock(&debugConsoleLock);
   }
   pthread_mutex_unlock(&debugDatabaseLock);
+
+  String_delete(string);
 }
 
 #endif /* not NDEBUG */
@@ -8635,12 +8708,11 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                                   long                    timeout
                                  )
 {
-  #define SLEEP_TIME 500L  // [ms]
+  #define MAX_SLEEP_TIME 500L  // [ms]
 
   bool                          done;
   Errors                        error;
-  uint                          maxRetryCount;
-  uint                          retryCount;
+  TimeoutInfo                   timeoutInfo;
   const DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseStatementHandle != NULL);
@@ -8651,8 +8723,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 
   done          = FALSE;
   error         = ERROR_NONE;
-  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  retryCount    = 0;
+  Misc_initTimeout(&timeoutInfo,timeout);
   do
   {
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
@@ -8796,36 +8867,35 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
     }
     else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
     {
-//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
-//Database_debugPrintLockInfo(databaseHandle);
-      // execute registered busy handlers
-//TODO: lock list?
+      // call busy handlers
       LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
         busyHandlerNode->function(busyHandlerNode->userData);
       }
 
-      Misc_mdelay(SLEEP_TIME);
-
-      // next retry
-      retryCount++;
+      // wait a short time and try again
+      Misc_mdelay(Misc_getRestTimeout(&timeoutInfo,MAX_SLEEP_TIME));
 
       error = ERROR_NONE;
     }
   }
   while (   !done
          && (error == ERROR_NONE)
-         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
+         && !Misc_isTimeout(&timeoutInfo)
         );
 
   if      (error != ERROR_NONE)
   {
     return error;
   }
-  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
+  else if (Misc_isTimeout(&timeoutInfo))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
+    #ifndef NDEBUG
+      return ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+    #else
+      return ERROR_DATABASE_TIMEOUT;
+    #endif
   }
   else
   {
@@ -9109,7 +9179,11 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   }
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
+    #ifndef NDEBUG
+      return ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+    #else
+      return ERROR_DATABASE_TIMEOUT;
+    #endif
   }
 
   #undef SLEEP_TIME
@@ -9149,7 +9223,11 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
 
   i = 0;
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -10796,13 +10874,13 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
         break;
-      case DATABASE_TYPE_POSTGRESQL:        
+      case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
         {
 // TODO: called to often -> no progress?
 #if 0
           PGcancel *pgCancel;
-          
+
           pgCancel = PQgetCancel(databaseHandle->postgresql.handle);
           if (pgCancel != NULL)
           {
@@ -10829,7 +10907,11 @@ Errors Database_getTableList(StringList     *tableList,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -10956,7 +11038,11 @@ Errors Database_getViewList(StringList     *viewList,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -11081,7 +11167,11 @@ Errors Database_getIndexList(StringList     *indexList,
   StringList_init(indexList);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -11295,7 +11385,11 @@ Errors Database_getTriggerList(StringList     *triggerList,
   StringList_init(triggerList);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
@@ -14108,7 +14202,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     DATABASE_DOX(error,
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+                 #ifndef NDEBUG
+                   ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 #else
+                   ERROR_DATABASE_TIMEOUT,
+                 #endif
                  databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
                  WAIT_FOREVER,
@@ -14357,7 +14455,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     #endif /* not NDEBUG */
     {
       String_delete(sqlString);
-      return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
+      #ifndef NDEBUG
+        return ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__fileName__,__lineNb__,debugGetLockedByInfo(databaseHandle));
+      #else /* NDEBUG */
+        return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
+      #endif /* not NDEBUG */
     }
 
     // begin transaction
@@ -14923,7 +15025,11 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   assert(sqlString != NULL);
 
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",sqlString,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
@@ -14939,246 +15045,6 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
   });
 
   return error;
-}
-
-#ifdef NDEBUG
-  Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
-                          DatabaseHandle          *databaseHandle,
-                          const DatabaseColumn    *columns,
-                          uint                    columnCount,
-                          const char              *sqlString,
-                          const DatabaseValue     values[],
-                          uint                    valueCount,
-                          const DatabaseFilter    filters[],
-                          uint                    filterCount
-                         )
-#else /* not NDEBUG */
-  Errors __Database_prepare(const char              *__fileName__,
-                            ulong                   __lineNb__,
-                            DatabaseStatementHandle *databaseStatementHandle,
-                            DatabaseHandle          *databaseHandle,
-                            const DatabaseColumn    *columns,
-                            uint                    columnCount,
-                            const char              *sqlString,
-                            const DatabaseValue     values[],
-                            uint                    valueCount,
-                            const DatabaseFilter    filters[],
-                            uint                    filterCount
-                           )
-#endif /* NDEBUG */
-{
-  Errors      error;
-  TimeoutInfo timeoutInfo;
-
-  assert(databaseStatementHandle != NULL);
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(sqlString != NULL);
-
-// TODO: debug version
-#ifndef NDEBUG
-  UNUSED_VARIABLE(__fileName__);
-  UNUSED_VARIABLE(__lineNb__);
-#endif /* not NDEBUG */
-
-
-  // prepare statement
-  error = prepareStatement(databaseStatementHandle,
-                           databaseHandle,
-                           sqlString,
-                           valueCount+filterCount
-                          );
-
-  // bind values, filters, results
-  if (error == ERROR_NONE)
-  {
-    error = bindValues(databaseStatementHandle,values,valueCount);
-  }
-  if (filters != NULL)
-  {
-    if (error == ERROR_NONE)
-    {
-      error = bindFilters(databaseStatementHandle,filters,filterCount);
-    }
-  }
-  if (error == ERROR_NONE)
-  {
-    error = bindResults(databaseStatementHandle,columns,columnCount);
-  }
-  if (error != ERROR_NONE)
-  {
-    finalizeStatement(databaseStatementHandle);
-    return error;
-  }
-
-  // execute statement (return rows via Database_getNextRow()(
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
-  {
-    return executePreparedStatement(databaseStatementHandle,
-                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                    NULL,  // changedRowCount
-                                    DATABASE_FLAG_NONE,
-                                    Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
-                                   );
-  });
-  Misc_doneTimeout(&timeoutInfo);
-  if (error != ERROR_NONE)
-  {
-    finalizeStatement(databaseStatementHandle);
-    return error;
-  }
-
-  // free resources
-
-  return ERROR_NONE;
-}
-
-bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         ...
-                        )
-{
-  bool    result;
-  va_list arguments;
-  union
-  {
-    DatabaseId *id;
-    bool       *b;
-    int        *i;
-    int64      *i64;
-    uint       *u;
-    uint64     *u64;
-    float      *f;
-    double     *d;
-    char       *ch;
-    uint64     *dateTime;
-    const char **s;
-    String     string;
-  }       value;
-
-  assert(databaseStatementHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
-  assert(databaseStatementHandle->databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
-  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
-
-  result = FALSE;
-
-  DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-  if (getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT))
-  {
-    va_start(arguments,databaseStatementHandle);
-    for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
-    {
-      switch (databaseStatementHandle->results[i].type)
-      {
-        case DATABASE_DATATYPE_NONE:
-          break;
-        case DATABASE_DATATYPE:
-          break;
-        case DATABASE_DATATYPE_PRIMARY_KEY:
-        case DATABASE_DATATYPE_KEY:
-          value.id = va_arg(arguments,DatabaseId*);
-          if (value.id != NULL)
-          {
-            (*value.id) = (int64)databaseStatementHandle->results[i].id;
-          }
-          break;
-        case DATABASE_DATATYPE_BOOL:
-          value.b = va_arg(arguments,bool*);
-          if (value.b != NULL)
-          {
-            (*value.b) = databaseStatementHandle->results[i].b;
-          }
-          break;
-        case DATABASE_DATATYPE_INT:
-          value.i = va_arg(arguments,int*);
-          if (value.i != NULL)
-          {
-            (*value.i) = (int)databaseStatementHandle->results[i].i;
-          }
-          break;
-        case DATABASE_DATATYPE_INT64:
-          value.i64 = va_arg(arguments,int64*);
-          if (value.i64 != NULL)
-          {
-            (*value.i64) = databaseStatementHandle->results[i].i64;
-          }
-          break;
-        case DATABASE_DATATYPE_UINT:
-          value.u = va_arg(arguments,uint*);
-          if (value.u != NULL)
-          {
-            (*value.u) = (int)databaseStatementHandle->results[i].u;
-          }
-          break;
-        case DATABASE_DATATYPE_UINT64:
-          value.u64 = va_arg(arguments,uint64*);
-          if (value.u64 != NULL)
-          {
-            (*value.u64) = databaseStatementHandle->results[i].u64;
-          }
-          break;
-        case DATABASE_DATATYPE_DOUBLE:
-          value.d = va_arg(arguments,double*);
-          if (value.d != NULL)
-          {
-            (*value.d) = (ulong)databaseStatementHandle->results[i].d;
-          }
-          break;
-        case DATABASE_DATATYPE_ENUM:
-          value.u = va_arg(arguments,uint*);
-          if (value.u != NULL)
-          {
-            (*value.u) = (int)databaseStatementHandle->results[i].u;
-          }
-          break;
-        case DATABASE_DATATYPE_DATETIME:
-          value.dateTime = va_arg(arguments,uint64*);
-          if (value.dateTime != NULL)
-          {
-            (*value.dateTime) = databaseStatementHandle->results[i].dateTime;
-          }
-          break;
-        case DATABASE_DATATYPE_STRING:
-          value.string = va_arg(arguments,String);
-          if (value.string != NULL)
-          {
-            String_set(value.string,
-                       databaseStatementHandle->results[i].string
-                      );
-          }
-          break;
-        case DATABASE_DATATYPE_CSTRING:
-          value.s = va_arg(arguments,const char**);
-          if (value.s != NULL)
-          {
-            (*value.s) = databaseStatementHandle->results[i].s;
-          }
-          break;
-        case DATABASE_DATATYPE_BLOB:
-          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-          break;
-        case DATABASE_DATATYPE_ARRAY:
-          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
-      }
-    }
-
-    result = TRUE;
-  }
-  DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-
-  return result;
 }
 
 Errors Database_insert(DatabaseHandle       *databaseHandle,
@@ -15413,7 +15279,11 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15608,7 +15478,11 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15749,7 +15623,11 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15861,7 +15739,11 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -15962,7 +15844,11 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   filters[0].type = filterDataType;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
@@ -16075,7 +15961,11 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 
     Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
     DATABASE_DOX(error,
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+                 #ifndef NDEBUG
+                   ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 #else
+                   ERROR_DATABASE_TIMEOUT,
+                 #endif
                  databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
                  databaseHandle->timeout,
@@ -16084,7 +15974,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
       return executePreparedQuery(&databaseStatementHandle,
                                   changedRowCount,
                                   Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
-                                  );
+                                 );
     });
     Misc_doneTimeout(&timeoutInfo);
     if (error != ERROR_NONE)
@@ -16102,40 +15992,6 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   }
 
   return ERROR_NONE;
-}
-
-
-#ifdef NDEBUG
-  void Database_finalize(DatabaseStatementHandle *databaseStatementHandle)
-#else /* not NDEBUG */
-  void __Database_finalize(const char        *__fileName__,
-                           ulong             __lineNb__,
-                           DatabaseStatementHandle *databaseStatementHandle
-                          )
-#endif /* NDEBUG */
-{
-  assert(databaseStatementHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
-  assert(databaseStatementHandle->databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
-  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
-
-  #ifndef NDEBUG
-    String_clear(databaseStatementHandle->databaseHandle->debug.current.sqlString);
-    #ifdef HAVE_BACKTRACE
-      databaseStatementHandle->databaseHandle->debug.current.stackTraceSize = 0;
-    #endif /* HAVE_BACKTRACE */
-  #endif /* not NDEBUG */
-
-  #ifdef NDEBUG
-    finalizeStatement(databaseStatementHandle);
-  #else /* not NDEBUG */
-    __finalizeStatement(__fileName__,__lineNb__,databaseStatementHandle);
-  #endif /* NDEBUG */
-
-  #ifndef NDEBUG
-    DATABASE_DEBUG_TIME(databaseStatementHandle);
-  #endif /* not NDEBUG */
 }
 
 Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
@@ -16291,24 +16147,29 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
     return error;
   }
 
-  // execute statement (Note: rows are returned via Database_getNextRow())
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
+  // lock
+  if (!Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ,databaseHandle->timeout))
   {
-    return executePreparedStatement(databaseStatementHandle,
-                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                    NULL,  // changedRowCount
-                                    flags,
-                                    Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
+    #ifndef NDEBUG
+      error = ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle));
+    #else
+      error = ERROR_DATABASE_TIMEOUT;
+    #endif
+    finalizeStatement(databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  // execute statement (Note: rows are returned via Database_getNextRow())
+  error = executePreparedStatement(databaseStatementHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   flags,
+                                   Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                    );
-  });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
+    Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
     finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
     return error;
@@ -16318,6 +16179,185 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   String_delete(sqlString);
 
   return ERROR_NONE;
+}
+
+bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
+                         ...
+                        )
+{
+  bool    result;
+  va_list arguments;
+  union
+  {
+    DatabaseId *id;
+    bool       *b;
+    int        *i;
+    int64      *i64;
+    uint       *u;
+    uint64     *u64;
+    float      *f;
+    double     *d;
+    char       *ch;
+    uint64     *dateTime;
+    const char **s;
+    String     string;
+  }       value;
+
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
+  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
+
+  result = FALSE;
+
+  DATABASE_DEBUG_TIME_START(databaseStatementHandle);
+  if (getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT))
+  {
+    va_start(arguments,databaseStatementHandle);
+    for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
+    {
+      switch (databaseStatementHandle->results[i].type)
+      {
+        case DATABASE_DATATYPE_NONE:
+          break;
+        case DATABASE_DATATYPE:
+          break;
+        case DATABASE_DATATYPE_PRIMARY_KEY:
+        case DATABASE_DATATYPE_KEY:
+          value.id = va_arg(arguments,DatabaseId*);
+          if (value.id != NULL)
+          {
+            (*value.id) = (int64)databaseStatementHandle->results[i].id;
+          }
+          break;
+        case DATABASE_DATATYPE_BOOL:
+          value.b = va_arg(arguments,bool*);
+          if (value.b != NULL)
+          {
+            (*value.b) = databaseStatementHandle->results[i].b;
+          }
+          break;
+        case DATABASE_DATATYPE_INT:
+          value.i = va_arg(arguments,int*);
+          if (value.i != NULL)
+          {
+            (*value.i) = (int)databaseStatementHandle->results[i].i;
+          }
+          break;
+        case DATABASE_DATATYPE_INT64:
+          value.i64 = va_arg(arguments,int64*);
+          if (value.i64 != NULL)
+          {
+            (*value.i64) = databaseStatementHandle->results[i].i64;
+          }
+          break;
+        case DATABASE_DATATYPE_UINT:
+          value.u = va_arg(arguments,uint*);
+          if (value.u != NULL)
+          {
+            (*value.u) = (int)databaseStatementHandle->results[i].u;
+          }
+          break;
+        case DATABASE_DATATYPE_UINT64:
+          value.u64 = va_arg(arguments,uint64*);
+          if (value.u64 != NULL)
+          {
+            (*value.u64) = databaseStatementHandle->results[i].u64;
+          }
+          break;
+        case DATABASE_DATATYPE_DOUBLE:
+          value.d = va_arg(arguments,double*);
+          if (value.d != NULL)
+          {
+            (*value.d) = (ulong)databaseStatementHandle->results[i].d;
+          }
+          break;
+        case DATABASE_DATATYPE_ENUM:
+          value.u = va_arg(arguments,uint*);
+          if (value.u != NULL)
+          {
+            (*value.u) = (int)databaseStatementHandle->results[i].u;
+          }
+          break;
+        case DATABASE_DATATYPE_DATETIME:
+          value.dateTime = va_arg(arguments,uint64*);
+          if (value.dateTime != NULL)
+          {
+            (*value.dateTime) = databaseStatementHandle->results[i].dateTime;
+          }
+          break;
+        case DATABASE_DATATYPE_STRING:
+          value.string = va_arg(arguments,String);
+          if (value.string != NULL)
+          {
+            String_set(value.string,
+                       databaseStatementHandle->results[i].string
+                      );
+          }
+          break;
+        case DATABASE_DATATYPE_CSTRING:
+          value.s = va_arg(arguments,const char**);
+          if (value.s != NULL)
+          {
+            (*value.s) = databaseStatementHandle->results[i].s;
+          }
+          break;
+        case DATABASE_DATATYPE_BLOB:
+          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          break;
+        case DATABASE_DATATYPE_ARRAY:
+          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
+    }
+
+    result = TRUE;
+  }
+  DATABASE_DEBUG_TIME_END(databaseStatementHandle);
+
+  return result;
+}
+
+#ifdef NDEBUG
+  void Database_finalize(DatabaseStatementHandle *databaseStatementHandle)
+#else /* not NDEBUG */
+  void __Database_finalize(const char        *__fileName__,
+                           ulong             __lineNb__,
+                           DatabaseStatementHandle *databaseStatementHandle
+                          )
+#endif /* NDEBUG */
+{
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
+  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
+
+  #ifndef NDEBUG
+    String_clear(databaseStatementHandle->databaseHandle->debug.current.sqlString);
+    #ifdef HAVE_BACKTRACE
+      databaseStatementHandle->databaseHandle->debug.current.stackTraceSize = 0;
+    #endif /* HAVE_BACKTRACE */
+  #endif /* not NDEBUG */
+
+  // unlock
+  Database_unlock(databaseStatementHandle->databaseHandle,DATABASE_LOCK_TYPE_READ);
+
+  #ifdef NDEBUG
+    finalizeStatement(databaseStatementHandle);
+  #else /* not NDEBUG */
+    __finalizeStatement(__fileName__,__lineNb__,databaseStatementHandle);
+  #endif /* NDEBUG */
+
+  #ifndef NDEBUG
+    DATABASE_DEBUG_TIME(databaseStatementHandle);
+  #endif /* not NDEBUG */
 }
 
 bool Database_existsValue(DatabaseHandle       *databaseHandle,
@@ -16557,8 +16597,13 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
 
   // execute statement
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+// TODO:
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
@@ -17296,7 +17341,11 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
 
   error = ERROR_UNKNOWN;
   DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__),
+               #ifndef NDEBUG
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+               #else
+                 ERROR_DATABASE_TIMEOUT,
+               #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,

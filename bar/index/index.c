@@ -262,7 +262,7 @@ typedef struct
 //  uint64     cycleCounter;
   #ifdef INDEX_DEBUG_LOCK
     ThreadLWPId threadLWPId;
-    #ifndef NDEBUG
+    #ifndef HAVE_BACKTRACE
       void const *stackTrace[16];
       uint       stackTraceSize;
     #endif /* NDEBUG */
@@ -445,7 +445,7 @@ LOCAL void busyHandler(void *userData)
                                    databaseSpecifier,
                                    NULL,  // databaseName
                                    DATABASE_OPEN_MODE_FORCE_CREATE,
-                                   DATABASE_TIMEOUT
+                                   timeout
                                   );
             #else /* not NDEBUG */
               return __Database_open(__fileName__,__lineNb__,
@@ -453,7 +453,7 @@ LOCAL void busyHandler(void *userData)
                                      databaseSpecifier,
                                      NULL,  // databaseName
                                      DATABASE_OPEN_MODE_FORCE_CREATE,
-                                     DATABASE_TIMEOUT
+                                     timeout
                                     );
             #endif /* NDEBUG */
           });
@@ -733,7 +733,7 @@ LOCAL Errors getIndexVersion(uint *indexVersion, const DatabaseSpecifier *databa
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
+  error = openIndex(&indexHandle,databaseSpecifier,NULL,INDEX_OPEN_MODE_READ,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -1043,7 +1043,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   }
 
   // open old index (Note: must be read/write to fix errors in database)
-  error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
+  error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     Database_doneSpecifier(&databaseSpecifier);
@@ -1704,18 +1704,21 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
       String_set(printableStorageName,storageName);
     }
 
-    error = Index_deleteStorage(indexHandle,storageId);
+    error = IndexStorage_purge(indexHandle,
+                               storageId,
+                               NULL  // progressInfo
+                              );
     if (error == ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Deleted incomplete storage #%"PRIi64": '%s'",
+                  "Purged incomplete storage #%"PRIi64": '%s'",
                   storageId,
                   String_cString(printableStorageName)
                  );
     }
-    
+
     Array_append(&storageIds,&storageId);
   }
 
@@ -2377,7 +2380,7 @@ LOCAL void indexThreadCode(void)
   // open index
   do
   {
-    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_PURGE_TIMEOUT);
+    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_TIMEOUT);
     if ((error != ERROR_NONE) && !indexQuitFlag)
     {
       Misc_mdelay(1*MS_PER_SECOND);
@@ -2596,7 +2599,7 @@ LOCAL void indexThreadCode(void)
             // remove storage from database
             do
             {
-              // delete storage
+              // delete storage from index
               error = IndexStorage_delete(&indexHandle,
                                           storageId,
                                           NULL  // progressInfo
@@ -3145,10 +3148,10 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
           break;
       }
 
-      error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+      error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,INDEX_TIMEOUT);
       if (error == ERROR_NONE)
       {
-        error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
+        error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,INDEX_TIMEOUT);
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,
@@ -3212,7 +3215,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   if (createFlag)
   {
     // create new index database
-    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
       String_delete(printableDatabaseURI);
@@ -3252,7 +3255,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   }
 
   // initial clean-up
-  error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
+  error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(printableDatabaseURI);
@@ -3879,7 +3882,7 @@ void Index_debugPrintInUseInfo(void)
               Thread_getName(threadInfo.threadId)
              );
 
-      #ifndef NDEBUG
+      #ifndef HAVE_BACKTRACE
         debugDumpStackTrace(stderr,
                             2,
                             DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,

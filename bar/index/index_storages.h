@@ -68,8 +68,8 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
-* Name   : purgeStorage
-* Purpose: delete storage
+* Name   : IndexStorage_delete
+* Purpose: delete storage from index
 * Input  : indexHandle  - index handle
 *          storageId    - storage database id
 *          progressInfo - progress info (or NULL)
@@ -86,15 +86,17 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
 /***********************************************************************\
 * Name   : IndexStorage_purge
 * Purpose: purge storage (mark as "deleted")
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_purge(IndexHandle *indexHandle,
-                          DatabaseId  storageId
+Errors IndexStorage_purge(IndexHandle  *indexHandle,
+                          DatabaseId   storageId,
+                          ProgressInfo *progressInfo
                          );
 
 /***********************************************************************\
@@ -108,9 +110,10 @@ Errors IndexStorage_purge(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_purgeAllById(IndexHandle *indexHandle,
-                                 DatabaseId  entityId,
-                                 DatabaseId  keepStorageId
+Errors IndexStorage_purgeAllById(IndexHandle  *indexHandle,
+                                 DatabaseId   entityId,
+                                 DatabaseId   keepStorageId,
+                                 ProgressInfo *progressInfo
                                 );
 
 /***********************************************************************\
@@ -128,7 +131,8 @@ Errors IndexStorage_purgeAllById(IndexHandle *indexHandle,
 Errors IndexStorage_purgeAllByName(IndexHandle            *indexHandle,
                                    const StorageSpecifier *storageSpecifier,
                                    ConstString            archiveName,
-                                   DatabaseId             keepStorageId
+                                   DatabaseId             keepStorageId,
+                                   ProgressInfo           *progressInfo
                                   );
 
 /***********************************************************************\

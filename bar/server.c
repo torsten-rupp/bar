@@ -46,6 +46,7 @@
 #include "archive.h"
 #include "storage.h"
 #include "index/index.h"
+#include "index/index_storages.h"
 #include "continuous.h"
 #include "jobs.h"
 #include "server_io.h"
@@ -68,7 +69,9 @@
 #define SESSION_KEY_SIZE                         1024                     // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS               3                        // number of threads for a client
-#define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
+// TODO:
+//#define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
+#define LOCK_TIMEOUT                             (30L*MS_PER_SECOND)  // general lock timeout [ms]
 #define CLIENT_TIMEOUT                           (30L*MS_PER_SECOND)      // client timeout [ms]
 
 #define SLAVE_DEBUG_LEVEL                        1
@@ -2145,7 +2148,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   {
     String_delete(string);
     String_delete(storageName);
-    return ERROR_DATABASE_INDEX_NOT_FOUND;
+    return error;
   }
 
   if (!String_isEmpty(storageName))
@@ -2249,10 +2252,13 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       return ERROR_INTERRUPTED;
     }
 
-    // delete index
+    // purge index
     if (error == ERROR_NONE)
     {
-      error = Index_deleteStorage(indexHandle,storageId);
+      error = IndexStorage_purge(indexHandle,
+                                 storageId,
+                                 NULL  // progressInfo
+                                );
     }
 
     // log
@@ -2317,6 +2323,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   uint64           createdDateTime;
   Errors           error;
   const JobNode    *jobNode;
+  IndexId          deleteStorageId;
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
 
@@ -2367,59 +2374,72 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
 
   // delete all storages of entity
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 entityId,
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID,
-                                 NULL,  // indexIds
-                                 0,  // indexIdCount
-                                 INDEX_TYPE_SET_ALL,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // name
-                                 INDEX_STORAGE_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_NONE,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
+  do
   {
-    String_delete(string);
-    String_delete(jobName);
-    return error;
+    deleteStorageId = INDEX_ID_NONE;
+
+    // get next storage to delete
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   INDEX_ID_ANY,  // uuidId
+                                   entityId,
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
+                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
+                                   NULL,  // userName
+                                   NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      String_delete(jobName);
+      return error;
+    }
+    if (Index_getNextStorage(&indexQueryHandle,
+                             NULL,  // uuidId
+                             NULL,  // jobUUID
+                             NULL,  // entityId
+                             NULL,  // scheduleUUID
+                             NULL,  // hostName
+                             NULL,  // userName
+                             NULL,  // comment
+                             NULL,  // createdDateTime
+                             NULL,  // archiveType
+                             &storageId,
+                             NULL,  // storageName
+                             NULL,  // createdDateTime
+                             NULL,  // size
+                             NULL,  // indexState
+                             NULL,  // indexMode
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // errorMessage
+                             NULL,  // totalEntryCount
+                             NULL  // totalEntrySize
+                            )
+          )
+    {
+      deleteStorageId = storageId;
+    }
+    Index_doneList(&indexQueryHandle);
+
+    // delete storage
+    if (deleteStorageId != INDEX_ID_NONE)
+    {
+      error = deleteStorage(indexHandle,deleteStorageId);
+    }
   }
-  while (   (error == ERROR_NONE)
-         && !isQuit()
-         && Index_getNextStorage(&indexQueryHandle,
-                                 NULL,  // uuidId
-                                 NULL,  // jobUUID
-                                 NULL,  // entityId
-                                 NULL,  // scheduleUUID
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // comment
-                                 NULL,  // createdDateTime
-                                 NULL,  // archiveType
-                                 &storageId,
-                                 NULL,  // storageName
-                                 NULL,  // createdDateTime
-                                 NULL,  // size
-                                 NULL,  // indexState
-                                 NULL,  // indexMode
-                                 NULL,  // lastCheckedDateTime
-                                 NULL,  // errorMessage
-                                 NULL,  // totalEntryCount
-                                 NULL  // totalEntrySize
-                                )
-        )
-  {
-    error = deleteStorage(indexHandle,storageId);
-  }
-  Index_doneList(&indexQueryHandle);
+  while (   !isQuit()
+         && (deleteStorageId != INDEX_ID_NONE)
+        );
   if (isQuit())
   {
     String_delete(string);
@@ -2756,7 +2776,7 @@ LOCAL bool getEntityList(EntityList  *entityList,
                               )
           )
     {
-//fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
+//fprintf(stderr,"%s, %d: %llu entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,Misc_getTimestamp()/1000,entityId,archiveType,totalSize,Misc_getCurrentDateTime(),createdDateTime,(Misc_getCurrentDateTime()-createdDateTime)/S_PER_DAY);
       // create expiration node
       entityNode = newExpirationNode(entityId,
                                      jobUUID,
@@ -2990,6 +3010,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   Array            entityIdArray;
   String           expiredJobName;
   EntityList       entityList;
+  Errors           failError;
   uint64           now;
   IndexId          expiredEntityId;
   ArchiveTypes     expiredArchiveType;
@@ -3019,7 +3040,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
             CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL)
            );
 
-  error = ERROR_NONE;
+  failError = ERROR_NONE;
   do
   {
     // get entity list
@@ -3181,6 +3202,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     {
       Array_append(&entityIdArray,&expiredEntityId);
 
+      error = ERROR_NONE;
+
       // lock entity
       if (error == ERROR_NONE)
       {
@@ -3253,6 +3276,11 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     Error_getText(error)
                    );
       }
+
+      if (failError == ERROR_NONE)
+      {
+        failError = error;
+      }
     }
 
     // free resources
@@ -3268,7 +3296,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   String_delete(expiredJobName);
   Array_done(&entityIdArray);
 
-  return error;
+  return failError;
 }
 
 /***********************************************************************\
@@ -4559,6 +4587,376 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 }
 
 /***********************************************************************\
+* Name   : autoAddUpdateIndex
+* Purpose: add missing/update outdated indizes
+* Input  : indexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
+{
+  StringList                 storageDirectoryList;
+  StorageSpecifier           storageSpecifier;
+  String                     baseName;
+  String                     pattern;
+  String                     printableStorageName;
+  String                     storageDirectoryName;
+  JobOptions                 jobOptions;
+  Errors                     error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  IndexId                    storageId;
+  IndexStates                indexState;
+  uint64                     lastCheckedDateTime;
+
+  // init variables
+  StringList_init(&storageDirectoryList);
+  Storage_initSpecifier(&storageSpecifier);
+  baseName             = String_new();
+  pattern              = String_new();
+  printableStorageName = String_new();
+  Job_initOptions(&jobOptions);
+
+  // collect storage locations to check for BAR files
+  getStorageDirectories(&storageDirectoryList);
+
+  // check storage locations for BAR files, send index update request
+  while (!StringList_isEmpty(&storageDirectoryList))
+  {
+    storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
+
+    error = Storage_parseName(&storageSpecifier,storageDirectoryName);
+    if (error == ERROR_NONE)
+    {
+      if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
+          || (storageSpecifier.type == STORAGE_TYPE_FTP       )
+          || (storageSpecifier.type == STORAGE_TYPE_SSH       )
+          || (storageSpecifier.type == STORAGE_TYPE_SCP       )
+          || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
+          || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
+          || (storageSpecifier.type == STORAGE_TYPE_WEBDAVS   )
+         )
+      {
+        // get base directory
+        File_setFileName(baseName,storageSpecifier.archiveName);
+        do
+        {
+          error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                            &storageSpecifier,
+                                            baseName,
+                                            &jobOptions,
+                                            SERVER_CONNECTION_PRIORITY_LOW
+                                           );
+          if (error == ERROR_NONE)
+          {
+            Storage_closeDirectoryList(&storageDirectoryListHandle);
+          }
+          else
+          {
+            File_getDirectoryName(baseName,baseName);
+          }
+        }
+        while ((error != ERROR_NONE) && !String_isEmpty(baseName));
+
+        if (!String_isEmpty(baseName))
+        {
+          // read directory and scan all sub-directories for .bar files if possible
+          pprintInfo(4,
+                     "INDEX: ",
+                     "Auto-index scan '%s'\n",
+                     String_cString(Storage_getPrintableName(printableStorageName,&storageSpecifier,baseName))
+                    );
+          File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
+// TODO: complexity ~ O(n*n) if Index_findStorageByName() require O(n). Use a sorted list or hash table with sotrages and get the storage list from the index only once?
+// TODO:
+          (void)Storage_forAll(&storageSpecifier,
+                               baseName,
+                               String_cString(pattern),
+                               CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                               {
+                                 Errors error;
+                                 uint64 now;
+
+                                 assert(fileInfo != NULL);
+
+                                 UNUSED_VARIABLE(userData);
+
+                                 now = Misc_getCurrentDateTime();
+//fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
+
+                                 // to avoid add/update on currently created archive, wait for min. 30min after creation
+                                 if (now > (fileInfo->timeLastChanged+30*60))
+                                 {
+                                   error = Storage_parseName(&storageSpecifier,storageName);
+                                   if (error == ERROR_NONE)
+                                   {
+                                     // check entry type and file name
+                                     switch (fileInfo->type)
+                                     {
+                                       case FILE_TYPE_FILE:
+                                       case FILE_TYPE_LINK:
+                                       case FILE_TYPE_HARDLINK:
+                                         // get printable name
+                                         Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+                                         // wait until index is unused
+                                         while (   Index_isIndexInUse()
+                                                && !isQuit()
+                                               )
+                                         {
+                                           Misc_mdelay(5*MS_PER_SECOND);
+                                         }
+                                         if (isQuit())
+                                         {
+                                           return ERROR_NONE;
+                                         }
+
+                                         // get index id, request index update
+                                         error = Index_findStorageByName(indexHandle,
+                                                                         &storageSpecifier,
+                                                                         NULL,  // archiveName
+                                                                         NULL,  // uuidId
+                                                                         NULL,  // entityId
+                                                                         NULL,  // jobUUID
+                                                                         NULL,  // scheduleUUID
+                                                                         &storageId,
+                                                                         NULL,  // createdDateTime
+                                                                         NULL,  // size
+                                                                         &indexState,
+                                                                         NULL,  // indexMode
+                                                                         &lastCheckedDateTime,
+                                                                         NULL,  // errorMessage
+                                                                         NULL,  // totalEntryCount
+                                                                         NULL  // totalEntrySize
+                                                                        );
+                                         if      (error == ERROR_NONE)
+                                         {
+                                           // already in index -> check if modified/state
+//fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
+                                           if      (fileInfo->timeModified > lastCheckedDateTime)
+                                           {
+                                             // modified -> request update index
+                                             error = Index_setStorageState(indexHandle,
+                                                                           storageId,
+                                                                           INDEX_STATE_UPDATE_REQUESTED,
+                                                                           now,
+                                                                           NULL  // errorMessage
+                                                                          );
+                                             if (error == ERROR_NONE)
+                                             {
+                                               plogMessage(NULL,  // logHandle,
+                                                           LOG_TYPE_INDEX,
+                                                           "INDEX",
+                                                           "Auto requested update index for '%s'",
+                                                           String_cString(printableStorageName)
+                                                          );
+                                             }
+                                           }
+                                           else if (indexState == INDEX_STATE_OK)
+                                           {
+                                             // set last checked date/time
+                                             error = Index_setStorageState(indexHandle,
+                                                                           storageId,
+                                                                           INDEX_STATE_OK,
+                                                                           now,
+                                                                           NULL  // errorMessage
+                                                                          );
+                                           }
+                                         }
+                                         else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+                                         {
+                                           // add to index
+                                           error = Index_newStorage(indexHandle,
+                                                                    INDEX_ID_NONE, // uuidId
+                                                                    INDEX_ID_NONE, // entityId
+                                                                    NULL,  // hostName
+                                                                    NULL,  // userName
+                                                                    storageName,
+                                                                    0LL,  // createdDateTime
+                                                                    0LL,  // size
+                                                                    INDEX_STATE_UPDATE_REQUESTED,
+                                                                    INDEX_MODE_AUTO,
+                                                                    NULL  // storageId
+                                                                   );
+                                           if (error == ERROR_NONE)
+                                           {
+                                             plogMessage(NULL,  // logHandle,
+                                                         LOG_TYPE_INDEX,
+                                                         "INDEX",
+                                                         "Auto requested add index for '%s'",
+                                                         String_cString(printableStorageName)
+                                                        );
+                                           }
+                                         }
+                                         break;
+                                       default:
+                                         break;
+                                     }
+                                   }
+                                 }
+                                 else
+                                 {
+                                   error = ERROR_NONE;
+                                 }
+
+                                 // throddle database access
+                                 Misc_mdelay(500);
+
+                                 return error;
+                               },NULL),
+                               CALLBACK_(NULL,NULL)
+                              );
+        }
+      }
+    }
+
+    String_delete(storageDirectoryName);
+  }
+
+  // free resources
+  Job_doneOptions(&jobOptions);
+  String_delete(printableStorageName);
+  String_delete(pattern);
+  String_delete(baseName);
+  Storage_doneSpecifier(&storageSpecifier);
+  StringList_done(&storageDirectoryList);
+}
+
+/***********************************************************************\
+* Name   : autoCleanIndex
+* Purpose: purge expired indizes
+* Input  : indexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void autoCleanIndex(IndexHandle *indexHandle)
+{
+  StorageSpecifier storageSpecifier;
+  String           storageName;
+  String           printableStorageName;
+  Errors           error;
+  IndexId          purgeStorageId;
+  uint64           now;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+  uint64           createdDateTime;
+  IndexStates      indexState;
+  IndexModes       indexMode;
+  uint64           lastCheckedDateTime;
+  char             buffer[64];
+
+  // init variables
+  Storage_initSpecifier(&storageSpecifier);
+  storageName          = String_new();
+  printableStorageName = String_new();
+
+  do
+  {
+    purgeStorageId = INDEX_ID_NONE;
+
+    // get not existing and expired storage index to purge
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   INDEX_ID_ANY,  // uuidId
+                                   INDEX_ID_ANY,  // entity id
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID,
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
+                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
+                                   NULL,  // hostName
+                                   NULL,  // userName
+                                   NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    if (error == ERROR_NONE)
+    {
+      now = Misc_getCurrentDateTime();
+      while (   !isQuit()
+             && (purgeStorageId != INDEX_ID_NONE)
+             && Index_getNextStorage(&indexQueryHandle,
+                                     NULL,  // uuidId
+                                     NULL,  // jobUUID
+                                     NULL,  // entityId
+                                     NULL,  // scheduleUUID
+                                     NULL,  // hostName
+                                     NULL,  // userName
+                                     NULL,  // comment
+                                     NULL,  // createdDateTime
+                                     NULL,  // archiveType
+                                     &storageId,
+                                     storageName,
+                                     &createdDateTime,
+                                     NULL,  // size
+                                     &indexState,
+                                     &indexMode,
+                                     &lastCheckedDateTime,
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
+                                    )
+            )
+      {
+        // get printable name (if possible)
+        error = Storage_parseName(&storageSpecifier,storageName);
+        if (error == ERROR_NONE)
+        {
+          Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+        }
+        else
+        {
+          String_set(printableStorageName,storageName);
+        }
+
+        if (   (indexMode == INDEX_MODE_AUTO)
+            && (indexState != INDEX_STATE_UPDATE_REQUESTED)
+            && (indexState != INDEX_STATE_UPDATE)
+            && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
+            && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
+           )
+        {
+          purgeStorageId = storageId;
+        }
+      }
+      Index_doneList(&indexQueryHandle);
+    }
+
+    // purge expired storage index
+    if (purgeStorageId != INDEX_ID_NONE)
+    {
+      IndexStorage_purge(indexHandle,
+                         purgeStorageId,
+                         NULL  // progressInfo
+                        );
+
+      plogMessage(NULL,  // logHandle,
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Auto deleted index for '%s', last checked %s",
+                  String_cString(printableStorageName),
+                  Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,FALSE,NULL)
+                 );
+    }
+  }
+  while (   (purgeStorageId != INDEX_ID_NONE)
+         && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
+        );
+
+  // free resources
+  String_delete(storageName);
+  String_delete(printableStorageName);
+  Storage_doneSpecifier(&storageSpecifier);
+}
+
+/***********************************************************************\
 * Name   : autoIndexThreadCode
 * Purpose: auto index request thread
 * Input  : -
@@ -4569,33 +4967,10 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void autoIndexThreadCode(void)
 {
-  IndexHandle                indexHandle;
-  StringList                 storageDirectoryList;
-  StorageSpecifier           storageSpecifier;
-  String                     baseName;
-  String                     pattern;
-  String                     printableStorageName;
-  String                     storageName;
-  String                     storageDirectoryName;
-  JobOptions                 jobOptions;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  IndexId                    storageId;
-  uint64                     createdDateTime;
-  IndexStates                indexState;
-  uint64                     lastCheckedDateTime;
-  uint64                     now;
-  String                     string;
-  IndexQueryHandle           indexQueryHandle;
-  IndexModes                 indexMode;
+  IndexHandle indexHandle;
+  Errors      error;
 
   // initialize variables
-  StringList_init(&storageDirectoryList);
-  Storage_initSpecifier(&storageSpecifier);
-  baseName             = String_new();
-  pattern              = String_new();
-  printableStorageName = String_new();
-  storageName          = String_new();
 
   if (Index_isAvailable())
   {
@@ -4613,18 +4988,14 @@ LOCAL void autoIndexThreadCode(void)
                   "Cannot open index database (error: %s)",
                   Error_getText(error)
                  );
-      String_delete(storageName);
-      String_delete(printableStorageName);
-      String_delete(pattern);
-      String_delete(baseName);
-      Storage_doneSpecifier(&storageSpecifier);
-      StringList_done(&storageDirectoryList);
       return;
     }
 
     // run continuous check for auto index
     while (!isQuit())
     {
+      if (isMaintenanceTime(Misc_getCurrentDateTime(),NULL))
+      {
       // pause
       pauseIndexUpdate();
       if (isQuit())
@@ -4636,293 +5007,18 @@ LOCAL void autoIndexThreadCode(void)
           && globalOptions.indexDatabaseAutoUpdateFlag
          )
       {
-        // collect storage locations to check for BAR files
-        getStorageDirectories(&storageDirectoryList);
-
-        // check storage locations for BAR files, send index update request
-        Job_initOptions(&jobOptions);
-        while (!StringList_isEmpty(&storageDirectoryList))
-        {
-          storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
-
-          error = Storage_parseName(&storageSpecifier,storageDirectoryName);
-          if (error == ERROR_NONE)
-          {
-            if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
-                || (storageSpecifier.type == STORAGE_TYPE_FTP       )
-                || (storageSpecifier.type == STORAGE_TYPE_SSH       )
-                || (storageSpecifier.type == STORAGE_TYPE_SCP       )
-                || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
-                || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
-                || (storageSpecifier.type == STORAGE_TYPE_WEBDAVS   )
-               )
-            {
-              // get base directory
-              File_setFileName(baseName,storageSpecifier.archiveName);
-              do
-              {
-                error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                                  &storageSpecifier,
-                                                  baseName,
-                                                  &jobOptions,
-                                                  SERVER_CONNECTION_PRIORITY_LOW
-                                                 );
-                if (error == ERROR_NONE)
-                {
-                  Storage_closeDirectoryList(&storageDirectoryListHandle);
-                }
-                else
-                {
-                  File_getDirectoryName(baseName,baseName);
-                }
-              }
-              while ((error != ERROR_NONE) && !String_isEmpty(baseName));
-
-              if (!String_isEmpty(baseName))
-              {
-                // get printable storage name
-                Storage_getPrintableName(printableStorageName,&storageSpecifier,baseName);
-
-                // read directory and scan all sub-directories for .bar files if possible
-                pprintInfo(4,
-                           "INDEX: ",
-                           "Auto-index scan '%s'\n",
-                           String_cString(printableStorageName)
-                          );
-                File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-                (void)Storage_forAll(&storageSpecifier,
-                                     baseName,
-                                     String_cString(pattern),
-                                     CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
-                                     {
-                                       Errors error;
-                                       uint64 now;
-
-                                       assert(fileInfo != NULL);
-
-                                       UNUSED_VARIABLE(userData);
-
-                                       now = Misc_getCurrentDateTime();
-//fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
-
-                                       // to avoid add/update on currently created archive, wait for min. 30min after creation
-                                       if (now > (fileInfo->timeLastChanged+30*60))
-                                       {
-                                         error = Storage_parseName(&storageSpecifier,storageName);
-                                         if (error == ERROR_NONE)
-                                         {
-                                           // check entry type and file name
-                                           switch (fileInfo->type)
-                                           {
-                                             case FILE_TYPE_FILE:
-                                             case FILE_TYPE_LINK:
-                                             case FILE_TYPE_HARDLINK:
-                                               // get printable name
-                                               Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
-
-                                               // wait until index is unused
-                                               while (   Index_isIndexInUse()
-                                                      && !isQuit()
-                                                     )
-                                               {
-                                                 Misc_mdelay(5*MS_PER_SECOND);
-                                               }
-                                               if (isQuit())
-                                               {
-                                                 return ERROR_NONE;
-                                               }
-
-                                               // get index id, request index update
-                                               error = Index_findStorageByName(&indexHandle,
-                                                                               &storageSpecifier,
-                                                                               NULL,  // archiveName
-                                                                               NULL,  // uuidId
-                                                                               NULL,  // entityId
-                                                                               NULL,  // jobUUID
-                                                                               NULL,  // scheduleUUID
-                                                                               &storageId,
-                                                                               NULL,  // createdDateTime
-                                                                               NULL,  // size
-                                                                               &indexState,
-                                                                               NULL,  // indexMode
-                                                                               &lastCheckedDateTime,
-                                                                               NULL,  // errorMessage
-                                                                               NULL,  // totalEntryCount
-                                                                               NULL  // totalEntrySize
-                                                                              );
-                                               if      (error == ERROR_NONE)
-                                               {
-                                                 // already in index -> check if modified/state
-//fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
-                                                 if      (fileInfo->timeModified > lastCheckedDateTime)
-                                                 {
-                                                   // modified -> request update index
-                                                   error = Index_setStorageState(&indexHandle,
-                                                                                 storageId,
-                                                                                 INDEX_STATE_UPDATE_REQUESTED,
-                                                                                 now,
-                                                                                 NULL  // errorMessage
-                                                                                );
-                                                   if (error == ERROR_NONE)
-                                                   {
-                                                     plogMessage(NULL,  // logHandle,
-                                                                 LOG_TYPE_INDEX,
-                                                                 "INDEX",
-                                                                 "Auto requested update index for '%s'",
-                                                                 String_cString(printableStorageName)
-                                                                );
-                                                   }
-                                                 }
-                                                 else if (indexState == INDEX_STATE_OK)
-                                                 {
-                                                   // set last checked date/time
-                                                   error = Index_setStorageState(&indexHandle,
-                                                                                 storageId,
-                                                                                 INDEX_STATE_OK,
-                                                                                 now,
-                                                                                 NULL  // errorMessage
-                                                                                );
-                                                 }
-                                               }
-                                               else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-                                               {
-                                                 // add to index
-                                                 error = Index_newStorage(&indexHandle,
-                                                                          INDEX_ID_NONE, // uuidId
-                                                                          INDEX_ID_NONE, // entityId
-                                                                          NULL,  // hostName
-                                                                          NULL,  // userName
-                                                                          storageName,
-                                                                          0LL,  // createdDateTime
-                                                                          0LL,  // size
-                                                                          INDEX_STATE_UPDATE_REQUESTED,
-                                                                          INDEX_MODE_AUTO,
-                                                                          NULL  // storageId
-                                                                         );
-                                                 if (error == ERROR_NONE)
-                                                 {
-                                                   plogMessage(NULL,  // logHandle,
-                                                               LOG_TYPE_INDEX,
-                                                               "INDEX",
-                                                               "Auto requested add index for '%s'",
-                                                               String_cString(printableStorageName)
-                                                              );
-                                                 }
-                                               }
-                                               break;
-                                             default:
-                                               break;
-                                           }
-                                         }
-                                       }
-                                       else
-                                       {
-                                         error = ERROR_NONE;
-                                       }
-
-                                       return error;
-                                     },NULL),
-                                     CALLBACK_(NULL,NULL)
-                                    );
-              }
-            }
-          }
-
-          String_delete(storageDirectoryName);
-        }
-        Job_doneOptions(&jobOptions);
+        autoAddUpdateIndex(&indexHandle);
         if (isQuit())
         {
           break;
         }
 
-        // delete not existing and expired indizes
-        if (isMaintenanceTime(Misc_getCurrentDateTime(),NULL))
-        {
-          error = Index_initListStorages(&indexQueryHandle,
-                                         &indexHandle,
-                                         INDEX_ID_ANY,  // uuidId
-                                         INDEX_ID_ANY,  // entity id
-                                         NULL,  // jobUUID
-                                         NULL,  // scheduleUUID,
-                                         NULL,  // indexIds
-                                         0,  // indexIdCount
-                                         INDEX_TYPE_SET_ALL,
-                                         INDEX_STATE_SET_ALL,
-                                         INDEX_MODE_SET_ALL,
-                                         NULL,  // hostName
-                                         NULL,  // userName
-                                         NULL,  // name
-                                         INDEX_STORAGE_SORT_MODE_NONE,
-                                         DATABASE_ORDERING_NONE,
-                                         0LL,  // offset
-                                         INDEX_UNLIMITED
-                                        );
-          if (error == ERROR_NONE)
-          {
-            now    = Misc_getCurrentDateTime();
-            string = String_new();
-            while (   !isQuit()
-                   && Index_getNextStorage(&indexQueryHandle,
-                                           NULL,  // uuidId
-                                           NULL,  // jobUUID
-                                           NULL,  // entityId
-                                           NULL,  // scheduleUUID
-                                           NULL,  // hostName
-                                           NULL,  // userName
-                                           NULL,  // comment
-                                           NULL,  // createdDateTime
-                                           NULL,  // archiveType
-                                           &storageId,
-                                           storageName,
-                                           &createdDateTime,
-                                           NULL,  // size
-                                           &indexState,
-                                           &indexMode,
-                                           &lastCheckedDateTime,
-                                           NULL,  // errorMessage
-                                           NULL,  // totalEntryCount
-                                           NULL  // totalEntrySize
-                                          )
-                  )
-            {
-              // get printable name (if possible)
-              error = Storage_parseName(&storageSpecifier,storageName);
-              if (error == ERROR_NONE)
-              {
-                Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
-              }
-              else
-              {
-                String_set(printableStorageName,storageName);
-              }
-
-              if (   (indexMode == INDEX_MODE_AUTO)
-                  && (indexState != INDEX_STATE_UPDATE_REQUESTED)
-                  && (indexState != INDEX_STATE_UPDATE)
-                  && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
-                  && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
-                 )
-              {
-                Index_deleteStorage(&indexHandle,storageId);
-
-                plogMessage(NULL,  // logHandle,
-                            LOG_TYPE_INDEX,
-                            "INDEX",
-                            "Auto deleted index for '%s', last checked %s",
-                            String_cString(printableStorageName),
-                            String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,FALSE,NULL))
-                           );
-              }
-            }
-            Index_doneList(&indexQueryHandle);
-            String_delete(string);
-          }
-        }
+        autoCleanIndex(&indexHandle);
         if (isQuit())
         {
           break;
         }
+      }
       }
       if (isQuit())
       {
@@ -4946,12 +5042,6 @@ LOCAL void autoIndexThreadCode(void)
   }
 
   // free resources
-  String_delete(storageName);
-  String_delete(printableStorageName);
-  String_delete(pattern);
-  String_delete(baseName);
-  Storage_doneSpecifier(&storageSpecifier);
-  StringList_done(&storageDirectoryList);
 }
 
 /*---------------------------------------------------------------------*/
@@ -19470,8 +19560,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
           String_set(printableStorageName,storageName);
         }
 
-        // delete from index
-        error = Index_deleteStorage(indexHandle,storageId);
+        // purge from index
+        error = IndexStorage_purge(indexHandle,
+                                   storageId,
+                                   NULL  // progressInfo
+                                  );
         if (error == ERROR_NONE)
         {
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -19541,8 +19634,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (!INDEX_ID_IS_NONE(storageId))
   {
-    // delete storage index
-    error = Index_deleteStorage(indexHandle,storageId);
+    // purge storage index
+    error = IndexStorage_purge(indexHandle,
+                               storageId,
+                               NULL  // progressInfo
+                              );
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
