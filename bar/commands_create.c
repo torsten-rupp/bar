@@ -50,6 +50,7 @@
 #include "crypt.h"
 #include "storage.h"
 #include "continuous.h"
+#include "index/index_storages.h"
 
 #include "commands_create.h"
 
@@ -4350,8 +4351,11 @@ NULL, // masterIO
           Storage_done(&storageInfo);
         }
 
-        // delete index of storage
-        error = Index_deleteStorage(indexHandle,oldestStorageId);
+        // purge index of storage
+        error = IndexStorage_purge(indexHandle,
+                                   oldestStorageId,
+                                   NULL  // progressInfo
+                                  );
         if (error != ERROR_NONE)
         {
           logMessage(logHandle,
@@ -4569,8 +4573,11 @@ NULL, // masterIO
           Storage_done(&storageInfo);
         }
 
-        // delete index of storage
-        error = Index_deleteStorage(indexHandle,oldestStorageId);
+        // purge index of storage
+        error = IndexStorage_purge(indexHandle,
+                                   oldestStorageId,
+                                   NULL  // progressInfo
+                                  );
         if (error != ERROR_NONE)
         {
           logMessage(logHandle,
@@ -4908,7 +4915,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                      {
                        if (!appendFlag && !INDEX_ID_IS_NONE(storageMsg.storageId))
                        {
-                         Index_purgeStorage(createInfo->indexHandle,storageMsg.storageId);
+                         IndexStorage_purge(createInfo->indexHandle,
+                                            storageMsg.storageId,
+                                            NULL  // progressInfo
+                                           );
                        }
                      }
                     );
@@ -5339,7 +5349,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
   {
     // discard index
-    if (!INDEX_ID_IS_NONE(storageMsg.storageId)) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+    if (!INDEX_ID_IS_NONE(storageMsg.storageId))
+    {
+      (void)IndexStorage_purge(createInfo->indexHandle,
+                               storageMsg.storageId,
+                               NULL  // progressInfo
+                              );
+    }
 
     // delete temporary storage file
     error = File_delete(storageMsg.intermediateFileName,FALSE);

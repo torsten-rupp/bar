@@ -4185,7 +4185,7 @@ test_image_operations: \
 test_image_operations_raw:  \
   $(TEST_CONFIGS)
 	# raw
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
@@ -4243,7 +4243,7 @@ test_image_operations_ext2: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT2@,)
 	# ext2
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
@@ -4476,7 +4476,7 @@ test_image_operations_ext3: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT3@,)
 	# ext3
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
@@ -4707,7 +4707,7 @@ test_image_operations_ext4: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_EXT4@,)
 	# ext4
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
@@ -4954,7 +4954,7 @@ test_image_operations_fat12: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@#
 	# FAT12 zero-data
@@ -5017,7 +5017,7 @@ test_image_operations_fat16: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@#
 	# FAT16 zero-data
@@ -5080,7 +5080,7 @@ test_image_operations_fat32: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@#
 	# FAT32 zero-data
@@ -5158,7 +5158,7 @@ test_image_operations_reiserfs3: \
 ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@#
 	# ReiserFS 3 zero-data
@@ -5263,7 +5263,7 @@ ifeq ($(TEST_IMAGE_OPERATIONS),yes)
 	# delta tests
 	@$(call functionInfoHeader,test image operation dryrun)
 	@#
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
 	# raw zero-data
@@ -5514,6 +5514,8 @@ test_index_operations_tool: \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX) \
   $(TEST_FILES)
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@#
 	# bar-index operations
 	@$(call functionInfoHeader,test index tool operations)
 	@$(call functionVerifyParameter,BAR_STORAGE)
@@ -5543,7 +5545,9 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --check $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(INTERMEDIATE_DIR)/test.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
+	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# operations with non-empty database
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
@@ -5555,6 +5559,7 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(INTERMEDIATE_DIR)/test.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-jobs $(LOG)
@@ -5580,6 +5585,7 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -n "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
+	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# newest entries in index
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)

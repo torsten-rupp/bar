@@ -2506,12 +2506,15 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
       return error;
     }
 
-    // delete storages
+    // purge storages
     if (error == ERROR_NONE)
     {
       ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
       {
-        error = Index_deleteStorage(indexHandle,INDEX_ID_STORAGE(storageId));
+        error = IndexStorage_purge(indexHandle,
+                                   INDEX_ID_STORAGE(storageId),
+                                   NULL  // progressInfo
+                                  );
       }
     }
     if (error != ERROR_NONE)
@@ -2523,7 +2526,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // set deleted flag
+      // purge entity (mark as deleted)
       error = Database_update(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "entities",

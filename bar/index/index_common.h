@@ -168,10 +168,10 @@ typedef struct
 //  uint64     cycleCounter;
   #ifdef INDEX_DEBUG_LOCK
     ThreadLWPId threadLWPId;
-    #ifndef NDEBUG
+    #if defined(NDEBUG) && defined(HAVE_BACKTRACE)
       void const *stackTrace[16];
       uint       stackTraceSize;
-    #endif /* NDEBUG */
+    #endif /* defined(NDEBUG) && defined(HAVE_BACKTRACE) */
   #endif /* INDEX_DEBUG_LOCK */
 } ThreadInfo;
 
@@ -343,9 +343,9 @@ INLINE void IndexCommon_addIndexInUseThreadInfo(void)
   threadInfo.threadId = Thread_getCurrentId();
   #ifdef INDEX_DEBUG_LOCK
     threadInfo.threadLWPId = Thread_getCurrentLWPId();
-    #ifdef HAVE_BACKTRACE
+    #if defined(NDEBUG) && defined(HAVE_BACKTRACE)
       BACKTRACE(threadInfo.stackTrace,threadInfo.stackTraceSize);
-    #endif /* HAVE_BACKTRACE */
+    #endif /* defined(NDEBUG) && defined(HAVE_BACKTRACE) */
   #endif /* INDEX_DEBUG_LOCK */
 
   SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -435,6 +435,8 @@ INLINE bool IndexCommon_isIndexInUse(void)
   return indexInUse;
 }
 #endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
+
+const char *IndexCommon_getIndexInUseInfo(void);
 
 /***********************************************************************\
 * Name   : IndexCommon_isMaintenanceTime
@@ -618,8 +620,8 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
                          );
 
 /***********************************************************************\
-* Name   : IndexCommon_deleteById
-* Purpose: delete entry in index
+* Name   : IndexCommon_deleteByIds
+* Purpose: delete by ids
 * Input  : indexHandle       - index handle
 *          changedRowCount   - deleted entries count variable (can be NULL)
 *          tableName         - table name,
@@ -632,14 +634,14 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexCommon_deleteById(IndexHandle      *indexHandle,
-                              bool             *doneFlag,
-                              ulong            *deletedCounter,
-                              const char       *tableName,
-                              const char       *columnName,
-                              const DatabaseId ids[],
-                              ulong            idCount
-                             );
+Errors IndexCommon_deleteByIds(IndexHandle      *indexHandle,
+                               bool             *doneFlag,
+                               ulong            *deletedCounter,
+                               const char       *tableName,
+                               const char       *columnName,
+                               const DatabaseId ids[],
+                               ulong            idCount
+                              );
 
 // TODO: comment
 void IndexCommon_verify(IndexHandle *indexHandle,

@@ -7526,6 +7526,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 {
   Errors     error;
   FileHandle handle;
+  char       sqlString[256];
 
   printInfo("Vacuum...");
   switch (Database_getType(databaseHandle))
@@ -7559,10 +7560,9 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 "VACUUM INTO ?",
+                                 stringFormat(sqlString,sizeof(sqlString),"VACUUM INTO '%s'",toFileName),
                                  DATABASE_PARAMETERS
                                  (
-                                   DATABASE_PARAMETER_STRING(toFileName)
                                  )
                                 );
         if (error != ERROR_NONE)

@@ -38,6 +38,7 @@
 #include "bar.h"
 #include "jobs.h"
 #include "server.h"
+#include "index/index_storages.h"
 
 #include "connector.h"
 
@@ -3132,8 +3133,9 @@ LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, Inde
   if (indexHandle != NULL)
   {
     // purge storage
-    error = Index_purgeStorage(indexHandle,
-                               storageId
+    error = IndexStorage_purge(indexHandle,
+                               storageId,
+                               NULL  // progressInfo
                               );
     if (error != ERROR_NONE)
     {
