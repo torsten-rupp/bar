@@ -65,7 +65,7 @@ Errors IndexEntity_cleanUp(IndexHandle *indexHandle);
 Errors IndexEntity_purge(IndexHandle *indexHandle,
                          bool        *doneFlag,
                          ulong       *deletedCounter,
-                         DatabaseId  entityId
+                         IndexId     entityId
                         );
 
 /***********************************************************************\
@@ -87,7 +87,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
 Errors IndexEntity_prune(IndexHandle *indexHandle,
                          bool        *doneFlag,
                          ulong       *deletedCounter,
-                         DatabaseId  entityId
+                         IndexId     entityId
                         );
 
 /***********************************************************************\
@@ -121,7 +121,7 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
-                                    DatabaseId  entityId
+                                    IndexId     entityId
                                    );
 
 #ifdef __cplusplus

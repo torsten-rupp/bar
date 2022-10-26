@@ -78,12 +78,8 @@ const char *DATABASE_SAVE_PATTERNS[] =
   ".*\\_old\\d\\d\\d$"
 };
 
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-#else
-const IndexId INDEX_ID_NONE = {INDEX_TYPE_NONE, 0LL};
-const IndexId INDEX_ID_ANY  = {INDEX_TYPE_NONE,-1LL};
-#endif
+const IndexId INDEX_ID_NONE = {.type = INDEX_TYPENONE,.value = DATABASE_ID_NONE};
+const IndexId INDEX_ID_ANY  = {.type = INDEX_TYPENONE,.value = DATABASE_ID_ANY };
 
 // index open mask
 #define INDEX_OPEN_MASK_MODE  0x0000000F
@@ -1180,7 +1176,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount,
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -2054,7 +2050,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0L,  // indexIdCount
                                 NULL,  // entryIds
                                 0L,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
+                                INDEX_TYPESET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
                                 FALSE,  // fragmentsCount
@@ -2371,7 +2367,7 @@ LOCAL void indexThreadCode(void)
     uint                oldDatabaseCount;
     String              failFileName;
   #endif /* INDEX_IMPORT_OLD_DATABASE */
-  DatabaseId  storageId,entityId;
+  IndexId     storageId,entityId;
   String      storageName;
   uint        sleepTime;
 
@@ -2528,7 +2524,7 @@ LOCAL void indexThreadCode(void)
 //          (void)cleanUpOrphanedStorages(&indexHandle);
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
-          storageId = DATABASE_ID_NONE;
+          storageId = INDEX_ID_NONE;
           INDEX_DOX(error,
                     &indexHandle,
           {
@@ -2541,8 +2537,8 @@ LOCAL void indexThreadCode(void)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(valueCount);
 
-                                  storageId = values[0].id;
-                                  entityId  = values[1].id;
+                                  storageId = INDEX_ID_STORAGE(values[0].id);
+                                  entityId  = INDEX_ID_ENTITY (values[1].id);
                                   String_set(storageName,values[2].string);
 
                                   return ERROR_NONE;
@@ -2594,7 +2590,7 @@ LOCAL void indexThreadCode(void)
             break;
           }
 
-          if (storageId != DATABASE_ID_NONE)
+          if (!INDEX_ID_IS_NONE(storageId))
           {
             // remove storage from database
             do
@@ -2622,8 +2618,8 @@ LOCAL void indexThreadCode(void)
             }
 
             // prune entity
-            if (   (entityId != DATABASE_ID_NONE)
-                && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+            if (   !INDEX_ID_IS_NONE(entityId)
+                && !INDEX_ID_IS_DEFAULT_ENTITY(entityId)
                )
             {
               do
@@ -2664,7 +2660,7 @@ LOCAL void indexThreadCode(void)
             }
           }
         }
-        while (   (storageId != DATABASE_ID_NONE)
+        while (   !INDEX_ID_IS_NONE(storageId)
                && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
                && !indexQuitFlag
               );
@@ -3540,7 +3536,7 @@ bool Index_containsType(const IndexId indexIds[],
 
   for (i = 0; i < indexIdCount; i++)
   {
-    if (Index_getType(indexIds[i]) == indexType)
+    if (INDEX_TYPE(indexIds[i]) == indexType)
     {
       return TRUE;
     }

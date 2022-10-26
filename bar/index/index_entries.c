@@ -706,13 +706,13 @@ if (error != ERROR_NONE) fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Er
 
 Errors IndexEntry_collectIds(Array        *entryIds,
                              IndexHandle  *indexHandle,
-                             DatabaseId   storageId,
+                             IndexId      storageId,
                              ProgressInfo *progressInfo
                             )
 {
   Errors error;
   #ifdef INDEX_DEBUG_PURGE
-    uint64             t0,dt[10];
+    uint64 t0,dt[10];
   #endif
 
   UNUSED_VARIABLE(progressInfo);
@@ -738,7 +738,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              "storageId=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(storageId)
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                              ),
                              DATABASE_UNLIMITED
                             );
@@ -764,7 +764,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              "storageId=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(storageId)
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                              ),
                              DATABASE_UNLIMITED
                             );
@@ -789,7 +789,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              "storageId=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(storageId)
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                              ),
                              DATABASE_UNLIMITED
                             );
@@ -814,7 +814,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              "storageId=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(storageId)
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                              ),
                              DATABASE_UNLIMITED
                             );
@@ -1018,15 +1018,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   // get id sets
   for (i = 0; i < indexIdCount; i++)
   {
-    switch (Index_getType(indexIds[i]))
+    switch (INDEX_TYPE(indexIds[i]))
     {
       case INDEX_TYPE_UUID:
         if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_appendFormat(uuidIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(uuidIdsString,"%"PRIi64,INDEX_DATABASE_ID(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-        String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
         break;
@@ -1040,7 +1040,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-    String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+    String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
   }
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_getEntriesInfo --------------------------------------------------------\n",__FILE__,__LINE__);
@@ -1076,8 +1076,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           switch (indexType)
           {
-            case INDEX_TYPE_NONE:
-            case INDEX_TYPE_ANY:
+            case INDEX_TYPENONE:
+            case INDEX_TYPEANY:
               error = Database_get(&indexHandle->databaseHandle,
                                    CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                    {
@@ -1468,8 +1468,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           switch (indexType)
           {
-            case INDEX_TYPE_NONE:
-            case INDEX_TYPE_ANY:
+            case INDEX_TYPENONE:
+            case INDEX_TYPEANY:
               error = Database_get(&indexHandle->databaseHandle,
                                    CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                    {
@@ -2052,12 +2052,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     if (newestOnly)
     {
       Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
-      Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
+      Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entriesNewest.type=%u",indexType);
     }
     else
     {
       Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-      Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
+      Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entries.type=%u",indexType);
     }
 
     #ifdef INDEX_DEBUG_LIST_INFO
@@ -2365,15 +2365,15 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   // get id sets
   for (i = 0; i < indexIdCount; i++)
   {
-    switch (Index_getType(indexIds[i]))
+    switch (INDEX_TYPE(indexIds[i]))
     {
       case INDEX_TYPE_UUID:
         if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_appendFormat(uuidIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(uuidIdsString,"%"PRIi64,INDEX_DATABASE_ID(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-        String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
         break;
@@ -2387,7 +2387,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-    String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+    String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
   }
 
   // get filters
@@ -2397,11 +2397,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
   if (newestOnly)
   {
-    Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
+    Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entriesNewest.type=%u",indexType);
   }
   else
   {
-    Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
+    Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entries.type=%u",indexType);
   }
 
   // get sort mode, ordering
@@ -2972,12 +2972,12 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
   assert(indexHandle->masterIO == NULL);
-  assert(   (Index_getType(entryId) == INDEX_TYPE_FILE)
-         || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
-         || (Index_getType(entryId) == INDEX_TYPE_DIRECTORY)
-         || (Index_getType(entryId) == INDEX_TYPE_LINK)
-         || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
-         || (Index_getType(entryId) == INDEX_TYPE_SPECIAL)
+  assert(   (INDEX_TYPE(entryId) == INDEX_TYPE_FILE)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_IMAGE)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_DIRECTORY)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_LINK)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_HARDLINK)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_SPECIAL)
         );
 
   // check init error
@@ -3019,7 +3019,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(entryId))
                            ),
                            NULL,  // groupBy
                            "entryFragments.offset ASC",
@@ -3089,12 +3089,12 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(   (Index_getType(entryId) == INDEX_TYPE_FILE)
-         || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
-         || (Index_getType(entryId) == INDEX_TYPE_DIRECTORY)
-         || (Index_getType(entryId) == INDEX_TYPE_LINK)
-         || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
-         || (Index_getType(entryId) == INDEX_TYPE_SPECIAL)
+  assert(   (INDEX_TYPE(entryId) == INDEX_TYPE_FILE)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_IMAGE)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_DIRECTORY)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_LINK)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_HARDLINK)
+         || (INDEX_TYPE(entryId) == INDEX_TYPE_SPECIAL)
         );
 
   // check init error
@@ -3109,7 +3109,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
 // TODO: use deleteSubEntry
-    switch (Index_getType(entryId))
+    switch (INDEX_TYPE(entryId))
     {
       case INDEX_TYPE_FILE:
         error = Database_delete(&indexHandle->databaseHandle,
@@ -3119,7 +3119,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 "entryId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                                 ),
                                 DATABASE_UNLIMITED
                                );
@@ -3132,7 +3132,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 "entryId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                                 ),
                                 DATABASE_UNLIMITED
                                );
@@ -3145,7 +3145,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 "entryId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                                 ),
                                 DATABASE_UNLIMITED
                                );
@@ -3158,7 +3158,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 "entryId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                                 ),
                                 DATABASE_UNLIMITED
                                );
@@ -3171,7 +3171,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 "entryId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                                 ),
                                 DATABASE_UNLIMITED
                                );
@@ -3184,7 +3184,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 "entryId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                                 ),
                                 DATABASE_UNLIMITED
                                );
@@ -3208,7 +3208,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                             "entryId=?",
                             DATABASE_FILTERS
                             (
-                              DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                             ),
                             DATABASE_UNLIMITED
                            );
@@ -3225,7 +3225,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                             "id=?",
                             DATABASE_FILTERS
                             (
-                              DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
                             ),
                             DATABASE_UNLIMITED
                            );
@@ -3299,17 +3299,17 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   entityIdsString = String_new();
   for (i = 0; i < entityIdCount; i++)
   {
-    assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
+    assert(INDEX_TYPE(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
-    if (Index_getType(entryIds[i]) == INDEX_TYPE_FILE)
+    if (INDEX_TYPE(entryIds[i]) == INDEX_TYPE_FILE)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
     }
   }
 
@@ -3459,17 +3459,17 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   entityIdsString = String_new();
   for (i = 0; i < entityIdCount; i++)
   {
-    assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
+    assert(INDEX_TYPE(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
-    if (Index_getType(entryIds[i]) == INDEX_TYPE_IMAGE)
+    if (INDEX_TYPE(entryIds[i]) == INDEX_TYPE_IMAGE)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
     }
   }
 
@@ -3620,17 +3620,17 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   entityIdsString = String_new();
   for (i = 0; i < entityIdCount; i++)
   {
-    assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
+    assert(INDEX_TYPE(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
-    if (Index_getType(entryIds[i]) == INDEX_TYPE_DIRECTORY)
+    if (INDEX_TYPE(entryIds[i]) == INDEX_TYPE_DIRECTORY)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
     }
   }
 
@@ -3778,17 +3778,17 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   entityIdsString = String_new();
   for (i = 0; i < entityIdCount; i++)
   {
-    assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
+    assert(INDEX_TYPE(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
-    if (Index_getType(entryIds[i]) == INDEX_TYPE_LINK)
+    if (INDEX_TYPE(entryIds[i]) == INDEX_TYPE_LINK)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
     }
   }
   String_appendCString(entryIdsString,"))");
@@ -3940,17 +3940,17 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   entityIdsString = String_new();
   for (i = 0; i < entityIdCount; i++)
   {
-    assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
+    assert(INDEX_TYPE(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
-    if (Index_getType(entryIds[i]) == INDEX_TYPE_HARDLINK)
+    if (INDEX_TYPE(entryIds[i]) == INDEX_TYPE_HARDLINK)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
     }
   }
 
@@ -4101,16 +4101,16 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   entryIdsString = String_new();
   for (i = 0; i < entityIdCount; i++)
   {
-    assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
+    assert(INDEX_TYPE(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,INDEX_DATABASE_ID(entityIds[i]));
   }
   for (i = 0; i < entryIdCount; i++)
   {
-    if (Index_getType(entryIds[i]) == INDEX_TYPE_SPECIAL)
+    if (INDEX_TYPE(entryIds[i]) == INDEX_TYPE_SPECIAL)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,INDEX_DATABASE_ID(entryIds[i]));
     }
   }
 
@@ -4238,8 +4238,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -4268,7 +4268,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                ",
                                DATABASE_FILTERS
                                (
-                                 DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
+                                 DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
                                  DATABASE_FILTER_STRING(name)
                                )
@@ -4282,7 +4282,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_KEY     ("entityId",        INDEX_DATABASE_ID(entityId)),
                                     DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_FILE),
                                     DATABASE_VALUE_STRING  ("name",            name),
                                     DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
@@ -4292,7 +4292,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     DATABASE_VALUE_UINT    ("groupId",         groupId),
                                     DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_KEY     ("uuidId",          INDEX_DATABASE_ID(uuidId)),
                                     DATABASE_VALUE_UINT64  ("size",            size)
                                   ),
                                   DATABASE_COLUMNS_NONE,
@@ -4377,7 +4377,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
-                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    fragmentOffset),
                                 DATABASE_VALUE_UINT64("size",      fragmentSize)
                               ),
@@ -4391,7 +4391,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
-                                               Index_getDatabaseId(storageId),
+                                               INDEX_DATABASE_ID(storageId),
                                                entryId,
                                                name,
                                                size
@@ -4456,8 +4456,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -4486,7 +4486,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                ",
                                DATABASE_FILTERS
                                (
-                                 DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
+                                 DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
                                  DATABASE_FILTER_STRING(name)
                                )
@@ -4500,7 +4500,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_KEY     ("entityId",        INDEX_DATABASE_ID(entityId)),
                                     DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_IMAGE),
                                     DATABASE_VALUE_STRING  ("name",            name),
                                     DATABASE_VALUE_DATETIME("timeLastAccess",  0LL),
@@ -4510,7 +4510,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     DATABASE_VALUE_UINT    ("groupId",         0),
                                     DATABASE_VALUE_UINT    ("permission",      0),
 
-                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_KEY     ("uuidId",          INDEX_DATABASE_ID(uuidId)),
                                     DATABASE_VALUE_UINT64  ("size",            size)
                                   ),
                                   DATABASE_COLUMNS_NONE,
@@ -4596,7 +4596,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
-                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    blockOffset*(uint64)blockSize),
                                 DATABASE_VALUE_UINT64("size",      blockCount*(uint64)blockSize)
                               ),
@@ -4609,8 +4609,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       }
 
       #ifndef NDEBUG
-        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%"PRIi64" AND totalEntrySize<0",Index_getDatabaseId(storageId));
-        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%"PRIi64" AND totalFileSize<0",Index_getDatabaseId(storageId));
+        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%"PRIi64" AND totalEntrySize<0",INDEX_DATABASE_ID(storageId));
+        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%"PRIi64" AND totalFileSize<0",INDEX_DATABASE_ID(storageId));
       #endif /* not NDEBUG */
 
       return ERROR_NONE;
@@ -4655,8 +4655,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -4677,7 +4677,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_KEY     ("entityId",        INDEX_DATABASE_ID(entityId)),
                                 DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_DIRECTORY),
                                 DATABASE_VALUE_STRING  ("name",            name),
                                 DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
@@ -4687,7 +4687,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                 DATABASE_VALUE_UINT    ("groupId",         groupId),
                                 DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_KEY     ("uuidId",          INDEX_DATABASE_ID(uuidId)),
                                 DATABASE_VALUE_UINT64  ("size",            0)
                               ),
                               DATABASE_COLUMNS_NONE,
@@ -4752,7 +4752,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
-                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_STRING("name",      name)
                               ),
                               DATABASE_COLUMNS_NONE,
@@ -4765,7 +4765,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
-                                               Index_getDatabaseId(storageId),
+                                               INDEX_DATABASE_ID(storageId),
                                                entryId,
                                                name,
                                                0LL
@@ -4827,8 +4827,8 @@ Errors Index_addLink(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
@@ -4852,7 +4852,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_KEY     ("entityId",        INDEX_DATABASE_ID(entityId)),
                                 DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_LINK),
                                 DATABASE_VALUE_STRING  ("name",            linkName),
                                 DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
@@ -4862,7 +4862,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 DATABASE_VALUE_UINT    ("groupId",         groupId),
                                 DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_KEY     ("uuidId",          INDEX_DATABASE_ID(uuidId)),
                                 DATABASE_VALUE_UINT64  ("size",            0)
                               ),
                               DATABASE_COLUMNS_NONE,
@@ -4928,7 +4928,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",         entryId),
-                                DATABASE_VALUE_KEY   ("storageId",       Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_KEY   ("storageId",       INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_STRING("destinationName", destinationName)
                               ),
                               DATABASE_COLUMNS_NONE,
@@ -4941,7 +4941,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
-                                               Index_getDatabaseId(storageId),
+                                               INDEX_DATABASE_ID(storageId),
                                                entryId,
                                                linkName,
                                                0LL
@@ -4998,8 +4998,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -5028,7 +5028,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                ",
                                DATABASE_FILTERS
                                (
-                                 DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
+                                 DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_STRING(name),
                                )
@@ -5042,7 +5042,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_KEY     ("entityId",        INDEX_DATABASE_ID(entityId)),
                                     DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_HARDLINK),
                                     DATABASE_VALUE_STRING  ("name",            name),
                                     DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
@@ -5052,7 +5052,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     DATABASE_VALUE_UINT    ("groupId",         groupId),
                                     DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_KEY     ("uuidId",          INDEX_DATABASE_ID(uuidId)),
                                     DATABASE_VALUE_UINT64  ("size",            size)
                                   ),
                                   DATABASE_COLUMNS_NONE,
@@ -5137,7 +5137,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
-                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    fragmentOffset),
                                 DATABASE_VALUE_UINT64("size",      fragmentSize)
                               ),
@@ -5151,7 +5151,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
-                                               Index_getDatabaseId(storageId),
+                                               INDEX_DATABASE_ID(storageId),
                                                entryId,
                                                name,
                                                size
@@ -5220,8 +5220,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -5242,7 +5242,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_KEY     ("entityId",        INDEX_DATABASE_ID(entityId)),
                                 DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_SPECIAL),
                                 DATABASE_VALUE_STRING  ("name",            name),
                                 DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
@@ -5252,7 +5252,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                 DATABASE_VALUE_UINT    ("groupId",         groupId),
                                 DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_KEY     ("uuidId",          INDEX_DATABASE_ID(uuidId)),
                                 DATABASE_VALUE_UINT64  ("size",            0)
                               ),
                               DATABASE_COLUMNS_NONE,
@@ -5317,7 +5317,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",     entryId),
-                                DATABASE_VALUE_KEY   ("storageId",   Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_KEY   ("storageId",   INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT  ("specialType", specialType),
                                 DATABASE_VALUE_UINT  ("major",       major),
                                 DATABASE_VALUE_UINT  ("minor",       minor)
@@ -5332,7 +5332,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
-                                               Index_getDatabaseId(storageId),
+                                               INDEX_DATABASE_ID(storageId),
                                                entryId,
                                                name,
                                                0LL
@@ -5441,7 +5441,7 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
   assert(   (indexType == INDEX_TYPE_FILE           )
          || (indexType == INDEX_CONST_TYPE_IMAGE    )
          || (indexType == INDEX_CONST_TYPE_DIRECTORY)
@@ -5466,7 +5466,7 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
                             (
-                              DATABASE_VALUE_KEY   ("entityId", Index_getDatabaseId(entityId)),
+                              DATABASE_VALUE_KEY   ("entityId", INDEX_DATABASE_ID(entityId)),
                               DATABASE_VALUE_UINT  ("type",     indexType),
                               DATABASE_VALUE_STRING("name",     entryName)
                             ),
@@ -5491,12 +5491,12 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(   (Index_getType(indexId) == INDEX_TYPE_FILE           )
-         || (Index_getType(indexId) == INDEX_CONST_TYPE_IMAGE    )
-         || (Index_getType(indexId) == INDEX_CONST_TYPE_DIRECTORY)
-         || (Index_getType(indexId) == INDEX_CONST_TYPE_LINK     )
-         || (Index_getType(indexId) == INDEX_CONST_TYPE_HARDLINK )
-         || (Index_getType(indexId) == INDEX_CONST_TYPE_SPECIAL  )
+  assert(   (INDEX_TYPE(indexId) == INDEX_TYPE_FILE           )
+         || (INDEX_TYPE(indexId) == INDEX_CONST_TYPE_IMAGE    )
+         || (INDEX_TYPE(indexId) == INDEX_CONST_TYPE_DIRECTORY)
+         || (INDEX_TYPE(indexId) == INDEX_CONST_TYPE_LINK     )
+         || (INDEX_TYPE(indexId) == INDEX_CONST_TYPE_HARDLINK )
+         || (INDEX_TYPE(indexId) == INDEX_CONST_TYPE_SPECIAL  )
         );
 
   // check init error
@@ -5517,7 +5517,7 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
                              "id=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(Index_getDatabaseId(indexId))
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(indexId))
                              ),
                              DATABASE_UNLIMITED
                             );

@@ -165,12 +165,13 @@ LOCAL Errors updateUUIDAggregates(IndexHandle *indexHandle,
 \***********************************************************************/
 
 LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
-                       DatabaseId  uuidId
+                       IndexId     uuidId
                       )
 {
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE(uuidId) == INDEX_TYPE_UUID);
 
-  return    (uuidId != DATABASE_ID_NONE)
+  return    !INDEX_ID_IS_NONE(uuidId)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entities \
                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -180,7 +181,7 @@ LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
                                   "uuids.id=?",
                                   DATABASE_FILTERS
                                   (
-                                    DATABASE_FILTER_KEY(uuidId)
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(uuidId))
                                   )
                                  );
 }
@@ -203,13 +204,14 @@ Errors IndexUUID_cleanUp(IndexHandle *indexHandle)
 Errors IndexUUID_purge(IndexHandle *indexHandle,
                        bool        *doneFlag,
                        ulong       *deletedCounter,
-                       DatabaseId  uuidId
+                       IndexId     uuidId
                       )
 {
   Errors        error;
 
   assert(indexHandle != NULL);
-  assert(uuidId != DATABASE_ID_NONE);
+  assert(INDEX_TYPE(uuidId) == INDEX_TYPE_UUID);
+  assert(!INDEX_ID_IS_NONE(uuidId));
 
   UNUSED_VARIABLE(doneFlag);
   UNUSED_VARIABLE(deletedCounter);
@@ -224,7 +226,7 @@ Errors IndexUUID_purge(IndexHandle *indexHandle,
                             "id=?",
                             DATABASE_FILTERS
                             (
-                              DATABASE_FILTER_KEY(uuidId)
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(uuidId))
                             ),
                             DATABASE_UNLIMITED
                            );
@@ -240,7 +242,7 @@ Errors IndexUUID_purge(IndexHandle *indexHandle,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_UUID_PURGE uuidId=%"PRIi64,
-                                    INDEX_ID_(INDEX_TYPE_UUID,uuidId)
+                                    uuidId
                                    );
   }
 
@@ -250,13 +252,14 @@ Errors IndexUUID_purge(IndexHandle *indexHandle,
 Errors IndexUUID_prune(IndexHandle *indexHandle,
                        bool        *doneFlag,
                        ulong       *deletedCounter,
-                       DatabaseId  uuidId
+                       IndexId     uuidId
                       )
 {
   Errors        error;
 
   assert(indexHandle != NULL);
-  assert(uuidId != DATABASE_ID_NONE);
+  assert(INDEX_TYPE(uuidId) == INDEX_TYPE_UUID);
+  assert(!INDEX_ID_IS_NONE(uuidId));
 
   UNUSED_VARIABLE(doneFlag);
   UNUSED_VARIABLE(deletedCounter);
@@ -486,22 +489,22 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-                                      if (uuidId                      != NULL) StringMap_getInt64 (resultMap,"uuidId",                     uuidId,                     INDEX_ID_NONE);
-                                      if (executionCountNormal        != NULL) StringMap_getUInt  (resultMap,"executionCountNormal",       executionCountNormal,       0            );
-                                      if (executionCountFull          != NULL) StringMap_getUInt  (resultMap,"executionCountFull",         executionCountFull,         0            );
-                                      if (executionCountIncremental   != NULL) StringMap_getUInt  (resultMap,"executionCountIncremental",  executionCountIncremental,  0            );
-                                      if (executionCountDifferential  != NULL) StringMap_getUInt  (resultMap,"executionCountDifferential", executionCountDifferential, 0            );
-                                      if (executionCountContinuous    != NULL) StringMap_getUInt  (resultMap,"executionCountContinuous",   executionCountContinuous,   0            );
-                                      if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL          );
-                                      if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL          );
-                                      if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL          );
-                                      if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL          );
-                                      if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL          );
-                                      if (totalEntityCount            != NULL) StringMap_getUInt  (resultMap,"totalEntityCount",           totalEntityCount,           0L           );
-                                      if (totalStorageCount           != NULL) StringMap_getUInt  (resultMap,"totalStorageCount",          totalStorageCount,          0            );
-                                      if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL          );
-                                      if (totalEntryCount             != NULL) StringMap_getUInt  (resultMap,"totalEntryCount",            totalEntryCount,            0            );
-                                      if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL          );
+                                      if (uuidId                      != NULL) StringMap_getIndexId(resultMap,"uuidId",                     uuidId,                     INDEX_ID_NONE);
+                                      if (executionCountNormal        != NULL) StringMap_getUInt   (resultMap,"executionCountNormal",       executionCountNormal,       0            );
+                                      if (executionCountFull          != NULL) StringMap_getUInt   (resultMap,"executionCountFull",         executionCountFull,         0            );
+                                      if (executionCountIncremental   != NULL) StringMap_getUInt   (resultMap,"executionCountIncremental",  executionCountIncremental,  0            );
+                                      if (executionCountDifferential  != NULL) StringMap_getUInt   (resultMap,"executionCountDifferential", executionCountDifferential, 0            );
+                                      if (executionCountContinuous    != NULL) StringMap_getUInt   (resultMap,"executionCountContinuous",   executionCountContinuous,   0            );
+                                      if (averageDurationNormal       != NULL) StringMap_getUInt64 (resultMap,"averageDurationNormal",      averageDurationNormal,      0LL          );
+                                      if (averageDurationFull         != NULL) StringMap_getUInt64 (resultMap,"averageDurationFull",        averageDurationFull,        0LL          );
+                                      if (averageDurationIncremental  != NULL) StringMap_getUInt64 (resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL          );
+                                      if (averageDurationDifferential != NULL) StringMap_getUInt64 (resultMap,"averageDurationDifferential",averageDurationDifferential,0LL          );
+                                      if (averageDurationContinuous   != NULL) StringMap_getUInt64 (resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL          );
+                                      if (totalEntityCount            != NULL) StringMap_getUInt   (resultMap,"totalEntityCount",           totalEntityCount,           0L           );
+                                      if (totalStorageCount           != NULL) StringMap_getUInt   (resultMap,"totalStorageCount",          totalStorageCount,          0            );
+                                      if (totalStorageSize            != NULL) StringMap_getUInt64 (resultMap,"totalStorageSize",           totalStorageSize,           0LL          );
+                                      if (totalEntryCount             != NULL) StringMap_getUInt   (resultMap,"totalEntryCount",            totalEntryCount,            0            );
+                                      if (totalEntrySize              != NULL) StringMap_getUInt64 (resultMap,"totalEntrySize",             totalEntrySize,             0LL          );
 
                                       return ERROR_NONE;
                                     },NULL),
@@ -532,7 +535,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
+  assert(INDEX_ID_IS_ANY(uuidId) || (INDEX_TYPE(uuidId) == INDEX_TYPE_UUID));
 
   if (lastExecutedDateTime != NULL) (*lastExecutedDateTime) = 0LL;
   if (totalEntityCount     != NULL) (*totalEntityCount)     = 0;
@@ -553,7 +556,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
 // TODO: FTS_uuids do not exists
   IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids.name",name);
 
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
   Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID='%S'",entityUUID);
   Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
@@ -646,7 +649,7 @@ UNUSED_VARIABLE(uuidId);
   ulong               totalSpecialCount;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
+  assert(INDEX_TYPE(uuidId) == INDEX_TYPE_UUID);
 
   if (indexHandle->masterIO == NULL)
   {
@@ -688,7 +691,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -734,7 +737,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -778,7 +781,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -822,7 +825,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -868,7 +871,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -912,7 +915,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -955,7 +958,7 @@ UNUSED_VARIABLE(uuidId);
                               "id=?",
                               DATABASE_FILTERS
                               (
-                                DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
+                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(uuidId))
                               )
                              );
       if (error != ERROR_NONE)
@@ -1000,7 +1003,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -1046,7 +1049,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -1090,7 +1093,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -1134,7 +1137,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -1180,7 +1183,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -1224,7 +1227,7 @@ UNUSED_VARIABLE(uuidId);
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                             DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(uuidId))
                            ),
                            NULL,  // orderGroup
                            0LL,
@@ -1267,7 +1270,7 @@ UNUSED_VARIABLE(uuidId);
                               "id=?",
                               DATABASE_FILTERS
                               (
-                                DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
+                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(uuidId))
                               )
                              );
       if (error != ERROR_NONE)
@@ -1506,7 +1509,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-                                      if (StringMap_getInt64(resultMap,"uuidId",uuidId,INDEX_ID_NONE))
+                                      if (StringMap_getIndexId(resultMap,"uuidId",uuidId,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
                                       }
@@ -1573,7 +1576,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                          "uuids.id=?",
                          DATABASE_FILTERS
                          (
-                           DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
+                           DATABASE_FILTER_KEY (INDEX_DATABASE_ID(uuidId))
                          ),
                          NULL,  // groupBy
                          NULL,  // orderBy
@@ -1594,7 +1597,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                             "id=?",
                             DATABASE_FILTERS
                             (
-                              DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(uuidId))
                             ),
                             DATABASE_UNLIMITED
                            );
@@ -1619,14 +1622,12 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
   bool emptyFlag;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
+  assert(INDEX_TYPE(uuidId) == INDEX_TYPE_UUID);
 
   INDEX_DOX(emptyFlag,
             indexHandle,
   {
-    return isEmptyUUID(indexHandle,
-                       Index_getDatabaseId(uuidId)
-                      );
+    return isEmptyUUID(indexHandle,uuidId);
   });
 
   return emptyFlag;
@@ -1639,7 +1640,7 @@ Errors Index_purgeUUID(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_UUID);
+  assert(INDEX_TYPE(indexId) == INDEX_TYPE_UUID);
 
   if (indexHandle->masterIO == NULL)
   {
@@ -1649,7 +1650,7 @@ Errors Index_purgeUUID(IndexHandle *indexHandle,
       return IndexUUID_purge(indexHandle,
                              NULL,  // doneFlag
                              NULL,  // deletedCounter
-                             Index_getDatabaseId(indexId)
+                             indexId
                             );
     });
   }
@@ -1674,7 +1675,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_UUID);
+  assert(INDEX_TYPE(indexId) == INDEX_TYPE_UUID);
 
   if (indexHandle->masterIO == NULL)
   {
@@ -1684,7 +1685,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
       return IndexUUID_prune(indexHandle,
                              NULL,  // doneFlag
                              NULL,  // deletedCounter
-                             Index_getDatabaseId(indexId)
+                             indexId
                             );
     });
   }
@@ -1737,7 +1738,7 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
     error = IndexUUID_prune(indexHandle,
                             doneFlag,
                             deletedCounter,
-                            uuidId
+                            INDEX_ID_UUID(uuidId)
                            );
   }
   if (error != ERROR_NONE)

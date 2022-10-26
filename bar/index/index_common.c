@@ -708,7 +708,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0L,  // indexIdCount
                                 NULL,  // entryIds
                                 0L,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
+                                INDEX_TYPESET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
                                 FALSE,  // fragmentsCount

@@ -123,7 +123,7 @@ LOCAL Errors importIndexVersion2(IndexHandle *oldIndexHandle,
                                                        TRUE,  // locked
                                                        &entityId
                                                       );
-                               (void)Database_setTableColumnListId(toColumnList,"entityId",Index_getDatabaseId(entityId));
+                               (void)Database_setTableColumnListId(toColumnList,"entityId",INDEX_DATABASE_ID(entityId));
 
                                return error;
                              },NULL),

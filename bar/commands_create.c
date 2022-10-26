@@ -4245,7 +4245,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                      NULL,  // entityUUID
                                      NULL,  // indexIds
                                      0,   // indexIdCount
-                                     INDEX_TYPE_SET_ALL,
+                                     INDEX_TYPESET_ALL,
                                        INDEX_STATE_SET(INDEX_STATE_OK)
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
@@ -4462,7 +4462,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                      NULL,  // entityUUID
                                      NULL,  // indexIds
                                      0,   // indexIdCount
-                                     INDEX_TYPE_SET_ALL,
+                                     INDEX_TYPESET_ALL,
                                        INDEX_STATE_SET(INDEX_STATE_OK)
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
@@ -5165,7 +5165,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            NULL,  // entityUUID
                                            NULL,  // indexIds
                                            0,  // indexIdCount
-                                           INDEX_TYPE_SET_ALL,
+                                           INDEX_TYPESET_ALL,
                                            INDEX_STATE_SET_ALL,
                                            INDEX_MODE_SET_ALL,
                                            NULL,  // hostName

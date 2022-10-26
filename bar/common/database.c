@@ -16161,12 +16161,14 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   }
 
   // execute statement (Note: rows are returned via Database_getNextRow())
+  Misc_initTimeout(&timeoutInfo,databaseStatementHandle->databaseHandle->timeout);
   error = executePreparedStatement(databaseStatementHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    flags,
                                    Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                    );
+  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);

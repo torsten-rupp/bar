@@ -1468,7 +1468,7 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                                                             fromEntryId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
 
-                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPE_NONE);
+                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPENONE);
                                                             toEntryId = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
