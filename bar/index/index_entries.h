@@ -54,7 +54,7 @@
 
 Errors IndexEntry_collectIds(Array        *entryIds,
                              IndexHandle  *indexHandle,
-                             DatabaseId   storageId,
+                             IndexId      storageId,
                              ProgressInfo *progressInfo
                             );
 

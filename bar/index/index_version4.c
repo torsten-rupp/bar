@@ -713,7 +713,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                                                          &entityId
                                                         );
                                }
-                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(entityId));
+                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",INDEX_DATABASE_ID(entityId));
 
                                return error;
                              },NULL),

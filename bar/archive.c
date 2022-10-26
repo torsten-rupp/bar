@@ -37,6 +37,7 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index/index.h"
+#include "index/index_storages.h"
 
 #include "archive.h"
 
@@ -1640,7 +1641,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+  assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
 
   error = ERROR_NONE;
 
@@ -1826,7 +1827,7 @@ LOCAL Errors autoFlushArchiveIndexList(ArchiveHandle *archiveHandle,
                                       )
 {
   assert(archiveHandle != NULL);
-  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+  assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
 
   return flushArchiveIndexList(archiveHandle,uuidId,entityId,storageId,MAX_INDEX_LIST);
 }
@@ -3166,7 +3167,7 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
   (*archiveSize) = 0LL;
 
   // flush index entries
-  if (archiveHandle->storageId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(archiveHandle->storageId))
   {
     error = flushArchiveIndexList(archiveHandle,
                                   archiveHandle->uuidId,
@@ -5955,7 +5956,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions != NULL);
   assert(archiveStoreFunction != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
 
 //TODO:
 UNUSED_VARIABLE(storageInfo);
@@ -13757,7 +13758,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
 
       // flush index list
       if (   (error == ERROR_NONE)
-          && (archiveEntryInfo->archiveHandle->storageId != INDEX_ID_NONE)
+          && !INDEX_ID_IS_NONE(archiveEntryInfo->archiveHandle->storageId)
          )
       {
         error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
@@ -15321,7 +15322,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
 
   assert(indexHandle != NULL);
-  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+  assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
   assert(storageInfo != NULL);
 
   // init variables
@@ -15730,7 +15731,46 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             break;
           }
 
-          if (!INDEX_ID_IS_NONE(entityId))
+          // create UUID if not exists with given job UUID
+          if (INDEX_ID_IS_NONE(uuidId))
+          {
+            error = Index_findUUID(indexHandle,
+                                   jobUUID,
+                                   NULL,  // findEntityUUID
+                                   &uuidId,
+                                   NULL,  // executionCountNormal,
+                                   NULL,  // executionCountFull,
+                                   NULL,  // executionCountIncremental,
+                                   NULL,  // executionCountDifferential,
+                                   NULL,  // executionCountContinuous,
+                                   NULL,  // averageDurationNormal,
+                                   NULL,  // averageDurationFull,
+                                   NULL,  // averageDurationIncremental,
+                                   NULL,  // averageDurationDifferential,
+                                   NULL,  // averageDurationContinuous,
+                                   NULL,  // totalEntityCount,
+                                   NULL,  // totalStorageCount,
+                                   NULL,  // totalStorageSize,
+                                   NULL,  // totalEntryCount,
+                                   NULL  // totalEntrySize
+                                  );
+            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            {
+              // create new UUID
+              error = Index_newUUID(indexHandle,
+                                    String_cString(jobUUID),
+                                    &uuidId
+                                   );
+            }
+            if (error != ERROR_NONE)
+            {
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              break;
+            }
+          }
+
+          // create entity if not exists with given job UUID/entity UUID/host name/archive type
+          if (INDEX_ID_IS_NONE(entityId))
           {
             // update entity
 // TODO: do not update entity!

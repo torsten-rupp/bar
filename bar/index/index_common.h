@@ -62,13 +62,6 @@
 extern const char *DATABASE_SAVE_EXTENSIONS[];
 extern const char *DATABASE_SAVE_PATTERNS[];
 
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-#else
-const IndexId INDEX_ID_NONE = {INDEX_TYPE_NONE, 0LL};
-const IndexId INDEX_ID_ANY  = {INDEX_TYPE_NONE,-1LL};
-#endif
-
 // index open mask
 #define INDEX_OPEN_MASK_MODE  0x0000000F
 #define INDEX_OPEN_MASK_FLAGS 0xFFFF0000

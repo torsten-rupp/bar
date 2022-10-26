@@ -60,6 +60,7 @@
 #include "storage.h"
 #include "deltasources.h"
 #include "index/index.h"
+#include "index/index_storages.h"
 #include "continuous.h"
 #if HAVE_BREAKPAD
   #include "minidump.h"
@@ -3105,14 +3106,14 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
                          #ifndef NDEBUG
                            (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
                          #else
-                           jobUUID,
+                           String_cString(jobUUID),
                          #endif
                          NULL,  // scheduleUUID
                          NULL,  // scheduleTitle
                          #ifndef NDEBUG
                            (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(entityUUID),
                          #else
-                           entityUUID,
+                           String_cString(entityUUID),
                          #endif
                          archiveType,
                          globalOptions.storageName,
@@ -3812,7 +3813,7 @@ LOCAL Errors runDebug(void)
                                     NULL  // totalEntrySize
                                    ) == ERROR_NONE
            )
-        && (entityId == INDEX_ID_ENTITY(globalOptions.debug.indexEntityId))
+        && (INDEX_ID_EQUALS(entityId,INDEX_ID_ENTITY(globalOptions.debug.indexEntityId)))
        )
     {
       error = IndexStorage_purge(&indexHandle,

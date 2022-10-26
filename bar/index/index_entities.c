@@ -341,12 +341,14 @@ return ERROR_NONE;
 \***********************************************************************/
 
 LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
-                         DatabaseId  entityId
+// TODO: XXX
+                         IndexId     entityId
                         )
 {
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
-  return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  return    !INDEX_ID_IS_DEFAULT_ENTITY(entityId)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "storages",
                                   DATABASE_FLAG_NONE,
@@ -354,7 +356,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                   "entityId=?",
                                   DATABASE_FILTERS
                                   (
-                                    DATABASE_FILTER_KEY(entityId)
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                   )
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
@@ -364,7 +366,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                   "entityId=?",
                                   DATABASE_FILTERS
                                   (
-                                    DATABASE_FILTER_KEY(entityId)
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                   )
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
@@ -374,7 +376,7 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                                   "entityId=?",
                                   DATABASE_FILTERS
                                   (
-                                    DATABASE_FILTER_KEY(entityId)
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                   )
                                  );
 }
@@ -487,7 +489,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0L,  // indexIdCount
                                 NULL,  // entryIds
                                 0L,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
+                                INDEX_TYPESET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
                                 FALSE,  // fragmentsCount
@@ -801,12 +803,12 @@ UNUSED_VARIABLE(indexHandle);
 Errors IndexEntity_purge(IndexHandle *indexHandle,
                          bool        *doneFlag,
                          ulong       *deletedCounter,
-                         DatabaseId  entityId
+                         IndexId     entityId
                         )
 {
   String       string;
   Errors       error;
-  DatabaseId   uuidId;
+  IndexId      uuidId;
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
 
   assert(indexHandle != NULL);
@@ -816,7 +818,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
-    if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+    if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
     {
       // get uuid id, job UUID, created date/time, archive type
       error = Database_get(&indexHandle->databaseHandle,
@@ -828,7 +830,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                              UNUSED_VARIABLE(userData);
                              UNUSED_VARIABLE(valueCount);
 
-                             uuidId = values[0].id;
+                             uuidId = INDEX_ID_UUID(values[0].id);
                              String_set(jobUUID,values[1].string);
 
                              return ERROR_NONE;
@@ -849,7 +851,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                            "entities.id=?",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_KEY (entityId)
+                             DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                            ),
                            NULL,  // groupBy
                            NULL,  // orderby
@@ -858,7 +860,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                           );
       if (error != ERROR_NONE)
       {
-        uuidId = DATABASE_ID_NONE;
+        uuidId = INDEX_ID_NONE;
         String_clear(jobUUID);
       }
 
@@ -870,7 +872,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                               "id=?",
                               DATABASE_FILTERS
                               (
-                                DATABASE_FILTER_KEY(entityId)
+                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                               ),
                               DATABASE_UNLIMITED
                              );
@@ -888,7 +890,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                                 "entityId=?",
                                 DATABASE_FILTERS
                                 (
-                                  DATABASE_FILTER_KEY(entityId)
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                 )
                                );
       if (error != ERROR_NONE)
@@ -898,7 +900,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
       }
 
       // prune UUID
-      if (uuidId != DATABASE_ID_NONE)
+      if (!INDEX_ID_IS_NONE(uuidId))
       {
         error = IndexUUID_prune(indexHandle,
                                 doneFlag,
@@ -920,7 +922,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_UUID_PURGE entityId=%"PRIi64,
-                                    INDEX_ID_ENTITY(entityId)
+                                    entityId
                                    );
   }
 
@@ -934,15 +936,17 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
 Errors IndexEntity_prune(IndexHandle *indexHandle,
                          bool        *doneFlag,
                          ulong       *deletedCounter,
-                         DatabaseId  entityId
+                         IndexId     entityId
                         )
 {
   uint   lockedCount;
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+  assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
 
-  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
   {
     // get locked count
     error = Database_getUInt(&indexHandle->databaseHandle,
@@ -952,7 +956,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                              "id=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(entityId)
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                              ),
                              NULL  // group
                             );
@@ -989,7 +993,7 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
   Array         entityIds;
   Errors        error;
   ArrayIterator arrayIterator;
-  DatabaseId    entityId;
+  DatabaseId    databaseId;
 
   assert(indexHandle != NULL);
 
@@ -1016,9 +1020,9 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune entities
-  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+  ARRAY_ITERATEX(&entityIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
-    error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,entityId);
+    error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_ENTITY(databaseId));
   }
   if (error != ERROR_NONE)
   {
@@ -1043,8 +1047,8 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
-                                          DatabaseId  entityId
-                                         )
+                                    IndexId     entityId
+                                   )
 {
   Errors error;
   ulong  totalFileCount;
@@ -1058,6 +1062,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   ulong  totalSpecialCount;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // get file aggregate data
   error = Database_get(&indexHandle->databaseHandle,
@@ -1093,7 +1098,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1139,7 +1144,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1181,7 +1186,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1223,7 +1228,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1269,7 +1274,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1311,7 +1316,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1354,7 +1359,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                           "id=?",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_KEY(entityId),
+                            DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                           )
                          );
   if (error != ERROR_NONE)
@@ -1398,7 +1403,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1445,7 +1450,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1488,7 +1493,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1532,7 +1537,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1578,7 +1583,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1623,7 +1628,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
-                         DATABASE_FILTER_KEY (entityId)
+                         DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderby
@@ -1666,7 +1671,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                           "id=?",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_KEY(entityId)
+                            DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                           )
                         );
   if (error != ERROR_NONE)
@@ -1682,7 +1687,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
 Errors Index_findEntity(IndexHandle  *indexHandle,
                         IndexId      findEntityId,
                         ConstString  findJobUUID,
-                        ConstString  findScheduleUUID,
+                        ConstString  findEntityUUID,
                         ConstString  findHostName,
                         ArchiveTypes findArchiveType,
                         uint64       findCreatedDate,
@@ -1711,9 +1716,9 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
 
   // get filters
   filterString = Database_newFilter();
-  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",Index_getDatabaseId(findEntityId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",INDEX_DATABASE_ID(findEntityId));
   Database_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
-  Database_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(findEntityUUID),"AND","entities.scheduleUUID=%'S",findEntityUUID);
   Database_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
   Database_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
   Database_filterAppend(filterString,findCreatedDate != 0LL,"AND","%s=%"PRIu64,Database_filterDateString(&indexHandle->databaseHandle,"entities.created"),findCreatedDate);
@@ -1829,14 +1834,14 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
               indexHandle,
     {
-      return IndexEntity_updateAggregates(indexHandle,Index_getDatabaseId(entityId));
+      return IndexEntity_updateAggregates(indexHandle,entityId);
     });
   }
   else
@@ -1881,7 +1886,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
   assert(indexHandle->masterIO == NULL);
-  assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
+  assert(INDEX_ID_IS_ANY(uuidId) || (INDEX_TYPE(uuidId) == INDEX_TYPE_UUID));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -1900,7 +1905,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   // get filters
   string = String_new();
   Database_filterAppend(filterString,TRUE,"AND","entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID=%'S",entityUUID);
   Database_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
@@ -2197,7 +2202,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-                                      if (StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
+                                      if (StringMap_getIndexId (resultMap,"entityId",entityId,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
                                       }
@@ -2237,7 +2242,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -2266,7 +2271,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                               "id=?",
                               DATABASE_FILTERS
                               (
-                                DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                               )
                             );
       if (error != ERROR_NONE)
@@ -2307,7 +2312,7 @@ Errors Index_lockEntity(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -2329,7 +2334,7 @@ Errors Index_lockEntity(IndexHandle *indexHandle,
                             "id=?",
                             DATABASE_FILTERS
                             (
-                              DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                             )
                            );
     if (error != ERROR_NONE)
@@ -2350,7 +2355,7 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -2374,7 +2379,7 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
                              "id=? AND lockedCount>0",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                              )
                             );
     });
@@ -2401,7 +2406,7 @@ bool Index_isLockedEntity(IndexHandle *indexHandle,
   uint   lockedCount;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -2419,7 +2424,7 @@ bool Index_isLockedEntity(IndexHandle *indexHandle,
                              "id=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                              ),
                              NULL  // group
                             );
@@ -2439,13 +2444,13 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                          )
 {
   Errors        error;
-  DatabaseId    uuidId;
+  DatabaseId    databaseId;
+  IndexId       uuidId;
   Array         storageIds;
   ArrayIterator arrayIterator;
-  DatabaseId    storageId;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -2463,7 +2468,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     {
       // get UUID id
       error = Database_getId(&indexHandle->databaseHandle,
-                             &uuidId,
+                             &databaseId,
                              "entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              ",
@@ -2471,13 +2476,14 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                              "entities.id=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                              )
                             );
       if (error != ERROR_NONE)
       {
         return error;
       }
+      uuidId = INDEX_ID_UUID(databaseId);
 
       // get storages to delete
       error = Database_getIds(&indexHandle->databaseHandle,
@@ -2489,7 +2495,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                               "entities.id=?",
                               DATABASE_FILTERS
                               (
-                                DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                               ),
                               DATABASE_UNLIMITED
                              );
@@ -2509,10 +2515,10 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     // purge storages
     if (error == ERROR_NONE)
     {
-      ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+      ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
       {
         error = IndexStorage_purge(indexHandle,
-                                   INDEX_ID_STORAGE(storageId),
+                                   INDEX_ID_STORAGE(databaseId),
                                    NULL  // progressInfo
                                   );
       }
@@ -2538,7 +2544,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                               "id=?",
                               DATABASE_FILTERS
                               (
-                                DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                               )
                              );
       if (error == ERROR_NONE)
@@ -2595,7 +2601,7 @@ bool Index_isDeletedEntity(IndexHandle *indexHandle,
   bool deletedFlag;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   if (indexHandle->masterIO == NULL)
   {
@@ -2609,7 +2615,7 @@ bool Index_isDeletedEntity(IndexHandle *indexHandle,
                                    "id=? AND deletedFlag!=1",
                                    DATABASE_FILTERS
                                    (
-                                     DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                                     DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                    )
                                   );
     });
@@ -2630,28 +2636,26 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
   bool emptyFlag;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   INDEX_DOX(emptyFlag,
             indexHandle,
   {
-    return isEmptyEntity(indexHandle,
-                         Index_getDatabaseId(entityId)
-                        );
+    return isEmptyEntity(indexHandle,entityId);
   });
 
   return emptyFlag;
 }
 
 Errors Index_purgeEntity(IndexHandle *indexHandle,
-                         IndexId     indexId
+                         IndexId     entityId
                         )
 {
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
-  assert(Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+  assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
 
   if (indexHandle->masterIO == NULL)
   {
@@ -2661,7 +2665,7 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
       return IndexEntity_purge(indexHandle,
                                NULL,  // doneFlag
                                NULL,  // deletedCounter
-                               Index_getDatabaseId(indexId)
+                               entityId
                               );
     });
   }
@@ -2672,7 +2676,7 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ENTITY_PURGE entityId=%lld",
-                                    indexId
+                                    entityId
                                    );
   }
 
@@ -2680,14 +2684,14 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
 }
 
 Errors Index_pruneEntity(IndexHandle *indexHandle,
-                         IndexId     indexId
+                         IndexId     entityId
                         )
 {
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
-  assert(Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+  assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
 
   // prune storages of entity if not default entity
   if (indexHandle->masterIO == NULL)
@@ -2698,7 +2702,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
       return IndexEntity_prune(indexHandle,
                                NULL,  // doneFlag
                                NULL,  // deletedCounter
-                               Index_getDatabaseId(indexId)
+                               entityId
                               );
     });
   }
@@ -2709,7 +2713,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ENTITY_PRUNE entityId=%lld",
-                                    indexId
+                                    entityId
                                    );
   }
 

@@ -2269,7 +2269,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Deleted storage #%lld: '%s', created at %s",
-                   Index_getDatabaseId(storageId),
+                   INDEX_DATABASE_ID(storageId),
                    String_cString(storageName),
                    String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
                   );
@@ -2279,7 +2279,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Deleted storage #%lld: '%s'",
-                   Index_getDatabaseId(storageId),
+                   INDEX_DATABASE_ID(storageId),
                    String_cString(storageName)
                   );
       }
@@ -2289,7 +2289,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Delete storage #%lld: '%s' fail (error: %s)",
-                 Index_getDatabaseId(storageId),
+                 INDEX_DATABASE_ID(storageId),
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -2387,7 +2387,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -2432,13 +2432,13 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     Index_doneList(&indexQueryHandle);
 
     // delete storage
-    if (deleteStorageId != INDEX_ID_NONE)
+    if (!INDEX_ID_IS_NONE(deleteStorageId))
     {
       error = deleteStorage(indexHandle,deleteStorageId);
     }
   }
   while (   !isQuit()
-         && (deleteStorageId != INDEX_ID_NONE)
+         && !INDEX_ID_IS_NONE(deleteStorageId)
         );
   if (isQuit())
   {
@@ -2461,7 +2461,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Deleted entity #%lld: job '%s', created at %s",
-                 Index_getDatabaseId(entityId),
+                 INDEX_DATABASE_ID(entityId),
                  String_cString(jobName),
                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
                 );
@@ -2471,7 +2471,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Deleted entity #%lld: job '%s'",
-                 Index_getDatabaseId(entityId),
+                 INDEX_DATABASE_ID(entityId),
                  String_cString(jobName)
                 );
     }
@@ -2481,7 +2481,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Delete entity #%lld: job '%s' fail (error: %s)",
-               Index_getDatabaseId(entityId),
+               INDEX_DATABASE_ID(entityId),
                String_cString(jobName),
                Error_getText(error)
               );
@@ -2859,7 +2859,7 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
   now = Misc_getCurrentDateTime();
   LIST_ITERATE(entityList,entityNode)
   {
-//fprintf(stderr,"%s:%d: uuid=%s id=%llu\n",__FILE__,__LINE__,String_cString(entityNode->jobUUID),Index_getDatabaseId(entityNode->entityId));
+//fprintf(stderr,"%s:%d: uuid=%s id=%llu\n",__FILE__,__LINE__,String_cString(entityNode->jobUUID),INDEX_DATABASE_ID(entityNode->entityId));
     if (   String_equals(entityNode->jobUUID,jobUUID)
         #ifdef SIMULATE_PURGE
         && !Array_contains(&simulatedPurgeEntityIdArray,&entityNode->entityId)
@@ -3368,7 +3368,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                  NULL,  // scheduleUUID
                                  NULL,  // indexIds
                                  0,  // indexIdCount
-                                 INDEX_TYPE_SET_ALL,
+                                 INDEX_TYPESET_ALL,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
@@ -3389,7 +3389,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                      SET_VALUE(INDEX_STATE_NONE)
                                    | SET_VALUE(INDEX_STATE_OK)
                                    | SET_VALUE(INDEX_STATE_CREATE)
@@ -3756,8 +3756,9 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   do
   {
     // init variables
-    moveToEntityId    = INDEX_ID_NONE;
-    moveToArchiveType = ARCHIVE_TYPE_NONE;
+    moveToEntityId        = INDEX_ID_NONE;
+    moveToArchiveType     = ARCHIVE_TYPE_NONE;
+    moveToCreatedDateTime = 0LL;
 
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
@@ -3795,7 +3796,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                            NULL,  // scheduleUUID,
                                            NULL,  // indexIds
                                            0,  // indexIdCount
-                                           INDEX_TYPE_SET_ALL,
+                                           INDEX_TYPESET_ALL,
                                              SET_VALUE(INDEX_STATE_NONE)
                                            | SET_VALUE(INDEX_STATE_OK)
                                            | SET_VALUE(INDEX_STATE_CREATE)
@@ -3951,7 +3952,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_INDEX,
                    "Moved archives of entity #%"PRIi64" '%s': %s, created at %s to '%s'",
-                   Index_getDatabaseId(moveToEntityId),
+                   INDEX_DATABASE_ID(moveToEntityId),
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(moveToArchiveType),
                    Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,FALSE,NULL),
@@ -3963,7 +3964,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ERROR,
                    "Failed to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
-                   Index_getDatabaseId(moveToEntityId),
+                   INDEX_DATABASE_ID(moveToEntityId),
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(moveToArchiveType),
                    Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,FALSE,NULL),
@@ -4480,7 +4481,7 @@ LOCAL void updateIndexThreadCode(void)
       }
 
       // sleep and check quit flag/trigger
-      if (storageId == INDEX_ID_NONE)
+      if (INDEX_ID_IS_NONE(storageId))
       {
         delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
       }
@@ -4866,7 +4867,7 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -4881,7 +4882,7 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
     {
       now = Misc_getCurrentDateTime();
       while (   !isQuit()
-             && (purgeStorageId != INDEX_ID_NONE)
+             && !INDEX_ID_IS_NONE(purgeStorageId)
              && Index_getNextStorage(&indexQueryHandle,
                                      NULL,  // uuidId
                                      NULL,  // jobUUID
@@ -4930,7 +4931,7 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
     }
 
     // purge expired storage index
-    if (purgeStorageId != INDEX_ID_NONE)
+    if (!INDEX_ID_IS_NONE(purgeStorageId))
     {
       IndexStorage_purge(indexHandle,
                          purgeStorageId,
@@ -4946,7 +4947,7 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
                  );
     }
   }
-  while (   (purgeStorageId != INDEX_ID_NONE)
+  while (   !INDEX_ID_IS_NONE(purgeStorageId)
          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
         );
 
@@ -15842,7 +15843,7 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
   assert(argumentMap != NULL);
 
   // get entityId, moveTo
-  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  if (!StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
     return;
@@ -15978,8 +15979,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
@@ -16825,7 +16826,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64                n;
   IndexId               entityId;
   StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
   bool                  jobUUIDAny;
@@ -16874,9 +16874,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     entityId = INDEX_ID_ENTITY_NONE;
   }
-  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
+  else if (StringMap_getUInt64(argumentMap,"entityId",&entityId.data,INDEX_ID_ANY.data))
   {
-    entityId = (IndexId)n;
   }
   else
   {
@@ -16910,7 +16909,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_SET_ALL,"|",INDEX_TYPE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPENONE))
   {
     indexTypeAny = FALSE;
   }
@@ -16974,7 +16973,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  !scheduleUUIDAny ? String_cString(scheduleUUID) : NULL,
                                  Array_cArray(&clientInfo->indexIdArray),
                                  Array_length(&clientInfo->indexIdArray),
-                                 indexTypeAny ? INDEX_TYPE_SET_ALL : indexTypeSet,
+                                 indexTypeAny ? INDEX_TYPESET_ALL : indexTypeSet,
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  NULL,  // hostName
@@ -17159,7 +17158,7 @@ LOCAL void serverCommand_indexStorageListAdd(ClientInfo *clientInfo, IndexHandle
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
-      storageId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      storageId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_PARSE_ID,"'%S'",token);
@@ -17230,7 +17229,7 @@ LOCAL void serverCommand_indexStorageListRemove(ClientInfo *clientInfo, IndexHan
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
-      storageId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      storageId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_PARSE_ID,"'%S'",token);
@@ -17279,7 +17278,6 @@ LOCAL void serverCommand_indexStorageListRemove(ClientInfo *clientInfo, IndexHan
 
 LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64        n;
   IndexId       entityId;
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   bool          jobUUIDAny;
@@ -17310,9 +17308,8 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     entityId = INDEX_ID_NONE;
   }
-  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
+  else if (StringMap_getUInt64(argumentMap,"entityId",&entityId.data,INDEX_ID_ANY.data))
   {
-    entityId = (IndexId)n;
   }
   else
   {
@@ -17346,7 +17343,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_SET_ALL,"|",INDEX_TYPE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPENONE))
   {
     indexTypeAny = FALSE;
   }
@@ -17397,7 +17394,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
                                  !scheduleUUIDAny ? scheduleUUID : NULL,
                                  Array_cArray(&clientInfo->indexIdArray),
                                  Array_length(&clientInfo->indexIdArray),
-                                 indexTypeAny ? INDEX_TYPE_SET_ALL : indexTypeSet,
+                                 indexTypeAny ? INDEX_TYPESET_ALL : indexTypeSet,
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  name,
@@ -17633,15 +17630,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   StringMap_getString(argumentMap,"name",name,NULL);
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
-    entryType = INDEX_TYPE_ANY;
+    entryType = INDEX_TYPEANY;
   }
-  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPEANY))
   {
     // ok
   }
   else
   {
-    entryType = INDEX_TYPE_ANY;
+    entryType = INDEX_TYPEANY;
   }
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
@@ -17736,7 +17733,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     if (String_isEmpty(jobName)) String_set(jobName,jobUUID);
 
     // send entry data
-    switch (Index_getType(entryId))
+    switch (INDEX_TYPE(entryId))
     {
       case INDEX_TYPE_FILE:
         SEND_FILE_ENTRY(jobName,archiveType,hostName,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentCount);
@@ -17857,7 +17854,7 @@ LOCAL void serverCommand_indexEntryListAdd(ClientInfo *clientInfo, IndexHandle *
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
-      entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      entryId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_PARSE_ID,"'%S'",token);
@@ -17927,7 +17924,7 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
-      entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
+      entryId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_PARSE_ID,"'%S'",token);
@@ -17993,15 +17990,15 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
-    entryType = INDEX_TYPE_ANY;
+    entryType = INDEX_TYPEANY;
   }
-  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPEANY))
   {
     // ok
   }
   else
   {
-    entryType = INDEX_TYPE_ANY;
+    entryType = INDEX_TYPEANY;
   }
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
@@ -18069,7 +18066,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64  n;
   IndexId entryId;
   uint64  offset;
   uint64  limit;
@@ -18084,11 +18080,7 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
   assert(argumentMap != NULL);
 
   // get entity id, offset, limit
-  if (StringMap_getUInt64(argumentMap,"entryId",&n,INDEX_ID_NONE))
-  {
-    entryId = (IndexId)n;
-  }
-  else
+  if (!StringMap_getIndexId(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<id>");
     return;
@@ -18747,7 +18739,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   String_clear(toJobUUID);
   toEntityId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"toEntityId",&toEntityId,INDEX_ID_NONE)
      )
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"toJobUUID=<uuid> or toEntityId=<id>");
@@ -18762,8 +18754,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
     String_delete(toHostName);
@@ -19028,9 +19020,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
   String_clear(jobUUID);
-  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+  if (   !StringMap_getIndexId(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
       && !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getString(argumentMap,"name",name,NULL)
      )
@@ -19069,7 +19061,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -19132,7 +19124,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -19195,7 +19187,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -19263,7 +19255,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -19326,7 +19318,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -19461,9 +19453,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
   String_clear(jobUUID);
-  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+  if (   !StringMap_getIndexId(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
       && !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getString(argumentMap,"name",name,NULL)
      )
@@ -19502,7 +19494,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -20089,7 +20081,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                        NULL,  // scheduleUUID,
                                        Array_cArray(&clientInfo->indexIdArray),
                                        Array_length(&clientInfo->indexIdArray),
-                                       INDEX_TYPE_SET_ALL,
+                                       INDEX_TYPESET_ALL,
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
                                        NULL,  // hostName
@@ -20144,7 +20136,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     0, // indexIdCount
                                     Array_cArray(&clientInfo->entryIdArray),
                                     Array_length(&clientInfo->entryIdArray),
-                                    INDEX_TYPE_ANY,
+                                    INDEX_TYPEANY,
                                     NULL, // name
                                     FALSE,  // newestOnly,
                                     FALSE,  //fragments
@@ -20182,15 +20174,15 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
               )
         {
           EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-          if (directoryContentFlag && (Index_getType(entryId) == INDEX_TYPE_DIRECTORY))
+          if (directoryContentFlag && (INDEX_TYPE(entryId) == INDEX_TYPE_DIRECTORY))
           {
             String_appendCString(entryName,"/*");
             EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
           }
 
-          if (   (Index_getType(entryId) == INDEX_TYPE_FILE)
-              || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
-              || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
+          if (   (INDEX_TYPE(entryId) == INDEX_TYPE_FILE)
+              || (INDEX_TYPE(entryId) == INDEX_TYPE_IMAGE)
+              || (INDEX_TYPE(entryId) == INDEX_TYPE_HARDLINK)
              )
           {
             error = Index_initListEntryFragments(&indexQueryHandle2,

@@ -87,7 +87,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   orderString  = String_new();
 
   // get filters
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
 
   // get ordering
@@ -290,7 +290,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
 
                                       if (historyId != NULL)
                                       {
-                                        if (!StringMap_getInt64(resultMap,"historyId",historyId,INDEX_ID_NONE))
+                                        if (!StringMap_getIndexId(resultMap,"historyId",historyId,INDEX_ID_NONE))
                                         {
                                           error = ERROR_EXPECTED_PARAMETER;
                                         }
@@ -350,7 +350,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
                             "id=?",
                             DATABASE_FILTERS
                             (
-                              DATABASE_FILTER_KEY(Index_getDatabaseId(historyId))
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(historyId))
                             ),
                             DATABASE_UNLIMITED
                            );
