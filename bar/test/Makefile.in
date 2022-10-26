@@ -2673,26 +2673,26 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --mount-device=foo $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "mount-device = foo"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "mount-device = foo"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "overwrite-archive-files = yes"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "overwrite-archive-files = yes"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "overwrite-files = yes"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "overwrite-files = yes"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "stop-on-error = yes"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "stop-on-error = yes"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "remote-host-name = foo"; \
-		$(ECHO) "remote-host-port = 1234"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "remote-host-name = foo"; \
+    $(ECHO) "remote-host-port = 1234"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
     $(ECHO) "[schedule full]"; \
@@ -2758,14 +2758,14 @@ test_config: \
 	@#
 	# test configuration data
 	( \
-		$(ECHO) "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
-		$(ECHO) "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
-	) > $(TEST_CONFIG)
+    $(ECHO) "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
+    $(ECHO) "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
+  ) > $(TEST_CONFIG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
 	( \
-		$(ECHO) "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
-		$(ECHO) "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
-	) > $(TEST_CONFIG)
+    $(ECHO) "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
+    $(ECHO) "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
+  ) > $(TEST_CONFIG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
 #	@$(RMF) $(INTERMEDIATE_DIR)/test.cfg
 	$(call functionDoneTestFiles)
