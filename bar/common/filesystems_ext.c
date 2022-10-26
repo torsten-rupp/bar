@@ -577,7 +577,7 @@ if ((extHandle->bitmapData[index/8] & (1 << index%8)) == 0)
 {
 int h = open("ext_freeblocks.txt",O_CREAT|O_WRONLY|O_APPEND,0664);
 char s[256];
-sprintf(s,"%llu %d\n",offset,block);
+sprintf(s,"%"PRIu64" %d\n",offset,block);
 write(h,s,strlen(s));
 close(h);
 }

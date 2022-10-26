@@ -6938,7 +6938,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           {
             if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("skipped unknown chunk '%s' at offset %llu in '%s'",
+              printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -6959,7 +6959,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           // report unknown chunk
           archiveHandle->pendingError = ERRORX_(UNKNOWN_CHUNK,
                                                 0,
-                                                "'%s' at offset %llu",
+                                                "'%s' at offset %"PRIu64,
                                                 Chunk_idToString(chunkHeader.id),
                                                 chunkHeader.offset
                                                );
@@ -9321,7 +9321,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           {
             if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("skipped unknown chunk '%s' at offset %llu in '%s'",
+              printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -9343,7 +9343,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           // report unknown chunk
           return ERRORX_(UNKNOWN_CHUNK,
                          0,
-                         "'%s' at offset %llu",
+                         "'%s' at offset %"PRIu64,
                          Chunk_idToString(chunkHeader.id),
                          chunkHeader.offset
                         );
@@ -9698,7 +9698,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10319,7 +10319,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10879,7 +10879,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11338,7 +11338,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11766,7 +11766,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12417,7 +12417,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12877,7 +12877,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -15735,7 +15735,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           if (INDEX_ID_IS_NONE(uuidId))
           {
             error = Index_findUUID(indexHandle,
-                                   jobUUID,
+                                   String_cString(jobUUID),
                                    NULL,  // findEntityUUID
                                    &uuidId,
                                    NULL,  // executionCountNormal,
@@ -16136,7 +16136,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
             {
               printInfo(1,
-                        "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
+                        "  Restore file '%s'...skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
                         String_cString(destinationFileName),
                         fragmentOffset,
                         (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
@@ -16319,7 +16319,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
               {
                 printInfo(1,
-                          "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
+                          "  Restore image '%s'...skipped (image part %"PRIu64"..%"PRIu64" exists)\n",
                           String_cString(destinationDeviceName),
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
@@ -17101,7 +17101,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 {
                   if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
                   {
-                    printInfo(2,"skipped (file part %llu..%llu exists)\n",
+                    printInfo(2,"skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
                               String_cString(destinationFileName),
                               fragmentOffset,
                               (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset

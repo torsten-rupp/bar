@@ -117,14 +117,14 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                              LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
                              LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
                              LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                           WHERE entries.storageId=%lld \
+                           WHERE entries.storageId=%"PRIi64" \
                           ",
                           fromStorageId
                          );
   if (error == ERROR_NONE)
   {
     if (Database_getNextRow(&databaseQueryHandle,
-                            "%lld %lld %lld %lld",
+                            "%"PRIi64" %"PRIi64" %"PRIi64" %"PRIi64"",
                             &size,
                             &fromStorageId,
                             &fragmentOffset,

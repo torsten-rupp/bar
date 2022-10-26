@@ -81,7 +81,7 @@ void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint, bool freeFlag
 #if 0
       #ifndef NDEBUG
         fprintf(stderr,
-                "DEBUG: call auto free %p at %s, line %lu with auto resource 0x%llu\n",
+                "DEBUG: call auto free %p at %s, line %lu with auto resource 0x%"PRIx64"\n",
                 autoFreeNode->autoFreeFunction,
                 autoFreeNode->fileName,
                 autoFreeNode->lineNb,
@@ -267,7 +267,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
 #if 0
         #ifndef NDEBUG
           fprintf(stderr,
-                  "DEBUG: call auto free %p at %s, line %lu with auto resource 0x%llu\n",
+                  "DEBUG: call auto free %p at %s, line %lu with auto resource 0x%"PRIx64"\n",
                   autoFreeNode->autoFreeFunction,
                   autoFreeNode->fileName,
                   autoFreeNode->lineNb,

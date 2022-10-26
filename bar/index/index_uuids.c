@@ -556,7 +556,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
 // TODO: FTS_uuids do not exists
   IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids.name",name);
 
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",INDEX_DATABASE_ID(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
   Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID='%S'",entityUUID);
   Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
@@ -1287,7 +1287,7 @@ UNUSED_VARIABLE(uuidId);
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_UUID_UPDATE_INFOS uuidId=%lld",
+                                    "INDEX_UUID_UPDATE_INFOS uuidId=%"PRIi64"",
                                     uuidId
                                    );
   }
@@ -1660,7 +1660,7 @@ Errors Index_purgeUUID(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_UUID_PURGE uuidId=%lld",
+                                    "INDEX_UUID_PURGE uuidId=%"PRIi64"",
                                     indexId
                                    );
   }
@@ -1695,7 +1695,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_UUID_PRUNE uuidId=%lld",
+                                    "INDEX_UUID_PRUNE uuidId=%"PRIi64"",
                                     indexId
                                    );
   }

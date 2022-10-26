@@ -985,7 +985,7 @@ LOCAL Errors deleteStorageFragments(IndexHandle  *indexHandle,
     {
       do
       {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"entryFragments","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: fragments %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"entryFragments","count(id)","WHERE storageId=%"PRIi64"",storageId);fprintf(stderr,"%s, %"PRIi64": fragments %d: %"PRIi64"\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = IndexCommon_delete(indexHandle,
                                   &doneFlag,
@@ -1396,7 +1396,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
   /* get entries to purge without associated file/image/directory/link/hardlink/special entry
      Note: may be left from interrupted purge of previous run
   */
-//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%lld\n",__FILE__,__LINE__,l);
+//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%"PRIi64"\n",__FILE__,__LINE__,l);
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif

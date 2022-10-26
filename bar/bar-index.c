@@ -2662,7 +2662,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    storageId = values[0].id;
                                    name      = values[1].string;
-//fprintf(stderr,"%s:%d: storageId=%llu\n",__FILE__,__LINE__,storageId);
+//fprintf(stderr,"%s:%d: storageId=%"PRIu64"\n",__FILE__,__LINE__,storageId);
 
                                    getPostgreSQLFTSTokens(tokens,name);
                                    error = Database_insert(databaseHandle,
@@ -2721,7 +2721,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    entryId = values[0].id;
                                    name    = values[1].string;
-//fprintf(stderr,"%s:%d: entryId=%llu\n",__FILE__,__LINE__,entryId);
+//fprintf(stderr,"%s:%d: entryId=%"PRIu64"\n",__FILE__,__LINE__,entryId);
 
                                    getPostgreSQLFTSTokens(tokens,name);
                                    error = Database_insert(databaseHandle,

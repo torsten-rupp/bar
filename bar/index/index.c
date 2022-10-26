@@ -1218,7 +1218,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
-          logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
+          logImportProgress("Aggregated storage #%"PRIi64": (%"PRIu64"s)",
                             storageId,
                             (t1-t0)/US_PER_SECOND
                            );
@@ -1267,7 +1267,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
-          logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
+          logImportProgress("Aggregated entity #%"PRIi64": (%"PRIu64"s)",
                             entityId,
                             (t1-t0)/US_PER_SECOND
                            );
@@ -1306,7 +1306,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
-          logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
+          logImportProgress("Aggregated UUID #%"PRIi64": (%"PRIu64"s)",
                             uuidId,
                             (t1-t0)/US_PER_SECOND
                            );
@@ -1594,7 +1594,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Requested update index #%lld: %s",
+                    "Requested update index #%"PRIi64": %s",
                     indexId,
                     String_cString(printableStorageName)
                    );
@@ -1785,7 +1785,7 @@ UNUSED_VARIABLE(indexHandle);
   /* get entries to purge without associated file/image/directory/link/hardlink/special entry
      Note: may be left from interrupted purge of previous run
   */
-//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%lld\n",__FILE__,__LINE__,l);
+//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%"PRIi64"\n",__FILE__,__LINE__,l);
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif

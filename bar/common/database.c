@@ -301,7 +301,7 @@ LOCAL DatabaseList databaseList;
       \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database %s, %d: execution time=%llums\n",__FILE__,__LINE__,databaseStatementHandle->debug.dt/1000ULL); \
+        fprintf(stderr,"DEBUG database %s, %d: execution time=%"PRIu64"ms\n",__FILE__,__LINE__,databaseStatementHandle->debug.dt/1000ULL); \
       } \
     } \
     while (0)
@@ -5346,7 +5346,7 @@ LOCAL String vformatSQLString(String     sqlString,
               if      (longLongFlag)
               {
                 value.ll = va_arg(arguments,long long int);
-                String_appendFormat(sqlString,"%lld",value.ll);
+                String_appendFormat(sqlString,"%"PRIi64,value.ll);
               }
               else if (longFlag)
               {
@@ -5366,7 +5366,7 @@ LOCAL String vformatSQLString(String     sqlString,
               if      (longLongFlag)
               {
                 value.ull = va_arg(arguments,unsigned long long int);
-                String_appendFormat(sqlString,"%llu",value.ull);
+                String_appendFormat(sqlString,"%"PRIu64,value.ull);
               }
               else if (longFlag)
               {
@@ -8042,7 +8042,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                 for (j = 0; j < filters[i].array.length; j++)
                 {
                   if (!String_isEmpty(string)) String_appendChar(string,',');
-                  String_appendFormat(string,"%lld",((DatabaseId*)filters[i].array.data)[j]);
+                  String_appendFormat(string,"%"PRIi64,((DatabaseId*)filters[i].array.data)[j]);
                 }
 
                 sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
@@ -11950,7 +11950,7 @@ if (   (databaseHandle->databaseNode->pendingReadCount == 0)
     && (databaseHandle->databaseNode->readWriteCount == 0)
    )
 fprintf(stderr,"%s, %d: --------------------------------------------------------------------------------------------------\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: %x trigger R %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter()-startCycleCounter,databaseLock.__data.__lock);
+fprintf(stderr,"%s, %d: %x trigger R %p %"PRIu64" %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter()-startCycleCounter,databaseLock.__data.__lock);
 #endif
         if (databaseHandle->databaseNode->readCount == 0)
         {
@@ -12024,7 +12024,7 @@ if (   (databaseHandle->databaseNode->pendingReadCount == 0)
     && (databaseHandle->databaseNode->readWriteCount == 0)
    )
 fprintf(stderr,"%s, %d: --------------------------------------------------------------------------------------------------\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: %x trigger RW %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter()-startCycleCounter,databaseLock.__data.__lock);
+fprintf(stderr,"%s, %d: %x trigger RW %p %"PRIu64" %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter()-startCycleCounter,databaseLock.__data.__lock);
 #endif
         if (databaseHandle->databaseNode->readWriteCount == 0)
         {
@@ -14816,7 +14816,7 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       break;
     case DATABASE_DATATYPE_PRIMARY_KEY:
     case DATABASE_DATATYPE_KEY:
-      String_format(string,"%lld",databaseValue->id);
+      String_format(string,"%"PRIi64,databaseValue->id);
       break;
     case DATABASE_DATATYPE_BOOL:
       String_format(string,"%s",databaseValue->b ? "TRUE" : "FALSE");
@@ -14837,7 +14837,7 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       String_format(string,"%lf",databaseValue->d);
       break;
     case DATABASE_DATATYPE_ENUM:
-      String_format(string,"%lld",databaseValue->i);
+      String_format(string,"%d",databaseValue->i);
       break;
     case DATABASE_DATATYPE_DATETIME:
       Misc_formatDateTime(string,databaseValue->dateTime,FALSE,NULL);
@@ -14872,7 +14872,7 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       break;
     case DATABASE_DATATYPE_PRIMARY_KEY:
     case DATABASE_DATATYPE_KEY:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->id);
+      stringFormat(buffer,bufferSize,"%"PRIi64,databaseValue->id);
       break;
     case DATABASE_DATATYPE_BOOL:
       stringFormat(buffer,bufferSize,"%s",databaseValue->b ? "TRUE" : "FALSE");

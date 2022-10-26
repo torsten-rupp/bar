@@ -1758,7 +1758,7 @@ LOCAL void schedulerThreadCode(void)
                          NULL  // isDayLightSaving
                         );
 
-//fprintf(stderr,"%s:%d: currentDateTime=%llu\n",__FILE__,__LINE__,currentDateTime);
+//fprintf(stderr,"%s:%d: currentDateTime=%"PRIu64"\n",__FILE__,__LINE__,currentDateTime);
 //fprintf(stderr,"%s:%d: dateTime=%d %d %d - %d %d\n",__FILE__,__LINE__,dateTime.year,dateTime.month,dateTime.day,dateTime.hour,dateTime.minute);
 //fprintf(stderr,"%s:%d: lastScheduleCheckYear %d: %d %d\n",__FILE__,__LINE__,lastScheduleCheckYear);
       // check if matching with schedule
@@ -2087,7 +2087,7 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
       }
     }
   }
-//fprintf(stderr,"%s, %d: isMaintenanceTime %d %llu %llu -> %d\n",__FILE__,__LINE__,pauseFlags.indexMaintenance,dateTime,intermediateMaintenanceDateTime,maintenanceTimeFlag);
+//fprintf(stderr,"%s, %d: isMaintenanceTime %d %"PRIu64" %"PRIu64" -> %d\n",__FILE__,__LINE__,pauseFlags.indexMaintenance,dateTime,intermediateMaintenanceDateTime,maintenanceTimeFlag);
 
   return maintenanceTimeFlag;
 
@@ -2268,7 +2268,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Deleted storage #%lld: '%s', created at %s",
+                   "Deleted storage #%"PRIi64": '%s', created at %s",
                    INDEX_DATABASE_ID(storageId),
                    String_cString(storageName),
                    String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
@@ -2278,7 +2278,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Deleted storage #%lld: '%s'",
+                   "Deleted storage #%"PRIi64": '%s'",
                    INDEX_DATABASE_ID(storageId),
                    String_cString(storageName)
                   );
@@ -2288,7 +2288,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Delete storage #%lld: '%s' fail (error: %s)",
+                 "Delete storage #%"PRIi64": '%s' fail (error: %s)",
                  INDEX_DATABASE_ID(storageId),
                  String_cString(storageName),
                  Error_getText(error)
@@ -2460,7 +2460,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Deleted entity #%lld: job '%s', created at %s",
+                 "Deleted entity #%"PRIi64": job '%s', created at %s",
                  INDEX_DATABASE_ID(entityId),
                  String_cString(jobName),
                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
@@ -2470,7 +2470,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Deleted entity #%lld: job '%s'",
+                 "Deleted entity #%"PRIi64": job '%s'",
                  INDEX_DATABASE_ID(entityId),
                  String_cString(jobName)
                 );
@@ -2480,7 +2480,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   {
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Delete entity #%lld: job '%s' fail (error: %s)",
+               "Delete entity #%"PRIi64": job '%s' fail (error: %s)",
                INDEX_DATABASE_ID(entityId),
                String_cString(jobName),
                Error_getText(error)
@@ -2776,7 +2776,7 @@ LOCAL bool getEntityList(EntityList  *entityList,
                               )
           )
     {
-//fprintf(stderr,"%s, %d: %llu entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,Misc_getTimestamp()/1000,entityId,archiveType,totalSize,Misc_getCurrentDateTime(),createdDateTime,(Misc_getCurrentDateTime()-createdDateTime)/S_PER_DAY);
+//fprintf(stderr,"%s, %d: %"PRIu64" entityId=%"PRIi64" archiveType=%d totalSize=%"PRIu64" now=%"PRIu64" createdDateTime=%"PRIu64" -> age=%"PRIu64"\n",__FILE__,__LINE__,Misc_getTimestamp()/1000,entityId,archiveType,totalSize,Misc_getCurrentDateTime(),createdDateTime,(Misc_getCurrentDateTime()-createdDateTime)/S_PER_DAY);
       // create expiration node
       entityNode = newExpirationNode(entityId,
                                      jobUUID,
@@ -2859,7 +2859,7 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
   now = Misc_getCurrentDateTime();
   LIST_ITERATE(entityList,entityNode)
   {
-//fprintf(stderr,"%s:%d: uuid=%s id=%llu\n",__FILE__,__LINE__,String_cString(entityNode->jobUUID),INDEX_DATABASE_ID(entityNode->entityId));
+//fprintf(stderr,"%s:%d: uuid=%s id=%"PRIu64"\n",__FILE__,__LINE__,String_cString(entityNode->jobUUID),INDEX_DATABASE_ID(entityNode->entityId));
     if (   String_equals(entityNode->jobUUID,jobUUID)
         #ifdef SIMULATE_PURGE
         && !Array_contains(&simulatedPurgeEntityIdArray,&entityNode->entityId)
@@ -4684,7 +4684,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                  UNUSED_VARIABLE(userData);
 
                                  now = Misc_getCurrentDateTime();
-//fprintf(stderr,"%s:%d: %s %llu %llu\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
+//fprintf(stderr,"%s:%d: %s %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
 
                                  // to avoid add/update on currently created archive, wait for min. 30min after creation
                                  if (now > (fileInfo->timeLastChanged+30*60))
@@ -4734,7 +4734,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                          if      (error == ERROR_NONE)
                                          {
                                            // already in index -> check if modified/state
-//fprintf(stderr,"%s:%d: storageId=%lld file=%lld lastCheckedDateTime=%lld\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
+//fprintf(stderr,"%s:%d: storageId=%"PRIi64" file=%"PRIi64" lastCheckedDateTime=%"PRIi64"\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
                                            if      (fileInfo->timeModified > lastCheckedDateTime)
                                            {
                                              // modified -> request update index
@@ -8788,7 +8788,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
         {
           ServerIO_sendResult(&clientInfo->io,
                               id,FALSE,ERROR_NONE,
-                              "name=%'S size=%lld mounted=%y",
+                              "name=%'S size=%"PRIu64" mounted=%y",
                               deviceName,
                               deviceInfo.size,
                               deviceInfo.mounted
@@ -10133,7 +10133,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 
                                      return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                    },NULL),
-                                   "DIRECTORY_INFO name=%'S timeout=%lld",
+                                   "DIRECTORY_INFO name=%'S timeout=%"PRIi64"",
                                    name,
                                    timeout
                                   );
@@ -11501,7 +11501,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
       Job_listUnlock();
       return;
     }
-// TODO:fprintf(stderr,"%s:%d: %llu %llu\n",__FILE__,__LINE__,jobNode->statusInfo.entry.doneSize,jobNode->statusInfo.entry.totalSize);
+// TODO:fprintf(stderr,"%s:%d: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,jobNode->statusInfo.entry.doneSize,jobNode->statusInfo.entry.totalSize);
 
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
@@ -16266,35 +16266,35 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
                        totalDeletedEntityCount=%u \
                        \
                        totalEntryCount=%u \
-                       totalEntrySize=%llu \
-                       totalEntryContentSize=%llu \
+                       totalEntrySize=%"PRIu64" \
+                       totalEntryContentSize=%"PRIu64" \
                        totalFileCount=%u \
-                       totalFileSize=%llu \
+                       totalFileSize=%"PRIu64" \
                        totalImageCount=%u \
-                       totalImageSize=%llu \
+                       totalImageSize=%"PRIu64" \
                        totalDirectoryCount=%u \
                        totalLinkCount=%u \
                        totalHardlinkCount=%u \
-                       totalHardlinkSize=%llu \
+                       totalHardlinkSize=%"PRIu64" \
                        totalSpecialCount=%u \
                        \
                        totalEntryCountNewest=%u \
-                       totalEntrySizeNewest=%llu \
-                       totalEntryContentSizeNewest=%llu \
+                       totalEntrySizeNewest=%"PRIu64" \
+                       totalEntryContentSizeNewest=%"PRIu64" \
                        totalFileCountNewest=%u \
-                       totalFileSizeNewest=%llu \
+                       totalFileSizeNewest=%"PRIu64" \
                        totalImageCountNewest=%u \
-                       totalImageSizeNewest=%llu \
+                       totalImageSizeNewest=%"PRIu64" \
                        totalDirectoryCountNewest=%u \
                        totalLinkCountNewest=%u \
                        totalHardlinkCountNewest=%u \
-                       totalHardlinkSizeNewest=%llu \
+                       totalHardlinkSizeNewest=%"PRIu64" \
                        totalSpecialCountNewest=%u \
                        \
                        totalSkippedEntryCount=%u \
                        \
                        totalStorageCount=%u \
-                       totalStorageSize=%llu \
+                       totalStorageSize=%"PRIu64" \
                        totalDeletedStorageCount=%u \
                       ",
                       totalEntityCount,
@@ -17410,7 +17410,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
     String_delete(name);
     return;
   }
-//fprintf(stderr,"%s, %d: %ld %lld %ld %lld\n",__FILE__,__LINE__,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize);
+//fprintf(stderr,"%s, %d: %ld %"PRIi64" %ld %"PRIi64"\n",__FILE__,__LINE__,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize);
 
   // send data
 //TODO
@@ -17562,7 +17562,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=HARDLINK name=%'S size=%lld dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentCount=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentCount=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
