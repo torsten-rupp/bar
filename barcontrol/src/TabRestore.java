@@ -621,10 +621,6 @@ public class TabRestore
       {
         result = -1;
       }
-      else if (indexData1.id == indexData2.id)
-      {
-        result = 0;
-      }
       else
       {
         boolean doneFlag = false;
