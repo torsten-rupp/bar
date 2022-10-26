@@ -1309,7 +1309,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
           storageHandle->scp.readAheadBuffer.length = (ulong)readBytes;
-//fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
+//fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%"PRIu64" storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
 
           // copy data from read-ahead buffer
           bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
@@ -1616,7 +1616,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
                         );
           }
           assert(length > 0L);
-//fprintf(stderr,"%s, %d: skipSize=%llu length=%lu\n",__FILE__,__LINE__,skipSize,length);
+//fprintf(stderr,"%s, %d: skipSize=%"PRIu64" length=%lu\n",__FILE__,__LINE__,skipSize,length);
 
           // get start time, start received bytes
           startTimestamp          = Misc_getTimestamp();
@@ -1639,7 +1639,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
           storageHandle->scp.readAheadBuffer.length = (ulong)readBytes;
-//fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
+//fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%"PRIu64" storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
 
           // skip data in read-ahead buffer, adjust skipSize, index
           bytesAvail = storageHandle->scp.readAheadBuffer.length;

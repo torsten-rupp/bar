@@ -1652,7 +1652,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             // check crc
             if (n != crc)
             {
-              error = ERRORX_(CRC_,0,"%llu",offset);
+              error = ERRORX_(CRC_,0,"%"PRIu64,offset);
               break;
             }
 

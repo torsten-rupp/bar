@@ -4291,7 +4291,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  )
             )
       {
-//fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
+//fprintf(stderr,"%s, %d: %"PRIu64" %s: createdDateTime=%"PRIu64" size=%"PRIu64"\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
         if (createdDateTime < oldestCreatedDateTime)
         {
           oldestUUIDId          = uuidId;
@@ -4305,7 +4305,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       }
       Index_doneList(&indexQueryHandle);
 
-//fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
+//fprintf(stderr,"%s, %d: totalStorageSize=%"PRIu64" limit=%"PRIu64" oldestStorageId=%"PRIu64"\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
       if ((totalStorageSize > limit) && !INDEX_ID_IS_NONE((oldestStorageId)))
       {
         // delete oldest storage entry
@@ -4508,7 +4508,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                  )
             )
       {
-//fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
+//fprintf(stderr,"%s, %d: %"PRIu64" %s: %"PRIu64"\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
         error = Storage_parseName(&storageSpecifier,storageName);
         if (   (error == ERROR_NONE)
             && String_equals(storageSpecifier.hostName,server->name)
@@ -5091,7 +5091,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           });
 
           // append index: assign storage index entries to existing storage index
-//fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
+//fprintf(stderr,"%s, %d: append to storage %"PRIu64"\n",__FILE__,__LINE__,storageId);
           error = Index_assignTo(createInfo->indexHandle,
                                  NULL,  // jobUUID
                                  INDEX_ID_NONE,  // entityId

@@ -632,7 +632,7 @@ LOCAL String getUniqName(String destinationFileName)
   String prefixFileName,postfixFileName;
   long   index;
   uint   n;
-  
+
   assert(destinationFileName != NULL);
 
   File_splitFileName(destinationFileName,&pathName,&baseName);
@@ -841,7 +841,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_STOP:
                 // stop
                 printInfo(1,
-                          "stopped (file part %llu..%llu exists)\n",
+                          "stopped (file part %"PRIu64"..%"PRIu64" exists)\n",
                           fragmentOffset,
                           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                          );
@@ -858,7 +858,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_SKIP_EXISTING:
                 // skip
                 printInfo(1,
-                          "skipped (file part %llu..%llu exists)\n",
+                          "skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
                           fragmentOffset,
                           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                          );
@@ -1297,7 +1297,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ (void)Archive_closeEntry(&archiveEntryInfo); });
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("device block size %llu on '%s' is too big (max: %llu)",
+    printError("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")",
                deviceInfo.blockSize,
                String_cString(deviceName),
                bufferSize
@@ -1347,7 +1347,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_STOP:
                 // stop
                 printInfo(1,
-                          "stopped (image part %llu..%llu exists)\n",
+                          "stopped (image part %"PRIu64"..%"PRIu64" exists)\n",
                           String_cString(destinationDeviceName),
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
@@ -1376,7 +1376,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_SKIP_EXISTING:
                 // skip
                 printInfo(1,
-                          "skipped (image part %llu..%llu exists)\n",
+                          "skipped (image part %"PRIu64"..%"PRIu64" exists)\n",
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                          );
@@ -2478,7 +2478,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               {
                 case RESTORE_ENTRY_MODE_STOP:
                   // stop
-                  printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
+                  printInfo(1,"skipped (hardlink part %"PRIu64"..%"PRIu64" exists)\n",
                             fragmentOffset,
                             (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                            );
@@ -2494,7 +2494,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                   break;
                 case RESTORE_ENTRY_MODE_SKIP_EXISTING:
                   // skip
-                  printInfo(1,"skipped (hardlink part %llu..%llu exists)\n",
+                  printInfo(1,"skipped (hardlink part %"PRIu64"..%"PRIu64" exists)\n",
                             fragmentOffset,
                             (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                            );

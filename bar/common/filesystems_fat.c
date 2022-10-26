@@ -405,11 +405,11 @@ LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FATHandle *fatHandle, uin
 #if 0
 if (blockIsUsed)
 {
-  fprintf(stderr,"%s, %d: used offset=%llu sector=%d cluster=%d \n",__FILE__,__LINE__,offset,offset/fatHandle->bytesPerSector,cluster);
+  fprintf(stderr,"%s, %d: used offset=%"PRIu64" sector=%d cluster=%d \n",__FILE__,__LINE__,offset,offset/fatHandle->bytesPerSector,cluster);
 }
 else
 {
-//  fprintf(stderr,"%s, %d: free offset=%llu sector=%d cluster=%d \n",__FILE__,__LINE__,offset,offset/fatHandle->bytesPerSector,cluster);
+//  fprintf(stderr,"%s, %d: free offset=%"PRIu64" sector=%d cluster=%d \n",__FILE__,__LINE__,offset,offset/fatHandle->bytesPerSector,cluster);
 }
 #endif
 }

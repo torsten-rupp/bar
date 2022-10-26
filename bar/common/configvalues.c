@@ -3904,11 +3904,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_appendFormat(line,"%lld%s",(*configVariable.l)/factor,unitName);
+          String_appendFormat(line,"%"PRIi64"%s",(*configVariable.l)/factor,unitName);
         }
         else
         {
-          String_appendFormat(line,"%lld",*configVariable.l);
+          String_appendFormat(line,"%"PRIi64,*configVariable.l);
         }
 
         doneLine(line);

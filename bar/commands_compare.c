@@ -354,7 +354,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     if (fileInfo.size != File_getSize(&fileHandle))
     {
       printInfo(1,"FAIL!\n");
-      printError("'%s' differ in size: expected %lld bytes, found %lld bytes",
+      printError("'%s' differ in size: expected %"PRIu64" bytes, found %"PRIu64" bytes",
                  String_cString(fileName),
                  fileInfo.size,
                  File_getSize(&fileHandle)
@@ -703,7 +703,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     if (deviceInfo.size != Device_getSize(&deviceHandle))
     {
       printInfo(1,"FAIL!\n");
-      printError("'%s' differ in size: expected %lld bytes, found %lld bytes",
+      printError("'%s' differ in size: expected %"PRIu64" bytes, found %"PRIu64" bytes",
                  String_cString(deviceName),
                  deviceInfo.size,
                  Device_getSize(&deviceHandle)
@@ -1348,7 +1348,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         if (fileInfo.size != File_getSize(&fileHandle))
         {
           printInfo(1,"FAIL!\n");
-          printError("'%s' differ in size: expected %lld bytes, found %lld bytes",
+          printError("'%s' differ in size: expected %"PRIu64" bytes, found %"PRIu64" bytes",
                      String_cString(fileName),
                      fileInfo.size,
                      File_getSize(&fileHandle)

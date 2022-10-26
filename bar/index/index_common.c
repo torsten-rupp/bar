@@ -563,7 +563,7 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
       if (changedRowCount > 0)
       {
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %llums\n",__FILE__,__LINE__,
+        fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %"PRIu64"ms\n",__FILE__,__LINE__,
                 Error_getText(error),
                 changedRowCount,
                 tableName,
@@ -642,7 +642,7 @@ Errors IndexCommon_deleteByIds(IndexHandle      *indexHandle,
         if (changedRowCount > 0)
         {
           t1 = Misc_getTimestamp();
-          fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %llums\n",__FILE__,__LINE__,
+          fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %"PRIu64"ms\n",__FILE__,__LINE__,
                   Error_getText(error),
                   changedRowCount,
                   tableName,

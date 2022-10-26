@@ -1335,7 +1335,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         return error;
       }
       File_getInfo(&fileInfo,imageFileName);
-      printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+      printInfo(1,"OK (%"PRIu64" bytes)\n",fileInfo.size);
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Created medium image #%u",storageInfo->volumeNumber);
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
       storageInfo->opticalDisk.write.step++;
@@ -1377,7 +1377,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           return error;
         }
         File_getInfo(&fileInfo,imageFileName);
-        printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+        printInfo(1,"OK (%"PRIu64" bytes)\n",fileInfo.size);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Added error correction codes to medium image #%u",storageInfo->volumeNumber);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
         storageInfo->opticalDisk.write.step++;

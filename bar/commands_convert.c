@@ -966,7 +966,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("device block size %llu on '%s' is too big (max: %llu)",
+    printError("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")",
                deviceInfo.blockSize,
                String_cString(deviceName),
                bufferSize
@@ -1842,7 +1842,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   {
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
-//fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
+//fprintf(stderr,"%s, %d: %p %d %"PRIu64"\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
     if (   ((convertInfo->failError == ERROR_NONE) || !convertInfo->newJobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(convertInfo)

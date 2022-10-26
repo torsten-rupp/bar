@@ -87,7 +87,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   orderString  = String_new();
 
   // get filters
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",INDEX_DATABASE_ID(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
 
   // get ordering

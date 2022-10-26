@@ -1716,7 +1716,7 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
 
   // get filters
   filterString = Database_newFilter();
-  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",INDEX_DATABASE_ID(findEntityId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%"PRIi64"",INDEX_DATABASE_ID(findEntityId));
   Database_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
   Database_filterAppend(filterString,!String_isEmpty(findEntityUUID),"AND","entities.scheduleUUID=%'S",findEntityUUID);
   Database_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
@@ -1850,7 +1850,7 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_UPDATE_INFOS entityId=%lld",
+                                    "INDEX_ENTITY_UPDATE_INFOS entityId=%"PRIi64"",
                                     entityId
                                    );
   }
@@ -1904,8 +1904,8 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 
   // get filters
   string = String_new();
-  Database_filterAppend(filterString,TRUE,"AND","entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",INDEX_DATABASE_ID(uuidId));
+  Database_filterAppend(filterString,TRUE,"AND","entities.id!=%"PRIi64"",INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID=%'S",entityUUID);
   Database_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
@@ -2390,7 +2390,7 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_UNLOCK entityId=%lld",
+                                    "INDEX_ENTITY_UNLOCK entityId=%"PRIi64"",
                                     entityId
                                    );
   }
@@ -2586,7 +2586,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_DELETE entityId=%lld",
+                                    "INDEX_ENTITY_DELETE entityId=%"PRIi64"",
                                     entityId
                                    );
   }
@@ -2675,7 +2675,7 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_PURGE entityId=%lld",
+                                    "INDEX_ENTITY_PURGE entityId=%"PRIi64"",
                                     entityId
                                    );
   }
@@ -2712,7 +2712,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_PRUNE entityId=%lld",
+                                    "INDEX_ENTITY_PRUNE entityId=%"PRIi64"",
                                     entityId
                                    );
   }
