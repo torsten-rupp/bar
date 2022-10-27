@@ -1523,9 +1523,9 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 #ifdef NDEBUG
   void Crypt_doneKey(CryptKey *cryptKey)
 #else /* not NDEBUG */
-  void __Crypt_doneKey(const char        *__fileName__,
-                       ulong             __lineNb__,
-                       CryptKey          *cryptKey
+  void __Crypt_doneKey(const char *__fileName__,
+                       ulong      __lineNb__,
+                       CryptKey   *cryptKey
                       )
 #endif /* NDEBUG */
 {
@@ -1598,7 +1598,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 void Crypt_clearKey(CryptKey *cryptKey)
 {
   assert(cryptKey != NULL);
-  DEBUG_REMOVE_RESOURCE_TRACE(cryptKey,CryptKey);
+  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
 
   #ifdef HAVE_GCRYPT
     if (cryptKey->key != NULL)
@@ -1641,6 +1641,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
+  key = NULL;
 
   // derive key
   switch (cryptKeyDeriveType)
@@ -1697,8 +1698,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
           return ERRORX_(INIT_KEY,gcryptError,"%s",buffer);
         }
         assert(cryptKey->key != NULL);
-#else
-key = NULL;
 #endif
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(NO_SALT);
@@ -2175,6 +2174,9 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
     gcry_sexp_t  key;
     gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
+
+  assert(cryptKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
 
   #ifdef HAVE_GCRYPT
     if ((modulus != NULL) && (exponent != NULL))
@@ -2713,6 +2715,8 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
     if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
+    if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+    cryptKey->key        = NULL;
 
     // free resources
     freeSecure(pkcs1EncodedMessage);
@@ -2869,6 +2873,8 @@ fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMe
     if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
+    if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+    cryptKey->key        = NULL;
 
     // free resources
     freeSecure(pkcs1EncodedMessage);
@@ -2905,6 +2911,7 @@ Errors Crypt_getSignature(CryptKey *privateKey,
   #endif /* HAVE_GCRYPT */
 
   assert(privateKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(privateKey);
   assert(buffer != NULL);
   assert(signature != NULL);
   assert(signatureLength != NULL);
@@ -3003,6 +3010,7 @@ Errors Crypt_verifySignature(CryptKey             *publicKey,
   #endif /* HAVE_GCRYPT */
 
   assert(publicKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(publicKey);
   assert(buffer != NULL);
   assert(signature != NULL);
 
