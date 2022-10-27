@@ -31,7 +31,7 @@
 
 /****************** Conditional compilation switches *******************/
 // switch on for debugging only!
-#define INDEX_DEBUG_LOCK
+#define _INDEX_DEBUG_LOCK
 #define _INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
