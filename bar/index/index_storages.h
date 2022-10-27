@@ -64,12 +64,12 @@ Errors IndexStorage_cleanUp(IndexHandle *indexHandle);
 \***********************************************************************/
 
 bool IndexStorage_isEmpty(IndexHandle *indexHandle,
-                          DatabaseId  storageId
+                          IndexId     storageId
                          );
 
 /***********************************************************************\
-* Name   : purgeStorage
-* Purpose: delete storage
+* Name   : IndexStorage_delete
+* Purpose: delete storage from index
 * Input  : indexHandle  - index handle
 *          storageId    - storage database id
 *          progressInfo - progress info (or NULL)
@@ -79,22 +79,24 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors IndexStorage_delete(IndexHandle  *indexHandle,
-                           DatabaseId   storageId,
+                           IndexId      storageId,
                            ProgressInfo *progressInfo
                           );
 
 /***********************************************************************\
 * Name   : IndexStorage_purge
 * Purpose: purge storage (mark as "deleted")
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_purge(IndexHandle *indexHandle,
-                          DatabaseId  storageId
+Errors IndexStorage_purge(IndexHandle  *indexHandle,
+                          IndexId      storageId,
+                          ProgressInfo *progressInfo
                          );
 
 /***********************************************************************\
@@ -108,9 +110,10 @@ Errors IndexStorage_purge(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexStorage_purgeAllById(IndexHandle *indexHandle,
-                                 DatabaseId  entityId,
-                                 DatabaseId  keepStorageId
+Errors IndexStorage_purgeAllById(IndexHandle  *indexHandle,
+                                 IndexId      entityId,
+                                 IndexId      keepStorageId,
+                                 ProgressInfo *progressInfo
                                 );
 
 /***********************************************************************\
@@ -128,7 +131,8 @@ Errors IndexStorage_purgeAllById(IndexHandle *indexHandle,
 Errors IndexStorage_purgeAllByName(IndexHandle            *indexHandle,
                                    const StorageSpecifier *storageSpecifier,
                                    ConstString            archiveName,
-                                   DatabaseId             keepStorageId
+                                   IndexId                keepStorageId,
+                                   ProgressInfo           *progressInfo
                                   );
 
 /***********************************************************************\
@@ -146,7 +150,7 @@ Errors IndexStorage_purgeAllByName(IndexHandle            *indexHandle,
 Errors IndexStorage_prune(IndexHandle *indexHandle,
                           bool        *doneFlag,
                           ulong       *deletedCounter,
-                          DatabaseId  storageId
+                          IndexId     storageId
                          );
 
 /***********************************************************************\
@@ -179,7 +183,7 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
-                                DatabaseId   storageId,
+                                IndexId      storageId,
                                 ProgressInfo *progressInfo
                                );
 
@@ -195,7 +199,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
-                                     DatabaseId   storageId,
+                                     IndexId      storageId,
                                      ProgressInfo *progressInfo
                                     );
 
@@ -210,7 +214,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
-                                     DatabaseId  storageId
+                                     IndexId     storageId
                                     );
 
 #ifdef __cplusplus

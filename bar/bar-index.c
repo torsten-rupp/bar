@@ -2662,7 +2662,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    storageId = values[0].id;
                                    name      = values[1].string;
-//fprintf(stderr,"%s:%d: storageId=%llu\n",__FILE__,__LINE__,storageId);
+//fprintf(stderr,"%s:%d: storageId=%"PRIu64"\n",__FILE__,__LINE__,storageId);
 
                                    getPostgreSQLFTSTokens(tokens,name);
                                    error = Database_insert(databaseHandle,
@@ -2721,7 +2721,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    entryId = values[0].id;
                                    name    = values[1].string;
-//fprintf(stderr,"%s:%d: entryId=%llu\n",__FILE__,__LINE__,entryId);
+//fprintf(stderr,"%s:%d: entryId=%"PRIu64"\n",__FILE__,__LINE__,entryId);
 
                                    getPostgreSQLFTSTokens(tokens,name);
                                    error = Database_insert(databaseHandle,
@@ -7526,6 +7526,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 {
   Errors     error;
   FileHandle handle;
+  char       sqlString[256];
 
   printInfo("Vacuum...");
   switch (Database_getType(databaseHandle))
@@ -7559,10 +7560,9 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 "VACUUM INTO ?",
+                                 stringFormat(sqlString,sizeof(sqlString),"VACUUM INTO '%s'",toFileName),
                                  DATABASE_PARAMETERS
                                  (
-                                   DATABASE_PARAMETER_STRING(toFileName)
                                  )
                                 );
         if (error != ERROR_NONE)

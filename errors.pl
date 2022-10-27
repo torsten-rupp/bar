@@ -567,6 +567,7 @@ sub writeC()
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
@@ -696,7 +697,7 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               if      (longLongFlag)
               {
                 value.ll = va_arg(arguments,int64);
-                stringFormatAppend(string,n,\"%lld\",value.ll);
+                stringFormatAppend(string,n,\"%\"PRIi64,value.ll);
               }
               else if (longFlag)
               {
@@ -716,7 +717,7 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               if      (longLongFlag)
               {
                 value.ull = va_arg(arguments,uint64);
-                stringFormatAppend(string,n,\"%llu\",value.ull);
+                stringFormatAppend(string,n,\"%\"PRIu64,value.ull);
               }
               else if (longFlag)
               {

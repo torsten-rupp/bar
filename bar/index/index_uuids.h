@@ -65,7 +65,7 @@ Errors IndexUUID_cleanUp(IndexHandle *indexHandle);
 Errors IndexUUID_purge(IndexHandle *indexHandle,
                        bool        *doneFlag,
                        ulong       *deletedCounter,
-                       DatabaseId  uuidId
+                       IndexId     uuidId
                       );
 
 /***********************************************************************\
@@ -83,7 +83,7 @@ Errors IndexUUID_purge(IndexHandle *indexHandle,
 Errors IndexUUID_prune(IndexHandle *indexHandle,
                        bool        *doneFlag,
                        ulong       *deletedCounter,
-                       DatabaseId  uuidId
+                       IndexId     uuidId
                       );
 
 /***********************************************************************\

@@ -107,6 +107,26 @@ bool                       indexQuitFlag;
   extern "C" {
 #endif
 
+const char *IndexCommon_getIndexInUseInfo(void)
+{
+  static char buffer[256];
+
+  ArrayIterator arrayIterator;
+  ThreadInfo    threadInfo;
+
+  stringClear(buffer);
+  SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    ARRAY_ITERATE(&indexUsedBy,arrayIterator,threadInfo)
+    {
+      if (!stringIsEmpty(buffer)) stringAppendChar(buffer,sizeof(buffer),' ');
+      stringFormatAppend(buffer,sizeof(buffer),"%s",Thread_getIdString(threadInfo.threadId));
+    }
+  }
+
+  return buffer;
+}
+
 void IndexCommon_indexThreadInterrupt(void)
 {
   if (   indexInitializedFlag
@@ -511,12 +531,11 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
                           uint                 filterCount
                          )
 {
-  #ifdef INDEX_DEBUG_PURGE
-    uint64 t0;
-  #endif
-
   Errors error;
   ulong  changedRowCount;
+  #ifdef INDEX_DEBUG_PURGE
+    uint64 t0,t1;
+  #endif
   bool   indexInUse;
 
   assert(indexHandle != NULL);
@@ -543,11 +562,12 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
     #ifdef INDEX_DEBUG_PURGE
       if (changedRowCount > 0)
       {
-        fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %llums\n",__FILE__,__LINE__,
+        t1 = Misc_getTimestamp();
+        fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %"PRIu64"ms\n",__FILE__,__LINE__,
                 Error_getText(error),
                 changedRowCount,
                 tableName,
-                (Misc_getTimestamp()-t0)/US_PER_MS
+                (t1-t0)/US_PER_MS
                );
       }
     #endif
@@ -577,49 +597,83 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
   return error;
 }
 
-Errors IndexCommon_deleteById(IndexHandle      *indexHandle,
-                              bool             *doneFlag,
-                              ulong            *deletedCounter,
-                              const char       *tableName,
-                              const char       *columnName,
-                              const DatabaseId ids[],
-                              ulong            idCount
-                             )
+Errors IndexCommon_deleteByIds(IndexHandle      *indexHandle,
+                               bool             *doneFlag,
+                               ulong            *deletedCounter,
+                               const char       *tableName,
+                               const char       *columnName,
+                               const DatabaseId ids[],
+                               ulong            idCount
+                              )
 {
   const uint INCREMENT_SIZE = 1024;
 
   Errors error;
   ulong  i;
   ulong  changedRowCount;
+  #ifdef INDEX_DEBUG_PURGE
+    uint64 t0,t1;
+  #endif
   bool   indexInUse;
 
   assert(indexHandle != NULL);
   assert(tableName != NULL);
 
   error = ERROR_NONE;
-  for (i = 0; i < idCount; i += INCREMENT_SIZE)
+  i = 0;
+  if (idCount > 0)
   {
-    changedRowCount = 0;
-
-    error = Database_deleteByIds(&indexHandle->databaseHandle,
-                                 &changedRowCount,
-                                 tableName,
-                                 columnName,
-                                 DATABASE_FLAG_NONE,
-                                 &ids[i],
-                                 MIN(idCount-i,INCREMENT_SIZE)
-                                );
-    if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
-
-    indexInUse =IndexCommon_isIndexInUse();
-  }
-
-  // update done-flag
-  if ((error == ERROR_NONE) && (doneFlag != NULL))
-  {
-    if ((changedRowCount > 0) && indexInUse)
+    do
     {
-      (*doneFlag) = FALSE;
+      changedRowCount = 0;
+      #ifdef INDEX_DEBUG_PURGE
+        t0 = Misc_getTimestamp();
+      #endif
+      error = Database_deleteByIds(&indexHandle->databaseHandle,
+                                   &changedRowCount,
+                                   tableName,
+                                   columnName,
+                                   DATABASE_FLAG_NONE,
+                                   &ids[i],
+                                   MIN(idCount-i,INCREMENT_SIZE)
+                                  );
+      if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
+      #ifdef INDEX_DEBUG_PURGE
+        if (changedRowCount > 0)
+        {
+          t1 = Misc_getTimestamp();
+          fprintf(stderr,"%s, %d: error: %s, deleted %lu entries from '%s': %"PRIu64"ms\n",__FILE__,__LINE__,
+                  Error_getText(error),
+                  changedRowCount,
+                  tableName,
+                  (t1-t0)/US_PER_MS
+                 );
+        }
+      #endif
+
+      indexInUse = IndexCommon_isIndexInUse();
+
+      i += INCREMENT_SIZE;
+    }
+    while (   (i < idCount)
+           && (error == ERROR_NONE)
+           && (changedRowCount > 0)
+           && !indexInUse
+          );
+    #ifdef INDEX_DEBUG_PURGE
+      if (error == ERROR_INTERRUPTED)
+      {
+        fprintf(stderr,"%s, %d: delete interrupted\n",__FILE__,__LINE__);
+      }
+    #endif
+
+    // update done-flag
+    if ((error == ERROR_NONE) && (doneFlag != NULL))
+    {
+      if ((changedRowCount > 0) && indexInUse)
+      {
+        (*doneFlag) = FALSE;
+      }
     }
   }
 
@@ -654,7 +708,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0L,  // indexIdCount
                                 NULL,  // entryIds
                                 0L,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
+                                INDEX_TYPESET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
                                 FALSE,  // fragmentsCount

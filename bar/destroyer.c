@@ -14,6 +14,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -238,7 +239,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
   // get position
   if (String_getNextToken(&stringTokenizer,&w,NULL))
   {
-    if      (String_scan(w,STRING_BEGIN,"%llu",&definition->position))
+    if      (String_scan(w,STRING_BEGIN,"%"PRIu64,&definition->position))
     {
     }
     else if (String_scan(w,STRING_BEGIN,"\"%"STRINGIFY(MAX_FIND_LENGTH)"s\"",find))

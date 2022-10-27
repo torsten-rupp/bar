@@ -60,6 +60,7 @@
 #include "storage.h"
 #include "deltasources.h"
 #include "index/index.h"
+#include "index/index_storages.h"
 #include "continuous.h"
 #if HAVE_BREAKPAD
   #include "minidump.h"
@@ -2954,6 +2955,37 @@ LOCAL Errors runServer(void)
   // open log file
   openLog();
 
+  // create pid file
+  error = createPIDFile();
+  if (error != ERROR_NONE)
+  {
+    closeLog();
+    return error;
+  }
+
+  // read all jobs
+  error = Job_rereadAll(globalOptions.jobsDirectory);
+  if (error != ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               _("cannot read jobs from '%s' (error: %s)!"),
+               String_cString(globalOptions.jobsDirectory),
+               Error_getText(error)
+              );
+    deletePIDFile();
+    closeLog();
+    return error;
+  }
+
+  // init continuous
+  error = Continuous_init(globalOptions.continuousDatabaseFileName);
+  if (error != ERROR_NONE)
+  {
+    printWarning("continuous support is not available (reason: %s)",Error_getText(error));
+  }
+  Job_updateAllNotifies();
+
   // init UUID if needed (ignore errors)
   if (String_isEmpty(instanceUUID))
   {
@@ -2968,22 +3000,6 @@ LOCAL Errors runServer(void)
                 );
     }
   }
-
-  // create pid file
-  error = createPIDFile();
-  if (error != ERROR_NONE)
-  {
-    closeLog();
-    return error;
-  }
-
-  // init continuous
-  error = Continuous_init(globalOptions.continuousDatabaseFileName);
-  if (error != ERROR_NONE)
-  {
-    printWarning("continuous support is not available (reason: %s)",Error_getText(error));
-  }
-  Job_updateAllNotifies();
 
   // server mode -> run server with network
   globalOptions.runMode = RUN_MODE_SERVER;
@@ -3035,6 +3051,13 @@ LOCAL Errors runBatch(void)
 {
   Errors error;
 
+  // read all jobs
+  error = Job_rereadAll(globalOptions.jobsDirectory);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
   // batch mode -> run server with standard i/o
   globalOptions.runMode = RUN_MODE_BATCH;
   error = Server_batch(STDIN_FILENO,STDOUT_FILENO);
@@ -3063,6 +3086,17 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   JobOptions    jobOptions;
   StaticString  (entityUUID,MISC_UUID_STRING_LENGTH);
   Errors        error;
+
+  // read all jobs
+  error = Job_rereadAll(globalOptions.jobsDirectory);
+  if (error != ERROR_NONE)
+  {
+    printError(_("cannot read jobs from '%s' (error: %s)!"),
+               String_cString(globalOptions.jobsDirectory),
+               Error_getText(error)
+              );
+    return error;
+  }
 
   // get job to execute
   String_clear(jobUUID);
@@ -3105,14 +3139,14 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
                          #ifndef NDEBUG
                            (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
                          #else
-                           jobUUID,
+                           String_cString(jobUUID),
                          #endif
                          NULL,  // scheduleUUID
                          NULL,  // scheduleTitle
                          #ifndef NDEBUG
                            (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(entityUUID),
                          #else
-                           entityUUID,
+                           String_cString(entityUUID),
                          #endif
                          archiveType,
                          globalOptions.storageName,
@@ -3606,6 +3640,18 @@ LOCAL Errors runDebug(void)
   // initialize variables
   AutoFree_init(&autoFreeList);
 
+  // read all jobs
+  error = Job_rereadAll(globalOptions.jobsDirectory);
+  if (error != ERROR_NONE)
+  {
+    printError(_("cannot read jobs from '%s' (error: %s)!"),
+               String_cString(globalOptions.jobsDirectory),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
   // init index database
   if (stringIsEmpty(globalOptions.indexDatabaseURI))
   {
@@ -3613,7 +3659,6 @@ LOCAL Errors runDebug(void)
     AutoFree_cleanup(&autoFreeList);
     return ERROR_DATABASE;
   }
-
   error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
   if (error != ERROR_NONE)
   {
@@ -3624,7 +3669,6 @@ LOCAL Errors runDebug(void)
   AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
   printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
   AUTOFREE_ADD(&autoFreeList,printableDatabaseURI,{ String_delete(printableDatabaseURI); });
-
   error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
   if (error != ERROR_NONE)
   {
@@ -3729,10 +3773,11 @@ LOCAL Errors runDebug(void)
       return ERROR_ARCHIVE_NOT_FOUND;
     }
 
-    // delete storage
-    error = Index_deleteStorage(&indexHandle,
-                                storageId
-                               );
+    // purge storage
+    error = IndexStorage_purge(&indexHandle,
+                               storageId,
+                               NULL  // progressInfo
+                              );
     if (error != ERROR_NONE)
     {
       printError("cannot delete storage '%s' (error: %s)!",
@@ -3792,7 +3837,7 @@ LOCAL Errors runDebug(void)
     }
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
-    // delete storage if it exists
+    // purge storage if it exists
     if (   (Index_findStorageByName(&indexHandle,
                                     &storageSpecifier,
                                     globalOptions.debug.indexAddStorage,
@@ -3811,10 +3856,13 @@ LOCAL Errors runDebug(void)
                                     NULL  // totalEntrySize
                                    ) == ERROR_NONE
            )
-        && (entityId == INDEX_ID_ENTITY(globalOptions.debug.indexEntityId))
+        && (INDEX_ID_EQUALS(entityId,INDEX_ID_ENTITY(globalOptions.debug.indexEntityId)))
        )
     {
-      error = Index_deleteStorage(&indexHandle,storageId);
+      error = IndexStorage_purge(&indexHandle,
+                                 storageId,
+                                 NULL  // progressInfo
+                                );
       if (error != ERROR_NONE)
       {
         printError("cannot delete storage '%s' (error: %s)!",
@@ -4333,17 +4381,6 @@ LOCAL Errors bar(int argc, const char *argv[])
       return ERROR_NONE;
     }
   #endif /* NDEBUG */
-
-  // read all jobs
-  error = Job_rereadAll(globalOptions.jobsDirectory);
-  if (error != ERROR_NONE)
-  {
-    printError(_("cannot read jobs in '%s' (error: %s)!"),
-               String_cString(globalOptions.jobsDirectory),
-               Error_getText(error)
-              );
-    return error;
-  }
 
   // create temporary directory
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);

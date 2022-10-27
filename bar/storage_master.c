@@ -244,7 +244,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
                                   CALLBACK_(NULL,NULL),  // commandResultFunction
-                                  "STORAGE_CREATE archiveName=%'S archiveSize=%llu",
+                                  "STORAGE_CREATE archiveName=%'S archiveSize=%"PRIu64,
                                   fileName,
                                   fileSize
                                  );
@@ -375,11 +375,11 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     Misc_base64Encode(String_clear(encodedData),p+writtenBytes,length);
 
     // send data
-//fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
+//fprintf(stderr,"%s, %d: n=%"PRIu64"\n",__FILE__,__LINE__,n);
     error = ServerIO_sendCommand(storageHandle->storageInfo->masterIO,
                                  MASTER_DEBUG_LEVEL_DATA,
                                  &ids[idCount],
-                                 "STORAGE_WRITE offset=%llu length=%u data=%s",
+                                 "STORAGE_WRITE offset=%"PRIu64" length=%u data=%s",
 //TODO
                                  storageHandle->master.index,
                                  length,
@@ -510,7 +510,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     error = ServerIO_sendCommand(storageHandle->storageInfo->masterIO,
                                  MASTER_DEBUG_LEVEL_DATA,
                                  &ids[idCount],
-                                 "STORAGE_WRITE offset=%llu length=%u data=%s",
+                                 "STORAGE_WRITE offset=%"PRIu64" length=%u data=%s",
 //TODO
                                  storageHandle->master.index,
                                  length,

@@ -548,7 +548,7 @@ void Array_sort(Array                *array,
                );
 
 /***********************************************************************\
-* Name   : Array_toCArray
+* Name   : Array_cArray
 * Purpose: get C-array data pointer
 * Input  : array - array
 * Output : -

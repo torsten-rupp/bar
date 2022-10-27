@@ -130,7 +130,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                        TRUE,  // locked
                                                        &entityId
                                                       );
-                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(entityId));
+                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",INDEX_DATABASE_ID(entityId));
 
                                return error;
                              },NULL),
@@ -178,8 +178,8 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %lld, \
-                                                                                          %lld, \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIi64", \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -190,7 +190,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                             },NULL),
                                                             CALLBACK_(getCopyPauseCallback(),NULL),
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%"PRIi64"",
                                                             fromStorageId
                                                            );
                                }
@@ -230,11 +230,11 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %lld, \
-                                                                                          %lld, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIu64", \
+                                                                                          %"PRIu64", \
+                                                                                          %"PRIu64" \
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
@@ -246,7 +246,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                             },NULL),
                                                             CALLBACK_(getCopyPauseCallback(),NULL),
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%"PRIi64"",
                                                             fromStorageId
                                                            );
                                }
@@ -288,13 +288,13 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %lld, \
-                                                                                          %lld, \
-                                                                                          %llu, \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIu64", \
                                                                                           %d, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %"PRIu64", \
+                                                                                          %"PRIu64", \
+                                                                                          %"PRIu64" \
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
@@ -308,7 +308,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                             },NULL),
                                                             CALLBACK_(getCopyPauseCallback(),NULL),
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%"PRIi64"",
                                                             fromStorageId
                                                            );
                                }
@@ -346,8 +346,8 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %lld, \
-                                                                                          %lld, \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIi64", \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -358,7 +358,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                             },NULL),
                                                             CALLBACK_(getCopyPauseCallback(),NULL),
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%"PRIi64"",
                                                             fromStorageId
                                                            );
                                }
@@ -398,10 +398,10 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %lld, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIu64", \
+                                                                                          %"PRIu64", \
+                                                                                          %"PRIu64" \
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
@@ -413,7 +413,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                             },NULL),
                                                             CALLBACK_(getCopyPauseCallback(),NULL),
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%"PRIi64"",
                                                             fromStorageId
                                                            );
                                }
@@ -453,8 +453,8 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %lld, \
-                                                                                          %lld, \
+                                                                                          %"PRIi64", \
+                                                                                          %"PRIi64", \
                                                                                           %d, \
                                                                                           %u, \
                                                                                           %u \
@@ -469,7 +469,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                             },NULL),
                                                             CALLBACK_(getCopyPauseCallback(),NULL),
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%"PRIi64"",
                                                             fromStorageId
                                                            );
                                }
@@ -503,7 +503,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
   if (error == ERROR_NONE)
   {
     while (Database_getNextRow(&databaseQueryHandle1,
-                               "%S %S %llu",
+                               "%S %S %"PRIu64"",
                                uuid,
                                name1,
                                &createdDateTime
@@ -526,7 +526,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                   ( \
                                    %'S, \
                                    '', \
-                                   DATETIME(%llu,'unixepoch'), \
+                                   DATETIME(%"PRIu64",'unixepoch'), \
                                    %d, \
                                    %d\
                                   ); \
@@ -554,7 +554,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
         if (error == ERROR_NONE)
         {
           while (Database_getNextRow(&databaseQueryHandle2,
-                                     "%lld %S",
+                                     "%"PRIi64" %S",
                                      &storageId,
                                      name2
                                     )
@@ -579,8 +579,8 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      "UPDATE storage \
-                                      SET entityId=%lld \
-                                      WHERE id=%lld; \
+                                      SET entityId=%"PRIi64" \
+                                      WHERE id=%"PRIi64"; \
                                      ",
                                      entityId,
                                      storageId

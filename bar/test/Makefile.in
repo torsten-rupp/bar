@@ -2626,26 +2626,26 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --mount-device=foo $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "mount-device = foo"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "mount-device = foo"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "overwrite-archive-files = yes"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "overwrite-archive-files = yes"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "overwrite-files = yes"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "overwrite-files = yes"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "stop-on-error = yes"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "stop-on-error = yes"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
-		$(ECHO) "remote-host-name = foo"; \
-		$(ECHO) "remote-host-port = 1234"; \
-	) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
+    $(ECHO) "remote-host-name = foo"; \
+    $(ECHO) "remote-host-port = 1234"; \
+  ) >$(INTERMEDIATE_DIR)/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --no-default-config --config=$(INTERMEDIATE_DIR)/test.cfg --config=$(INTERMEDIATE_DIR)/test-deprecated.cfg $(LOG))
 	( \
     $(ECHO) "[schedule full]"; \
@@ -2711,14 +2711,14 @@ test_config: \
 	@#
 	# test configuration data
 	( \
-		$(ECHO) "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
-		$(ECHO) "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
-	) > $(TEST_CONFIG)
+    $(ECHO) "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
+    $(ECHO) "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
+  ) > $(TEST_CONFIG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
 	( \
-		$(ECHO) "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
-		$(ECHO) "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
-	) > $(TEST_CONFIG)
+    $(ECHO) "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
+    $(ECHO) "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
+  ) > $(TEST_CONFIG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
 #	@$(RMF) $(INTERMEDIATE_DIR)/test.cfg
 	$(call functionDoneTestFiles)
@@ -4155,7 +4155,8 @@ test_image_operations: \
 test_image_operations_raw:  \
   $(TEST_CONFIGS)
 	# raw
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@
 	# raw zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
@@ -4209,7 +4210,8 @@ test_image_operations_ext2: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT2@,)
 	# ext2
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@
@@ -4455,7 +4457,8 @@ test_image_operations_ext3: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT3@,)
 	# ext3
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@
@@ -4699,7 +4702,8 @@ test_image_operations_ext4: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT4@,)
 	# ext4
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@
 ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@
@@ -4958,7 +4962,8 @@ test_image_operations_fat12: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@#
 	# FAT12 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),1,1440K)
@@ -5020,7 +5025,8 @@ test_image_operations_fat16: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@#
 	# FAT16 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),20,1M)
@@ -5084,7 +5090,8 @@ test_image_operations_fat32: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@#
 	# FAT32 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
@@ -5163,7 +5170,8 @@ test_image_operations_reiserfs3: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@#
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
@@ -5271,7 +5279,8 @@ test_image_operations_dryrun: \
 	# delta tests
 	@$(call functionInfoHeader,test image operation dryrun)
 	@#
-	$(INSTALL) -d intermediate
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionTestDeviceReset)
 	@
 	# raw zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
@@ -5481,6 +5490,8 @@ test_index_operations_tool: \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX) \
   $(TEST_FILES)
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@#
 	# bar-index operations
 	@$(call functionInfoHeader,test index tool operations)
 	@$(call functionVerifyParameter,BAR_STORAGE)
@@ -5510,7 +5521,9 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --check $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(INTERMEDIATE_DIR)/test.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
+	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# operations with non-empty database
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
@@ -5522,6 +5535,7 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(INTERMEDIATE_DIR)/test.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-jobs $(LOG)
@@ -5547,6 +5561,7 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -n "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
+	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# newest entries in index
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)

@@ -78,12 +78,8 @@ const char *DATABASE_SAVE_PATTERNS[] =
   ".*\\_old\\d\\d\\d$"
 };
 
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-#else
-const IndexId INDEX_ID_NONE = {INDEX_TYPE_NONE, 0LL};
-const IndexId INDEX_ID_ANY  = {INDEX_TYPE_NONE,-1LL};
-#endif
+const IndexId INDEX_ID_NONE = {.type = INDEX_TYPENONE,.value = DATABASE_ID_NONE};
+const IndexId INDEX_ID_ANY  = {.type = INDEX_TYPENONE,.value = DATABASE_ID_ANY };
 
 // index open mask
 #define INDEX_OPEN_MASK_MODE  0x0000000F
@@ -262,7 +258,7 @@ typedef struct
 //  uint64     cycleCounter;
   #ifdef INDEX_DEBUG_LOCK
     ThreadLWPId threadLWPId;
-    #ifndef NDEBUG
+    #ifndef HAVE_BACKTRACE
       void const *stackTrace[16];
       uint       stackTraceSize;
     #endif /* NDEBUG */
@@ -445,7 +441,7 @@ LOCAL void busyHandler(void *userData)
                                    databaseSpecifier,
                                    NULL,  // databaseName
                                    DATABASE_OPEN_MODE_FORCE_CREATE,
-                                   DATABASE_TIMEOUT
+                                   timeout
                                   );
             #else /* not NDEBUG */
               return __Database_open(__fileName__,__lineNb__,
@@ -453,7 +449,7 @@ LOCAL void busyHandler(void *userData)
                                      databaseSpecifier,
                                      NULL,  // databaseName
                                      DATABASE_OPEN_MODE_FORCE_CREATE,
-                                     DATABASE_TIMEOUT
+                                     timeout
                                     );
             #endif /* NDEBUG */
           });
@@ -733,7 +729,7 @@ LOCAL Errors getIndexVersion(uint *indexVersion, const DatabaseSpecifier *databa
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
+  error = openIndex(&indexHandle,databaseSpecifier,NULL,INDEX_OPEN_MODE_READ,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -1043,7 +1039,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   }
 
   // open old index (Note: must be read/write to fix errors in database)
-  error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
+  error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     Database_doneSpecifier(&databaseSpecifier);
@@ -1180,7 +1176,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount,
-                                   INDEX_TYPE_SET_ALL,
+                                   INDEX_TYPESET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -1222,7 +1218,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
-          logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
+          logImportProgress("Aggregated storage #%"PRIi64": (%"PRIu64"s)",
                             storageId,
                             (t1-t0)/US_PER_SECOND
                            );
@@ -1271,7 +1267,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
-          logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
+          logImportProgress("Aggregated entity #%"PRIi64": (%"PRIu64"s)",
                             entityId,
                             (t1-t0)/US_PER_SECOND
                            );
@@ -1310,7 +1306,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
-          logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
+          logImportProgress("Aggregated UUID #%"PRIi64": (%"PRIu64"s)",
                             uuidId,
                             (t1-t0)/US_PER_SECOND
                            );
@@ -1598,7 +1594,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Requested update index #%lld: %s",
+                    "Requested update index #%"PRIi64": %s",
                     indexId,
                     String_cString(printableStorageName)
                    );
@@ -1704,18 +1700,21 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
       String_set(printableStorageName,storageName);
     }
 
-    error = Index_deleteStorage(indexHandle,storageId);
+    error = IndexStorage_purge(indexHandle,
+                               storageId,
+                               NULL  // progressInfo
+                              );
     if (error == ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Deleted incomplete storage #%"PRIi64": '%s'",
+                  "Purged incomplete storage #%"PRIi64": '%s'",
                   storageId,
                   String_cString(printableStorageName)
                  );
     }
-    
+
     Array_append(&storageIds,&storageId);
   }
 
@@ -1786,7 +1785,7 @@ UNUSED_VARIABLE(indexHandle);
   /* get entries to purge without associated file/image/directory/link/hardlink/special entry
      Note: may be left from interrupted purge of previous run
   */
-//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%lld\n",__FILE__,__LINE__,l);
+//l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%"PRIi64"\n",__FILE__,__LINE__,l);
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -2051,7 +2050,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0L,  // indexIdCount
                                 NULL,  // entryIds
                                 0L,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
+                                INDEX_TYPESET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
                                 FALSE,  // fragmentsCount
@@ -2368,7 +2367,7 @@ LOCAL void indexThreadCode(void)
     uint                oldDatabaseCount;
     String              failFileName;
   #endif /* INDEX_IMPORT_OLD_DATABASE */
-  DatabaseId  storageId,entityId;
+  IndexId     storageId,entityId;
   String      storageName;
   uint        sleepTime;
 
@@ -2377,7 +2376,7 @@ LOCAL void indexThreadCode(void)
   // open index
   do
   {
-    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_PURGE_TIMEOUT);
+    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_TIMEOUT);
     if ((error != ERROR_NONE) && !indexQuitFlag)
     {
       Misc_mdelay(1*MS_PER_SECOND);
@@ -2525,7 +2524,7 @@ LOCAL void indexThreadCode(void)
 //          (void)cleanUpOrphanedStorages(&indexHandle);
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
-          storageId = DATABASE_ID_NONE;
+          storageId = INDEX_ID_NONE;
           INDEX_DOX(error,
                     &indexHandle,
           {
@@ -2538,8 +2537,8 @@ LOCAL void indexThreadCode(void)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(valueCount);
 
-                                  storageId = values[0].id;
-                                  entityId  = values[1].id;
+                                  storageId = INDEX_ID_STORAGE(values[0].id);
+                                  entityId  = INDEX_ID_ENTITY (values[1].id);
                                   String_set(storageName,values[2].string);
 
                                   return ERROR_NONE;
@@ -2591,12 +2590,12 @@ LOCAL void indexThreadCode(void)
             break;
           }
 
-          if (storageId != DATABASE_ID_NONE)
+          if (!INDEX_ID_IS_NONE(storageId))
           {
             // remove storage from database
             do
             {
-              // delete storage
+              // delete storage from index
               error = IndexStorage_delete(&indexHandle,
                                           storageId,
                                           NULL  // progressInfo
@@ -2619,8 +2618,8 @@ LOCAL void indexThreadCode(void)
             }
 
             // prune entity
-            if (   (entityId != DATABASE_ID_NONE)
-                && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+            if (   !INDEX_ID_IS_NONE(entityId)
+                && !INDEX_ID_IS_DEFAULT_ENTITY(entityId)
                )
             {
               do
@@ -2661,7 +2660,7 @@ LOCAL void indexThreadCode(void)
             }
           }
         }
-        while (   (storageId != DATABASE_ID_NONE)
+        while (   !INDEX_ID_IS_NONE(storageId)
                && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
                && !indexQuitFlag
               );
@@ -3145,10 +3144,10 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
           break;
       }
 
-      error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+      error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,INDEX_TIMEOUT);
       if (error == ERROR_NONE)
       {
-        error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
+        error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,INDEX_TIMEOUT);
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,
@@ -3212,7 +3211,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   if (createFlag)
   {
     // create new index database
-    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
       String_delete(printableDatabaseURI);
@@ -3252,7 +3251,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   }
 
   // initial clean-up
-  error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
+  error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(printableDatabaseURI);
@@ -3537,7 +3536,7 @@ bool Index_containsType(const IndexId indexIds[],
 
   for (i = 0; i < indexIdCount; i++)
   {
-    if (Index_getType(indexIds[i]) == indexType)
+    if (INDEX_TYPE(indexIds[i]) == indexType)
     {
       return TRUE;
     }
@@ -3879,7 +3878,7 @@ void Index_debugPrintInUseInfo(void)
               Thread_getName(threadInfo.threadId)
              );
 
-      #ifndef NDEBUG
+      #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
         debugDumpStackTrace(stderr,
                             2,
                             DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
@@ -3887,7 +3886,7 @@ void Index_debugPrintInUseInfo(void)
                             threadInfo.stackTraceSize,
                             0
                            );
-      #endif /* NDEBUG */
+      #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
     }
   }
 }

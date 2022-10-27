@@ -37,6 +37,7 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index/index.h"
+#include "index/index_storages.h"
 
 #include "archive.h"
 
@@ -1640,7 +1641,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+  assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
 
   error = ERROR_NONE;
 
@@ -1826,7 +1827,7 @@ LOCAL Errors autoFlushArchiveIndexList(ArchiveHandle *archiveHandle,
                                       )
 {
   assert(archiveHandle != NULL);
-  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+  assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
 
   return flushArchiveIndexList(archiveHandle,uuidId,entityId,storageId,MAX_INDEX_LIST);
 }
@@ -3080,7 +3081,10 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         {
           SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            Index_deleteStorage(&archiveHandle->indexHandle,archiveHandle->storageId);
+            (void)IndexStorage_purge(&archiveHandle->indexHandle,
+                                     archiveHandle->storageId,
+                                     NULL  // progressInfo
+                                    );
           }
         });
       }
@@ -3163,7 +3167,7 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
   (*archiveSize) = 0LL;
 
   // flush index entries
-  if (archiveHandle->storageId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(archiveHandle->storageId))
   {
     error = flushArchiveIndexList(archiveHandle,
                                   archiveHandle->uuidId,
@@ -5952,7 +5956,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions != NULL);
   assert(archiveStoreFunction != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
 
 //TODO:
 UNUSED_VARIABLE(storageInfo);
@@ -6934,7 +6938,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           {
             if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("skipped unknown chunk '%s' at offset %llu in '%s'",
+              printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -6955,7 +6959,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           // report unknown chunk
           archiveHandle->pendingError = ERRORX_(UNKNOWN_CHUNK,
                                                 0,
-                                                "'%s' at offset %llu",
+                                                "'%s' at offset %"PRIu64,
                                                 Chunk_idToString(chunkHeader.id),
                                                 chunkHeader.offset
                                                );
@@ -9317,7 +9321,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           {
             if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("skipped unknown chunk '%s' at offset %llu in '%s'",
+              printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -9339,7 +9343,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           // report unknown chunk
           return ERRORX_(UNKNOWN_CHUNK,
                          0,
-                         "'%s' at offset %llu",
+                         "'%s' at offset %"PRIu64,
                          Chunk_idToString(chunkHeader.id),
                          chunkHeader.offset
                         );
@@ -9694,7 +9698,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10315,7 +10319,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10875,7 +10879,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11334,7 +11338,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11762,7 +11766,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12413,7 +12417,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12873,7 +12877,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %llu)",
+              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -13754,7 +13758,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
 
       // flush index list
       if (   (error == ERROR_NONE)
-          && (archiveEntryInfo->archiveHandle->storageId != INDEX_ID_NONE)
+          && !INDEX_ID_IS_NONE(archiveEntryInfo->archiveHandle->storageId)
          )
       {
         error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
@@ -15162,7 +15166,10 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
     {
       Index_unlockEntity(indexHandle,entityId);
     }
-    (void)Index_deleteStorage(indexHandle,storageId);
+    (void)IndexStorage_purge(indexHandle,
+                             storageId,
+                             NULL  // progressInfo
+                            );
     return error;
   }
 
@@ -15178,7 +15185,10 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   }
   else
   {
-    (void)Index_deleteStorage(indexHandle,storageId);
+    (void)IndexStorage_purge(indexHandle,
+                             storageId,
+                             NULL  // progressInfo
+                            );
   }
 
   // unlock entity (if exists)
@@ -15312,7 +15322,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
 
   assert(indexHandle != NULL);
-  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+  assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
   assert(storageInfo != NULL);
 
   // init variables
@@ -15721,7 +15731,46 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             break;
           }
 
-          if (!INDEX_ID_IS_NONE(entityId))
+          // create UUID if not exists with given job UUID
+          if (INDEX_ID_IS_NONE(uuidId))
+          {
+            error = Index_findUUID(indexHandle,
+                                   String_cString(jobUUID),
+                                   NULL,  // findEntityUUID
+                                   &uuidId,
+                                   NULL,  // executionCountNormal,
+                                   NULL,  // executionCountFull,
+                                   NULL,  // executionCountIncremental,
+                                   NULL,  // executionCountDifferential,
+                                   NULL,  // executionCountContinuous,
+                                   NULL,  // averageDurationNormal,
+                                   NULL,  // averageDurationFull,
+                                   NULL,  // averageDurationIncremental,
+                                   NULL,  // averageDurationDifferential,
+                                   NULL,  // averageDurationContinuous,
+                                   NULL,  // totalEntityCount,
+                                   NULL,  // totalStorageCount,
+                                   NULL,  // totalStorageSize,
+                                   NULL,  // totalEntryCount,
+                                   NULL  // totalEntrySize
+                                  );
+            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            {
+              // create new UUID
+              error = Index_newUUID(indexHandle,
+                                    String_cString(jobUUID),
+                                    &uuidId
+                                   );
+            }
+            if (error != ERROR_NONE)
+            {
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              break;
+            }
+          }
+
+          // create entity if not exists with given job UUID/entity UUID/host name/archive type
+          if (INDEX_ID_IS_NONE(entityId))
           {
             // update entity
 // TODO: do not update entity!
@@ -15961,7 +16010,10 @@ Errors Archive_removeIndex(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
 
-  error = Index_deleteStorage(indexHandle,storageId);
+  error = IndexStorage_purge(indexHandle,
+                             storageId,
+                             NULL  // progressInfo
+                            );
   if (error != ERROR_NONE)
   {
     return error;
@@ -16084,7 +16136,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
             {
               printInfo(1,
-                        "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
+                        "  Restore file '%s'...skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
                         String_cString(destinationFileName),
                         fragmentOffset,
                         (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
@@ -16267,7 +16319,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
               {
                 printInfo(1,
-                          "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
+                          "  Restore image '%s'...skipped (image part %"PRIu64"..%"PRIu64" exists)\n",
                           String_cString(destinationDeviceName),
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
@@ -17049,7 +17101,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 {
                   if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
                   {
-                    printInfo(2,"skipped (file part %llu..%llu exists)\n",
+                    printInfo(2,"skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
                               String_cString(destinationFileName),
                               fragmentOffset,
                               (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset

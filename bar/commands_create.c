@@ -50,6 +50,7 @@
 #include "crypt.h"
 #include "storage.h"
 #include "continuous.h"
+#include "index/index_storages.h"
 
 #include "commands_create.h"
 
@@ -4244,7 +4245,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                      NULL,  // entityUUID
                                      NULL,  // indexIds
                                      0,   // indexIdCount
-                                     INDEX_TYPE_SET_ALL,
+                                     INDEX_TYPESET_ALL,
                                        INDEX_STATE_SET(INDEX_STATE_OK)
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
@@ -4290,7 +4291,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  )
             )
       {
-//fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
+//fprintf(stderr,"%s, %d: %"PRIu64" %s: createdDateTime=%"PRIu64" size=%"PRIu64"\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
         if (createdDateTime < oldestCreatedDateTime)
         {
           oldestUUIDId          = uuidId;
@@ -4304,7 +4305,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       }
       Index_doneList(&indexQueryHandle);
 
-//fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
+//fprintf(stderr,"%s, %d: totalStorageSize=%"PRIu64" limit=%"PRIu64" oldestStorageId=%"PRIu64"\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
       if ((totalStorageSize > limit) && !INDEX_ID_IS_NONE((oldestStorageId)))
       {
         // delete oldest storage entry
@@ -4350,8 +4351,11 @@ NULL, // masterIO
           Storage_done(&storageInfo);
         }
 
-        // delete index of storage
-        error = Index_deleteStorage(indexHandle,oldestStorageId);
+        // purge index of storage
+        error = IndexStorage_purge(indexHandle,
+                                   oldestStorageId,
+                                   NULL  // progressInfo
+                                  );
         if (error != ERROR_NONE)
         {
           logMessage(logHandle,
@@ -4458,7 +4462,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                      NULL,  // entityUUID
                                      NULL,  // indexIds
                                      0,   // indexIdCount
-                                     INDEX_TYPE_SET_ALL,
+                                     INDEX_TYPESET_ALL,
                                        INDEX_STATE_SET(INDEX_STATE_OK)
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
@@ -4504,7 +4508,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                  )
             )
       {
-//fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
+//fprintf(stderr,"%s, %d: %"PRIu64" %s: %"PRIu64"\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
         error = Storage_parseName(&storageSpecifier,storageName);
         if (   (error == ERROR_NONE)
             && String_equals(storageSpecifier.hostName,server->name)
@@ -4569,8 +4573,11 @@ NULL, // masterIO
           Storage_done(&storageInfo);
         }
 
-        // delete index of storage
-        error = Index_deleteStorage(indexHandle,oldestStorageId);
+        // purge index of storage
+        error = IndexStorage_purge(indexHandle,
+                                   oldestStorageId,
+                                   NULL  // progressInfo
+                                  );
         if (error != ERROR_NONE)
         {
           logMessage(logHandle,
@@ -4908,7 +4915,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                      {
                        if (!appendFlag && !INDEX_ID_IS_NONE(storageMsg.storageId))
                        {
-                         Index_purgeStorage(createInfo->indexHandle,storageMsg.storageId);
+                         IndexStorage_purge(createInfo->indexHandle,
+                                            storageMsg.storageId,
+                                            NULL  // progressInfo
+                                           );
                        }
                      }
                     );
@@ -5081,7 +5091,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           });
 
           // append index: assign storage index entries to existing storage index
-//fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
+//fprintf(stderr,"%s, %d: append to storage %"PRIu64"\n",__FILE__,__LINE__,storageId);
           error = Index_assignTo(createInfo->indexHandle,
                                  NULL,  // jobUUID
                                  INDEX_ID_NONE,  // entityId
@@ -5155,7 +5165,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            NULL,  // entityUUID
                                            NULL,  // indexIds
                                            0,  // indexIdCount
-                                           INDEX_TYPE_SET_ALL,
+                                           INDEX_TYPESET_ALL,
                                            INDEX_STATE_SET_ALL,
                                            INDEX_MODE_SET_ALL,
                                            NULL,  // hostName
@@ -5339,7 +5349,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
   {
     // discard index
-    if (!INDEX_ID_IS_NONE(storageMsg.storageId)) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+    if (!INDEX_ID_IS_NONE(storageMsg.storageId))
+    {
+      (void)IndexStorage_purge(createInfo->indexHandle,
+                               storageMsg.storageId,
+                               NULL  // progressInfo
+                              );
+    }
 
     // delete temporary storage file
     error = File_delete(storageMsg.intermediateFileName,FALSE);

@@ -248,9 +248,6 @@ typedef enum
   RESTORE_ENTRY_MODE_SKIP_EXISTING
 } RestoreEntryModes;
 
-#define INDEX_TIMEOUT       (10L*60L*MS_PER_SECOND)  // index timeout [ms]
-#define INDEX_PURGE_TIMEOUT (30L*MS_PER_SECOND)      // index purge timeout [ms]
-
 // log types
 typedef enum
 {

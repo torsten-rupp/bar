@@ -30,8 +30,6 @@
 #include "server_io.h"
 
 /****************** Conditional compilation switches *******************/
-//#define __INDEX_ID_TYPE_SAFE
-
 // switch on for debugging only!
 #define _INDEX_DEBUG_LOCK
 #define _INDEX_DEBUG_IMPORT_OLD_DATABASE
@@ -47,21 +45,12 @@
 // index version
 #define INDEX_VERSION INDEX_CONST_VERSION
 
+// timeouts
+#define INDEX_TIMEOUT       ( 5L*60L*MS_PER_SECOND)   // index timeout [ms]
+#define INDEX_PURGE_TIMEOUT (    30L*MS_PER_SECOND)   // index purge timeout [ms]
+
 // max. limit value
 #define INDEX_UNLIMITED DATABASE_UNLIMITED
-
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-// special index ids
-#define INDEX_ID_MASK_TYPE         0x000000000000000FULL
-#define INDEX_ID_SHIFT_TYPE        0
-#define INDEX_ID_MASK_DATABASE_ID  0xFFFFFFFFFFFFFFF0ULL
-#define INDEX_ID_SHIFT_DATABASE_ID 4
-
-#define INDEX_ID_NONE INDEX_ID_(INDEX_TYPE_NONE,DATABASE_ID_NONE)
-#define INDEX_ID_ANY  INDEX_ID_(INDEX_TYPE_ANY, DATABASE_ID_ANY )
-#else
-#endif
 
 #define INDEX_ID_UUID_NONE     INDEX_ID_UUID     (DATABASE_ID_NONE)
 #define INDEX_ID_ENTITY_NONE   INDEX_ID_ENTITY   (DATABASE_ID_NONE)
@@ -173,7 +162,7 @@ typedef struct
 // index types
 typedef enum
 {
-  INDEX_TYPE_NONE      = 0,
+  INDEX_TYPENONE      = 0,
 
   INDEX_TYPE_UUID      = INDEX_CONST_TYPE_UUID,
   INDEX_TYPE_ENTITY    = INDEX_CONST_TYPE_ENTITY,
@@ -187,14 +176,14 @@ typedef enum
   INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
   INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
 
-  INDEX_TYPE_ANY       = 0xF
+  INDEX_TYPEANY       = 0xF
 } IndexTypes;
 
-#define INDEX_TYPE_MIN INDEX_TYPE_UUID
-#define INDEX_TYPE_MAX INDEX_TYPE_HISTORY
+#define INDEX_TYPEMIN INDEX_TYPE_UUID
+#define INDEX_TYPEMAX INDEX_TYPEHISTORY
 
-#define INDEX_TYPE_SET_NONE 0
-#define INDEX_TYPE_SET_ALL \
+#define INDEX_TYPESET_NONE 0
+#define INDEX_TYPESET_ALL \
   (  SET_VALUE(INDEX_TYPE_UUID) \
    | SET_VALUE(INDEX_TYPE_ENTITY) \
    | SET_VALUE(INDEX_TYPE_STORAGE) \
@@ -207,7 +196,7 @@ typedef enum
    | SET_VALUE(INDEX_TYPE_SPECIAL) \
    | SET_VALUE(INDEX_TYPE_HISTORY) \
   )
-#define INDEX_TYPE_SET_ALL_ENTRIES \
+#define INDEX_TYPESET_ALL_ENTRIES \
   (  SET_VALUE(INDEX_TYPE_FILE) \
    | SET_VALUE(INDEX_TYPE_IMAGE) \
    | SET_VALUE(INDEX_TYPE_DIRECTORY) \
@@ -219,25 +208,21 @@ typedef enum
 typedef ulong IndexTypeSet;
 
 // index id
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-typedef int64 IndexId;
-#else
 typedef struct
 {
   union
   {
     struct
     {
-      IndexTypes type  : 4;
-      int64      value : 60;
+      IndexTypes type  :  4;
+      DatabaseId value : 60;
     };
     uint64 data;
   };
 } IndexId;
+
 extern const IndexId INDEX_ID_NONE;
 extern const IndexId INDEX_ID_ANY;
-#endif
 
 // sort modes
 typedef enum
@@ -288,16 +273,12 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 /****************************** Macros *********************************/
 
 //TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-#define INDEX_ID_EQUALS(id1,id2) ((id1) == (id2))
-#else
-//#define INDEX_IS_ID(id) (id.type != INDEX_TYPE_NONE)
 #define INDEX_ID_EQUALS(id1,id2) ((id1).data == (id2).data)
-#warning TODO: defualt entity
-#endif
-#define INDEX_ID_IS_DEFAULT_ENTITY(id) ((Index_getType(id)==INDEX_TYPE_ENTITY) && Index_getDatabaseId(id)==0)
-#define INDEX_ID_IS_NONE(id)           (((id) & INDEX_ID_MASK_DATABASE_ID) == (DATABASE_ID_NONE & INDEX_ID_MASK_DATABASE_ID))
-#define INDEX_ID_IS_ANY(id)            (((id) & INDEX_ID_MASK_DATABASE_ID) == (DATABASE_ID_ANY  & INDEX_ID_MASK_DATABASE_ID))
+#define INDEX_ID_IS_DEFAULT_ENTITY(id) (   (INDEX_TYPE(id) == INDEX_TYPE_ENTITY) \
+                                        && (INDEX_DATABASE_ID(id) == INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID) \
+                                       )
+#define INDEX_ID_IS_NONE(id)           ((id).value == DATABASE_ID_NONE)
+#define INDEX_ID_IS_ANY(id)            ((id).value == DATABASE_ID_ANY )
 
 // create index state set value
 #define INDEX_STATE_SET(indexState) (1U << indexState)
@@ -306,31 +287,11 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 #define INDEX_MODE_SET(indexMode) (1U << indexMode)
 
 // get type, database id from index id
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-#define INDEX_TYPE_(indexId)        ((IndexTypes)(((indexId) & INDEX_ID_MASK_TYPE       ) >> INDEX_ID_SHIFT_TYPE       ))
-#define INDEX_DATABASE_ID_(indexId) ((DatabaseId)(((indexId) & INDEX_ID_MASK_DATABASE_ID) >> INDEX_ID_SHIFT_DATABASE_ID))
-#else
-#define INDEX_TYPE_(indexId)        (indexId.type)
-#define INDEX_DATABASE_ID_(indexId) (indexId.value)
-#endif
+#define INDEX_TYPE(indexId)        Index_getType(indexId)
+#define INDEX_DATABASE_ID(indexId) Index_getDatabaseId(indexId)
 
 // create index id
-//TODO: use type safe type
-#ifndef __INDEX_ID_TYPE_SAFE
-#define INDEX_ID_(indexType,databaseId) (IndexId)(  ((uint64)(indexType ) << INDEX_ID_SHIFT_TYPE       ) \
-                                                  | ((uint64)(databaseId) << INDEX_ID_SHIFT_DATABASE_ID) \
-                                                 )
-#else
-static inline IndexId INDEX_ID_(IndexTypes indexType, DatabaseId databaseId)
-{
-  IndexId indexId;
-
-  indexId.type  = indexType;
-  indexId.value = databaseId;
-  return indexId;
-}
-#endif
+#define INDEX_ID_(indexType,databaseId) Index_getId(indexType,databaseId)
 #define INDEX_ID_UUID(databaseId)      INDEX_ID_(INDEX_TYPE_UUID     ,databaseId)
 #define INDEX_ID_ENTITY(databaseId)    INDEX_ID_(INDEX_TYPE_ENTITY   ,databaseId)
 #define INDEX_ID_STORAGE(databaseId)   INDEX_ID_(INDEX_TYPE_STORAGE  ,databaseId)
@@ -343,11 +304,17 @@ static inline IndexId INDEX_ID_(IndexTypes indexType, DatabaseId databaseId)
 #define INDEX_ID_SPECIAL(databaseId)   INDEX_ID_(INDEX_TYPE_SPECIAL  ,databaseId)
 #define INDEX_ID_HISTORY(databaseId)   INDEX_ID_(INDEX_TYPE_HISTORY  ,databaseId)
 
+#define INDEX_DEFAULT_ENTITY_ID INDEX_ID_ENTITY(INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+
 #ifndef NDEBUG
   #define Index_lock(...)             __Index_lock            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_open(...)             __Index_open            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
+
+// additional string map functions
+#define StringMap_getIndexId(argumentMap,name,variable,defaultValue) \
+  StringMap_getUInt64(argumentMap,name,&(variable)->data,defaultValue.data)
 
 /***************************** Forwards ********************************/
 
@@ -714,6 +681,29 @@ Errors Index_rollbackTransaction(IndexHandle *indexHandle);
 Errors Index_flush(IndexHandle *indexHandle);
 
 /***********************************************************************\
+* Name   : Index_getId
+* Purpose: get index id
+* Input  : indexType  - index id type
+*          databaseId - database id
+* Output : -
+* Return : index id
+* Notes  : -
+\***********************************************************************/
+
+INLINE IndexId Index_getId(IndexTypes indexType, DatabaseId databaseId);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
+INLINE IndexId Index_getId(IndexTypes indexType, DatabaseId databaseId)
+{
+  IndexId indexId;
+
+  indexId.type  = indexType;
+  indexId.value = databaseId;
+
+  return indexId;
+}
+#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Index_getType
 * Purpose: get index type
 * Input  : indexId - index id
@@ -722,11 +712,28 @@ Errors Index_flush(IndexHandle *indexHandle);
 * Notes  : -
 \***********************************************************************/
 
-INLINE IndexTypes Index_getType(IndexId indexId);
+INLINE IndexTypes Index_getType(const IndexId indexId);
 #if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
-INLINE IndexTypes Index_getType(IndexId indexId)
+INLINE IndexTypes Index_getType(const IndexId indexId)
 {
-  return INDEX_TYPE_(indexId);
+  return indexId.type;
+}
+#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : xxxINDEX_DATABASE_ID
+* Purpose: get database id
+* Input  : indexId - index id
+* Output : -
+* Return : database id
+* Notes  : -
+\***********************************************************************/
+
+INLINE DatabaseId Index_getDatabaseId(const IndexId indexId);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
+INLINE DatabaseId Index_getDatabaseId(const IndexId indexId)
+{
+  return indexId.value;
 }
 #endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
 
@@ -747,28 +754,11 @@ bool Index_containsType(const IndexId indexIds[],
                        );
 
 /***********************************************************************\
-* Name   : Index_getDatabaseId
-* Purpose: get database id
-* Input  : indexId - index id
-* Output : -
-* Return : database id
-* Notes  : -
-\***********************************************************************/
-
-INLINE DatabaseId Index_getDatabaseId(IndexId indexId);
-#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
-INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
-{
-  return INDEX_DATABASE_ID_(indexId);
-}
-#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
-
-/***********************************************************************\
 * Name   : Index_findUUID
 * Purpose: find uuid info
-* Input  : indexHandle      - index handle
-*          findJobUUID      - unique job UUID to find
-*          findScheduleUUID - unique schedule UUID to find (can be NULL)
+* Input  : indexHandle    - index handle
+*          findJobUUID    - unique job UUID to find
+*          findEntityUUID - unique entity UUID to find (can be NULL)
 * Output : uuidId                      - index id of UUID entry (can be
 *                                        NULL)
 *          executionCount              - number job execution (can be
@@ -809,7 +799,7 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 
 Errors Index_findUUID(IndexHandle  *indexHandle,
                       const char   *findJobUUID,
-                      const char   *findScheduleUUID,
+                      const char   *findEntityUUID,
                       IndexId      *uuidId,
                       uint         *executionCountNormal,
                       uint         *executionCountFull,
@@ -835,7 +825,7 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
 *          findEntityId        - index id of entity to find (can be
 *                                INDEX_ID_NONE)
 *          findJobUUID         - unique job UUID to find (can be NULL)
-*          findScheduleUUID    - unique schedule UUID to find (can be
+*          findEntityUUID      - unique entity UUID to find (can be
 *                                NULL)
 *          findHostName        - host name (can be NULL)
 *          findArchiveType     - archive type to find (can be
@@ -857,7 +847,7 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
 Errors Index_findEntity(IndexHandle  *indexHandle,
                         IndexId      findEntityId,
                         ConstString  findJobUUID,
-                        ConstString  findScheduleUUID,
+                        ConstString  findEntityUUID,
                         ConstString  findHostName,
                         ArchiveTypes findArchiveType,
                         uint64       findCreatedDate,
@@ -1908,18 +1898,19 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                           );
 
 /***********************************************************************\
-* Name   : Index_deleteStorage
-* Purpose: delete storage index including all entries for attached files,
-*          image, directories, link, hard link, special entries
+* Name   : Index_puergeStorage
+* Purpose: purge storage index including all entries for attached files,
+*          image, directories, link, hard link, special entries (mark
+*          as deleted)
 * Input  : indexQueryHandle - index query handle
 *          storageId        - index id of storage
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_deleteStorage(IndexHandle *indexHandle,
-                           IndexId     storageId
-                          );
+Errors Index_purgeStorage(IndexHandle *indexHandle,
+                          IndexId     storageId
+                         );
 
 /***********************************************************************\
 * Name   : Index_hasDeletedStorages
@@ -2013,7 +2004,7 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexTypes       - index type or INDEX_TYPE_NONE
+*          indexTypes       - index type or INDEX_TYPENONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
 * Output : totalStorageCount     - total storage count (can be NULL)
@@ -2050,7 +2041,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexType        - index type or INDEX_TYPE_NONE
+*          indexType        - index type or INDEX_TYPENONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
 *          fragmentsCount   - TRUE to get fragments count
@@ -2855,14 +2846,14 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
 * Name   : Index_purgeEntity
 * Purpose: purge entity from index if empty
 * Input  : indexHandle - index handle
-*          indexId     - index id of entity
+*          entityId     - index id of entity
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_purgeEntity(IndexHandle *indexHandle,
-                         IndexId     indexId
+                         IndexId     entityId
                         );
 
 /***********************************************************************\
@@ -2951,7 +2942,7 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexType        - index type or INDEX_TYPE_NONE
+*          indexType        - index type or INDEX_TYPENONE
 *          name             - name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
@@ -3034,6 +3025,40 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
 Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
                                 IndexId     entryId
                                );
+
+// TODO: how to use?
+/***********************************************************************\
+* Name   : Index_getIndexId
+* Purpose:
+* Input  : stringMap    - string map
+*          name         - value name
+*          type         - index id type
+*          defaultValue - default value
+* Output : indexId - index id
+* Return : TRUE if read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Index_getIndexId(StringMap stringMap, const char *name, IndexId *indexId, IndexTypes type, IndexId defaultIndexId);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
+INLINE bool Index_getIndexId(StringMap stringMap, const char *name, IndexId *indexId, IndexTypes type, IndexId defaultIndexId)
+{
+  uint64 n;
+
+  assert(indexId != NULL);
+
+  if (StringMap_getUInt64(stringMap,name,&n,INDEX_DATABASE_ID(defaultIndexId)))
+  {
+    (*indexId) = INDEX_ID_(type,n);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
+
 
 #ifdef INDEX_DEBUG_LOCK
 /***********************************************************************\
