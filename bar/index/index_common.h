@@ -161,7 +161,7 @@ typedef struct
 //  uint64     cycleCounter;
   #ifdef INDEX_DEBUG_LOCK
     ThreadLWPId threadLWPId;
-    #if defined(NDEBUG) && defined(HAVE_BACKTRACE)
+    #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
       void const *stackTrace[16];
       uint       stackTraceSize;
     #endif /* defined(NDEBUG) && defined(HAVE_BACKTRACE) */

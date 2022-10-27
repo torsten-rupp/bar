@@ -3878,7 +3878,7 @@ void Index_debugPrintInUseInfo(void)
               Thread_getName(threadInfo.threadId)
              );
 
-      #ifndef HAVE_BACKTRACE
+      #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
         debugDumpStackTrace(stderr,
                             2,
                             DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
@@ -3886,7 +3886,7 @@ void Index_debugPrintInUseInfo(void)
                             threadInfo.stackTraceSize,
                             0
                            );
-      #endif /* NDEBUG */
+      #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
     }
   }
 }

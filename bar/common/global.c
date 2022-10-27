@@ -1460,6 +1460,7 @@ void debugResourceCheck(void)
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
+
 #ifdef HAVE_BFD_INIT
 LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                            const char *fileName,

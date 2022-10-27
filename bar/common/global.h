@@ -1947,6 +1947,9 @@ static inline uint getStackTrace(void const * stackTrace[], uint maxStackTraceSi
       stackTrace[i] = (void const **)((const byte*)stackTrace[i]-1);
     }
   #else
+    UNUSED_VARIABLE(stackTrace);
+    UNUSED_VARIABLE(maxStackTraceSize);
+
     stackTraceSize = 0;
   #endif
 
@@ -2678,7 +2681,7 @@ static inline bool stringStartsWithIgnoreCase(const char *s, const char *prefix)
 static inline bool stringEndsWith(const char *s, const char *suffix)
 {
   size_t n,m;
-  
+
   n = strlen(s);
   m = strlen(suffix);
 
@@ -2699,7 +2702,7 @@ static inline bool stringEndsWith(const char *s, const char *suffix)
 static inline bool stringEndsWithIgnoreCase(const char *s, const char *suffix)
 {
   size_t n,m;
-  
+
   n = strlen(s);
   m = strlen(suffix);
 
