@@ -938,9 +938,9 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 #ifdef NDEBUG
   void Crypt_doneKey(CryptKey *cryptKey);
 #else /* not NDEBUG */
-  void __Crypt_doneKey(const char        *__fileName__,
-                       ulong             __lineNb__,
-                       CryptKey          *cryptKey
+  void __Crypt_doneKey(const char *__fileName__,
+                       ulong      __lineNb__,
+                       CryptKey   *cryptKey
                       );
 #endif /* NDEBUG */
 
