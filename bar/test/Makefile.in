@@ -4082,14 +4082,14 @@ test_file_operations_destroyed: \
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
 	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName m:16:FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0 >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar_destroyed $(BAR_OPTIONS)) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
 	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName m:20:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
 	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName m:128:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
 #TODO: detect wrong data
 	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName d:1024:10 >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
 	@#
 	@$(call functionCleanTestFiles)
 #TODO: --debug-create-archive-errors=1000

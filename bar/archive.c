@@ -673,7 +673,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   // derive decrypt key from password with salt
   error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                           cryptKeyDeriveType,
-                          Crypt_isSalt(cryptSalt) ? cryptSalt : NULL,
+                          Crypt_isSaltAvailable(cryptSalt) ? cryptSalt : NULL,
                           decryptKeyNode->password,
                           keyLength
                          );
@@ -684,7 +684,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 
   // store new salt and key length
   Crypt_copySalt(&decryptKeyNode->cryptSalt,cryptSalt);
-  decryptKeyNode->keyLength  = keyLength;
+  decryptKeyNode->keyLength = keyLength;
 
   return ERROR_NONE;
 }
@@ -1223,21 +1223,20 @@ HALT_NOT_YET_IMPLEMENTED();
 }
 
 /***********************************************************************\
-* Name   : cryptGetBlockLength
-* Purpose: get crypt block lengths
+* Name   : getCryptBlockLengthLCM
+* Purpose: get least common multiply crypt block length
 * Input  : cryptAlgorithms     - crypt algorithms
 *          cryptAlgorithmCount - number of crypt alogithms
-*          blockLength         - crypt block lengths variable
-* Output : blockLength - crypt block lengths
-* Return : ERROR_NONE or error code
+* Output : -
+* Return : least common multiple crypt block length
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
-                                 uint            cryptAlgorithmCount,
-                                 uint            *blockLength
-                                )
+LOCAL uint getCryptBlockLengthLCM(CryptAlgorithms cryptAlgorithms[],
+                                  uint            cryptAlgorithmCount,
+                                 )
 {
+  uint   blockLength;
   uint   i;
   Errors error;
   uint   n;
@@ -1245,18 +1244,14 @@ LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
   assert(cryptAlgorithms != NULL);
   assert(blockLength != NULL);
 
-  (*blockLength) = 1;
+  blockLength = 1;
   for (i = 0; i < cryptAlgorithmCount; i++)
   {
-    error = Crypt_getBlockLength(cryptAlgorithms[0],&n);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    (*blockLength) = lcm((*blockLength),n);
+    n = Crypt_getBlockLength(cryptAlgorithms[0]);
+    blockLength = lcm(blockLength,n);
   }
 
-  return ERROR_NONE;
+  return blockLength;
 }
 #endif
 
@@ -1590,6 +1585,8 @@ LOCAL void freeArchiveIndexNode(ArchiveIndexNode *archiveIndexNode, void *userDa
       break;
     case ARCHIVE_ENTRY_TYPE_META:
       HALT_INTERNAL_ERROR("wrong archive index node type");
+      break;
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     default:
       #ifndef NDEBUG
@@ -2677,6 +2674,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
 {
   Errors         error;
   ChunkMeta      chunkMeta;
+  uint           blockLength;
   ChunkMetaEntry chunkMetaEntry;
   CryptInfo      cryptInfo;
 
@@ -2685,6 +2683,9 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
+
+  // get crypt block length
+  blockLength = Crypt_getBlockLength(cryptAlgorithm);
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -2735,7 +2736,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
                      CHUNK_USE_PARENT,
                      CHUNK_ID_META_ENTRY,
                      CHUNK_DEFINITION_META_ENTRY,
-                     archiveHandle->blockLength,
+                     blockLength,
                      &cryptInfo,
                      &chunkMetaEntry
                     );
@@ -6061,30 +6062,16 @@ UNUSED_VARIABLE(storageInfo);
                                                 );
   assert(archiveHandle->archiveCryptInfo != NULL);
 
+  // get crypt block length
+  archiveHandle->blockLength = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (archiveHandle->blockLength > 0));
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (keyLength > 0));
+
   // create intitial random crypt salt
   Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
-
-  // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
-  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (archiveHandle->blockLength > 0));
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  assert(archiveHandle->blockLength > 0);
-  if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_UNSUPPORTED_BLOCK_LENGTH;
-  }
-  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
-  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (keyLength > 0));
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
 
   // init encryption key
   switch (archiveHandle->archiveCryptInfo->cryptType)
@@ -7038,7 +7025,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength                    = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
@@ -7456,7 +7443,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength                     = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
 
@@ -7816,7 +7803,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
 
@@ -8066,7 +8053,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
 
@@ -8327,7 +8314,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength                        = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
@@ -8768,7 +8755,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
 
@@ -9025,7 +9012,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_META;
 
@@ -9558,22 +9545,13 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 //TODO: multi crypt
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0]);
 
-  // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  // get crypt block length
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read meta entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -9938,32 +9916,16 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length, crypt key length
+  // get crypt block length
 #ifndef MULTI_CRYPT
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
 #else
-  error = cryptGetBlockLength(archiveEntryInfo->cryptAlgorithms,SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = cryptGetBlockLengthLCM(archiveEntryInfo->cryptAlgorithms,SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms));
 #endif
+
+  // get required crypt key length for algorithm
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -10593,21 +10555,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -11122,21 +11075,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read directory entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -11548,21 +11492,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read link entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -11822,6 +11757,7 @@ NULL//                             password
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
+  // init variables
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
 
@@ -12005,21 +11941,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // allocate buffers
   archiveEntryInfo->hardLink.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -12660,21 +12587,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read special entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -12933,6 +12851,7 @@ NULL//                             password
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
+  // init variables
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
 
@@ -15461,8 +15380,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
                                         NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptAlgorithm
                                         NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
                                         fileName,
                                         &fileInfo,
                                         NULL,  // fileExtendedAttributeList
@@ -15549,8 +15468,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read directory entry
           error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                              &archiveHandle,
-                                             NULL,  // cryptAlgorithm
                                              NULL,  // cryptType
+                                             NULL,  // cryptAlgorithm
                                              directoryName,
                                              &fileInfo,
                                              NULL  // fileExtendedAttributeList
@@ -15586,8 +15505,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read link entry
           error = Archive_readLinkEntry(&archiveEntryInfo,
                                         &archiveHandle,
-                                        NULL,  // cryptAlgorithm
                                         NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
                                         linkName,
                                         destinationName,
                                         &fileInfo,
@@ -15631,8 +15550,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                             &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
                                             NULL,  // byteCompressAlgorithm
-                                            NULL,  // cryptAlgorithm
                                             NULL,  // cryptType
+                                            NULL,  // cryptAlgorithm
                                             &fileNameList,
                                             &fileInfo,
                                             NULL,  // fileExtendedAttributeList
@@ -15678,8 +15597,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read special entry
           error = Archive_readSpecialEntry(&archiveEntryInfo,
                                            &archiveHandle,
-                                           NULL,  // cryptAlgorithm
                                            NULL,  // cryptType
+                                           NULL,  // cryptAlgorithm
                                            fileName,
                                            &fileInfo,
                                            NULL   // fileExtendedAttributeList
@@ -16099,6 +16018,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                         &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
                                         NULL,  // byteCompressAlgorithm
+                                        NULL,  // cryptType
                                         NULL,  // cryptAlgorithm
                                         fileName,
                                         &fileInfo,
