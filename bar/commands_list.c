@@ -55,11 +55,11 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-8s %size:-12s %dateTime:-32s %name:s"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX        "%storageName"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %    :-12s %     :-12s %          :-10s %size:12s %        :-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
@@ -67,11 +67,11 @@
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE                     "                                                                     source: %deltaSource:S, %deltaSourceSize:s"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-8s %size:12s %dateTime:-32S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-8s %size:12s %dateTime:-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-8s %size:12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-8s %    :12s %dateTime:-32S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-8s %    :12s %dateTime:-32S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-8s %size:12s %dateTime:-32S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-8s %    :12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-8s %    :12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-8s %size:12s %dateTime:-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-8s %    :12s %        :-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-8s %    :12s %        :-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-8s %    :12s %        :-32s %name:S"
@@ -79,7 +79,7 @@
 
 #define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-8s %size:-12s %dateTime:-32s %name:s"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT                          "%type:-8s %size:12s %dateTime:-32S %name:S"
+#define DEFAULT_DIRECTORY_LIST_FORMAT                          "%type:-8s %size:12s %dateTime:-32s %name:S"
 
 /***************************** Datatypes *******************************/
 
@@ -302,7 +302,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
                          CryptSignatureStates allCryptSignatureState
                         )
 {
-  String          dateTime;
+  char            dateTimeString[64];
   StringTokenizer stringTokenizer;
   ConstString     s;
 
@@ -313,7 +313,6 @@ LOCAL void printMetaInfo(ConstString          hostName,
   assert(comment != NULL);
 
   // init variables
-  dateTime = String_new();
 
   // print info
   printConsole(stdout,0,"\n");
@@ -322,7 +321,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
   printConsole(stdout,0,"Job UUID   : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
   printConsole(stdout,0,"Entity UUID: %s\n",!String_isEmpty(entityUUID) ? String_cString(entityUUID) : "-");
   printConsole(stdout,0,"Type       : %s\n",Archive_archiveTypeToString(archiveType));
-  printConsole(stdout,0,"Created at : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,FALSE,NULL)));
+  printConsole(stdout,0,"Created at : %s\n",Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),createdDateTime,FALSE,NULL));
   printConsole(stdout,0,"Signatures : ");
   switch (allCryptSignatureState)
   {
@@ -351,7 +350,6 @@ LOCAL void printMetaInfo(ConstString          hostName,
   printConsole(stdout,0,"\n");
 
   // free resources
-  String_delete(dateTime);
 }
 
 /***********************************************************************\
@@ -502,10 +500,10 @@ LOCAL void printFileInfo(uint               prefixWidth,
                          uint64             fragmentSize
                         )
 {
-  String     dateTimeString;
   String     compressString;
   String     cryptString;
   String     line;
+  char       dateTimeString[64];
   double     ratio;
   char       sizeString[32];
   char       userName[12],groupName[12];
@@ -517,13 +515,12 @@ LOCAL void printFileInfo(uint               prefixWidth,
   assert(fileName != NULL);
 
   // init variables
-  dateTimeString = String_new();
   compressString = String_new();
   cryptString    = String_new();
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -614,7 +611,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
     TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                          NULL);
     TEXT_MACRO_X_CSTRING  ("%type",           "FILE",                                                               NULL);
     TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                           NULL);
-    TEXT_MACRO_X_STRING   ("%dateTime",       dateTimeString,                                                       NULL);
+    TEXT_MACRO_X_CSTRING  ("%dateTime",       dateTimeString,                                                       NULL);
     TEXT_MACRO_X_CSTRING  ("%user",           userName,                                                             NULL);
     TEXT_MACRO_X_CSTRING  ("%group",          groupName,                                                            NULL);
     TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,                                                     NULL);
@@ -676,7 +673,6 @@ LOCAL void printFileInfo(uint               prefixWidth,
   String_delete(line);
   String_delete(cryptString);
   String_delete(compressString);
-  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -892,9 +888,9 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
                               CryptTypes      cryptType
                              )
 {
-  String     dateTimeString;
   String     cryptString;
   String     line;
+  char       dateTimeString[64];
   char       userName[12],groupName[12];
   char       permissionString[10];
   const char *prefixTemplate,*template;
@@ -903,12 +899,11 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   assert(directoryName != NULL);
 
   // init variables
-  dateTimeString = String_new();
-  cryptString    = String_new();
-  line           = String_new();
+  cryptString = String_new();
+  line        = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -944,7 +939,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   {
     TEXT_MACRO_X_STRING ("%storageName",storageName,     NULL);
     TEXT_MACRO_X_CSTRING("%type",       "DIR",           NULL);
-    TEXT_MACRO_X_STRING ("%dateTime",   dateTimeString,  NULL);
+    TEXT_MACRO_X_CSTRING ("%dateTime",  dateTimeString,  NULL);
     TEXT_MACRO_X_CSTRING("%user",       userName,        NULL);
     TEXT_MACRO_X_CSTRING("%group",      groupName,       NULL);
     TEXT_MACRO_X_CSTRING("%permission", permissionString,NULL);
@@ -984,7 +979,6 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   // free resources
   String_delete(line);
   String_delete(cryptString);
-  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -1018,9 +1012,9 @@ LOCAL void printLinkInfo(uint            prefixWidth,
                          CryptTypes      cryptType
                         )
 {
-  String     dateTimeString;
   String     cryptString;
   String     line;
+  char       dateTimeString[64];
   char       userName[12],groupName[12];
   char       permissionString[10];
   const char *prefixTemplate,*template;
@@ -1030,12 +1024,11 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   assert(destinationName != NULL);
 
   // init variables
-  dateTimeString = String_new();
-  cryptString    = String_new();
-  line           = String_new();
+  cryptString = String_new();
+  line        = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -1071,7 +1064,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   {
     TEXT_MACRO_X_STRING   ("%storageName",    storageName,     NULL);
     TEXT_MACRO_X_CSTRING  ("%type",           "LINK",          NULL);
-    TEXT_MACRO_X_STRING   ("%dateTime",       dateTimeString,  NULL);
+    TEXT_MACRO_X_CSTRING  ("%dateTime",       dateTimeString,  NULL);
     TEXT_MACRO_X_CSTRING  ("%user",           userName,        NULL);
     TEXT_MACRO_X_CSTRING  ("%group",          groupName,       NULL);
     TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,NULL);
@@ -1112,7 +1105,6 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   // free resources
   String_delete(line);
   String_delete(cryptString);
-  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -1160,10 +1152,10 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
                              uint64             fragmentSize
                             )
 {
-  String     dateTimeString;
   String     compressString;
   String     cryptString;
   String     line;
+  char       dateTimeString[64];
   double     ratio;
   char       sizeString[32];
   char       userName[12],groupName[12];
@@ -1175,13 +1167,12 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   assert(fileName != NULL);
 
   // init variables
-  dateTimeString = String_new();
   compressString = String_new();
   cryptString    = String_new();
   line           = String_new();
 
   // format
-  Misc_formatDateTime(dateTimeString,timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -1272,7 +1263,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
     TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                          NULL);
     TEXT_MACRO_X_CSTRING  ("%type",           "HARDLINK",                                                           NULL);
     TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                           NULL);
-    TEXT_MACRO_X_STRING   ("%dateTime",       dateTimeString,                                                       NULL);
+    TEXT_MACRO_X_CSTRING  ("%dateTime",       dateTimeString,                                                       NULL);
     TEXT_MACRO_X_CSTRING  ("%user",           userName,                                                             NULL);
     TEXT_MACRO_X_CSTRING  ("%group",          groupName,                                                            NULL);
     TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,                                                     NULL);
@@ -1334,7 +1325,6 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   String_delete(line);
   String_delete(cryptString);
   String_delete(compressString);
-  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -4132,7 +4122,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     case STORAGE_TYPE_DEVICE:
 //TODO: remove
 #if 0
-      printError("list archives on device is not supported!");
+      printError("list archives on device is still not supported!");
 #endif
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -4326,8 +4316,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   String             fileName;
   DirectoryEntryNode *directoryEntryNode;
   uint64             totalFileSize;
-  String             dateTimeString;
   String             line;
+  char               dateTimeString[64];
   char               userName[12],groupName[12];
   char               permissionsString[10];
   TextMacros         (textMacros,8);
@@ -4342,7 +4332,6 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   printableStorageName = String_new();
   List_init(&directoryEntryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDirectoryEntryNode,NULL));
   fileName             = String_new();
-  dateTimeString       = String_new();
   line                 = String_new();
 
   // get printable storage name
@@ -4356,7 +4345,6 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
     if (error != ERROR_NONE)
     {
       String_delete(line);
-      String_delete(dateTimeString);
       String_delete(fileName);
       List_done(&directoryEntryList);
       String_delete(printableStorageName);
@@ -4435,7 +4423,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           #endif /* NDEBUG */
           break;
       }
-      Misc_formatDateTime(String_clear(dateTimeString),directoryEntryNode->fileInfo.timeModified,FALSE,NULL);
+      Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),directoryEntryNode->fileInfo.timeModified,FALSE,NULL);
       if (globalOptions.numericUIDGIDFlag)
       {
         stringFormat(userName,sizeof(userName),"%d",directoryEntryNode->fileInfo.userId);
@@ -4454,7 +4442,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       {
         File_permissionToString(permissionsString,sizeof(permissionsString),directoryEntryNode->fileInfo.permissions);
       }
-      TEXT_MACRO_X_STRING ("%dateTime",   dateTimeString,              NULL);
+      TEXT_MACRO_X_CSTRING("%dateTime",   dateTimeString,              NULL);
       TEXT_MACRO_X_CSTRING("%user",       userName,                    NULL);
       TEXT_MACRO_X_CSTRING("%group",      groupName,                   NULL);
       TEXT_MACRO_X_STRING ("%permission" ,permissionsString,           NULL);
@@ -4480,7 +4468,6 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
 
   // free resources
   String_delete(line);
-  String_delete(dateTimeString);
   String_delete(fileName);
   List_done(&directoryEntryList);
   String_delete(printableStorageName);
