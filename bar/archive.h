@@ -279,7 +279,7 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
-  const  ArchiveCryptInfo  *archiveCryptInfo;                          // current crypt info
+  const ArchiveCryptInfo   *archiveCryptInfo;                          // current crypt info
 
   Semaphore                passwordLock;                               // input password lock
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
