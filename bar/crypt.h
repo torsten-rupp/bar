@@ -60,6 +60,9 @@ typedef enum
   CRYPT_ALGORITHM_UNKNOWN     = 0xFFFF
 } CryptAlgorithms;
 
+#define CRYPT_ALGORITHM_MIN CRYPT_ALGORITHM_NONE
+#define CRYPT_ALGORITHM_MAX CRYPT_ALGORITHM_CAMELLIA256
+
 #define MIN_ASYMMETRIC_CRYPT_KEY_BITS 1024
 #define MAX_ASYMMETRIC_CRYPT_KEY_BITS 3072
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
@@ -160,6 +163,7 @@ typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
   CryptMode        cryptMode;
+// TODO: required in CryptInfo?
   CryptSalt        cryptSalt;
   uint             blockLength;
   #ifdef HAVE_GCRYPT
@@ -205,6 +209,8 @@ typedef struct
 } CryptMAC;
 
 /***************************** Variables *******************************/
+extern uint cryptKeyLengths[];
+extern uint cryptBlockLengths[];
 
 /****************************** Macros *********************************/
 
@@ -525,22 +531,34 @@ void Crypt_randomize(byte *buffer, uint length);
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
-                          uint            *keyLength
-                         );
+INLINE uint Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm);
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
+INLINE uint Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm)
+{
+  assert(Crypt_isValidAlgorithm(cryptAlgorithm));
+
+  return cryptKeyLengths[cryptAlgorithm];
+}
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_getBlockLength
 * Purpose: get block length of crypt algorithm
 * Input  : -
-* Output : blockLength - block length
-* Return : ERROR_NONE or error code
+* Output : -
+* Return : crypt block length
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
-                            uint            *blockLength
-                           );
+INLINE uint Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm);
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
+INLINE uint Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm)
+{
+  assert(Crypt_isValidAlgorithm(cryptAlgorithm));
+
+  return cryptBlockLengths[cryptAlgorithm];
+}
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /*---------------------------------------------------------------------*/
 
@@ -648,17 +666,17 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
 CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt);
 
 /***********************************************************************\
-* Name   : Crypt_isSalt
-* Purpose: check if crypt salt
+* Name   : Crypt_isSaltAvailable
+* Purpose: check if crypt salt is available
 * Input  : cryptSalt - crypt salt to check
 * Output : -
-* Return : TRUE iff valid salt
+* Return : TRUE iff crypt salt is available
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Crypt_isSalt(const CryptSalt *cryptSalt);
+INLINE bool Crypt_isSaltAvailable(const CryptSalt *cryptSalt);
 #if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
-INLINE bool Crypt_isSalt(const CryptSalt *cryptSalt)
+INLINE bool Crypt_isSaltAvailable(const CryptSalt *cryptSalt)
 {
   return (cryptSalt != NULL) && (cryptSalt->length > 0);
 }
@@ -993,10 +1011,10 @@ void Crypt_clearKey(CryptKey *cryptKey);
 
 /***********************************************************************\
 * Name   : Crypt_isKeyAvailable
-* Purpose: check if key available
+* Purpose: check if crypt key is available
 * Input  : cryptKey - crypt key
 * Output : -
-* Return : TRUE iff key available
+* Return : TRUE iff crypt key is available
 * Notes  : -
 \***********************************************************************/
 
