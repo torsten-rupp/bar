@@ -1460,7 +1460,11 @@ LOCAL bool existsEntry(DatabaseHandle *databaseHandle,
 LOCAL void continuousThreadCode(void)
 {
 #if   defined(PLATFORM_LINUX)
-  #define TIMEOUT     (5*MS_PER_SECOND)
+  #ifndef NDEBUG
+    #define TIMEOUT 500
+  #else
+    #define TIMEOUT (5*MS_PER_SECOND)
+  #endif
   #define MAX_ENTRIES 128
   #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
 

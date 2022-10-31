@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-26 10:15+0200\n"
+"POT-Creation-Date: 2022-10-31 13:59+0100\n"
 "PO-Revision-Date: 2022-10-18 15:44+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1255,7 +1255,8 @@ msgid "initialize crypt failed"
 msgstr "Initialisierung Verschlüsselung fehlgeschlagen"
 
 #: src/BARException.java:673
-msgid "no decrypt key for cipher"
+#, fuzzy
+msgid "no crypt key for cipher"
 msgstr "Keinen Schlüssel für Entschlüsslung gefunden"
 
 #: src/BARException.java:676

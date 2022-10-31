@@ -804,6 +804,7 @@ void Password_dump(const Password *password)
 
   assert(password != NULL);
 
+  fprintf(stderr,"Password:\n");
   for (i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT

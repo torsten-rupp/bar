@@ -3137,14 +3137,14 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   // create archive
   error = Command_create(NULL, // masterIO
                          #ifndef NDEBUG
-                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
+                           CmdOption_isSet(&globalOptions.debug.indexUUID) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
                          #else
                            String_cString(jobUUID),
                          #endif
                          NULL,  // scheduleUUID
                          NULL,  // scheduleTitle
                          #ifndef NDEBUG
-                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(entityUUID),
+                           CmdOption_isSet(&globalOptions.debug.indexUUID) ? String_cString(globalOptions.debug.indexUUID) : String_cString(entityUUID),
                          #else
                            String_cString(entityUUID),
                          #endif
@@ -3369,12 +3369,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           // create archive
           error = Command_create(NULL, // masterIO
                                  #ifndef NDEBUG
-                                   (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                                   CmdOption_isSet(&globalOptions.debug.indexUUID) ? String_cString(globalOptions.debug.indexUUID) : NULL,
                                  #else
                                    NULL, // job UUID
                                  #endif
                                  #ifndef NDEBUG
-                                   (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                                   CmdOption_isSet(&globalOptions.debug.indexUUID) ? String_cString(globalOptions.debug.indexUUID) : NULL,
                                  #else
                                    NULL, // schedule UUID
                                  #endif
@@ -3547,26 +3547,29 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             // create new entity UUID
             Misc_getUUID(entityUUID);
 
-            #ifndef NDEBUG
-              error = Command_convert(&storageNameList,
-                                      (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
-                                      String_cString(globalOptions.newEntityUUID),
-                                      0LL,  // newCreatedDateTime
-                                      &jobOptions,
-                                      CALLBACK_(getPasswordFromConsole,NULL),
-                                      NULL  // logHandle
-                                     );
-            #else
-              error = Command_convert(&storageNameList,
-// TODO:
-NULL,//                                      String_cString(globalOptions.newEntityUUID),
-                                      String_cString(globalOptions.newEntityUUID),
-                                      0LL,  // newCreatedDateTime
-                                      &jobOptions,
-                                      CALLBACK_(getPasswordFromConsole,NULL),
-                                      NULL  // logHandle
-                                     );
-            #endif
+            error = Command_convert(&storageNameList,
+                                    #ifndef NDEBUG
+                                      CmdOption_isSet(&globalOptions.jobUUIDOrName)
+                                        ? String_cString(globalOptions.jobUUIDOrName)
+                                        : (CmdOption_isSet(&globalOptions.debug.indexUUID)
+                                             ? String_cString(globalOptions.debug.indexUUID)
+                                             : NULL
+                                          ),
+                                      CmdOption_isSet(&globalOptions.newEntityUUID)
+                                        ? String_cString(globalOptions.newEntityUUID)
+                                        : (CmdOption_isSet(&globalOptions.debug.indexUUID)
+                                             ? String_cString(globalOptions.debug.indexUUID)
+                                             : NULL
+                                          ),
+                                    #else
+                                      CmdOption_isSet(&globalOptions.jobUUIDOrName) ? String_cString(globalOptions.jobUUIDOrName) : NULL,
+                                      CmdOption_isSet(&globalOptions.newEntityUUID) ? String_cString(globalOptions.newEntityUUID) : NULL,
+                                    #endif
+                                    0LL,  // newCreatedDateTime
+                                    &jobOptions,
+                                    CALLBACK_(getPasswordFromConsole,NULL),
+                                    NULL  // logHandle
+                                   );
             break;
           default:
             break;
@@ -3622,7 +3625,7 @@ NULL,//                                      String_cString(globalOptions.newEnt
 }
 
 #ifndef NDEBUG
-LOCAL Errors runDebug(void)
+LOCAL Errors runDebug(int argc, const char *argv[])
 {
   AutoFreeList      autoFreeList;
   Errors            error;
@@ -3640,6 +3643,7 @@ LOCAL Errors runDebug(void)
   // initialize variables
   AutoFree_init(&autoFreeList);
 
+#if 0
   // read all jobs
   error = Job_rereadAll(globalOptions.jobsDirectory);
   if (error != ERROR_NONE)
@@ -3651,214 +3655,207 @@ LOCAL Errors runDebug(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+#endif
 
-  // init index database
-  if (stringIsEmpty(globalOptions.indexDatabaseURI))
+  if (   globalOptions.debug.indexWaitOperationsFlag
+      || globalOptions.debug.indexPurgeDeletedStoragesFlag
+      || globalOptions.debug.indexPurgeDeletedStoragesFlag
+      || (globalOptions.debug.indexRemoveStorage != NULL)
+      || (globalOptions.debug.indexAddStorage != NULL)
+      || (globalOptions.debug.indexRefreshStorage != NULL)
+     )
   {
-    printError("no index database!");
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_DATABASE;
-  }
-  error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
-  if (error != ERROR_NONE)
-  {
-    printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_DATABASE;
-  }
-  AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
-  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
-  AUTOFREE_ADD(&autoFreeList,printableDatabaseURI,{ String_delete(printableDatabaseURI); });
-  error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
-  if (error != ERROR_NONE)
-  {
-    printError("cannot init index database '%s' (error: %s)!",
-               String_cString(printableDatabaseURI),
-               Error_getText(error)
-              );
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseURI,{ Index_done(); });
+    // init index database
+    if (stringIsEmpty(globalOptions.indexDatabaseURI))
+    {
+      printError("no index database!");
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_DATABASE;
+    }
+    error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    if (error != ERROR_NONE)
+    {
+      printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_DATABASE;
+    }
+    AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
+    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
+    AUTOFREE_ADD(&autoFreeList,printableDatabaseURI,{ String_delete(printableDatabaseURI); });
+    error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
+    if (error != ERROR_NONE)
+    {
+      printError("cannot init index database '%s' (error: %s)!",
+                 String_cString(printableDatabaseURI),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseURI,{ Index_done(); });
 
-  // init continuous database
-  error = Continuous_init(globalOptions.continuousDatabaseFileName);
-  if (error != ERROR_NONE)
-  {
-    printWarning("continuous support is not available (reason: %s)",Error_getText(error));
-  }
-  AUTOFREE_ADD(&autoFreeList,globalOptions.continuousDatabaseFileName,{ Continuous_done(); });
-  Job_updateAllNotifies();
+    // init continuous database
+    error = Continuous_init(globalOptions.continuousDatabaseFileName);
+    if (error != ERROR_NONE)
+    {
+      printWarning("continuous support is not available (reason: %s)",Error_getText(error));
+    }
+    AUTOFREE_ADD(&autoFreeList,globalOptions.continuousDatabaseFileName,{ Continuous_done(); });
+    Job_updateAllNotifies();
 
-  // open index
-  error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
-  if (error != ERROR_NONE)
-  {
-    printError("cannot open index database '%s' (error: %s)!",
-               String_cString(printableDatabaseURI),
-               Error_getText(error)
-              );
-    AutoFree_cleanup(&autoFreeList);
-    return error;
+    // open index
+    error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      printError("cannot open index database '%s' (error: %s)!",
+                 String_cString(printableDatabaseURI),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
   }
-  AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
 
   #ifndef NDEBUG
-  if (globalOptions.debug.indexWaitOperationsFlag)
-  {
-    // wait for index opertions
-    printInfo(1,"Wait index operations...");
-    while (!Index_isInitialized())
+    if (globalOptions.debug.showChunkIdsFlag)
     {
-      Misc_udelay(1*US_PER_SECOND);
-    }
-    printInfo(1,"OK\n");
-  }
+      const ChunkIO CHUNK_IO_FILE =
+      {
+        (bool(*)(void*))File_eof,
+        (Errors(*)(void*,void*,ulong,ulong*))File_read,
+        (Errors(*)(void*,const void*,ulong))File_write,
+        (Errors(*)(void*,uint64*))File_tell,
+        (Errors(*)(void*,uint64))File_seek,
+        (uint64(*)(void*))File_getSize
+      };
 
-  if (globalOptions.debug.indexPurgeDeletedStoragesFlag)
-  {
-    // wait until all deleted storages are purged
-    printInfo(1,"Wait purge deleted storages...");
-    while (Index_hasDeletedStorages(&indexHandle,&deletedStorageCount))
-    {
-      printInfo(1,"%5lu\b\b\b\b\b",deletedStorageCount);
-      Misc_udelay(60*US_PER_SECOND);
-    }
-    printInfo(1,"OK   \n");
-  }
+      uint        i;
+      FileHandle  fileHandle;
+      ChunkHeader chunkHeader;
 
-  if (globalOptions.debug.indexRemoveStorage != NULL)
-  {
-    // remove storage from index
-    Storage_initSpecifier(&storageSpecifier);
-    AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+      for (i = 1; i < argc; i++)
+      {
+        error = File_openCString(&fileHandle,argv[i],FILE_OPEN_READ);
+        if (error != ERROR_NONE)
+        {
+          printError("cannot open file '%s' (error: %s)!",
+                     argv[i],
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
 
-    // parse storage name, get printable name
-    error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRemoveStorage);
-    if (error != ERROR_NONE)
-    {
-      printError("cannot parse storage name '%s' (error: %s)!",
-                 globalOptions.debug.indexRemoveStorage,
-                 Error_getText(error)
+        error = ERROR_NONE;
+        while (   !Chunk_eof(&CHUNK_IO_FILE,&fileHandle)
+               && (error == ERROR_NONE)
+              )
+        {
+          error = Chunk_next(&CHUNK_IO_FILE,&fileHandle,&chunkHeader);
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+          printf("%s: %c%c%c%c %16"PRIu64" %8"PRIu64"\n",
+                 argv[i],
+                 chunkHeader.idChars[3],
+                 chunkHeader.idChars[2],
+                 chunkHeader.idChars[1],
+                 chunkHeader.idChars[0],
+                 chunkHeader.offset,
+                 chunkHeader.size
                 );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+          error = Chunk_skip(&CHUNK_IO_FILE,&fileHandle,&chunkHeader);
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+        }
+        if (error != ERROR_NONE)
+        {
+          printError("cannot list chunks of file '%s' (error: %s)!",
+                     argv[i],
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+
+        (void)File_close(&fileHandle);
+      }
     }
 
-    // find storage
-    error = Index_findStorageByName(&indexHandle,
-                                    &storageSpecifier,
-                                    NULL,  // findArchiveName
-                                    NULL,  // uuidId
-                                    NULL,  // entityId
-                                    NULL,  // jobUUID
-                                    NULL,  // scheduleUUID
-                                    &storageId,
-                                    NULL,  // createdDateTime
-                                    NULL,  // size
-                                    NULL,  // indexState,
-                                    NULL,  // indexMode
-                                    NULL,  // lastCheckedDateTime,
-                                    NULL,  // errorMessage
-                                    NULL,  // totalEntryCount
-                                    NULL  // totalEntrySize
-                                   );
-    if (error != ERROR_NONE)
+    if (globalOptions.debug.indexWaitOperationsFlag)
     {
-      printError("cannot find storage '%s' (error: %s)!",
-                 globalOptions.debug.indexRemoveStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_ARCHIVE_NOT_FOUND;
+      // wait for index opertions
+      printInfo(1,"Wait index operations...");
+      while (!Index_isInitialized())
+      {
+        Misc_udelay(1*US_PER_SECOND);
+      }
+      printInfo(1,"OK\n");
     }
 
-    // purge storage
-    error = IndexStorage_purge(&indexHandle,
-                               storageId,
-                               NULL  // progressInfo
-                              );
-    if (error != ERROR_NONE)
+    if (globalOptions.debug.indexPurgeDeletedStoragesFlag)
     {
-      printError("cannot delete storage '%s' (error: %s)!",
-                 globalOptions.debug.indexRemoveStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      // wait until all deleted storages are purged
+      printInfo(1,"Wait purge deleted storages...");
+      while (Index_hasDeletedStorages(&indexHandle,&deletedStorageCount))
+      {
+        printInfo(1,"%5lu\b\b\b\b\b",deletedStorageCount);
+        Misc_udelay(60*US_PER_SECOND);
+      }
+      printInfo(1,"OK   \n");
     }
 
-    AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
-    Storage_doneSpecifier(&storageSpecifier);
-  }
-
-  if (globalOptions.debug.indexAddStorage != NULL)
-  {
-    // add storage to index
-    Storage_initSpecifier(&storageSpecifier);
-    AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-    Job_initOptions(&jobOptions);
-    AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
-
-    // parse storage name, get printable name
-    error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexAddStorage);
-    if (error != ERROR_NONE)
+    if (globalOptions.debug.indexRemoveStorage != NULL)
     {
-      printError("cannot parse storage name '%s' (error: %s)!",
-                 globalOptions.debug.indexAddStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
+      // remove storage from index
+      Storage_initSpecifier(&storageSpecifier);
+      AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
-    // init storage
-    error = Storage_init(&storageInfo,
-                         NULL,  // masterIO
-                         &storageSpecifier,
-                         &jobOptions,
-                         &globalOptions.indexDatabaseMaxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_LOW,
-                         CALLBACK_(NULL,NULL),  // updateStatusInfo
-                         CALLBACK_(NULL,NULL),  // getNamePassword
-                         CALLBACK_(NULL,NULL),  // requestVolume
-                         CALLBACK_(NULL,NULL),  // isPause
-                         CALLBACK_(NULL,NULL),  // isAborted
-                         NULL  // logHandle
-                        );
-    if (error != ERROR_NONE)
-    {
-      printError("cannot initialize storage '%s' (error: %s)!",
-                 globalOptions.debug.indexAddStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
+      // parse storage name, get printable name
+      error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRemoveStorage);
+      if (error != ERROR_NONE)
+      {
+        printError("cannot parse storage name '%s' (error: %s)!",
+                   globalOptions.debug.indexRemoveStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
 
-    // purge storage if it exists
-    if (   (Index_findStorageByName(&indexHandle,
-                                    &storageSpecifier,
-                                    globalOptions.debug.indexAddStorage,
-                                    NULL,  // uuidId,
-                                    &entityId,
-                                    NULL,  // jobUUID,
-                                    NULL,  // scheduleUUID,
-                                    &storageId,
-                                    NULL,  // dateTime,
-                                    NULL,  // size,
-                                    NULL,  // indexState,
-                                    NULL,  // indexMode,
-                                    NULL,  // lastCheckedDateTime,
-                                    NULL,  // errorMessage,
-                                    NULL,  // totalEntryCount,
-                                    NULL  // totalEntrySize
-                                   ) == ERROR_NONE
-           )
-        && (INDEX_ID_EQUALS(entityId,INDEX_ID_ENTITY(globalOptions.debug.indexEntityId)))
-       )
-    {
+      // find storage
+      error = Index_findStorageByName(&indexHandle,
+                                      &storageSpecifier,
+                                      NULL,  // findArchiveName
+                                      NULL,  // uuidId
+                                      NULL,  // entityId
+                                      NULL,  // jobUUID
+                                      NULL,  // scheduleUUID
+                                      &storageId,
+                                      NULL,  // createdDateTime
+                                      NULL,  // size
+                                      NULL,  // indexState,
+                                      NULL,  // indexMode
+                                      NULL,  // lastCheckedDateTime,
+                                      NULL,  // errorMessage
+                                      NULL,  // totalEntryCount
+                                      NULL  // totalEntrySize
+                                     );
+      if (error != ERROR_NONE)
+      {
+        printError("cannot find storage '%s' (error: %s)!",
+                   globalOptions.debug.indexRemoveStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_ARCHIVE_NOT_FOUND;
+      }
+
+      // purge storage
       error = IndexStorage_purge(&indexHandle,
                                  storageId,
                                  NULL  // progressInfo
@@ -3866,55 +3863,150 @@ LOCAL Errors runDebug(void)
       if (error != ERROR_NONE)
       {
         printError("cannot delete storage '%s' (error: %s)!",
-                   String_cString(globalOptions.debug.indexAddStorage),
+                   globalOptions.debug.indexRemoveStorage,
                    Error_getText(error)
                   );
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+
+      AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
+      Storage_doneSpecifier(&storageSpecifier);
     }
 
-    // create entity
-    if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
+    if (globalOptions.debug.indexAddStorage != NULL)
     {
-      error = Index_findEntity(&indexHandle,
-                               INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
-                               NULL,  // findJobUUID
-                               NULL,  // findScheduleUUID
-                               NULL,  // findHostName
-                               ARCHIVE_TYPE_ANY,
-                               0LL,  // findCreatedDate
-                               0L,  // findCreatedTime
-                               NULL,  // jobUUID
-                               NULL,  // scheduleUUID
-                               NULL,  // uuidId
-                               NULL,  // entityId
-                               NULL,  // archiveType
-                               NULL,  // createdDateTime
-                               NULL,  // lastErrorMessage
-                               NULL,  // totalEntryCount
-                               NULL  // totalEntrySize
-                              );
-      if      (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+      // add storage to index
+      Storage_initSpecifier(&storageSpecifier);
+      AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+      Job_initOptions(&jobOptions);
+      AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
+
+      // parse storage name, get printable name
+      error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexAddStorage);
+      if (error != ERROR_NONE)
       {
-        // Note: cannot use Index_newEntity(); specific id is required
-        error = Database_insert(&indexHandle.databaseHandle,
-                                NULL,  // insertRowId
-                                "entities",
-                                DATABASE_FLAG_NONE,
-                                DATABASE_VALUES
-                                (
-                                  DATABASE_VALUE_KEY     ("id",           globalOptions.debug.indexEntityId),
-                                  DATABASE_VALUE_KEY     ("uuidId",       1),
-                                  DATABASE_VALUE_CSTRING ("jobUUID",      MISC_UUID_NONE),
-                                  DATABASE_VALUE_DATETIME("created",      0LL),
-                                  DATABASE_VALUE_UINT    ("type",         ARCHIVE_TYPE_NORMAL),
-                                  DATABASE_VALUE_UINT    ("lockedCount",  FALSE)
-                                ),
-                                DATABASE_COLUMNS_NONE,
-                                DATABASE_FILTERS_NONE
-                               );
+        printError("cannot parse storage name '%s' (error: %s)!",
+                   globalOptions.debug.indexAddStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+
+      // init storage
+      error = Storage_init(&storageInfo,
+                           NULL,  // masterIO
+                           &storageSpecifier,
+                           &jobOptions,
+                           &globalOptions.indexDatabaseMaxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_LOW,
+                           CALLBACK_(NULL,NULL),  // updateStatusInfo
+                           CALLBACK_(NULL,NULL),  // getNamePassword
+                           CALLBACK_(NULL,NULL),  // requestVolume
+                           CALLBACK_(NULL,NULL),  // isPause
+                           CALLBACK_(NULL,NULL),  // isAborted
+                           NULL  // logHandle
+                          );
+      if (error != ERROR_NONE)
+      {
+        printError("cannot initialize storage '%s' (error: %s)!",
+                   globalOptions.debug.indexAddStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
+
+      // purge storage if it exists
+      if (   (Index_findStorageByName(&indexHandle,
+                                      &storageSpecifier,
+                                      globalOptions.debug.indexAddStorage,
+                                      NULL,  // uuidId,
+                                      &entityId,
+                                      NULL,  // jobUUID,
+                                      NULL,  // scheduleUUID,
+                                      &storageId,
+                                      NULL,  // dateTime,
+                                      NULL,  // size,
+                                      NULL,  // indexState,
+                                      NULL,  // indexMode,
+                                      NULL,  // lastCheckedDateTime,
+                                      NULL,  // errorMessage,
+                                      NULL,  // totalEntryCount,
+                                      NULL  // totalEntrySize
+                                     ) == ERROR_NONE
+             )
+          && (INDEX_ID_EQUALS(entityId,INDEX_ID_ENTITY(globalOptions.debug.indexEntityId)))
+         )
+      {
+        error = IndexStorage_purge(&indexHandle,
+                                   storageId,
+                                   NULL  // progressInfo
+                                  );
         if (error != ERROR_NONE)
+        {
+          printError("cannot delete storage '%s' (error: %s)!",
+                     String_cString(globalOptions.debug.indexAddStorage),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+      }
+
+      // create entity
+      if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
+      {
+        error = Index_findEntity(&indexHandle,
+                                 INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
+                                 NULL,  // findJobUUID
+                                 NULL,  // findScheduleUUID
+                                 NULL,  // findHostName
+                                 ARCHIVE_TYPE_ANY,
+                                 0LL,  // findCreatedDate
+                                 0L,  // findCreatedTime
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID
+                                 NULL,  // uuidId
+                                 NULL,  // entityId
+                                 NULL,  // archiveType
+                                 NULL,  // createdDateTime
+                                 NULL,  // lastErrorMessage
+                                 NULL,  // totalEntryCount
+                                 NULL  // totalEntrySize
+                                );
+        if      (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+        {
+          // Note: cannot use Index_newEntity(); specific id is required
+          error = Database_insert(&indexHandle.databaseHandle,
+                                  NULL,  // insertRowId
+                                  "entities",
+                                  DATABASE_FLAG_NONE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_KEY     ("id",           globalOptions.debug.indexEntityId),
+                                    DATABASE_VALUE_KEY     ("uuidId",       1),
+                                    DATABASE_VALUE_CSTRING ("jobUUID",      MISC_UUID_NONE),
+                                    DATABASE_VALUE_DATETIME("created",      0LL),
+                                    DATABASE_VALUE_UINT    ("type",         ARCHIVE_TYPE_NORMAL),
+                                    DATABASE_VALUE_UINT    ("lockedCount",  FALSE)
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
+                                 );
+          if (error != ERROR_NONE)
+          {
+            printError("cannot create new entity for storage '%s' (error: %s)!",
+                       String_cString(globalOptions.debug.indexAddStorage),
+                       Error_getText(error)
+                      );
+            AutoFree_cleanup(&autoFreeList);
+            return error;
+          }
+        }
+        else if (error != ERROR_NONE)
         {
           printError("cannot create new entity for storage '%s' (error: %s)!",
                      String_cString(globalOptions.debug.indexAddStorage),
@@ -3924,86 +4016,221 @@ LOCAL Errors runDebug(void)
           return error;
         }
       }
-      else if (error != ERROR_NONE)
+
+      // create storage
+      error = Index_newStorage(&indexHandle,
+                               INDEX_ID_NONE, // uuidId
+                               INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
+                               NULL,  // hostName
+                               NULL,  // userName
+                               globalOptions.debug.indexAddStorage,
+                               0LL,  // createdDateTime
+                               0LL,  // size
+                               INDEX_STATE_UPDATE_REQUESTED,
+                               INDEX_MODE_AUTO,
+                               &storageId
+                              );
+      if (error != ERROR_NONE)
       {
-        printError("cannot create new entity for storage '%s' (error: %s)!",
+        printError("cannot create new storage for '%s' (error: %s)!",
                    String_cString(globalOptions.debug.indexAddStorage),
                    Error_getText(error)
                   );
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+
+      // set state 'update'
+      Index_setStorageState(&indexHandle,
+                            storageId,
+                            INDEX_STATE_UPDATE,
+                            0LL,  // lastCheckedDateTime
+                            NULL  // errorMessage
+                           );
+
+      // index update
+      error = Archive_updateIndex(&indexHandle,
+                                  INDEX_ID_NONE,
+                                  INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
+                                  storageId,
+                                  &storageInfo,
+                                  &totalEntryCount,
+                                  &totalEntrySize,
+                                  CALLBACK_(NULL,NULL),
+                                  CALLBACK_(NULL,NULL),
+                                  NULL  // logHandle
+                                 );
+
+      // set index state
+      if      (error == ERROR_NONE)
+      {
+        // done
+        error = Index_setStorageState(&indexHandle,
+                                      storageId,
+                                      INDEX_STATE_OK,
+                                      Misc_getCurrentDateTime(),
+                                      NULL  // errorMessage
+                                     );
+      }
+      else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
+      {
+        // interrupt
+        error = Index_setStorageState(&indexHandle,
+                                      storageId,
+                                      INDEX_STATE_UPDATE_REQUESTED,
+                                      0LL,  // lastCheckedTimestamp
+                                      NULL  // errorMessage
+                                     );
+      }
+      else
+      {
+        // error
+        error = Index_setStorageState(&indexHandle,
+                                      storageId,
+                                      INDEX_STATE_ERROR,
+                                      0LL,  // lastCheckedDateTime
+                                      "%s (error code: %d)",
+                                      Error_getText(error),
+                                      Error_getCode(error)
+                                     );
+      }
+      if (error != ERROR_NONE)
+      {
+        printError("cannot set state of storage '%s' (error: %s)!",
+                   String_cString(globalOptions.debug.indexAddStorage),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+
+      // done storage
+      AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
+      (void)Storage_done(&storageInfo);
+
+      AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
+      Job_doneOptions(&jobOptions);
+      AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
+      Storage_doneSpecifier(&storageSpecifier);
     }
 
-    // create storage
-    error = Index_newStorage(&indexHandle,
-                             INDEX_ID_NONE, // uuidId
-                             INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
-                             NULL,  // hostName
-                             NULL,  // userName
-                             globalOptions.debug.indexAddStorage,
-                             0LL,  // createdDateTime
-                             0LL,  // size
-                             INDEX_STATE_UPDATE_REQUESTED,
-                             INDEX_MODE_AUTO,
-                             &storageId
-                            );
-    if (error != ERROR_NONE)
+    if (globalOptions.debug.indexRefreshStorage != NULL)
     {
-      printError("cannot create new storage for '%s' (error: %s)!",
-                 String_cString(globalOptions.debug.indexAddStorage),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
+      // refresh storage in index
+      Storage_initSpecifier(&storageSpecifier);
+      AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
-    // set state 'update'
-    Index_setStorageState(&indexHandle,
-                          storageId,
-                          INDEX_STATE_UPDATE,
-                          0LL,  // lastCheckedDateTime
-                          NULL  // errorMessage
-                         );
+      // parse storage name, get printable name
+      error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRefreshStorage);
+      if (error != ERROR_NONE)
+      {
+        printError("cannot parse storage name '%s' (error: %s)!",
+                   globalOptions.debug.indexRefreshStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
 
-    // index update
-    error = Archive_updateIndex(&indexHandle,
-                                INDEX_ID_NONE,
-                                INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
-                                storageId,
-                                &storageInfo,
-                                &totalEntryCount,
-                                &totalEntrySize,
-                                CALLBACK_(NULL,NULL),
-                                CALLBACK_(NULL,NULL),
-                                NULL  // logHandle
-                               );
+      // find storage
+      error = Index_findStorageByName(&indexHandle,
+                                      &storageSpecifier,
+                                      NULL,  // findArchiveName
+                                      NULL,  // uuidId
+                                      NULL,  // entityId
+                                      NULL,  // jobUUID
+                                      NULL,  // scheduleUUID
+                                      &storageId,
+                                      NULL,  // createdDateTime
+                                      NULL,  // size
+                                      NULL,  // indexState,
+                                      NULL,  // indexMode
+                                      NULL,  // lastCheckedDateTime,
+                                      NULL,  // errorMessage
+                                      NULL,  // totalEntryCount
+                                      NULL  // totalEntrySize
+                                     );
+      if (error != ERROR_NONE)
+      {
+        printError("cannot find storage '%s' (error: %s)!",
+                   globalOptions.debug.indexRefreshStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_ARCHIVE_NOT_FOUND;
+      }
 
-    // set index state
-    if      (error == ERROR_NONE)
-    {
-      // done
-      error = Index_setStorageState(&indexHandle,
+      // init storage
+      error = Storage_init(&storageInfo,
+                           NULL,  // masterIO
+                           &storageSpecifier,
+                           &jobOptions,
+                           &globalOptions.indexDatabaseMaxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_LOW,
+                           CALLBACK_(NULL,NULL),  // updateStatusInfo
+                           CALLBACK_(NULL,NULL),  // getNamePassword
+                           CALLBACK_(NULL,NULL),  // requestVolume
+                           CALLBACK_(NULL,NULL),  // isPause
+                           CALLBACK_(NULL,NULL),  // isAborted
+                           NULL  // logHandle
+                          );
+      if (error != ERROR_NONE)
+      {
+        printError("cannot initialzie storage '%s' (error: %s)!",
+                   globalOptions.debug.indexRefreshStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
+
+      // set state 'update'
+      Index_setStorageState(&indexHandle,
+                            storageId,
+                            INDEX_STATE_UPDATE,
+                            0LL,  // lastCheckedDateTime
+                            NULL  // errorMessage
+                           );
+
+      // index update
+      error = Archive_updateIndex(&indexHandle,
+                                  INDEX_ID_NONE,
+                                  INDEX_ID_NONE,
+                                  storageId,
+                                  &storageInfo,
+                                  &totalEntryCount,
+                                  &totalEntrySize,
+                                  CALLBACK_(NULL,NULL),
+                                  CALLBACK_(NULL,NULL),
+                                  NULL  // logHandle
+                                 );
+
+      // set index state
+      if      (error == ERROR_NONE)
+      {
+        // done
+        (void)Index_setStorageState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_OK,
                                     Misc_getCurrentDateTime(),
                                     NULL  // errorMessage
                                    );
-    }
-    else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
-    {
-      // interrupt
-      error = Index_setStorageState(&indexHandle,
+      }
+      else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
+      {
+        // interrupt
+        (void)Index_setStorageState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_UPDATE_REQUESTED,
                                     0LL,  // lastCheckedTimestamp
                                     NULL  // errorMessage
                                    );
-    }
-    else
-    {
-      // error
-      error = Index_setStorageState(&indexHandle,
+      }
+      else
+      {
+        // error
+        (void)Index_setStorageState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_ERROR,
                                     0LL,  // lastCheckedDateTime
@@ -4011,179 +4238,48 @@ LOCAL Errors runDebug(void)
                                     Error_getText(error),
                                     Error_getCode(error)
                                    );
+      }
+      if (error != ERROR_NONE)
+      {
+        printError("cannot refresh storage '%s' (error: %s)!",
+                   globalOptions.debug.indexRefreshStorage,
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+
+      // done storage
+      AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
+      (void)Storage_done(&storageInfo);
+
+      AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
+      Storage_doneSpecifier(&storageSpecifier);
     }
-    if (error != ERROR_NONE)
-    {
-      printError("cannot set state of storage '%s' (error: %s)!",
-                 String_cString(globalOptions.debug.indexAddStorage),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-
-    // done storage
-    AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
-    (void)Storage_done(&storageInfo);
-
-    AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
-    Job_doneOptions(&jobOptions);
-    AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
-    Storage_doneSpecifier(&storageSpecifier);
-  }
-
-  if (globalOptions.debug.indexRefreshStorage != NULL)
-  {
-    // refresh storage in index
-    Storage_initSpecifier(&storageSpecifier);
-    AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-
-    // parse storage name, get printable name
-    error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRefreshStorage);
-    if (error != ERROR_NONE)
-    {
-      printError("cannot parse storage name '%s' (error: %s)!",
-                 globalOptions.debug.indexRefreshStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-
-    // find storage
-    error = Index_findStorageByName(&indexHandle,
-                                    &storageSpecifier,
-                                    NULL,  // findArchiveName
-                                    NULL,  // uuidId
-                                    NULL,  // entityId
-                                    NULL,  // jobUUID
-                                    NULL,  // scheduleUUID
-                                    &storageId,
-                                    NULL,  // createdDateTime
-                                    NULL,  // size
-                                    NULL,  // indexState,
-                                    NULL,  // indexMode
-                                    NULL,  // lastCheckedDateTime,
-                                    NULL,  // errorMessage
-                                    NULL,  // totalEntryCount
-                                    NULL  // totalEntrySize
-                                   );
-    if (error != ERROR_NONE)
-    {
-      printError("cannot find storage '%s' (error: %s)!",
-                 globalOptions.debug.indexRefreshStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_ARCHIVE_NOT_FOUND;
-    }
-
-    // init storage
-    error = Storage_init(&storageInfo,
-                         NULL,  // masterIO
-                         &storageSpecifier,
-                         &jobOptions,
-                         &globalOptions.indexDatabaseMaxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_LOW,
-                         CALLBACK_(NULL,NULL),  // updateStatusInfo
-                         CALLBACK_(NULL,NULL),  // getNamePassword
-                         CALLBACK_(NULL,NULL),  // requestVolume
-                         CALLBACK_(NULL,NULL),  // isPause
-                         CALLBACK_(NULL,NULL),  // isAborted
-                         NULL  // logHandle
-                        );
-    if (error != ERROR_NONE)
-    {
-      printError("cannot initialzie storage '%s' (error: %s)!",
-                 globalOptions.debug.indexRefreshStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
-
-    // set state 'update'
-    Index_setStorageState(&indexHandle,
-                          storageId,
-                          INDEX_STATE_UPDATE,
-                          0LL,  // lastCheckedDateTime
-                          NULL  // errorMessage
-                         );
-
-    // index update
-    error = Archive_updateIndex(&indexHandle,
-                                INDEX_ID_NONE,
-                                INDEX_ID_NONE,
-                                storageId,
-                                &storageInfo,
-                                &totalEntryCount,
-                                &totalEntrySize,
-                                CALLBACK_(NULL,NULL),
-                                CALLBACK_(NULL,NULL),
-                                NULL  // logHandle
-                               );
-
-    // set index state
-    if      (error == ERROR_NONE)
-    {
-      // done
-      (void)Index_setStorageState(&indexHandle,
-                                  storageId,
-                                  INDEX_STATE_OK,
-                                  Misc_getCurrentDateTime(),
-                                  NULL  // errorMessage
-                                 );
-    }
-    else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
-    {
-      // interrupt
-      (void)Index_setStorageState(&indexHandle,
-                                  storageId,
-                                  INDEX_STATE_UPDATE_REQUESTED,
-                                  0LL,  // lastCheckedTimestamp
-                                  NULL  // errorMessage
-                                 );
-    }
-    else
-    {
-      // error
-      (void)Index_setStorageState(&indexHandle,
-                                  storageId,
-                                  INDEX_STATE_ERROR,
-                                  0LL,  // lastCheckedDateTime
-                                  "%s (error code: %d)",
-                                  Error_getText(error),
-                                  Error_getCode(error)
-                                 );
-    }
-    if (error != ERROR_NONE)
-    {
-      printError("cannot refresh storage '%s' (error: %s)!",
-                 globalOptions.debug.indexRefreshStorage,
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-
-    // done storage
-    AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
-    (void)Storage_done(&storageInfo);
-
-    AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
-    Storage_doneSpecifier(&storageSpecifier);
-  }
   #endif /* NDEBUG */
 
   // done index
-  Index_close(&indexHandle);
+  if (   globalOptions.debug.indexWaitOperationsFlag
+      || globalOptions.debug.indexPurgeDeletedStoragesFlag
+      || globalOptions.debug.indexPurgeDeletedStoragesFlag
+      || (globalOptions.debug.indexRemoveStorage != NULL)
+      || (globalOptions.debug.indexAddStorage != NULL)
+      || (globalOptions.debug.indexRefreshStorage != NULL)
+     )
+  {
+    AUTOFREE_REMOVE(&autoFreeList,&indexHandle);
+    Index_close(&indexHandle);
+    AUTOFREE_REMOVE(&autoFreeList,printableDatabaseURI);
+    String_delete(printableDatabaseURI);
+    AUTOFREE_REMOVE(&autoFreeList,&databaseSpecifier);
+    Database_doneSpecifier(&databaseSpecifier);
+    AUTOFREE_REMOVE(&autoFreeList,globalOptions.continuousDatabaseFileName);
+    Continuous_done();
+    AUTOFREE_REMOVE(&autoFreeList,globalOptions.indexDatabaseURI);
+    Index_done();
+  }
 
   // free resources
-  Continuous_done();
-  Index_done();
-  String_delete(printableDatabaseURI);
-  Database_doneSpecifier(&databaseSpecifier);
   AutoFree_done(&autoFreeList);
 
   return error;
@@ -4435,14 +4531,15 @@ LOCAL Errors bar(int argc, const char *argv[])
     error = runJob(globalOptions.jobUUIDOrName);
   }
   #ifndef NDEBUG
-  else if (   globalOptions.debug.indexWaitOperationsFlag
+  else if (   globalOptions.debug.showChunkIdsFlag
+           || globalOptions.debug.indexWaitOperationsFlag
            || globalOptions.debug.indexPurgeDeletedStoragesFlag
            || (globalOptions.debug.indexAddStorage     != NULL)
            || (globalOptions.debug.indexRemoveStorage  != NULL)
            || (globalOptions.debug.indexRefreshStorage != NULL)
           )
   {
-    error = runDebug();
+    error = runDebug(argc,argv);
   }
   #endif /* NDEBUG */
   else

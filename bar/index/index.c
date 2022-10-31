@@ -2356,6 +2356,12 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
 
 LOCAL void indexThreadCode(void)
 {
+  #ifndef NDEBUG
+    #define TIMEOUT 500
+  #else
+    #define TIMEOUT (5*MS_PER_SECOND)
+  #endif
+
   IndexHandle indexHandle;
   Errors      error;
   #ifdef INDEX_IMPORT_OLD_DATABASE
@@ -2369,7 +2375,7 @@ LOCAL void indexThreadCode(void)
   #endif /* INDEX_IMPORT_OLD_DATABASE */
   IndexId     storageId,entityId;
   String      storageName;
-  uint        sleepTime;
+  ulong       sleepTime;
 
   assert(indexDatabaseSpecifier != NULL);
 
@@ -2379,7 +2385,7 @@ LOCAL void indexThreadCode(void)
     error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_TIMEOUT);
     if ((error != ERROR_NONE) && !indexQuitFlag)
     {
-      Misc_mdelay(1*MS_PER_SECOND);
+      Misc_mdelay(TIMEOUT);
     }
   }
   while ((error != ERROR_NONE) && !indexQuitFlag);
@@ -2511,7 +2517,7 @@ LOCAL void indexThreadCode(void)
           error = ERROR_NONE;
 
           // wait until index is unused
-          WAIT_NOT_IN_USEX(5LL*MS_PER_SECOND,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
+          WAIT_NOT_IN_USEX(TIMEOUT,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
               || indexQuitFlag
              )
@@ -2582,7 +2588,7 @@ LOCAL void indexThreadCode(void)
           }
 
           // wait until index is unused
-          WAIT_NOT_IN_USEX(5LL*MS_PER_SECOND,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
+          WAIT_NOT_IN_USEX(TIMEOUT,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
               || indexQuitFlag
              )
@@ -2603,7 +2609,7 @@ LOCAL void indexThreadCode(void)
               if (error == ERROR_INTERRUPTED)
               {
                 // wait until index is unused
-                WAIT_NOT_IN_USEX(5LL*MS_PER_SECOND,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
+                WAIT_NOT_IN_USEX(TIMEOUT,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
               }
             }
             while (   (error == ERROR_INTERRUPTED)
@@ -2632,7 +2638,7 @@ LOCAL void indexThreadCode(void)
                 if (error == ERROR_INTERRUPTED)
                 {
                   // wait until index is unused
-                  WAIT_NOT_IN_USEX(5LL*MS_PER_SECOND,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
+                  WAIT_NOT_IN_USEX(TIMEOUT,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
                 }
               }
               while (   (error == ERROR_INTERRUPTED)
@@ -2680,11 +2686,11 @@ LOCAL void indexThreadCode(void)
     SEMAPHORE_LOCKED_DO(&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       while (   !indexQuitFlag
-             && (sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD)
-             && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
-        )
+             && (sleepTime < (SLEEP_TIME_INDEX_CLEANUP_THREAD*MS_PER_SECOND))
+             && !Semaphore_waitModified(&indexThreadTrigger,TIMEOUT)
+            )
       {
-        sleepTime += 10;
+        sleepTime += TIMEOUT;
       }
     }
   }

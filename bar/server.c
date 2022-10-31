@@ -15411,6 +15411,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &storageInfo,
                        NULL,  // archive name
                        NULL,  // deltaSourceList
+                       ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
                        CALLBACK_(NULL,NULL),
                        NULL  // logHandle
                       );
@@ -15425,7 +15426,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // list contents
   error = ERROR_NONE;
-  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS)
+  while (   !Archive_eof(&archiveHandle)
          && (error == ERROR_NONE)
          && !isCommandAborted(clientInfo,id)
         )
@@ -15435,7 +15436,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
                                         NULL,  // offset
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
+                                        NULL  // size
                                        );
     if (error == ERROR_NONE)
     {
@@ -15468,6 +15469,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                           &byteCompressAlgorithm,
                                           &cryptType,
                                           &cryptAlgorithm,
+                                          NULL,  // cryptSalt
+                                          NULL,  // cryptKey
                                           fileName,
                                           &fileInfo,
                                           NULL, // fileExtendedAttributeList
@@ -15534,6 +15537,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                            &byteCompressAlgorithm,
                                            &cryptType,
                                            &cryptAlgorithm,
+                                           NULL,  // cryptSalt
+                                           NULL,  // cryptKey
                                            imageName,
                                            &deviceInfo,
                                            &fileSystemType,
@@ -15592,6 +15597,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                                &archiveHandle,
                                                &cryptType,
                                                &cryptAlgorithm,
+                                               NULL,  // cryptSalt
+                                               NULL,  // cryptKey
                                                directoryName,
                                                &fileInfo,
                                                NULL   // fileExtendedAttributeList
@@ -15636,6 +15643,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                           &archiveHandle,
                                           &cryptType,
                                           &cryptAlgorithm,
+                                          NULL,  // cryptSalt
+                                          NULL,  // cryptKey
                                           linkName,
                                           name,
                                           NULL,  // fileInfo
@@ -15690,6 +15699,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                               &byteCompressAlgorithm,
                                               &cryptType,
                                               &cryptAlgorithm,
+                                              NULL,  // cryptSalt
+                                              NULL,  // cryptKey
                                               &fileNameList,
                                               &fileInfo,
                                               NULL,  // fileExtendedAttributeList
@@ -15747,6 +15758,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                              &archiveHandle,
                                              &cryptType,
                                              &cryptAlgorithm,
+                                             NULL,  // cryptSalt
+                                             NULL,  // cryptKey
                                              name,
                                              &fileInfo,
                                              NULL   // fileExtendedAttributeList
@@ -15780,6 +15793,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           }
           break;
         case ARCHIVE_ENTRY_TYPE_META:
+        case ARCHIVE_ENTRY_TYPE_SALT:
+        case ARCHIVE_ENTRY_TYPE_KEY:
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           error = Archive_skipNextEntry(&archiveHandle);
           if (error != ERROR_NONE)

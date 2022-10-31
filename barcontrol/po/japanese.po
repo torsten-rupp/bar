@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-26 10:15+0200\n"
+"POT-Creation-Date: 2022-10-31 13:59+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1368,7 +1368,7 @@ msgstr "パブリックキーファイル"
 
 #: src/BARException.java:673
 #, fuzzy
-msgid "no decrypt key for cipher"
+msgid "no crypt key for cipher"
 msgstr "WebDAVログインパスワード"
 
 #: src/BARException.java:676

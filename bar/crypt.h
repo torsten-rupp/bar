@@ -155,7 +155,7 @@ typedef uint CryptMode;
 typedef struct
 {
   byte data[CRYPT_SALT_LENGTH];
-  uint length;
+  uint dataLength;
 } CryptSalt;
 
 // crypt info
@@ -614,7 +614,7 @@ INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt)
   assert(data != NULL);
   assert(cryptSalt != NULL);
 
-  memCopyFast(data,length,cryptSalt->data,cryptSalt->length);
+  memCopyFast(data,length,cryptSalt->data,cryptSalt->dataLength);
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
@@ -622,14 +622,14 @@ INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt)
 * Name   : Crypt_setSalt
 * Purpose: set crypt salt
 * Input  : cryptSalt - crypt salt
-*          data      - salt data
-*          length    - salt length
+*          data       - salt data
+*          dataLength - salt data length
 * Output : -
 * Return : crypt salt
 * Notes  : -
 \***********************************************************************/
 
-CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length);
+CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint dataLength);
 
 /***********************************************************************\
 * Name   : Crypt_setSalt
@@ -678,7 +678,7 @@ INLINE bool Crypt_isSaltAvailable(const CryptSalt *cryptSalt);
 #if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isSaltAvailable(const CryptSalt *cryptSalt)
 {
-  return (cryptSalt != NULL) && (cryptSalt->length > 0);
+  return (cryptSalt != NULL) && (cryptSalt->dataLength > 0);
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
@@ -698,8 +698,8 @@ INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *crypt
   assert(cryptSalt0 != NULL);
   assert(cryptSalt1 != NULL);
 
-  return memEquals(cryptSalt0->data,cryptSalt0->length,
-                   cryptSalt1->data,cryptSalt1->length
+  return memEquals(cryptSalt0->data,cryptSalt0->dataLength,
+                   cryptSalt1->data,cryptSalt1->dataLength
                   );
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
