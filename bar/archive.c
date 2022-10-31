@@ -1064,7 +1064,6 @@ LOCAL Errors initArchiveCryptInfo(ArchiveHandle       *archiveHandle,
 {
   ArchiveCryptInfoNode *archiveCryptInfoNode;
 
-  assert(archiveCryptInfoNode != NULL);
   assert(archiveHandle != NULL);
 
   // init node
