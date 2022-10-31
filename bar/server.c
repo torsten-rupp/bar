@@ -1807,18 +1807,6 @@ LOCAL void schedulerThreadCode(void)
 
                           if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
                           {
-// TODO: remove
-#if 0
-char s[100];
-fprintf(stderr,"%s:%d: %s: %d %d %s\n",__FILE__,__LINE__,String_cString(jobScheduleNode->jobUUID),
-jobScheduleNode->archiveType,
-Continuous_isEntryAvailable(&continuousDatabaseHandle,
-                                                                    String_cString(jobScheduleNode->jobUUID),
-                                                                    String_cString(jobScheduleNode->scheduleUUID)
-                                                                   ),
-Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
-);
-#endif
                             if      (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_FULL)
                                      && (   (executeScheduleNode == NULL)
                                          || (   (executeScheduleNode->archiveType == jobScheduleNode->archiveType)
@@ -1900,7 +1888,10 @@ Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
           scheduleNode = Job_findScheduleByUUID(jobNode,executeScheduleNode->scheduleUUID);
 
           // trigger job
-          if ((jobNode != NULL) && (scheduleNode != NULL))
+          if (   (jobNode != NULL)
+              && (scheduleNode != NULL)
+              && !Job_isActive(jobNode->jobState)
+             )
           {
             Job_trigger(jobNode,
                         scheduleNode->uuid,
