@@ -2544,28 +2544,33 @@ void Job_trigger(JobNode      *jobNode,
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // set job state
-  jobNode->jobState              = JOB_STATE_WAITING;
-  String_set(jobNode->scheduleUUID,scheduleUUID);
-  jobNode->archiveType           = archiveType;
-  String_set(jobNode->customText,customText);
-  jobNode->testCreatedArchives   = testCreatedArchives;
-  jobNode->noStorage             = noStorage;
-  jobNode->dryRun                = dryRun;
-  jobNode->startDateTime         = startDateTime;
-  String_setCString(jobNode->byName,byName);
+  if (!Job_isActive(jobNode->jobState))
+  {
+    // set job state
+    jobNode->jobState              = JOB_STATE_WAITING;
+    String_set(jobNode->scheduleUUID,scheduleUUID);
+    jobNode->archiveType           = archiveType;
+    String_set(jobNode->customText,customText);
+    jobNode->testCreatedArchives   = testCreatedArchives;
+    jobNode->noStorage             = noStorage;
+    jobNode->dryRun                = dryRun;
+    jobNode->startDateTime         = startDateTime;
+    String_setCString(jobNode->byName,byName);
 
-  // reset running info
-  jobNode->requestedAbortFlag    = FALSE;
-  String_clear(jobNode->abortedByInfo);
-  jobNode->requestedVolumeNumber = 0;
-  jobNode->volumeNumber          = 0;
-  String_clear(jobNode->volumeMessage);
-  jobNode->volumeUnloadFlag      = FALSE;
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
+    // reset running info
+    jobNode->requestedAbortFlag    = FALSE;
+    String_clear(jobNode->abortedByInfo);
+    jobNode->requestedVolumeNumber = 0;
+    jobNode->volumeNumber          = 0;
+    String_clear(jobNode->volumeMessage);
+    jobNode->volumeUnloadFlag      = FALSE;
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
-  Job_resetStatusInfo(&jobNode->statusInfo);
-  Job_resetRunningInfo(&jobNode->runningInfo);
+    Job_resetStatusInfo(&jobNode->statusInfo);
+    Job_resetRunningInfo(&jobNode->runningInfo);
+
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  }
 }
 
 void Job_start(JobNode *jobNode)
@@ -2573,15 +2578,18 @@ void Job_start(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // set job state, reset running info
-  jobNode->jobState = JOB_STATE_RUNNING;
-  Job_resetStatusInfo(&jobNode->statusInfo);
-  Job_resetRunningInfo(&jobNode->runningInfo);
+  if (!Job_isRunning(jobNode->jobState))
+  {
+    // set job state, reset running info
+    jobNode->jobState = JOB_STATE_RUNNING;
+    Job_resetStatusInfo(&jobNode->statusInfo);
+    Job_resetRunningInfo(&jobNode->runningInfo);
 
-  // increment active counter
-  jobList.activeCount++;
+    // increment active counter
+    jobList.activeCount++;
 
-  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
+    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  }
 }
 
 void Job_end(JobNode *jobNode)
