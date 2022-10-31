@@ -7783,7 +7783,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
   CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,globalOptions.dryRun,                                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
-  CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  2,0,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
+  CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  0,2,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
 
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                          0,6,                                                         "increment/set verbosity level"                                            ),
