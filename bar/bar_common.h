@@ -970,6 +970,8 @@ typedef struct
   #ifndef NDEBUG
   struct
   {
+    bool                      showChunkIdsFlag;               // TRUE to show chunk ids only
+
     uint                      createArchiveErrors;            // number of errors in created archive
 
     uint                      serverLevel;                    // server debug level (for debug only)

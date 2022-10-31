@@ -511,7 +511,7 @@ CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt)
 {
   assert(cryptSalt != NULL);
 
-  cryptSalt->length = 0;
+  cryptSalt->dataLength = 0;
 
   return cryptSalt;
 }
@@ -520,10 +520,10 @@ CryptSalt *Crypt_duplicateSalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptS
 {
   assert(cryptSalt != NULL);
   assert(fromCryptSalt != NULL);
-  assert(sizeof(cryptSalt->data) >= fromCryptSalt->length);
+  assert(sizeof(cryptSalt->data) >= fromCryptSalt->dataLength);
 
-  cryptSalt->length = MIN(fromCryptSalt->length,sizeof(cryptSalt->data));
-  memCopyFast(cryptSalt->data,cryptSalt->length,fromCryptSalt->data,fromCryptSalt->length);
+  cryptSalt->dataLength = MIN(fromCryptSalt->dataLength,sizeof(cryptSalt->data));
+  memCopyFast(cryptSalt->data,cryptSalt->dataLength,fromCryptSalt->data,fromCryptSalt->dataLength);
 
   return cryptSalt;
 }
@@ -535,13 +535,13 @@ void Crypt_doneSalt(CryptSalt *cryptSalt)
   UNUSED_VARIABLE(cryptSalt);
 }
 
-CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length)
+CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint dataLength)
 {
   assert(cryptSalt != NULL);
   assert(data != NULL);
 
-  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),data,length);
-  cryptSalt->length = MIN(sizeof(cryptSalt->data),length);
+  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),data,dataLength);
+  cryptSalt->dataLength = MIN(sizeof(cryptSalt->data),dataLength);
 
   return cryptSalt;
 }
@@ -551,7 +551,7 @@ CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt)
   assert(cryptSalt != NULL);
 
   memClear(cryptSalt->data,sizeof(cryptSalt->data));
-  cryptSalt->length = 0;
+  cryptSalt->dataLength = 0;
 
   return cryptSalt;
 }
@@ -560,10 +560,10 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt)
 {
   assert(cryptSalt != NULL);
   assert(fromCryptSalt != NULL);
-  assert(sizeof(cryptSalt->data) >= fromCryptSalt->length);
+  assert(sizeof(cryptSalt->data) >= fromCryptSalt->dataLength);
 
-  cryptSalt->length = MIN(fromCryptSalt->length,sizeof(cryptSalt->data));
-  memCopyFast(cryptSalt->data,cryptSalt->length,fromCryptSalt->data,fromCryptSalt->length);
+  cryptSalt->dataLength = MIN(fromCryptSalt->dataLength,sizeof(cryptSalt->data));
+  memCopyFast(cryptSalt->data,cryptSalt->dataLength,fromCryptSalt->data,fromCryptSalt->dataLength);
 
   return cryptSalt;
 }
@@ -573,7 +573,7 @@ CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt)
   assert(cryptSalt != NULL);
 
   Crypt_randomize(cryptSalt->data,sizeof(cryptSalt->data));
-  cryptSalt->length = sizeof(cryptSalt->data);
+  cryptSalt->dataLength = sizeof(cryptSalt->data);
 
   return cryptSalt;
 }
@@ -957,7 +957,7 @@ Errors __Crypt_init(const char      *__fileName__,
           // check key
           if (!Crypt_isKeyAvailable(cryptKey))
           {
-            return ERROR_NO_DECRYPT_KEY;
+            return ERROR_NO_CRYPT_KEY;
           }
           if (keyLength > cryptKey->dataLength*8)
           {
@@ -1009,7 +1009,7 @@ Errors __Crypt_init(const char      *__fileName__,
           // set salt as IV
           if (Crypt_isSaltAvailable(&cryptInfo->cryptSalt))
           {
-            if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
+            if (cryptInfo->cryptSalt.dataLength < cryptInfo->blockLength)
             {
               gcry_cipher_close(cryptInfo->gcry_cipher_hd);
               return ERROR_INVALID_SALT_LENGTH;
@@ -1185,7 +1185,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
           // set salt as IV
           if (Crypt_isSaltAvailable(&cryptInfo->cryptSalt))
           {
-            if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
+            if (cryptInfo->cryptSalt.dataLength < cryptInfo->blockLength)
             {
               return ERROR_INVALID_SALT_LENGTH;
             }
@@ -1764,7 +1764,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
                                         KEY_DERIVE_ALGORITHM,
                                         KEY_DERIVE_HASH_ALGORITHM,
                                         (cryptSalt != NULL) ? cryptSalt->data : NO_SALT,
-                                        (cryptSalt != NULL) ? cryptSalt->length : sizeof(NO_SALT),
+                                        (cryptSalt != NULL) ? cryptSalt->dataLength : sizeof(NO_SALT),
                                         KEY_DERIVE_ITERATIONS,
                                         dataLength,
                                         data
@@ -4022,7 +4022,7 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 
   if (cryptKey->dataLength > 0)
   {
-    fprintf(stderr,"Crypt key: %dbytes\n",cryptKey->dataLength);
+    fprintf(stderr,"Crypt key: %ubytes\n",cryptKey->dataLength);
     debugDumpMemory(cryptKey->data,cryptKey->dataLength,FALSE);
   }
 
@@ -4131,8 +4131,13 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 void Crypt_dumpSalt(const CryptSalt *cryptSalt)
 {
   assert(cryptSalt != NULL);
+  assert(cryptSalt->dataLength <= CRYPT_SALT_LENGTH);
 
-  debugDumpMemory(cryptSalt->data,cryptSalt->length,FALSE);
+  if (cryptSalt->dataLength > 0)
+  {
+    fprintf(stderr,"Crypt salt: %ubytes\n",cryptSalt->dataLength);
+    debugDumpMemory(cryptSalt->data,cryptSalt->dataLength,FALSE);
+  }
 }
 
 void Crypt_dumpHash(const CryptHash *cryptHash)

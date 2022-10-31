@@ -944,7 +944,6 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-  assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
 
   if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
   {

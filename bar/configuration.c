@@ -3114,7 +3114,7 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOp
         {
           if (maintenanceTime->hour != TIME_ANY)
           {
-            String_appendFormat(line,"%d",maintenanceTime->hour);
+            String_appendFormat(line,"%02d",maintenanceTime->hour);
           }
           else
           {
@@ -3123,7 +3123,7 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOp
           String_appendChar(line,':');
           if (maintenanceTime->minute != TIME_ANY)
           {
-            String_appendFormat(line,"%d",maintenanceTime->minute);
+            String_appendFormat(line,"%02d",maintenanceTime->minute);
           }
           else
           {
@@ -7783,8 +7783,6 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
   CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,globalOptions.dryRun,                                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
-//  CMD_OPTION_STRING       ("new-entity-uuid",                   0,  2,0,globalOptions.newEntityUUID,                                                                                      "new entity uuid","uuid"                                                   ),
-//  CMD_OPTION_STRING       ("new-entity-uuid",                   0,  2,0,globalOptions.newEntityUUID,                                                                                      "new entity uuid","uuid"                                                   ),
   CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  2,0,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
 
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
@@ -7807,6 +7805,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   // only for debugging/testing
   #ifndef NDEBUG
+  CMD_OPTION_BOOLEAN      ("debug-show-chunks",                 0,  2,0,globalOptions.debug.showChunkIdsFlag,                                                                             "show chunk ids"                                                           ),
   CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,0,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "number of errors to create in archives"                                   ),
 
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  1,0,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),

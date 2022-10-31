@@ -409,6 +409,26 @@ void Chunk_tell(ChunkInfo *chunkInfo, uint64 *index);
 Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 
 /***********************************************************************\
+* Name   : Chunk_transfer
+* Purpose: transfer chunk
+* Input  : chunkHeader         - chunk header
+*          fromChunkIO         - from chunk i/o
+*          fromChunkIOUserData - from chunk i/o userdata
+*          toChunkIO           - to chunk i/o
+*          toChunkIOUserData   - to chunk i/o userdata
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Chunk_transfer(const ChunkHeader *chunkHeader,
+                      const ChunkIO     *fromChunkIO,
+                      void              *fromChunkIOUserData,
+                      const ChunkIO     *toChunkIO,
+                      void              *toChunkIOUserData
+                     );
+
+/***********************************************************************\
 * Name   : Chunk_open
 * Purpose: open chunk
 * Input  : chunkInfo   - chunk info block

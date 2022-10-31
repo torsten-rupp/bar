@@ -1917,7 +1917,8 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
       String_delete(archiveContentNode->special.name);
       break;
     case ARCHIVE_ENTRY_TYPE_META:
-      break;
+    case ARCHIVE_ENTRY_TYPE_SALT:
+    case ARCHIVE_ENTRY_TYPE_KEY:
     case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -1999,7 +2000,8 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       offset1       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_META:
-      break;
+    case ARCHIVE_ENTRY_TYPE_SALT:
+    case ARCHIVE_ENTRY_TYPE_KEY:
     case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -2046,7 +2048,8 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
       offset2       = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_META:
-      break;
+    case ARCHIVE_ENTRY_TYPE_SALT:
+    case ARCHIVE_ENTRY_TYPE_KEY:
     case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -2142,7 +2145,8 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
         name         = nextArchiveContentNode->special.name;
         break;
       case ARCHIVE_ENTRY_TYPE_META:
-        break;
+      case ARCHIVE_ENTRY_TYPE_SALT:
+      case ARCHIVE_ENTRY_TYPE_KEY:
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -2245,7 +2249,8 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
             }
             break;
           case ARCHIVE_ENTRY_TYPE_META:
-            break;
+          case ARCHIVE_ENTRY_TYPE_SALT:
+          case ARCHIVE_ENTRY_TYPE_KEY:
           case ARCHIVE_ENTRY_TYPE_SIGNATURE:
             break;
           case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -2364,7 +2369,8 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                         );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
-        break;
+      case ARCHIVE_ENTRY_TYPE_SALT:
+      case ARCHIVE_ENTRY_TYPE_KEY:
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -2477,6 +2483,7 @@ NULL, // masterSocketHandle
                              &storageInfo,
                              archiveName,
                              NULL,  // deltaSourceList
+                             ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS,
                              CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                              logHandle
                             );
@@ -2536,7 +2543,7 @@ NULL, // masterSocketHandle
         // list contents
         error = ERROR_NONE;
         printArchiveName(printableStorageName,showEntriesFlag);
-        while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS)
+        while (   !Archive_eof(&archiveHandle)
                && (error == ERROR_NONE)
               )
         {
@@ -2545,7 +2552,7 @@ NULL, // masterSocketHandle
                                               &archiveEntryType,
                                               NULL,  // archiveCryptInfo
                                               NULL,  // offset
-                                              ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
+                                              NULL  // size
                                              );
           if (error != ERROR_NONE)
           {
@@ -2582,6 +2589,8 @@ NULL, // masterSocketHandle
                                                 &byteCompressAlgorithm,
                                                 &cryptType,
                                                 &cryptAlgorithm,
+                                                NULL,  // cryptSalt
+                                                NULL,  // cryptKey
                                                 fileName,
                                                 &fileInfo,
                                                 NULL,  // fileExtendedAttributeList
@@ -2700,6 +2709,8 @@ NULL, // masterSocketHandle
                                                  &byteCompressAlgorithm,
                                                  &cryptType,
                                                  &cryptAlgorithm,
+                                                 NULL,  // cryptSalt
+                                                 NULL,  // cryptKey
                                                  deviceName,
                                                  &deviceInfo,
                                                  &fileSystemType,
@@ -2802,6 +2813,8 @@ NULL, // masterSocketHandle
                                                      &archiveHandle,
                                                      &cryptType,
                                                      &cryptAlgorithm,
+                                                     NULL,  // cryptSalt
+                                                     NULL,  // cryptKey
                                                      directoryName,
                                                      &fileInfo,
                                                      NULL   // fileExtendedAttributeList
@@ -2891,6 +2904,8 @@ NULL, // masterSocketHandle
                                                 &archiveHandle,
                                                 &cryptType,
                                                 &cryptAlgorithm,
+                                                NULL,  // cryptSalt
+                                                NULL,  // cryptKey
                                                 linkName,
                                                 fileName,
                                                 &fileInfo,
@@ -2993,6 +3008,8 @@ NULL, // masterSocketHandle
                                                     &byteCompressAlgorithm,
                                                     &cryptType,
                                                     &cryptAlgorithm,
+                                                    NULL,  // cryptSalt
+                                                    NULL,  // cryptKey
                                                     &fileNameList,
                                                     &fileInfo,
                                                     NULL,  // fileExtendedAttributeList
@@ -3105,6 +3122,8 @@ NULL, // masterSocketHandle
                                                    &archiveHandle,
                                                    &cryptType,
                                                    &cryptAlgorithm,
+                                                   NULL,  // cryptSalt
+                                                   NULL,  // cryptKey
                                                    fileName,
                                                    &fileInfo,
                                                    NULL   // fileExtendedAttributeList
@@ -3200,6 +3219,8 @@ NULL, // masterSocketHandle
                                                 &archiveHandle,
                                                 NULL,  // cryptType
                                                 NULL,  // cryptAlgorithm
+                                                NULL,  // cryptSalt
+                                                NULL,  // cryptKey
                                                 hostName,
                                                 userName,
                                                 jobUUID,
@@ -3256,6 +3277,14 @@ NULL, // masterSocketHandle
                   error = Archive_skipNextEntry(&archiveHandle);
                 }
               }
+              break;
+            case ARCHIVE_ENTRY_TYPE_SALT:
+            case ARCHIVE_ENTRY_TYPE_KEY:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNREACHABLE();
+              #else
+                error = Archive_skipNextEntry(&archiveHandle);
+              #endif /* NDEBUG */
               break;
             case ARCHIVE_ENTRY_TYPE_SIGNATURE:
               error = Archive_skipNextEntry(&archiveHandle);

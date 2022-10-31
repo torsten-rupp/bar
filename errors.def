@@ -317,7 +317,7 @@ ERROR INIT_CRYPT
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR NO_DECRYPT_KEY                   TR("no decrypt key for cipher")
+ERROR NO_CRYPT_KEY                     TR("no crypt key for cipher")
 ERROR NO_CRYPT_PASSWORD                TR("no password given for cipher")
 ERROR INVALID_CRYPT_PASSWORD           TR("invalid decryption password")
 ERROR CRYPT_PASSWORDS_MISMATCH         TR("encryption passwords mismatch")
