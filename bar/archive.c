@@ -15890,23 +15890,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // create entity if not exists with given job UUID/entity UUID/host name/archive type
           if (INDEX_ID_IS_NONE(entityId))
           {
-            // update entity
-// TODO: do not update entity!
-#if 0
-            error = Index_updateEntity(indexHandle,
-                                       entityId,
-                                       String_cString(jobUUID),
-                                       String_cString(entityUUID),
-                                       String_cString(hostName),
-                                       String_cString(userName),
-                                       archiveType,
-                                       createdDateTime
-                                      );
-#endif
-          }
-          else
-          {
-            // check if entity with given job UUID/entity UUID/host name/archive type exists, otherwise create that entity
             error = Index_findEntity(indexHandle,
                                      INDEX_ID_NONE,  // findEntityIndexId
                                      jobUUID,
@@ -15940,11 +15923,11 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                       &entityId
                                      );
             }
-          }
-          if (error != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            break;
+            if (error != ERROR_NONE)
+            {
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              break;
+            }
           }
 
           // flush index list

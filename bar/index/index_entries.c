@@ -5337,7 +5337,6 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                                name,
                                                0LL
                                               );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       if (error != ERROR_NONE)
       {
         return error;
