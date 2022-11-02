@@ -1097,7 +1097,6 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   }
 // TODO: replace
 //  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL))
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL)
 && !StringMap_getString(argumentMap,"scheduleUUID",entityUUUID,NULL)
 )

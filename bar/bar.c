@@ -3730,7 +3730,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
         (uint64(*)(void*))File_getSize
       };
 
-      uint        i;
+      int         i;
       FileHandle  fileHandle;
       ChunkHeader chunkHeader;
 

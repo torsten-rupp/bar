@@ -2273,7 +2273,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   {
     archiveFlags |= ARCHIVE_FLAG_RETURN_SALT_CHUNKS|ARCHIVE_FLAG_RETURN_KEY_CHUNKS;
   }
-  if (isPrintInfo(3)) archiveFlags != ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS;
+  if (isPrintInfo(3)) archiveFlags |= ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS;
   error = Archive_create(&convertInfo->destinationArchiveHandle,
                          NULL,  // hostName
                          NULL,  // userName
