@@ -2959,6 +2959,7 @@ LOCAL Errors runServer(void)
   error = createPIDFile();
   if (error != ERROR_NONE)
   {
+    printError("cannot create PID file",Error_getText(error));
     closeLog();
     return error;
   }
@@ -2967,6 +2968,7 @@ LOCAL Errors runServer(void)
   error = Job_rereadAll(globalOptions.jobsDirectory);
   if (error != ERROR_NONE)
   {
+    printError("cannot read jobs",Error_getText(error));
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                _("cannot read jobs from '%s' (error: %s)!"),
@@ -4397,8 +4399,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   error = Configuration_readAll(isPrintInfo(2) || printInfoFlag);
   if (error != ERROR_NONE)
   {
-    printError("%s",Error_getText(error));
-    return error;
+    printWarning("%s",Error_getText(error));
   }
 
   // special case: set verbose level/quiet flag in interactive mode
