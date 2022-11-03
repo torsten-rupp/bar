@@ -3646,7 +3646,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                totalEntityCount,
                                "entities",
                                "COUNT(entities.id)",
-                               "    lockCount=0 \
+                               "    lockedCount=0 \
                                 AND deletedFlag!=TRUE \
                                ",
                                DATABASE_FILTERS
