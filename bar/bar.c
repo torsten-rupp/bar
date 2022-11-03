@@ -2964,20 +2964,23 @@ LOCAL Errors runServer(void)
     return error;
   }
 
-  // read all jobs
-  error = Job_rereadAll(globalOptions.jobsDirectory);
-  if (error != ERROR_NONE)
+  // read all jobs (if master)
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
-    printError("cannot read jobs",Error_getText(error));
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               _("cannot read jobs from '%s' (error: %s)!"),
-               String_cString(globalOptions.jobsDirectory),
-               Error_getText(error)
-              );
-    deletePIDFile();
-    closeLog();
-    return error;
+    error = Job_rereadAll(globalOptions.jobsDirectory);
+    if (error != ERROR_NONE)
+    {
+      printError("cannot read jobs",Error_getText(error));
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 _("cannot read jobs from '%s' (error: %s)!"),
+                 String_cString(globalOptions.jobsDirectory),
+                 Error_getText(error)
+                );
+      deletePIDFile();
+      closeLog();
+      return error;
+    }
   }
 
   // init continuous
