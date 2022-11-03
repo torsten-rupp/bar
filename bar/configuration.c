@@ -6884,13 +6884,6 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                   );
     }
   }
-  else
-  {
-    printWarning(_("Cannot get file info for configuration file '%s' (error: %s)"),
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-  }
 
   // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
