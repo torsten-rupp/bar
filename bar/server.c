@@ -20919,52 +20919,45 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         isIndexOpen = (Index_open(&indexHandle,NULL,10*MS_PER_SECOND) == ERROR_NONE);
       }
 
-      if      (Index_isAvailable() && isIndexOpen)
+      // add command info
+      commandInfoNode = NULL;
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        // add command info
-        commandInfoNode = NULL;
-        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
+        if (commandInfoNode == NULL)
         {
-          commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
-          if (commandInfoNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          commandInfoNode->id          = command.id;
-          commandInfoNode->indexHandle = Index_isAvailable() ? &indexHandle : NULL;
-          List_append(&clientInfo->commandInfoList,commandInfoNode);
+          HALT_INSUFFICIENT_MEMORY();
         }
-
-        // execute command
-        #ifndef NDEBUG
-          t0 = 0LL;
-          if (globalOptions.debug.serverLevel >= 1)
-          {
-            t0 = Misc_getTimestamp();
-          }
-        #endif /* not NDEBUG */
-        command.serverCommandFunction(clientInfo,
-                                      &indexHandle,
-                                      command.id,
-                                      command.argumentMap
-                                     );
-        #ifndef NDEBUG
-          if (globalOptions.debug.serverLevel >= 2)
-          {
-            t1 = Misc_getTimestamp();
-            fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
-          }
-        #endif /* not DEBUG */
-
-        // remove command info
-        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-        {
-          List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
-        }
+        commandInfoNode->id          = command.id;
+        commandInfoNode->indexHandle = Index_isAvailable() ? &indexHandle : NULL;
+        List_append(&clientInfo->commandInfoList,commandInfoNode);
       }
-      else if (Index_isAvailable())
+
+      // execute command
+      #ifndef NDEBUG
+        t0 = 0LL;
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          t0 = Misc_getTimestamp();
+        }
+      #endif /* not NDEBUG */
+      command.serverCommandFunction(clientInfo,
+                                    (Index_isAvailable() && isIndexOpen) ? &indexHandle : NULL,
+                                    command.id,
+                                    command.argumentMap
+                                   );
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 2)
+        {
+          t1 = Misc_getTimestamp();
+          fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
+        }
+      #endif /* not DEBUG */
+
+      // remove command info
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_DATABASE_CONNECT,"");
+        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
       }
     }
     else
