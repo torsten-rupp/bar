@@ -5063,10 +5063,9 @@ if (false) {
       if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
       if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
       if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
-      BARServer.TLSModes tlsMode;
-      if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
-      else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
-      else                              tlsMode = BARServer.TLSModes.TRY;
+      BARServer.TLSModes tlsMode = BARServer.TLSModes.TRY;
+      if (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+      if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
