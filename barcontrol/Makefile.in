@@ -436,15 +436,16 @@ endif
 
 # jars
 .PHONY: jars clean_jars
-jars: \
-  barcontrol.jar \
-  barcontrol-linux.jar \
-  barcontrol-linux_64.jar \
-  barcontrol-solaris.jar \
-  barcontrol-macosx.jar \
-  barcontrol-macosx_64.jar \
-  barcontrol-windows.jar \
-  barcontrol-windows_64.jar
+jars:
+	$(MAKE) compile
+	$(MAKE) barcontrol.jar \
+          barcontrol-linux.jar \
+          barcontrol-linux_64.jar \
+          barcontrol-solaris.jar \
+          barcontrol-macosx.jar \
+          barcontrol-macosx_64.jar \
+          barcontrol-windows.jar \
+          barcontrol-windows_64.jar
 
 clean_jars:
 	$(RMF) barcontrol.jar
