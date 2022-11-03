@@ -1,4 +1,5 @@
 2022-11-03 0.22b
+  * fixed slave mode
   * fixed typing error when deleting entries in index
   * fixed warnings
 
