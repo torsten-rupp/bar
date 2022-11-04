@@ -4095,9 +4095,9 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // format value
         String_appendFormat(line,"%s",(select != NULL) ? select->name : "");
 
-        configValueFormat->endOfDataFlag = TRUE;
-
         doneLine(line);
+
+        configValueFormat->endOfDataFlag = TRUE;
 
         formatedFlag = TRUE;
         break;
@@ -4247,6 +4247,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
       case CONFIG_VALUE_TYPE_SPECIAL:
         initLine(configValueFormat,line);
         if (   (configValueFormat->configValue->specialValue.format != NULL)
+            && (configValueFormat->formatUserData != NULL)
             && configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
                                                                    CONFIG_VALUE_OPERATION_FORMAT,
                                                                    line,
@@ -4287,8 +4288,6 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           break;
       #endif /* NDEBUG */
     }
-
-    if (formatedFlag) configValueFormat->endOfDataFlag = TRUE;
   }
   else
   {

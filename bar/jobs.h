@@ -1337,16 +1337,7 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
 * Notes  : -
 \***********************************************************************/
 
-INLINE void Job_setModified(JobNode *jobNode);
-#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE void Job_setModified(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  jobNode->modifiedFlag = TRUE;
-}
-#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+void Job_setModified(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_setIncludeExcludeModified
