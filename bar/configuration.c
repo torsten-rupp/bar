@@ -1494,8 +1494,6 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
   certificate->data   = data;
   certificate->length = dataLength;
 
-  printInfo(2,"Read certificate file '%s'\n",fileName);
-
   return ERROR_NONE;
 }
 
@@ -1575,8 +1573,6 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
 
   // set key data
   Configuration_setKey(key,fileName,data,dataLength);
-
-  printInfo(3,"Read key file '%s'\n",fileName);
 
   // free resources
   freeSecure(data);
@@ -6078,6 +6074,7 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
     error = readCertificateFileCString(certificate,value);
     if (error != ERROR_NONE)
     {
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
       return FALSE;
     }
   }
@@ -9526,7 +9523,7 @@ Errors Configuration_readAll(bool printInfoFlag)
   return error;
 }
 
-Errors Configuration_readAllServerKeys(void)
+Errors Configuration_readAllServerKeysCertificates(void)
 {
   String fileName;
   Key    key;

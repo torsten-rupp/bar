@@ -21876,7 +21876,6 @@ Errors Server_socket(void)
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
-    printInfo(1,"Index database opened\n");
   }
 
   // init server sockets
@@ -22700,7 +22699,6 @@ Errors Server_batch(int inputDescriptor,
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
-    printInfo(1,"Index database opened\n");
   }
 
   // start threads

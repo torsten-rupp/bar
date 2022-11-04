@@ -889,7 +889,7 @@ INLINE bool Configuration_isModified(void)
 Errors Configuration_readAll(bool printInfoFlag);
 
 /***********************************************************************\
-* Name   : Configuration_readAllServerKeys
+* Name   : Configuration_readAllServerKeysCertificates
 * Purpose: initialize all server keys/certificates
 * Input  : -
 * Output : -
@@ -897,7 +897,7 @@ Errors Configuration_readAll(bool printInfoFlag);
 * Notes  : -
 \***********************************************************************/
 
-Errors Configuration_readAllServerKeys(void);
+Errors Configuration_readAllServerKeysCertificates(void);
 
 /***********************************************************************\
 * Name   : Configuration_validate
