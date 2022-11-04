@@ -357,6 +357,7 @@ LOCAL Thread                jobThread;                   // thread executing job
 LOCAL Thread                schedulerThread;             // thread for scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Thread                pairingThread;               // thread for pairing master/slaves
+LOCAL Semaphore             pairingThreadTrigger;
 LOCAL Semaphore             updateIndexThreadTrigger;
 LOCAL Thread                updateIndexThread;           // thread to add/update index
 LOCAL Semaphore             autoIndexThreadTrigger;
@@ -1330,6 +1331,10 @@ LOCAL void pairingThreadCode(void)
                                            jobNode->job.slaveHost.tlsMode
                                           );
                 }
+                else
+                {
+                  slaveNode->tlsMode = jobNode->job.slaveHost.tlsMode;
+                }
               }
             }
 
@@ -1489,12 +1494,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
         if (!anyOfflineFlag && !anyUnpairedFlag)
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+          delayThread(SLEEP_TIME_PAIRING_THREAD,&pairingThreadTrigger);
         }
         else
         {
           // short sleep
-          delayThread(30,NULL);
+          delayThread(30,&pairingThreadTrigger);
         }
         break;
       case SERVER_MODE_SLAVE:
@@ -1550,12 +1555,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
            )
         {
           // short sleep
-          delayThread(5,NULL);
+          delayThread(5,&pairingThreadTrigger);
         }
         else
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+          delayThread(SLEEP_TIME_PAIRING_THREAD,&pairingThreadTrigger);
         }
         break;
     }
@@ -1920,7 +1925,7 @@ LOCAL void schedulerThreadCode(void)
     if (!isQuit())
     {
       // sleep and check quit flag
-      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
+      delayThread(SLEEP_TIME_SCHEDULER_THREAD,&pairingThreadTrigger);
     }
   }
   List_done(&jobScheduleList);
@@ -10496,8 +10501,9 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
-      // set modified
+      // set modified, trigger re-pairing
       Job_setModified(jobNode);
+      Semaphore_signalModified(&pairingThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
     }
     else
     {
@@ -22020,6 +22026,7 @@ Errors Server_socket(void)
     {
       HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
     }
+    Semaphore_init(&pairingThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize pause thread!");
@@ -22550,6 +22557,7 @@ Errors Server_socket(void)
       HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
     }
     Thread_done(&pairingThread);
+    Semaphore_done(&pairingThreadTrigger);
     if (!Thread_join(&schedulerThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
