@@ -287,19 +287,13 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
 
-  error = ServerIO_executeCommand(storageHandle->storageInfo->masterIO,
-                                  MASTER_DEBUG_LEVEL,
-                                  MASTER_COMMAND_TIMEOUT,
-                                  CALLBACK_(NULL,NULL),  // commandResultFunction
-                                  "STORAGE_CLOSE"
-                                 );
-  if (error != ERROR_NONE)
-  {
-//TODO
-fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-  }
-
-  // free resources
+  // Note: ignore error
+  (void)ServerIO_executeCommand(storageHandle->storageInfo->masterIO,
+                                MASTER_DEBUG_LEVEL,
+                                MASTER_COMMAND_TIMEOUT,
+                                CALLBACK_(NULL,NULL),  // commandResultFunction
+                                "STORAGE_CLOSE"
+                               );
 }
 
 //TODO: required?
