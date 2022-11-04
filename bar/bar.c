@@ -4434,6 +4434,18 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_INVALID_ARGUMENT;
   }
 
+  // read all server keys/certificates
+  if (error == ERROR_NONE)
+  {
+    error = Configuration_readAllServerKeysCertificates();
+    if (error != ERROR_NONE)
+    {
+      printError(_("cannot read server keys/certificates (error: %s)!"),
+                 Error_getText(error)
+                );
+    }
+  }
+
   // check parameters
   if (!Configuration_validate())
   {
@@ -4603,18 +4615,6 @@ int main(int argc, const char *argv[])
        )
     {
       error = ERROR_INVALID_ARGUMENT;
-    }
-  }
-
-  // read all server keys/certificates
-  if (error == ERROR_NONE)
-  {
-    error = Configuration_readAllServerKeys();
-    if (error != ERROR_NONE)
-    {
-      printError(_("cannot read server keys/certificates (error: %s)!"),
-                 Error_getText(error)
-                );
     }
   }
 
