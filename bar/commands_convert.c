@@ -75,12 +75,11 @@ typedef struct
 // entry message send to convert threads
 typedef struct
 {
-//  StorageInfo            *storageInfo;
-  uint                   archiveIndex;                        // still not used
-  const ArchiveHandle    *archiveHandle;
-  ArchiveEntryTypes      archiveEntryType;
-  const ArchiveCryptInfo *archiveCryptInfo;
-  uint64                 offset;                              // offset in archive
+  uint                archiveIndex;                        // still not used
+  const ArchiveHandle *archiveHandle;
+  ArchiveEntryTypes   archiveEntryType;
+  ArchiveCryptInfo    *archiveCryptInfo;
+  uint64              offset;                              // offset in archive
 } EntryMsg;
 
 // storage message, send from convert threads -> storage thread
@@ -712,6 +711,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptAlgorithms           cryptAlgorithm;
+  const CryptSalt           *cryptSalt;
+  const CryptKey            *cryptKey;
   String                    fileName;
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
@@ -731,6 +732,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                 &byteCompressAlgorithm,
                                 NULL,  // cryptType,
                                 &cryptAlgorithm,
+                                &cryptSalt,
+                                &cryptKey,
                                 fileName,
                                 &fileInfo,
                                 &fileExtendedAttributeList,
@@ -758,7 +761,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   else
   {
-    stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fileInfo.size);
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
   }
   stringClear(fragmentString);
   if (fragmentSize < fileInfo.size)
@@ -773,7 +776,12 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // set new compression, crypt settings
   if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -792,6 +800,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                deltaCompressAlgorithm,
                                byteCompressAlgorithm,
                                cryptAlgorithm,
+                               cryptSalt,
+                               cryptKey,
                                fileName,
                                &fileInfo,
                                &fileExtendedAttributeList,
@@ -929,6 +939,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo   sourceArchiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptAlgorithms    cryptAlgorithm;
+  const CryptSalt    *cryptSalt;
+  const CryptKey     *cryptKey;
   String             deviceName;
   DeviceInfo         deviceInfo;
   ArchiveEntryInfo   destinationArchiveEntryInfo;
@@ -946,6 +958,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                  &byteCompressAlgorithm,
                                  NULL,  // cryptType,
                                  &cryptAlgorithm,
+                                 &cryptSalt,
+                                 &cryptKey,
                                  deviceName,
                                  &deviceInfo,
                                  &fileSystemType,
@@ -984,15 +998,15 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   else
   {
-    stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),blockCount*(uint64)deviceInfo.blockSize);
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
   }
   stringClear(fragmentString);
   if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
   {
     stringFormat(fragmentString,sizeof(fragmentString),
                  ", fragment %*"PRIu64"..%*"PRIu64,
-                 stringInt64Length(deviceInfo.size),blockOffset*(uint64)deviceInfo.blockSize,
-                 stringInt64Length(deviceInfo.size),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL
+                 stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize,
+                 stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL
                 );
   }
   printInfo(1,"  Convert image     '%s' (%s bytes%s)...",String_cString(deviceName),sizeString,fragmentString);
@@ -1000,6 +1014,11 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   // set new compression, crypt settings
   if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
   if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1018,6 +1037,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                 deltaCompressAlgorithm,
                                 byteCompressAlgorithm,
                                 cryptAlgorithm,
+                                cryptSalt,
+                                cryptKey,
                                 deviceName,
                                 &deviceInfo,
                                 fileSystemType,
@@ -1145,6 +1166,8 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CryptAlgorithms           cryptAlgorithm;
+  const CryptSalt           *cryptSalt;
+  const CryptKey            *cryptKey;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
@@ -1155,6 +1178,8 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                      sourceArchiveHandle,
                                      NULL,  // cryptType,
                                      &cryptAlgorithm,
+                                     &cryptSalt,
+                                     &cryptKey,
                                      directoryName,
                                      &fileInfo,
                                      &fileExtendedAttributeList
@@ -1175,11 +1200,18 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // set new crypt settings
   if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
 
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
                                     cryptAlgorithm,
+                                    cryptSalt,
+                                    cryptKey,
                                     directoryName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -1252,6 +1284,8 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   String                    linkName;
   String                    fileName;
   CryptAlgorithms           cryptAlgorithm;
+  const CryptSalt           *cryptSalt;
+  const CryptKey            *cryptKey;
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
@@ -1266,6 +1300,8 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                 sourceArchiveHandle,
                                 NULL,  // cryptType,
                                 &cryptAlgorithm,
+                                &cryptSalt,
+                                &cryptKey,
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -1288,11 +1324,18 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // set new crypt settings
   if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                cryptAlgorithm,
+                               cryptSalt,
+                               cryptKey,
                                linkName,
                                fileName,
                                &fileInfo,
@@ -1378,6 +1421,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptAlgorithms           cryptAlgorithm;
+  const CryptSalt           *cryptSalt;
+  const CryptKey            *cryptKey;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
   uint64                    fragmentOffset,fragmentSize;
@@ -1395,6 +1440,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                     &byteCompressAlgorithm,
                                     NULL,  // cryptType,
                                     &cryptAlgorithm,
+                                    &cryptSalt,
+                                    &cryptKey,
                                     &fileNameList,
                                     &fileInfo,
                                     &fileExtendedAttributeList,
@@ -1422,7 +1469,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   else
   {
-    stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fileInfo.size);
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
   }
   stringClear(fragmentString);
   if (fragmentSize < fileInfo.size)
@@ -1434,6 +1481,11 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   // set new compression, crypt settings
   if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
   if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1452,6 +1504,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                    deltaCompressAlgorithm,
                                    byteCompressAlgorithm,
                                    cryptAlgorithm,
+                                   cryptSalt,
+                                   cryptKey,
                                    &fileNameList,
                                    &fileInfo,
                                    &fileExtendedAttributeList,
@@ -1583,6 +1637,8 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CryptAlgorithms           cryptAlgorithm;
+  const CryptSalt           *cryptSalt;
+  const CryptKey            *cryptKey;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
@@ -1593,6 +1649,8 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                    sourceArchiveHandle,
                                    NULL,  // cryptType,
                                    &cryptAlgorithm,
+                                   &cryptSalt,
+                                   &cryptKey,
                                    fileName,
                                    &fileInfo,
                                    &fileExtendedAttributeList
@@ -1613,11 +1671,18 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // set new crypt settings
   if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
 
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
                                   cryptAlgorithm,
+                                  cryptSalt,
+                                  cryptKey,
                                   fileName,
                                   &fileInfo,
                                   &fileExtendedAttributeList
@@ -1695,6 +1760,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                              )
 {
   CryptAlgorithms  cryptAlgorithm;
+  const CryptSalt  *cryptSalt;
+  const CryptKey   *cryptKey;
   String           hostName;
   String           userName;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -1706,8 +1773,6 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors           error;
   ArchiveEntryInfo destinationArchiveEntryInfo;
 
-  UNUSED_VARIABLE(newJobOptions);
-
   // read source meta entry
   hostName = String_new();
   userName = String_new();
@@ -1716,6 +1781,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                                 sourceArchiveHandle,
                                 NULL,  // cryptType,
                                 &cryptAlgorithm,
+                                &cryptSalt,
+                                &cryptKey,
                                 hostName,
                                 userName,
                                 jobUUID,
@@ -1741,6 +1808,11 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // set new job UUID, schedule UUOD, created date/time comment
   if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  {
+    cryptSalt = NULL;
+    cryptKey  = NULL;
+  }
   if (!stringIsEmpty(newJobUUID)) String_setCString(jobUUID,newJobUUID);
   if (!stringIsEmpty(newEntityUUID)) String_setCString(entityUUID,newEntityUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
@@ -1750,6 +1822,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                cryptAlgorithm,
+                               cryptSalt,
+                               cryptKey,
                                String_cString(hostName),
                                String_cString(userName),
                                String_cString(jobUUID),
@@ -1869,9 +1943,13 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
         archiveIndex = entryMsg.archiveIndex;
       }
 
-//TODO: required?
+// TODO: required?
       // set crypt salt, crypt key derive type, and crypt mode
       Archive_setCryptInfo(&sourceArchiveHandle,entryMsg.archiveCryptInfo);
+      if (!CmdOption_isSet(globalOptions.cryptAlgorithms))
+      {
+        Archive_setCryptInfo(&convertInfo->destinationArchiveHandle,entryMsg.archiveCryptInfo);
+      }
 
       // seek to start of entry
       error = Archive_seek(&sourceArchiveHandle,entryMsg.offset);
@@ -1944,6 +2022,13 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
                                    convertInfo->newJobOptions
                                   );
           break;
+        case ARCHIVE_ENTRY_TYPE_SALT:
+        case ARCHIVE_ENTRY_TYPE_KEY:
+          assert(!CmdOption_isSet(globalOptions.cryptAlgorithms));
+          error = Archive_transferEntry(&sourceArchiveHandle,
+                                        &convertInfo->destinationArchiveHandle
+                                       );
+          break;
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -2003,20 +2088,22 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                             ConstString      archiveName
                            )
 {
-  AutoFreeList           autoFreeList;
-  String                 printableStorageName;
-  uint                   convertThreadCount;
-  Errors                 error;
-  String                 baseName;
-  Thread                 storageThread;
-  uint                   i;
-  ArchiveHandle          sourceArchiveHandle;
-  CryptSignatureStates   sourceAllCryptSignatureState;
-  uint64                 sourceLastSignatureOffset;
-  ArchiveEntryTypes      archiveEntryType;
-  const ArchiveCryptInfo *archiveCryptInfo;
-  uint64                 offset;
-  EntryMsg               entryMsg;
+  AutoFreeList         autoFreeList;
+  String               printableStorageName;
+  uint                 convertThreadCount;
+  Errors               error;
+  String               baseName;
+  Thread               storageThread;
+  uint                 i;
+  ArchiveHandle        sourceArchiveHandle;
+  CryptSignatureStates sourceAllCryptSignatureState;
+  uint64               sourceLastSignatureOffset;
+  ArchiveFlags         archiveFlags;
+  ArchiveEntryTypes    archiveEntryType;
+  ArchiveCryptInfo     *archiveCryptInfo;
+  uint64               offset;
+  uint64               size;
+  EntryMsg             entryMsg;
 
   assert(convertInfo != NULL);
   assert(convertInfo->newJobOptions != NULL);
@@ -2067,7 +2154,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   // check if storage exists
   if (!Storage_exists(&convertInfo->sourceStorageInfo,archiveName))
   {
-    printError("achive not found '%s'!",
+    printError("storage not found '%s'!",
                String_cString(printableStorageName)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -2079,6 +2166,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                        &convertInfo->sourceStorageInfo,
                        archiveName,
                        NULL,  // deltaSourceList,
+                       ARCHIVE_FLAG_NONE,
                        CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
                        convertInfo->logHandle
                       );
@@ -2176,6 +2264,16 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   String_delete(baseName);
 
   // create new archive
+  archiveFlags = ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms))
+  {
+    archiveFlags |= ARCHIVE_FLAG_CREATE_SALT|ARCHIVE_FLAG_CREATE_KEY;
+  }
+  else
+  {
+    archiveFlags |= ARCHIVE_FLAG_RETURN_SALT_CHUNKS|ARCHIVE_FLAG_RETURN_KEY_CHUNKS;
+  }
+  if (isPrintInfo(3)) archiveFlags |= ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS;
   error = Archive_create(&convertInfo->destinationArchiveHandle,
                          NULL,  // hostName
                          NULL,  // userName
@@ -2186,15 +2284,15 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 // TODO:
                          NULL,  // jobUUID
                          NULL,  // entityUUID
-//TODO
+// TODO:
                          NULL,  // deltaSourceList,
                          sourceArchiveHandle.archiveType,
                          FALSE, // dryRun
                          Misc_getCurrentDateTime(),
-                         FALSE,  // createMeta
                          CmdOption_isSet(&globalOptions.cryptNewPassword)
                            ? &globalOptions.cryptNewPassword
                            : &globalOptions.cryptPassword,
+                         archiveFlags,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(NULL,NULL),  // archiveGetSizeFunction
@@ -2224,9 +2322,11 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   }
   AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&convertInfo->storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
+// TODO: cannot be done multi-threaded because chunks-ordering is important and must not be changed! do multiple storages in parallel
   // start convert threads
   MsgQueue_reset(&convertInfo->entryMsgQueue);
-  convertThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+//  convertThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+convertThreadCount = 1;
   for (i = 0; i < convertThreadCount; i++)
   {
     ThreadPool_run(&workerThreadPool,convertThreadCode,convertInfo);
@@ -2246,12 +2346,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
   }
   while (   (convertInfo->failError == ERROR_NONE)
-         && !Archive_eof(&sourceArchiveHandle,
-                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3)
-                                                            ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
-                                                            : ARCHIVE_FLAG_NONE
-                                                          )
-                        )
+         && !Archive_eof(&sourceArchiveHandle)
         )
   {
     // get next archive entry type
@@ -2259,10 +2354,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                                         &archiveEntryType,
                                         &archiveCryptInfo,
                                         &offset,
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3)
-                                                                           ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
-                                                                           : ARCHIVE_FLAG_NONE
-                                                                         )
+                                        &size
                                        );
     if (error != ERROR_NONE)
     {
@@ -2276,15 +2368,18 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // convert entries
+//fprintf(stderr,"%s:%d: %s archiveEntryType=%s %llu %llu\n",__FILE__,__LINE__,String_cString(printableStorageName),Archive_archiveEntryTypeToString(archiveEntryType),offset,size);
     switch (archiveEntryType)
     {
-      case ARCHIVE_ENTRY_TYPE_META:
       case ARCHIVE_ENTRY_TYPE_FILE:
       case ARCHIVE_ENTRY_TYPE_IMAGE:
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
       case ARCHIVE_ENTRY_TYPE_LINK:
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      case ARCHIVE_ENTRY_TYPE_META:
+      case ARCHIVE_ENTRY_TYPE_SALT:
+      case ARCHIVE_ENTRY_TYPE_KEY:
         // send entry to convert threads
 //TODO: increment on multiple archives and when threads are not restarted each time
         entryMsg.archiveIndex     = 1;

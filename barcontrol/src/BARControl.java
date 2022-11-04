@@ -2193,7 +2193,7 @@ public class BARControl
    */
   public static void printError(Throwable throwable)
   {
-    System.err.println(BARControl.tr("ERROR")+": "+throwable.getMessage());
+    System.err.println(BARControl.tr("ERROR")+": "+((throwable.getMessage() != null) ? throwable.getMessage() : throwable.toString()));
   }
 
   /** print error to stderr
@@ -3608,7 +3608,7 @@ if (false) {
                 try
                 {
                   reconnect(BARServer.TLSModes.FORCE,false);
-                  
+
                   Settings.serverNoTLS       = false;
                   Settings.serverForceTLS    = true;
                   Settings.serverInsecureTLS = false;
@@ -3651,7 +3651,7 @@ if (false) {
                       Settings.serverNoTLS       = false;
                       Settings.serverForceTLS    = true;
                       Settings.serverInsecureTLS = true;
-                      
+
                       reconnected = true;
                     }
                     catch (ConnectionError error)
@@ -5063,10 +5063,9 @@ if (false) {
       if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
       if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
       if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
-      BARServer.TLSModes tlsMode;
-      if      (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
-      else if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
-      else                              tlsMode = BARServer.TLSModes.TRY;
+      BARServer.TLSModes tlsMode = BARServer.TLSModes.TRY;
+      if (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
+      if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
@@ -6313,12 +6312,12 @@ Dprintf.dprintf("still not supported");
     {
       internalError(error);
     }
-    catch (Error error)
+    catch (Throwable throwable)
     {
-      printError(error);
+      printError(throwable);
       if (Settings.debugLevel > 0)
       {
-        printStackTrace(error);
+        printStackTrace(throwable);
       }
       System.exit(ExitCodes.FAIL);
     }

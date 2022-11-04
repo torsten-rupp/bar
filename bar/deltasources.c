@@ -221,6 +221,7 @@ NULL, // masterIO
                        &storageInfo,
                        NULL,  // archive name
                        deltaSourceList,
+                       ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE),
                        CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
@@ -234,7 +235,7 @@ NULL, // masterIO
   failError = ERROR_NONE;
   while (   !restoredFlag
          && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
-         && !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
+         && !Archive_eof(&archiveHandle)
          && (failError == ERROR_NONE)
         )
   {
@@ -249,7 +250,7 @@ NULL, // masterIO
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
                                         NULL,  // offset
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
+                                        NULL  // size
                                        );
     if (error != ERROR_NONE)
     {
@@ -276,8 +277,10 @@ NULL, // masterIO
                                         &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
                                         NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptAlgorithm
                                         NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         fileName,
                                         NULL,  // fileInfo
                                         NULL,  // fileExtendedAttributeList
@@ -416,8 +419,10 @@ NULL, // masterIO
                                          &archiveHandle,
                                          NULL,  // deltaCompressAlgorithm
                                          NULL,  // byteCompressAlgorithm
-                                         NULL,  // cryptAlgorithm
                                          NULL,  // cryptType
+                                         NULL,  // cryptAlgorithm
+                                         NULL,  // cryptSalt
+                                         NULL,  // cryptKey
                                          imageName,
                                          &deviceInfo,
                                          NULL,  // fileSystemType
@@ -550,8 +555,10 @@ NULL, // masterIO
                                             &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
                                             NULL,  // byteCompressAlgorithm
-                                            NULL,  // cryptAlgorithm
                                             NULL,  // cryptType
+                                            NULL,  // cryptAlgorithm
+                                            NULL,  // cryptSalt
+                                            NULL,  // cryptKey
                                             &fileNameList,
                                             NULL,  // fileInfo
                                             NULL,  // fileExtendedAttributeList
@@ -681,6 +688,20 @@ NULL, // masterIO
       case ARCHIVE_ENTRY_TYPE_LINK:
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
       case ARCHIVE_ENTRY_TYPE_META:
+        error = Archive_skipNextEntry(&archiveHandle);
+        if (error != ERROR_NONE)
+        {
+          if (failError == ERROR_NONE) failError = error;
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_SALT:
+      case ARCHIVE_ENTRY_TYPE_KEY:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #else
+          error = Archive_skipNextEntry(&archiveHandle);
+        #endif /* NDEBUG */
+        break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
         error = Archive_skipNextEntry(&archiveHandle);
         if (error != ERROR_NONE)

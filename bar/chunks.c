@@ -271,7 +271,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
         return error;
       }
       chunkBuffer->bytesRead += n;
-//fprintf(stderr,"%s, %d: read:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
+//fprintf(stderr,"%s, %d: read raw:\n",__FILE__,__LINE__); debugDumpMemory(chunkBuffer->buffer,n,FALSE);
 
       // decrypt initial data
       if (cryptInfo != NULL)
@@ -285,7 +285,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
         }
       }
       chunkBuffer->bufferLength += n;
-//fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
+//fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(chunkBuffer->buffer,n,FALSE);
       break;
     case CHUNK_MODE_WRITE:
       n = ALIGN(1024,alignment);
@@ -401,7 +401,7 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
         return error;
       }
     }
-//fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,chunkBuffer->bufferLength+n);
+//fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(chunkBuffer->buffer,chunkBuffer->bufferLength+n,FALSE);
 
     chunkBuffer->bufferLength += n;
   }
@@ -515,7 +515,7 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
   memClear(&chunkBuffer->buffer[chunkBuffer->bufferLength],n-chunkBuffer->bufferLength);
 
   // encrypt data
-//fprintf(stderr,"%s, %d: write:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment));
+//fprintf(stderr,"%s, %d: write unencrypted:\n",__FILE__,__LINE__); debugDumpMemory(chunkBuffer->buffer,n,FALSE);
   if (chunkBuffer->cryptInfo != NULL)
   {
     Crypt_reset(chunkBuffer->cryptInfo);
@@ -530,7 +530,7 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
   }
 
   // write data
-//fprintf(stderr,"%s, %d: write encrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment));
+//fprintf(stderr,"%s, %d: write raw:\n",__FILE__,__LINE__); debugDumpMemory(chunkBuffer->buffer,n,FALSE);
   error = chunkBuffer->chunkIO->write(chunkBuffer->chunkIOUserData,
                                       chunkBuffer->buffer,
                                       n
@@ -2349,6 +2349,75 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index)
   }
 
   return error;
+}
+
+Errors Chunk_transfer(const ChunkHeader *chunkHeader,
+                      const ChunkIO     *fromChunkIO,
+                      void              *fromChunkIOUserData,
+                      const ChunkIO     *toChunkIO,
+                      void              *toChunkIOUserData
+                     )
+{
+  #define TRANSFER_BUFFER_SIZE (1024*1024)
+
+  void   *buffer;
+  Errors error;
+  uint64 transferedBytes;
+  ulong  n;
+
+  // init variables
+  buffer = malloc(TRANSFER_BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // transfer header
+  error = writeDefinition(toChunkIO,
+                          toChunkIOUserData,
+                          CHUNK_HEADER_DEFINITION,
+                          CHUNK_HEADER_SIZE,
+                          0,
+                          NULL,
+                          chunkHeader,
+                          NULL
+                         );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // transfer data
+  transferedBytes = 0;
+  while (transferedBytes < chunkHeader->size)
+  {
+    // get block size
+    n = (ulong)MIN(chunkHeader->size-transferedBytes,TRANSFER_BUFFER_SIZE);
+
+    // read data
+    error = fromChunkIO->read(fromChunkIOUserData,buffer,n,NULL);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    // transfer to storage
+    error = toChunkIO->write(toChunkIOUserData,buffer,n);
+    if (error != ERROR_NONE)
+    {
+      free(buffer);
+      return error;
+    }
+
+    // next part
+    transferedBytes += (uint64)n;
+  }
+
+  // free resources
+  free(buffer);
+
+  return ERROR_NONE;
 }
 
 #ifdef NDEBUG

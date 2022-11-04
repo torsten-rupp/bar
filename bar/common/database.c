@@ -301,7 +301,7 @@ LOCAL DatabaseList databaseList;
       \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database %s, %d: execution time=%"PRIu64"ms\n",__FILE__,__LINE__,databaseStatementHandle->debug.dt/1000ULL); \
+        fprintf(stderr,"DEBUG database %s, %d: execution time=%llums\n",__FILE__,__LINE__,databaseStatementHandle->debug.dt/1000ULL); \
       } \
     } \
     while (0)

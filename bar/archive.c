@@ -47,7 +47,7 @@
 #define _MULTI_CRYPT
 
 /***************************** Constants *******************************/
-// archive types
+// archive types (Note: must be sorted ascending!)
 LOCAL const struct
 {
   const char   *name;
@@ -62,7 +62,7 @@ LOCAL const struct
   { "continuous",   "C", ARCHIVE_TYPE_CONTINUOUS   }
 };
 
-// archive entry types
+// archive entry types (Note: must be sorted ascending!)
 LOCAL const struct
 {
   const char        *name;
@@ -74,7 +74,12 @@ LOCAL const struct
   {"directory",ARCHIVE_ENTRY_TYPE_DIRECTORY},
   {"link",     ARCHIVE_ENTRY_TYPE_LINK     },
   {"hardlink", ARCHIVE_ENTRY_TYPE_HARDLINK },
-  {"special",  ARCHIVE_ENTRY_TYPE_SPECIAL  }
+  {"special",  ARCHIVE_ENTRY_TYPE_SPECIAL  },
+
+  {"meta",     ARCHIVE_ENTRY_TYPE_META     },
+  {"salt",     ARCHIVE_ENTRY_TYPE_SALT     },
+  {"key",      ARCHIVE_ENTRY_TYPE_KEY      },
+  {"signature",ARCHIVE_ENTRY_TYPE_SIGNATURE}
 };
 
 // size of buffer for processing data
@@ -673,7 +678,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   // derive decrypt key from password with salt
   error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                           cryptKeyDeriveType,
-                          Crypt_isSalt(cryptSalt) ? cryptSalt : NULL,
+                          Crypt_isSaltAvailable(cryptSalt) ? cryptSalt : NULL,
                           decryptKeyNode->password,
                           keyLength
                          );
@@ -684,7 +689,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 
   // store new salt and key length
   Crypt_copySalt(&decryptKeyNode->cryptSalt,cryptSalt);
-  decryptKeyNode->keyLength  = keyLength;
+  decryptKeyNode->keyLength = keyLength;
 
   return ERROR_NONE;
 }
@@ -864,7 +869,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
         assert(decryptKeyNode != NULL);
         decryptKeyIterator->nextDecryptKeyNode = decryptKeyNode->next;
 
-        // check if key length/salt change
+        // check if key length/salt changed
         if (   (decryptKeyNode->keyLength != keyLength)
             || !Crypt_equalsSalt(&decryptKeyNode->cryptSalt,cryptSalt)
            )
@@ -1039,7 +1044,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator      *decryptKeyIter
 }
 
 /***********************************************************************\
-* Name   : addArchiveCryptInfoNode
+* Name   : initArchiveCryptInfo
 * Purpose: add new archive crypt info node
 * Input  : archiveHandle      - archive handle
 *          cryptType          - crypt type (symmetric/asymmetric; see
@@ -1047,15 +1052,15 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator      *decryptKeyIter
 *          cryptMode          - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 * Output : -
-* Return : archive crypt info node
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archiveHandle,
-                                                    CryptTypes          cryptType,
-                                                    CryptMode           cryptMode,
-                                                    CryptKeyDeriveTypes cryptKeyDeriveType
-                                                   )
+LOCAL Errors initArchiveCryptInfo(ArchiveHandle       *archiveHandle,
+                                  CryptTypes          cryptType,
+                                  CryptMode           cryptMode,
+                                  CryptKeyDeriveTypes cryptKeyDeriveType
+                                 )
 {
   ArchiveCryptInfoNode *archiveCryptInfoNode;
 
@@ -1077,7 +1082,7 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
   // keep reference to current archive crypt info
   archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
 
-  return archiveCryptInfoNode;
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -1223,21 +1228,20 @@ HALT_NOT_YET_IMPLEMENTED();
 }
 
 /***********************************************************************\
-* Name   : cryptGetBlockLength
-* Purpose: get crypt block lengths
+* Name   : getCryptBlockLengthLCM
+* Purpose: get least common multiply crypt block length
 * Input  : cryptAlgorithms     - crypt algorithms
 *          cryptAlgorithmCount - number of crypt alogithms
-*          blockLength         - crypt block lengths variable
-* Output : blockLength - crypt block lengths
-* Return : ERROR_NONE or error code
+* Output : -
+* Return : least common multiple crypt block length
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
-                                 uint            cryptAlgorithmCount,
-                                 uint            *blockLength
-                                )
+LOCAL uint getCryptBlockLengthLCM(CryptAlgorithms cryptAlgorithms[],
+                                  uint            cryptAlgorithmCount,
+                                 )
 {
+  uint   blockLength;
   uint   i;
   Errors error;
   uint   n;
@@ -1245,18 +1249,14 @@ LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
   assert(cryptAlgorithms != NULL);
   assert(blockLength != NULL);
 
-  (*blockLength) = 1;
+  blockLength = 1;
   for (i = 0; i < cryptAlgorithmCount; i++)
   {
-    error = Crypt_getBlockLength(cryptAlgorithms[0],&n);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    (*blockLength) = lcm((*blockLength),n);
+    n = Crypt_getBlockLength(cryptAlgorithms[0]);
+    blockLength = lcm(blockLength,n);
   }
 
-  return ERROR_NONE;
+  return blockLength;
 }
 #endif
 
@@ -1590,6 +1590,8 @@ LOCAL void freeArchiveIndexNode(ArchiveIndexNode *archiveIndexNode, void *userDa
       break;
     case ARCHIVE_ENTRY_TYPE_META:
       HALT_INTERNAL_ERROR("wrong archive index node type");
+      break;
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
       break;
     default:
       #ifndef NDEBUG
@@ -2214,12 +2216,17 @@ LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  // add new crypt info (Note: older BAR version use CTS+simple key derivation)
-  addArchiveCryptInfoNode(archiveHandle,
-                          CRYPT_TYPE_NONE,
-                          CRYPT_MODE_CTS_,
-                          CRYPT_KEY_DERIVE_SIMPLE
-                         );
+  // init new crypt info (Note: older BAR version use CTS+simple key derivation)
+  error = initArchiveCryptInfo(archiveHandle,
+                               CRYPT_TYPE_NONE,
+                               CRYPT_MODE_CTS_,
+                               CRYPT_KEY_DERIVE_SIMPLE
+                              );
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkBAR.info);
+    return error;
+  }
 
   // read BAR chunk
   error = Chunk_open(&chunkBAR.info,
@@ -2259,9 +2266,8 @@ LOCAL Errors readSalt(ArchiveHandle     *archiveHandle,
                       const ChunkHeader *chunkHeader
                      )
 {
-  Errors               error;
-  ChunkSalt            chunkSalt;
-  ArchiveCryptInfoNode *archiveCryptInfoNode;
+  Errors    error;
+  ChunkSalt chunkSalt;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2312,15 +2318,20 @@ LOCAL Errors readSalt(ArchiveHandle     *archiveHandle,
   }
 
   // add new crypt info
-  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
-                                                 CRYPT_TYPE_NONE,
-                                                 CRYPT_MODE_NONE,
-                                                 CRYPT_KEY_DERIVE_FUNCTION
-                                                );
-  assert(archiveCryptInfoNode != NULL);
+  error = initArchiveCryptInfo(archiveHandle,
+                               CRYPT_TYPE_NONE,
+                               CRYPT_MODE_NONE,
+                               CRYPT_KEY_DERIVE_FUNCTION
+                              );
+  if (error != ERROR_NONE)
+  {
+    Chunk_close(&chunkSalt.info);
+    Chunk_done(&chunkSalt.info);
+    return error;
+  }
 
-  // set salt
-  Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,
+  // set crypt salt
+  Crypt_setSalt(&archiveHandle->archiveCryptInfo->cryptSalt,
                 chunkSalt.salt,
                 sizeof(chunkSalt.salt)
                );
@@ -2569,7 +2580,7 @@ LOCAL Errors writeSalt(ArchiveHandle   *archiveHandle,
   }
 
   // get salt
-  assert(sizeof(chunkSalt.salt) == cryptSalt->length);
+  assert(sizeof(chunkSalt.salt) == cryptSalt->dataLength);
   Crypt_getSalt(chunkSalt.salt,sizeof(chunkSalt.salt),cryptSalt);
 
   // write salt
@@ -2677,6 +2688,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
 {
   Errors         error;
   ChunkMeta      chunkMeta;
+  uint           blockLength;
   ChunkMetaEntry chunkMetaEntry;
   CryptInfo      cryptInfo;
 
@@ -2685,6 +2697,9 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
+
+  // get crypt block length
+  blockLength = Crypt_getBlockLength(cryptAlgorithm);
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -2735,7 +2750,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
                      CHUNK_USE_PARENT,
                      CHUNK_ID_META_ENTRY,
                      CHUNK_DEFINITION_META_ENTRY,
-                     archiveHandle->blockLength,
+                     blockLength,
                      &cryptInfo,
                      &chunkMetaEntry
                     );
@@ -3008,7 +3023,9 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write salt if encryption enabled
-      if (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_NONE)
+      if (   IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_CREATE_SALT)
+          && (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_NONE)
+         )
       {
         // write salt
         error = writeSalt(archiveHandle,
@@ -3023,7 +3040,9 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       }
 
       // write encrypted key if asymmetric encryption enabled
-      if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_CREATE_KEY)
+          && (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+         )
       {
         // write encrypted key
         error = writeEncryptionKey(archiveHandle);
@@ -3035,7 +3054,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
-      if (archiveHandle->createMeta)
+      if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_CREATE_META))
       {
         // write meta data
         error = writeMeta(archiveHandle,
@@ -5894,8 +5913,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         ArchiveTypes            archiveType,
                         bool                    dryRun,
                         uint64                  createdDateTime,
-                        bool                    createMeta,
                         const Password          *cryptPassword,
+                        ArchiveFlags            archiveFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -5926,8 +5945,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ArchiveTypes            archiveType,
                           bool                    dryRun,
                           uint64                  createdDateTime,
-                          bool                    createMeta,
                           const Password          *cryptPassword,
+                          ArchiveFlags            archiveFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -5944,13 +5963,12 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                          )
 #endif /* NDEBUG */
 {
-  AutoFreeList         autoFreeList;
-  ArchiveCryptInfoNode *archiveCryptInfoNode;
-  Errors               error;
-  uint                 keyLength;
-  CryptKey             publicCryptKey;
-  bool                 okFlag;
-  ulong                maxEncryptedKeyDataLength;
+  AutoFreeList autoFreeList;
+  Errors       error;
+  uint         keyLength;
+  CryptKey     publicCryptKey;
+  bool         okFlag;
+  ulong        maxEncryptedKeyDataLength;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
@@ -5980,7 +5998,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveType             = archiveType;
   archiveHandle->dryRun                  = dryRun;
   archiveHandle->createdDateTime         = createdDateTime;
-  archiveHandle->createMeta              = createMeta;
+  archiveHandle->archiveFlags            = archiveFlags;
 
   archiveHandle->archiveInitFunction     = archiveInitFunction;
   archiveHandle->archiveInitUserData     = archiveInitUserData;
@@ -6052,39 +6070,26 @@ UNUSED_VARIABLE(storageInfo);
   }
 
   // create new crypt info
-  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
-                                                 Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0])
-                                                   ? storageInfo->jobOptions->cryptType
-                                                   : CRYPT_TYPE_NONE,
-                                                 CRYPT_MODE_NONE,
-                                                 CRYPT_KEY_DERIVE_FUNCTION
-                                                );
+  error = initArchiveCryptInfo(archiveHandle,
+                               Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0])
+                                 ? storageInfo->jobOptions->cryptType
+                                 : CRYPT_TYPE_NONE,
+                               CRYPT_MODE_NONE,
+                               CRYPT_KEY_DERIVE_FUNCTION
+                              );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
   assert(archiveHandle->archiveCryptInfo != NULL);
 
   // create intitial random crypt salt
-  Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
+  Crypt_randomSalt(&archiveHandle->archiveCryptInfo->cryptSalt);
 
-  // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
-  assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (archiveHandle->blockLength > 0));
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  assert(archiveHandle->blockLength > 0);
-  if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_UNSUPPORTED_BLOCK_LENGTH;
-  }
-  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (keyLength > 0));
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
 
   // init encryption key
   switch (archiveHandle->archiveCryptInfo->cryptType)
@@ -6103,9 +6108,9 @@ UNUSED_VARIABLE(storageInfo);
       AUTOFREE_ADD(&autoFreeList,archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
 
       // derive crypt key from password with salt
-      error = Crypt_deriveKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
-                              archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType,
-                              &archiveCryptInfoNode->archiveCryptInfo.cryptSalt,
+      error = Crypt_deriveKey(&archiveHandle->archiveCryptInfo->cryptKey,
+                              archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                              &archiveHandle->archiveCryptInfo->cryptSalt,
                               archiveHandle->cryptPassword,
                               keyLength
                              );
@@ -6162,7 +6167,7 @@ UNUSED_VARIABLE(storageInfo);
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          error = Crypt_getRandomCryptKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
+          error = Crypt_getRandomCryptKey(&archiveHandle->archiveCryptInfo->cryptKey,
                                           keyLength,
                                           &publicCryptKey,
                                           archiveHandle->encryptedKeyData,
@@ -6220,6 +6225,7 @@ UNUSED_VARIABLE(storageInfo);
                       StorageInfo             *storageInfo,
                       ConstString             archiveName,
                       DeltaSourceList         *deltaSourceList,
+                      ArchiveFlags            archiveFlags,
                       GetNamePasswordFunction getNamePasswordFunction,
                       void                    *getNamePasswordUserData,
                       LogHandle               *logHandle
@@ -6231,6 +6237,7 @@ UNUSED_VARIABLE(storageInfo);
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
                         DeltaSourceList         *deltaSourceList,
+                        ArchiveFlags            archiveFlags,
                         GetNamePasswordFunction getNamePasswordFunction,
                         void                    *getNamePasswordUserData,
                         LogHandle               *logHandle
@@ -6261,7 +6268,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->dryRun                  = FALSE;
   archiveHandle->createdDateTime         = 0LL;
-  archiveHandle->createMeta              = FALSE;
+  archiveHandle->archiveFlags            = archiveFlags;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -6412,7 +6419,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createdDateTime         = 0LL;
-  archiveHandle->createMeta              = FALSE;
+  archiveHandle->archiveFlags            = ARCHIVE_FLAG_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -6654,14 +6661,6 @@ UNUSED_VARIABLE(storageInfo);
   return error;
 }
 
-const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
-{
-  assert(archiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
-
-  return archiveHandle->archiveCryptInfo;
-}
-
 #if 0
 Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
 {
@@ -6766,9 +6765,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 }
 #endif
 
-bool Archive_eof(ArchiveHandle *archiveHandle,
-                 ArchiveFlags  flags
-                )
+bool Archive_eof(ArchiveHandle *archiveHandle)
 {
   bool           chunkHeaderFoundFlag;
   bool           scanFlag;
@@ -6818,125 +6815,139 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         }
         break;
       case CHUNK_ID_SALT:
-        // read salt
-        archiveHandle->pendingError = readSalt(archiveHandle,&chunkHeader);
-        if (archiveHandle->pendingError != ERROR_NONE)
+        if (!IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_SALT_CHUNKS))
         {
-          return FALSE;
+          // read salt
+          archiveHandle->pendingError = readSalt(archiveHandle,&chunkHeader);
+          if (archiveHandle->pendingError != ERROR_NONE)
+          {
+            return FALSE;
+          }
+        }
+        else
+        {
+          chunkHeaderFoundFlag = TRUE;
         }
         break;
       case CHUNK_ID_KEY:
         {
-          const Key *cryptPrivateKey;
+          if (!IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_KEY_CHUNKS))
+          {
+            const Key *cryptPrivateKey;
 
-          // check if private key available
-          if      (Configuration_isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
-          {
-            cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
-          }
-          else if (Configuration_isKeyAvailable(&globalOptions.cryptPrivateKey))
-          {
-            cryptPrivateKey = &globalOptions.cryptPrivateKey;
-          }
-          else
-          {
-            archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
-            return FALSE;
-          }
-          assert(Configuration_isKeyAvailable(cryptPrivateKey));
-          assert(archiveHandle->archiveCryptInfo != NULL);
+            // check if private key available
+            if      (Configuration_isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
+            {
+              cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
+            }
+            else if (Configuration_isKeyAvailable(&globalOptions.cryptPrivateKey))
+            {
+              cryptPrivateKey = &globalOptions.cryptPrivateKey;
+            }
+            else
+            {
+              archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
+              return FALSE;
+            }
+            assert(Configuration_isKeyAvailable(cryptPrivateKey));
+            assert(archiveHandle->archiveCryptInfo != NULL);
 
 //fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(cryptPrivateKey->data,cryptPrivateKey->length,0);
-          // init private key: try with no password/salt, then all passwords
-          Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
-          decryptedFlag = FALSE;
+            // init private key: try with no password/salt, then all passwords
+            Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
+            decryptedFlag = FALSE;
 //fprintf(stderr,"%s, %d: %p: %p %d\n",__FILE__,__LINE__,cryptPrivateKey,cryptPrivateKey->data,cryptPrivateKey->length);
 //debugDumpMemory(cryptPrivateKey->data,cryptPrivateKey->length,0);
-          archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
-                                                                      cryptPrivateKey->data,
-                                                                      cryptPrivateKey->length,
-                                                                      CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+            archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                                                        cryptPrivateKey->data,
+                                                                        cryptPrivateKey->length,
+                                                                        CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
 //TODO
 //CRYPT_KEY_DERIVE_NONE,//                                                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
 CRYPT_KEY_DERIVE_FUNCTION,//
-                                                                      NULL,  // salt
-                                                                      NULL  // password
-                                                                     );
-          if (archiveHandle->pendingError == ERROR_NONE)
-          {
-            decryptedFlag = TRUE;
-          }
-          else
-          {
-            password = getFirstDecryptPassword(&passwordHandle,
-                                               archiveHandle,
-                                               archiveHandle->storageInfo->jobOptions,
-                                               archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                               CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
-                                              );
-            while (   !decryptedFlag
-                   && (password != NULL)
-                  )
+                                                                        NULL,  // salt
+                                                                        NULL  // password
+                                                                       );
+            if (archiveHandle->pendingError == ERROR_NONE)
             {
-              archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
-                                                                          cryptPrivateKey->data,
-                                                                          cryptPrivateKey->length,
-                                                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+              decryptedFlag = TRUE;
+            }
+            else
+            {
+              password = getFirstDecryptPassword(&passwordHandle,
+                                                 archiveHandle,
+                                                 archiveHandle->storageInfo->jobOptions,
+                                                 archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
+                                                 CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                                );
+              while (   !decryptedFlag
+                     && (password != NULL)
+                    )
+              {
+                archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                                                            cryptPrivateKey->data,
+                                                                            cryptPrivateKey->length,
+                                                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
 //TODO
 //archiveHandle->archiveCryptInfo->cryptMode,
 //                                                                          archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
 //CRYPT_KEY_DERIVE_NONE,
 CRYPT_KEY_DERIVE_FUNCTION,//
-                                                                          NULL,  // salt
-                                                                          password
-                                                                         );
-              if (archiveHandle->pendingError == ERROR_NONE)
-              {
-                decryptedFlag = TRUE;
-              }
-              else
-              {
-                // next password
-                password = getNextDecryptPassword(&passwordHandle);
+                                                                            NULL,  // salt
+                                                                            password
+                                                                           );
+                if (archiveHandle->pendingError == ERROR_NONE)
+                {
+                  decryptedFlag = TRUE;
+                }
+                else
+                {
+                  // next password
+                  password = getNextDecryptPassword(&passwordHandle);
+                }
               }
             }
-          }
-          if (!decryptedFlag)
-          {
-            archiveHandle->pendingError = ERROR_KEY_DECRYPT;
-            Crypt_doneKey(&privateCryptKey);
-            return FALSE;
-          }
+            if (!decryptedFlag)
+            {
+              archiveHandle->pendingError = ERROR_KEY_DECRYPT;
+              Crypt_doneKey(&privateCryptKey);
+              return FALSE;
+            }
 
-          // read encryption key for asymmetric encrypted data
-          archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
-          if (archiveHandle->pendingError != ERROR_NONE)
-          {
-            Crypt_doneKey(&privateCryptKey);
-            return FALSE;
-          }
+            // read encryption key for asymmetric encrypted data
+            archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
+            if (archiveHandle->pendingError != ERROR_NONE)
+            {
+              Crypt_doneKey(&privateCryptKey);
+              return FALSE;
+            }
 
-          // free resources
-          Crypt_doneKey(&privateCryptKey);
+            // free resources
+            Crypt_doneKey(&privateCryptKey);
+          }
+          else
+          {
+            chunkHeaderFoundFlag = TRUE;
+          }
         }
         break;
+      case CHUNK_ID_META:
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
       case CHUNK_ID_LINK:
       case CHUNK_ID_HARDLINK:
       case CHUNK_ID_SPECIAL:
-      case CHUNK_ID_META:
       case CHUNK_ID_SIGNATURE:
         chunkHeaderFoundFlag = TRUE;
         break;
       default:
-        if (IS_SET(flags,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS))
+        if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS))
         {
           // unknown chunk -> switch to scan mode
           if (!scanFlag)
           {
-            if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
+            if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
               printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
                            Chunk_idToString(chunkHeader.id),
@@ -6984,6 +6995,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
                               CryptAlgorithms                 cryptAlgorithm,
+                              const CryptSalt                 *cryptSalt,
+                              const CryptKey                  *cryptKey,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -6999,6 +7012,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
                                 CryptAlgorithms                 cryptAlgorithm,
+                                const CryptSalt                 *cryptSalt,
+                                const CryptKey                  *cryptKey,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -7018,7 +7033,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
@@ -7038,7 +7052,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength                    = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
@@ -7152,8 +7166,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO MULTI_CRYPT
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7167,8 +7181,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO MULTI_CRYPT
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7182,8 +7196,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO MULTI_CRYPT
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7197,8 +7211,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO MULTI_CRYPT
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7212,8 +7226,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO MULTI_CRYPT
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7402,6 +7416,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
                                CryptAlgorithms    cryptAlgorithm,
+                               const CryptSalt    *cryptSalt,
+                               const CryptKey     *cryptKey,
                                ConstString        deviceName,
                                const DeviceInfo   *deviceInfo,
                                FileSystemTypes    fileSystemType,
@@ -7417,6 +7433,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
                                  CryptAlgorithms    cryptAlgorithm,
+                                 const CryptSalt    *cryptSalt,
+                                 const CryptKey     *cryptKey,
                                  ConstString        deviceName,
                                  const DeviceInfo   *deviceInfo,
                                  FileSystemTypes    fileSystemType,
@@ -7435,7 +7453,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
@@ -7456,7 +7473,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength                     = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
 
@@ -7570,8 +7587,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7585,8 +7602,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7600,8 +7617,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7615,8 +7632,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7771,6 +7788,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    CryptAlgorithms                 cryptAlgorithm,
+                                   const CryptSalt                 *cryptSalt,
+                                   const CryptKey                  *cryptKey,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -7781,6 +7800,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
                                      CryptAlgorithms                 cryptAlgorithm,
+                                     const CryptSalt                 *cryptSalt,
+                                     const CryptKey                  *cryptKey,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -7798,7 +7819,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
@@ -7816,7 +7836,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
 
@@ -7852,8 +7872,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7866,8 +7886,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8019,6 +8039,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
                               CryptAlgorithms                 cryptAlgorithm,
+                              const CryptSalt                 *cryptSalt,
+                              const CryptKey                  *cryptKey,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -8030,6 +8052,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
                                 CryptAlgorithms                 cryptAlgorithm,
+                                const CryptSalt                 *cryptSalt,
+                                const CryptKey                  *cryptKey,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -8048,7 +8072,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
@@ -8066,7 +8089,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
 
@@ -8102,8 +8125,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8116,8 +8139,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8270,6 +8293,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
                                   CryptAlgorithms                 cryptAlgorithm,
+                                  const CryptSalt                 *cryptSalt,
+                                  const CryptKey                  *cryptKey,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -8285,6 +8310,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
                                     CryptAlgorithms                 cryptAlgorithm,
+                                    const CryptSalt                 *cryptSalt,
+                                    const CryptKey                  *cryptKey,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -8306,7 +8333,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(!StringList_isEmpty(fileNameList));
   assert(fileInfo != NULL);
@@ -8327,7 +8353,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength                        = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
@@ -8446,8 +8472,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8460,8 +8486,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8474,8 +8500,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8488,8 +8514,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8502,8 +8528,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8516,8 +8542,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8723,6 +8749,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
                                  CryptAlgorithms                 cryptAlgorithm,
+                                 const CryptSalt                 *cryptSalt,
+                                 const CryptKey                  *cryptKey,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -8733,6 +8761,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    CryptAlgorithms                 cryptAlgorithm,
+                                   const CryptSalt                 *cryptSalt,
+                                   const CryptKey                  *cryptKey,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -8750,7 +8780,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
@@ -8768,7 +8797,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
 
@@ -8804,8 +8833,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8818,8 +8847,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -8974,6 +9003,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
                               CryptAlgorithms  cryptAlgorithm,
+                              const CryptSalt  *cryptSalt,
+                              const CryptKey   *cryptKey,
                               const char       *hostName,
                               const char       *userName,
                               const char       *jobUUID,
@@ -8988,6 +9019,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
                                 CryptAlgorithms  cryptAlgorithm,
+                                const CryptSalt  *cryptSalt,
+                                const CryptKey   *cryptKey,
                                 const char       *hostName,
                                 const char       *userName,
                                 const char       *jobUUID,
@@ -9008,7 +9041,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
-  assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
 
   // init variables
@@ -9025,7 +9057,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
-  archiveEntryInfo->blockLength      = archiveHandle->blockLength;
+  archiveEntryInfo->blockLength      = Crypt_getBlockLength(cryptAlgorithm);
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_META;
 
@@ -9063,8 +9095,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
 //TODO: multi crypt
                      archiveEntryInfo->cryptAlgorithms[0],
                      CRYPT_MODE_CBC_,
-                     &archiveHandle->archiveCryptInfo->cryptSalt,
-                     &archiveHandle->archiveCryptInfo->cryptKey
+                     (cryptSalt != NULL) ? cryptSalt : &archiveHandle->archiveCryptInfo->cryptSalt,
+                     (cryptKey != NULL) ? cryptKey : &archiveHandle->archiveCryptInfo->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -9080,6 +9112,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                      CHUNK_USE_PARENT,
                      CHUNK_ID_META_ENTRY,
                      CHUNK_DEFINITION_META_ENTRY,
+// TODO: only blockLength
                      MAX(archiveEntryInfo->blockLength,DEFAULT_ALIGNMENT),
                      &archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
                      &archiveEntryInfo->meta.chunkMetaEntry
@@ -9161,11 +9194,74 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   return ERROR_NONE;
 }
 
-Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
-                                   ArchiveEntryTypes      *archiveEntryType,
-                                   const ArchiveCryptInfo **archiveCryptInfo,
-                                   uint64                 *offset,
-                                   ArchiveFlags           flags
+#ifdef NDEBUG
+  Errors Archive_transferEntry(ArchiveHandle *sourceArchiveHandle,
+                               ArchiveHandle *destinationArchiveHandle
+                              )
+#else /* not NDEBUG */
+  Errors Archive_transferEntry(ArchiveHandle *sourceArchiveHandle,
+                               ArchiveHandle *destinationArchiveHandle
+                              )
+#endif /* NDEBUG */
+{
+  Errors      error;
+  ChunkHeader chunkHeader;
+
+  error = getNextChunkHeader(sourceArchiveHandle,&chunkHeader);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  if (!destinationArchiveHandle->dryRun)
+  {
+    // lock archive (Note: link entries are created direct without intermediate file)
+    Semaphore_forceLock(&destinationArchiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+    // ensure space in archive
+    error = ensureArchiveSpace(destinationArchiveHandle,
+                               sizeof(ChunkHeader)+chunkHeader.size
+                              );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&destinationArchiveHandle->lock);
+//      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // create new archive file (if not already created)
+    error = createArchiveFile(destinationArchiveHandle);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&destinationArchiveHandle->lock);
+//      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    error = Chunk_transfer(&chunkHeader,
+                           sourceArchiveHandle->chunkIO,
+                           sourceArchiveHandle->chunkIOUserData,
+                           destinationArchiveHandle->chunkIO,
+                           destinationArchiveHandle->chunkIOUserData
+                          );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&destinationArchiveHandle->lock);
+//      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    Semaphore_unlock(&destinationArchiveHandle->lock);
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
+                                   ArchiveEntryTypes *archiveEntryType,
+                                   ArchiveCryptInfo  **archiveCryptInfo,
+                                   uint64            *offset,
+                                   uint64            *size
                                   )
 {
   Errors         error;
@@ -9220,6 +9316,18 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
         {
           return FALSE;
         }
+
+        // reset to chunk offset if salt chunks are returned
+        if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_KEY_CHUNKS))
+        {
+          error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,chunkHeader.offset);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        scanMode = FALSE;
         break;
       case CHUNK_ID_KEY:
         {
@@ -9300,26 +9408,36 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           // free resources
           Crypt_doneKey(&privateCryptKey);
 
+          // reset to chunk offset if key chunks are returned
+          if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_KEY_CHUNKS))
+          {
+            error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,chunkHeader.offset);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+
           scanMode = FALSE;
         }
         break;
+      case CHUNK_ID_META:
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
       case CHUNK_ID_LINK:
       case CHUNK_ID_HARDLINK:
       case CHUNK_ID_SPECIAL:
-      case CHUNK_ID_META:
       case CHUNK_ID_SIGNATURE:
         scanMode = FALSE;
         break;
       default:
-        if (IS_SET(flags,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS))
+        if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS))
         {
           // unknown chunk -> switch to scan mode
           if (!scanMode)
           {
-            if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
+            if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
               printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
                            Chunk_idToString(chunkHeader.id),
@@ -9351,7 +9469,13 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
         break;
     }
   }
-  while (   (chunkHeader.id != CHUNK_ID_FILE)
+  while (   (   (chunkHeader.id != CHUNK_ID_SALT)
+             || ((chunkHeader.id == CHUNK_ID_SALT) && !IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_SALT_CHUNKS))
+            )
+         && (   (chunkHeader.id != CHUNK_ID_KEY)
+             || ((chunkHeader.id == CHUNK_ID_KEY) && !IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_KEY_CHUNKS))
+            )
+         && (chunkHeader.id != CHUNK_ID_FILE)
          && (chunkHeader.id != CHUNK_ID_IMAGE)
          && (chunkHeader.id != CHUNK_ID_DIRECTORY)
          && (chunkHeader.id != CHUNK_ID_LINK)
@@ -9366,13 +9490,15 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
   {
     switch (chunkHeader.id)
     {
+      case CHUNK_ID_SALT:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SALT;      break;
+      case CHUNK_ID_KEY:       (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_KEY;       break;
+      case CHUNK_ID_META:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_META;      break;
       case CHUNK_ID_FILE:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_FILE;      break;
       case CHUNK_ID_IMAGE:     (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_IMAGE;     break;
       case CHUNK_ID_DIRECTORY: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_DIRECTORY; break;
       case CHUNK_ID_LINK:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_LINK;      break;
       case CHUNK_ID_HARDLINK:  (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_HARDLINK;  break;
       case CHUNK_ID_SPECIAL:   (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SPECIAL;   break;
-      case CHUNK_ID_META:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_META;      break;
       case CHUNK_ID_SIGNATURE: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SIGNATURE; break;
       #ifndef NDEBUG
         default:
@@ -9383,6 +9509,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
   }
   if (archiveCryptInfo != NULL) (*archiveCryptInfo) = archiveHandle->archiveCryptInfo;
   if (offset != NULL) (*offset) = chunkHeader.offset;
+  if (size != NULL) (*size) = chunkHeader.size;
 
   // store chunk header for read
   ungetNextChunkHeader(archiveHandle,&chunkHeader);
@@ -9428,6 +9555,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                ArchiveHandle    *archiveHandle,
                                CryptTypes       *cryptType,
                                CryptAlgorithms  *cryptAlgorithm,
+                               const CryptSalt  **cryptSalt,
+                               const CryptKey   **cryptKey,
                                String           hostName,
                                String           userName,
                                String           jobUUID,
@@ -9443,6 +9572,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                  ArchiveHandle    *archiveHandle,
                                  CryptTypes       *cryptType,
                                  CryptAlgorithms  *cryptAlgorithm,
+                                 const CryptSalt  **cryptSalt,
+                                 const CryptKey   **cryptKey,
                                  String           hostName,
                                  String           userName,
                                  String           jobUUID,
@@ -9558,22 +9689,13 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 //TODO: multi crypt
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0]);
 
-  // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  // get crypt block length
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read meta entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -9617,7 +9739,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init meta entry crypt
@@ -9759,6 +9881,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   // init variables
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt      != NULL) (*cryptSalt)      = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey       != NULL) (*cryptKey)       = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList1);
@@ -9779,6 +9903,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                CompressAlgorithms        *byteCompressAlgorithm,
                                CryptTypes                *cryptType,
                                CryptAlgorithms           *cryptAlgorithm,
+                               const CryptSalt           **cryptSalt,
+                               const CryptKey            **cryptKey,
                                String                    fileName,
                                FileInfo                  *fileInfo,
                                FileExtendedAttributeList *fileExtendedAttributeList,
@@ -9796,6 +9922,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                  CompressAlgorithms        *byteCompressAlgorithm,
                                  CryptTypes                *cryptType,
                                  CryptAlgorithms           *cryptAlgorithm,
+                                 const CryptSalt           **cryptSalt,
+                                 const CryptKey            **cryptKey,
                                  String                    fileName,
                                  FileInfo                  *fileInfo,
                                  FileExtendedAttributeList *fileExtendedAttributeList,
@@ -9938,32 +10066,16 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length, crypt key length
+  // get crypt block length
 #ifndef MULTI_CRYPT
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
 #else
-  error = cryptGetBlockLength(archiveEntryInfo->cryptAlgorithms,SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = cryptGetBlockLengthLCM(archiveEntryInfo->cryptAlgorithms,SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms));
 #endif
+
+  // get required crypt key length for algorithm
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -10025,7 +10137,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init file entry/extended attribute/delta/data/file crypt
@@ -10414,6 +10526,8 @@ NULL//                             password
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->file.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType              != NULL) (*cryptType)              = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt              != NULL) (*cryptSalt)              = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey               != NULL) (*cryptKey)               = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -10435,6 +10549,8 @@ NULL//                             password
                                 CompressAlgorithms *byteCompressAlgorithm,
                                 CryptTypes         *cryptType,
                                 CryptAlgorithms    *cryptAlgorithm,
+                                const CryptSalt    **cryptSalt,
+                                const CryptKey     **cryptKey,
                                 String             deviceName,
                                 DeviceInfo         *deviceInfo,
                                 FileSystemTypes    *fileSystemType,
@@ -10452,6 +10568,8 @@ NULL//                             password
                                   CompressAlgorithms *byteCompressAlgorithm,
                                   CryptTypes         *cryptType,
                                   CryptAlgorithms    *cryptAlgorithm,
+                                  const CryptSalt    **cryptSalt,
+                                  const CryptKey     **cryptKey,
                                   String             deviceName,
                                   DeviceInfo         *deviceInfo,
                                   FileSystemTypes    *fileSystemType,
@@ -10593,21 +10711,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -10668,7 +10777,7 @@ NULL//                             password
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init image entry/delta/data/image crypt
@@ -10973,6 +11082,8 @@ NULL//                             password
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->image.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType              != NULL) (*cryptType)              = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt              != NULL) (*cryptSalt)              = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey               != NULL) (*cryptKey)               = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -10992,6 +11103,8 @@ NULL//                             password
                                     ArchiveHandle             *archiveHandle,
                                     CryptTypes                *cryptType,
                                     CryptAlgorithms           *cryptAlgorithm,
+                                    const CryptSalt           **cryptSalt,
+                                    const CryptKey            **cryptKey,
                                     String                    directoryName,
                                     FileInfo                  *fileInfo,
                                     FileExtendedAttributeList *fileExtendedAttributeList
@@ -11003,6 +11116,8 @@ NULL//                             password
                                       ArchiveHandle             *archiveHandle,
                                       CryptTypes                *cryptType,
                                       CryptAlgorithms           *cryptAlgorithm,
+                                      const CryptSalt           **cryptSalt,
+                                      const CryptKey            **cryptKey,
                                       String                    directoryName,
                                       FileInfo                  *fileInfo,
                                       FileExtendedAttributeList *fileExtendedAttributeList
@@ -11122,21 +11237,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read directory entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -11182,7 +11288,7 @@ NULL//                             password
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init crypt
@@ -11396,6 +11502,8 @@ NULL//                             password
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt      != NULL) (*cryptSalt)      = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey       != NULL) (*cryptKey)       = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -11415,6 +11523,8 @@ NULL//                             password
                                ArchiveHandle             *archiveHandle,
                                CryptTypes                *cryptType,
                                CryptAlgorithms           *cryptAlgorithm,
+                               const CryptSalt           **cryptSalt,
+                               const CryptKey            **cryptKey,
                                String                    linkName,
                                String                    destinationName,
                                FileInfo                  *fileInfo,
@@ -11427,6 +11537,8 @@ NULL//                             password
                                  ArchiveHandle             *archiveHandle,
                                  CryptTypes                *cryptType,
                                  CryptAlgorithms           *cryptAlgorithm,
+                                 const CryptSalt           **cryptSalt,
+                                 const CryptKey            **cryptKey,
                                  String                    linkName,
                                  String                    destinationName,
                                  FileInfo                  *fileInfo,
@@ -11548,21 +11660,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read link entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -11606,7 +11709,7 @@ NULL//                             password
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init crypt
@@ -11822,8 +11925,11 @@ NULL//                             password
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
+  // init variables
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt      != NULL) (*cryptSalt)      = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey       != NULL) (*cryptKey)       = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -11845,6 +11951,8 @@ NULL//                             password
                                    CompressAlgorithms        *byteCompressAlgorithm,
                                    CryptTypes                *cryptType,
                                    CryptAlgorithms           *cryptAlgorithm,
+                                   const CryptSalt           **cryptSalt,
+                                   const CryptKey            **cryptKey,
                                    StringList                *fileNameList,
                                    FileInfo                  *fileInfo,
                                    FileExtendedAttributeList *fileExtendedAttributeList,
@@ -11862,6 +11970,8 @@ NULL//                             password
                                      CompressAlgorithms        *byteCompressAlgorithm,
                                      CryptTypes                *cryptType,
                                      CryptAlgorithms           *cryptAlgorithm,
+                                     const CryptSalt           **cryptSalt,
+                                     const CryptKey            **cryptKey,
                                      StringList                *fileNameList,
                                      FileInfo                  *fileInfo,
                                      FileExtendedAttributeList *fileExtendedAttributeList,
@@ -12005,21 +12115,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // allocate buffers
   archiveEntryInfo->hardLink.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -12084,7 +12185,7 @@ NULL//                             password
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init crypt
@@ -12510,6 +12611,8 @@ NULL//                             password
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->hardLink.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType              != NULL) (*cryptType)              = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt              != NULL) (*cryptSalt)              = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey               != NULL) (*cryptKey)               = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -12529,6 +12632,8 @@ NULL//                             password
                                   ArchiveHandle             *archiveHandle,
                                   CryptTypes                *cryptType,
                                   CryptAlgorithms           *cryptAlgorithm,
+                                  const CryptSalt           **cryptSalt,
+                                  const CryptKey            **cryptKey,
                                   String                    specialName,
                                   FileInfo                  *fileInfo,
                                   FileExtendedAttributeList *fileExtendedAttributeList
@@ -12540,6 +12645,8 @@ NULL//                             password
                                     ArchiveHandle             *archiveHandle,
                                     CryptTypes                *cryptType,
                                     CryptAlgorithms           *cryptAlgorithm,
+                                    const CryptSalt           **cryptSalt,
+                                    const CryptKey            **cryptKey,
                                     String                    specialName,
                                     FileInfo                  *fileInfo,
                                     FileExtendedAttributeList *fileExtendedAttributeList
@@ -12660,21 +12767,12 @@ NULL//                             password
 #endif
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+  archiveEntryInfo->blockLength = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(archiveEntryInfo->blockLength > 0);
-  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
-  if (error != ERROR_NONE)
-  {
-    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
+
+  // get required crypt key length for algorithm
+  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read special entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
@@ -12718,7 +12816,7 @@ NULL//                             password
         && (decryptKey == NULL)
        )
     {
-      error = ERROR_NO_DECRYPT_KEY;
+      error = ERROR_NO_CRYPT_KEY;
     }
 
     // init crypt
@@ -12933,8 +13031,11 @@ NULL//                             password
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
+  // init variables
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->archiveCryptInfo->cryptType;
+  if (cryptSalt      != NULL) (*cryptSalt)      = &archiveHandle->archiveCryptInfo->cryptSalt;
+  if (cryptKey       != NULL) (*cryptKey)       = decryptKey;
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -15351,6 +15452,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                          storageInfo,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
+                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
                          CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                          logHandle
                         );
@@ -15363,6 +15465,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            storageInfo,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
+                           ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
                            CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                            logHandle
                           );
@@ -15375,6 +15478,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                          storageInfo,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
+                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
                          CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                          logHandle
                         );
@@ -15428,7 +15532,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
 //uint64 t0,t1; t0 = Misc_getTimestamp();
-  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
+  while (   !Archive_eof(&archiveHandle)
          && (error == ERROR_NONE)
          && !deletedFlag
          && !abortedFlag
@@ -15440,7 +15544,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
                                         NULL,  // offset
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
+                                        NULL  // size
                                        );
     if (error != ERROR_NONE)
     {
@@ -15461,8 +15565,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
                                         NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptAlgorithm
                                         NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         fileName,
                                         &fileInfo,
                                         NULL,  // fileExtendedAttributeList
@@ -15510,8 +15616,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                          &archiveHandle,
                                          NULL,  // deltaCompressAlgorithm
                                          NULL,  // byteCompressAlgorithm
-                                         NULL,  // cryptAlgorithm
                                          NULL,  // cryptType
+                                         NULL,  // cryptAlgorithm
+                                         NULL,  // cryptSalt
+                                         NULL,  // cryptKey
                                          imageName,
                                          &deviceInfo,
                                          &fileSystemType,
@@ -15549,8 +15657,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read directory entry
           error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                              &archiveHandle,
-                                             NULL,  // cryptAlgorithm
                                              NULL,  // cryptType
+                                             NULL,  // cryptAlgorithm
+                                             NULL,  // cryptSalt
+                                             NULL,  // cryptKey
                                              directoryName,
                                              &fileInfo,
                                              NULL  // fileExtendedAttributeList
@@ -15586,8 +15696,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read link entry
           error = Archive_readLinkEntry(&archiveEntryInfo,
                                         &archiveHandle,
-                                        NULL,  // cryptAlgorithm
                                         NULL,  // cryptType
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         linkName,
                                         destinationName,
                                         &fileInfo,
@@ -15631,8 +15743,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                             &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
                                             NULL,  // byteCompressAlgorithm
-                                            NULL,  // cryptAlgorithm
                                             NULL,  // cryptType
+                                            NULL,  // cryptAlgorithm
+                                            NULL,  // cryptSalt
+                                            NULL,  // cryptKey
                                             &fileNameList,
                                             &fileInfo,
                                             NULL,  // fileExtendedAttributeList
@@ -15678,8 +15792,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // read special entry
           error = Archive_readSpecialEntry(&archiveEntryInfo,
                                            &archiveHandle,
-                                           NULL,  // cryptAlgorithm
                                            NULL,  // cryptType
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptSalt
+                                           NULL,  // cryptKey
                                            fileName,
                                            &fileInfo,
                                            NULL   // fileExtendedAttributeList
@@ -15718,6 +15834,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         &archiveHandle,
                                         NULL,  // cryptType
                                         NULL,  // cryptAlgorithm
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         hostName,
                                         userName,
                                         jobUUID,
@@ -15772,23 +15890,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // create entity if not exists with given job UUID/entity UUID/host name/archive type
           if (INDEX_ID_IS_NONE(entityId))
           {
-            // update entity
-// TODO: do not update entity!
-#if 0
-            error = Index_updateEntity(indexHandle,
-                                       entityId,
-                                       String_cString(jobUUID),
-                                       String_cString(entityUUID),
-                                       String_cString(hostName),
-                                       String_cString(userName),
-                                       archiveType,
-                                       createdDateTime
-                                      );
-#endif
-          }
-          else
-          {
-            // check if entity with given job UUID/entity UUID/host name/archive type exists, otherwise create that entity
             error = Index_findEntity(indexHandle,
                                      INDEX_ID_NONE,  // findEntityIndexId
                                      jobUUID,
@@ -15822,11 +15923,11 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                       &entityId
                                      );
             }
-          }
-          if (error != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            break;
+            if (error != ERROR_NONE)
+            {
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              break;
+            }
           }
 
           // flush index list
@@ -16021,1685 +16122,6 @@ Errors Archive_removeIndex(IndexHandle *indexHandle,
 
   return ERROR_NONE;
 }
-
-#if 0
-Errors Archive_copy(ConstString             storageName,
-                    JobOptions              *jobOptions,
-                    bool                    dryRun,
-                    GetNamePasswordFunction getNamePasswordFunction,
-                    void                    *getNamePasswordData,
-                    ConstString             newStorageName
-                   )
-{
-  Errors        error;
-  ArchiveHandle sourceArchiveHandle;
-  ArchiveHandle destinationArchiveHandle;
-  Errors        failError;
-
-  // open source
-  error = Archive_open(&sourceArchiveHandle,
-                       &storageSpecifier,
-//                        DeltaSourceList                 *deltaSourceList,
-                       jobOptions,
-                       archiveGetCryptPassword,
-                       archiveGetCryptPasswordData
-                      )
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // create destination
-  error = Archive_create(&destinationArchiveHandle,
-NULL,//                      ConstString         archiveName,
-//                        DeltaSourceList                 *deltaSourceList,
-                         jobOptions,
-archiveHandle->archiveInitFunction              = NULL;
-archiveHandle->archiveInitUserData              = NULL;
-                         archiveStoreFunction          archiveStoreFunction,
-                         void                            *archiveNewFileUserData,
-                         CALLBACK_(NULL,NULL)
-                         NULL, // indexHandle
-                        );
-  if (error != ERROR_NONE)
-  {
-    Archive_close(&sourceArchiveHandle,FALSE);
-    return error;
-  }
-
-  // copy archive entries
-  failError = ERROR_NONE;
-  while (   //((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-         && !Archive_eof(&sourceArchiveHandle,TRUE)
-         && (failError == ERROR_NONE)
-        )
-  {
-#if 0
-    // pause
-    while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
-    {
-      Misc_udelay(500L*US_PER_MS);
-    }
-#endif /* 0 */
-
-    // get next archive entry type
-    error = Archive_getNextArchiveEntry(&archiveHandle,
-                                        &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
-                                        NULL,  // offset
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
-                                       );
-    if (error != ERROR_NONE)
-    {
-      if (failError == ERROR_NONE) failError = error;
-      break;
-    }
-
-    switch (archiveEntryType)
-    {
-      case ARCHIVE_ENTRY_TYPE_FILE:
-        {
-          String       fileName;
-          FileInfo     fileInfo;
-          uint64       fragmentOffset,fragmentSize;
-          String       destinationFileName;
-          FragmentNode *fragmentNode;
-          String       parentDirectoryName;
-          FileHandle   fileHandle;
-          uint64       length;
-          ulong        n;
-
-          // read file
-          fileName = String_new();
-          error = Archive_readFileEntry(&archiveEntryInfo,
-                                        &archiveHandle,
-                                        NULL,  // deltaCompressAlgorithm
-                                        NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptAlgorithm
-                                        fileName,
-                                        &fileInfo,
-                                        &fragmentOffset,
-                                        &fragmentSize
-                                       );
-          if (error != ERROR_NONE)
-          {
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            continue;
-          }
-
-          // check if file fragment already exists, file already exists
-          fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
-          if (fragmentNode != NULL)
-          {
-            if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
-            {
-              printInfo(1,
-                        "  Restore file '%s'...skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
-                        String_cString(destinationFileName),
-                        fragmentOffset,
-                        (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
-                       );
-              String_delete(destinationFileName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              continue;
-            }
-          }
-          else
-          {
-            fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
-          }
-
-          // copy file entry
-
-          // seek to fragment position
-          error = File_seek(&fileHandle,fragmentOffset);
-          if (error != ERROR_NONE)
-          {
-            printInfo(2,"FAIL!\n");
-            printError("cannot write file '%s' (error: %s)",
-                       String_cString(destinationFileName),
-                       Error_getText(error)
-                      );
-            File_close(&fileHandle);
-            String_delete(destinationFileName);
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
-            if (!jobOptions->noStopOnErrorFlag)
-            {
-              restoreInfo.failError = error;
-            }
-            continue;
-          }
-
-          // write file data
-          length = 0;
-          while (   //((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-                 && (length < fragmentSize)
-                )
-          {
-#if 0
-            // pause
-            while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
-            {
-              Misc_udelay(500L*US_PER_MS);
-            }
-#endif /* 0 */
-
-            n = MIN(fragmentSize-length,BUFFER_SIZE);
-
-            error = Archive_readData(&archiveEntryInfo,buffer,n);
-            if (error != ERROR_NONE)
-            {
-              printInfo(2,"FAIL!\n");
-              printError("cannot read content of archive '%s' (error: %s)!",
-                         String_cString(printableArchiveName),
-                         Error_getText(error)
-                        );
-              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-              break;
-            }
-
-            error = File_write(&fileHandle,buffer,n);
-            if (error != ERROR_NONE)
-            {
-              printInfo(2,"FAIL!\n");
-              printError("cannot write file '%s' (error: %s)",
-                         String_cString(destinationFileName),
-                         Error_getText(error)
-                        );
-              if (!jobOptions->noStopOnErrorFlag)
-              {
-                restoreInfo.failError = error;
-              }
-              break;
-            }
-//              abortFlag = !updateStatusInfo(&restoreInfo);
-
-            length += n;
-          }
-          if      (failError != ERROR_NONE)
-          {
-            if (!dryRun)
-            {
-              File_close(&fileHandle);
-            }
-            String_delete(destinationFileName);
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
-            continue;
-          }
-#if 0
-          else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
-          {
-            printInfo(2,"ABORTED\n");
-            if (!dryRun)
-            {
-              File_close(&fileHandle);
-            }
-            String_delete(destinationFileName);
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
-            continue;
-          }
-#endif /* 0 */
-
-          // add fragment to file fragment list
-          FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-
-          // close file
-          if (!dryRun)
-          {
-            File_close(&fileHandle);
-          }
-
-          // close source archive file
-          (void)Archive_closeEntry(&sourceArchiveEntryInfo);
-
-          // free resources
-          String_delete(fileName);
-        }
-        break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
-        {
-          String       imageName;
-          DeviceInfo   deviceInfo;
-          uint64       blockOffset,blockCount;
-          String       destinationDeviceName;
-          FragmentNode *fragmentNode;
-          DeviceHandle deviceHandle;
-          uint64       block;
-          ulong        bufferBlockCount;
-
-          // read image
-          imageName = String_new();
-          error = Archive_readImageEntry(&archiveEntryInfo,
-                                         &archiveHandle,
-                                         NULL,
-                                         imageName,
-                                         &deviceInfo,
-                                         NULL,
-                                         &blockOffset,
-                                         &blockCount
-                                        );
-          if (error != ERROR_NONE)
-          {
-            printError("cannot read 'image' content of archive '%s' (error: %s)!",
-                       String_cString(printableArchiveName),
-                       Error_getText(error)
-                      );
-            String_delete(imageName);
-            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-              && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
-             )
-          {
-            String_set(restoreInfo.statusInfo.name,imageName);
-            restoreInfo.statusInfo.entryDoneBytes  = 0LL;
-            restoreInfo.statusInfo.entryTotalBytes = blockCount;
-            abortFlag = !updateStatusInfo(&restoreInfo);
-
-            // get destination filename
-            destinationDeviceName = getDestinationDeviceName(String_new(),
-                                                             imageName,
-                                                             jobOptions->destination
-                                                            );
-
-
-            // check if image fragment exists
-            fragmentNode = FragmentList_find(&fragmentList,imageName);
-            if (fragmentNode != NULL)
-            {
-              if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
-              {
-                printInfo(1,
-                          "  Restore image '%s'...skipped (image part %"PRIu64"..%"PRIu64" exists)\n",
-                          String_cString(destinationDeviceName),
-                          blockOffset*(uint64)deviceInfo.blockSize,
-                          ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
-                         );
-                String_delete(destinationDeviceName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
-                continue;
-              }
-            }
-            else
-            {
-              fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
-            }
-
-            printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
-
-            // open device
-            if (!dryRun)
-            {
-              error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("cannot write to device '%s' (error: %s)",
-                           String_cString(destinationDeviceName),
-                           Error_getText(error)
-                          );
-                String_delete(destinationDeviceName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-              error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("cannot write to device '%s' (error: %s)",
-                           String_cString(destinationDeviceName),
-                           Error_getText(error)
-                          );
-                Device_close(&deviceHandle);
-                String_delete(destinationDeviceName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-            }
-
-            // write image data
-            block = 0;
-            while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-                   && (block < blockCount)
-                  )
-            {
-              // pause
-              while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
-              {
-                Misc_udelay(500L*US_PER_MS);
-              }
-
-              assert(deviceInfo.blockSize > 0);
-              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
-
-              error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("cannot read content of archive '%s' (error: %s)!",
-                           String_cString(printableArchiveName),
-                           Error_getText(error)
-                          );
-                if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                break;
-              }
-              if (!dryRun)
-              {
-                error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
-                if (error != ERROR_NONE)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot write to device '%s' (error: %s)",
-                             String_cString(destinationDeviceName),
-                             Error_getText(error)
-                            );
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  break;
-                }
-              }
-              restoreInfo.statusInfo.entryDoneBytes += bufferBlockCount*deviceInfo.blockSize;
-              abortFlag = !updateStatusInfo(&restoreInfo);
-
-              block += (uint64)bufferBlockCount;
-            }
-            if (!dryRun)
-            {
-              Device_close(&deviceHandle);
-              if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
-              {
-                printInfo(2,"ABORTED\n");
-                String_delete(destinationDeviceName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
-                continue;
-              }
-            }
-
-            // add fragment to file fragment list
-            FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-
-            // discard fragment list if file is complete
-            if (FragmentList_checkEntryComplete(fragmentNode))
-            {
-              FragmentList_discard(&fragmentList,fragmentNode);
-            }
-
-            if (!dryRun)
-            {
-              printInfo(2,"OK\n");
-            }
-            else
-            {
-              printInfo(2,"OK (dry-run)\n");
-            }
-
-            /* check if all data read.
-               Note: it is not possible to check if all data is read when
-               compression is used. The decompressor may not all data even
-               data is _not_ corrupt.
-            */
-            if (   !Compress_isCompressed(archiveEntryInfo.image.compressAlgorithm)
-                && !Archive_eofData(&archiveEntryInfo))
-            {
-              printWarning("unexpected data at end of image entry '%S'",imageName);
-            }
-
-            // free resources
-            String_delete(destinationDeviceName);
-          }
-          else
-          {
-            // skip
-            printInfo(3,"  Restore '%s'...skipped\n",String_cString(imageName));
-          }
-
-          // close archive entry
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printWarning("close 'image' entry fail (error: %s)",Error_getText(error));
-          }
-
-          // free resources
-          String_delete(imageName);
-        }
-        break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        {
-          String   directoryName;
-          FileInfo fileInfo;
-          String   destinationFileName;
-//            FileInfo localFileInfo;
-
-          // read directory
-          directoryName = String_new();
-          error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                             &archiveHandle,
-                                             NULL,
-                                             NULL,
-                                             directoryName,
-                                             &fileInfo
-                                            );
-          if (error != ERROR_NONE)
-          {
-            printError("cannot read 'directory' content of archive '%s' (error: %s)!",
-                       String_cString(printableArchiveName),
-                       Error_getText(error)
-                      );
-            String_delete(directoryName);
-            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-              && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-             )
-          {
-            String_set(restoreInfo.statusInfo.name,directoryName);
-            restoreInfo.statusInfo.entryDoneBytes  = 0LL;
-            restoreInfo.statusInfo.entryTotalBytes = 00L;
-            abortFlag = !updateStatusInfo(&restoreInfo);
-
-            // get destination filename
-            destinationFileName = getDestinationFileName(String_new(),
-                                                         directoryName,
-                                                         jobOptions->destination,
-                                                         jobOptions->directoryStripCount
-                                                        );
-
-
-            // check if directory already exists
-            if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
-            {
-              printInfo(1,
-                        "  Restore directory '%s'...skipped (file exists)\n",
-                        String_cString(destinationFileName)
-                       );
-              String_delete(destinationFileName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(directoryName);
-              continue;
-            }
-
-            printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
-
-            // create directory
-            if (!dryRun)
-            {
-              error = File_makeDirectory(destinationFileName,
-                                         FILE_DEFAULT_USER_ID,
-                                         FILE_DEFAULT_GROUP_ID,
-                                         fileInfo.permission
-                                        );
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("cannot create directory '%s' (error: %s)",
-                           String_cString(destinationFileName),
-                           Error_getText(error)
-                          );
-                String_delete(destinationFileName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(directoryName);
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-            }
-
-            // set file time, file owner/group, file permission, file attributes
-            if (!dryRun)
-            {
-              error = File_setInfo(&fileInfo,destinationFileName);
-              if (error != ERROR_NONE)
-              {
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot set directory info of '%s' (error: %s)",
-                             String_cString(destinationFileName),
-                             Error_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(directoryName);
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  continue;
-                }
-                else
-                {
-                  printWarning("cannot set directory info of '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                }
-              }
-
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
-              if (error != ERROR_NONE)
-              {
-                if (   !jobOptions->noStopOnOwnerErrorFlag
-                    && !File_isNetworkFileSystem(fragmentNode->name)
-                   )
-                {
-                  printInfo(1,"FAIL!\n");
-                  printError("cannot set file owner/group of '%s' (error: %s)",
-                             String_cString(fragmentNode->name),
-                             Error_getText(error)
-                            );
-                  return error;
-                }
-                else
-                {
-                  printWarning("cannot set file owner/group of '%s' (error: %s)",
-                               String_cString(fragmentNode->name),
-                               Error_getText(error)
-                              );
-                }
-              }
-
-              error = File_setAttributes(fileInfo.attributes,destinationFileName);
-              if (error != ERROR_NONE)
-              {
-                if (!jobOptions->noStopOnAttributeErrorFlagFlag)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot set directory info of '%s' (error: %s)",
-                             String_cString(destinationFileName),
-                             Error_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(directoryName);
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  continue;
-                }
-                else
-                {
-                  printWarning("cannot set directory info of '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                }
-              }
-            }
-
-            if (!dryRun)
-            {
-              printInfo(2,"OK\n");
-            }
-            else
-            {
-              printInfo(2,"OK (dry-run)\n");
-            }
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printWarning("unexpected data at end of directory entry '%S'",directoryName);
-            }
-
-            // free resources
-            String_delete(destinationFileName);
-          }
-          else
-          {
-            // skip
-            printInfo(3,"  Restore '%s'...skipped\n",String_cString(directoryName));
-          }
-
-          // close archive entry
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printWarning("close 'directory' entry fail (error: %s)",Error_getText(error));
-          }
-
-          // free resources
-          String_delete(directoryName);
-        }
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
-        {
-          String   linkName;
-          String   fileName;
-          FileInfo fileInfo;
-          String   destinationFileName;
-          String   parentDirectoryName;
-//            FileInfo localFileInfo;
-
-          // read link
-          linkName = String_new();
-          fileName = String_new();
-          error = Archive_readLinkEntry(&archiveEntryInfo,
-                                        &archiveHandle,
-                                        NULL,
-                                        NULL,
-                                        linkName,
-                                        fileName,
-                                        &fileInfo
-                                       );
-          if (error != ERROR_NONE)
-          {
-            printError("cannot read 'link' content of archive '%s' (error: %s)!",
-                       String_cString(printableArchiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            String_delete(linkName);
-            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-              && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-             )
-          {
-            String_set(restoreInfo.statusInfo.name,linkName);
-            restoreInfo.statusInfo.entryDoneBytes  = 0LL;
-            restoreInfo.statusInfo.entryTotalBytes = 00L;
-            abortFlag = !updateStatusInfo(&restoreInfo);
-
-            // get destination filename
-            destinationFileName = getDestinationFileName(String_new(),
-                                                         linkName,
-                                                         jobOptions->destination,
-                                                         jobOptions->directoryStripCount
-                                                        );
-
-            // create parent directories if not existing
-            if (!dryRun)
-            {
-              parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-              if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
-              {
-                // create directory
-                error = File_makeDirectory(parentDirectoryName,
-                                           FILE_DEFAULT_USER_ID,
-                                           FILE_DEFAULT_GROUP_ID,
-                                           FILE_DEFAULT_PERMISSIONS
-                                          );
-                if (error != ERROR_NONE)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot create directory '%s' (error: %s)",
-                             String_cString(parentDirectoryName),
-                             Error_getText(error)
-                            );
-                  String_delete(parentDirectoryName);
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  String_delete(linkName);
-                  if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                  continue;
-                }
-
-                // set directory owner ship
-                error = File_setOwner(parentDirectoryName,
-                                      (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                      (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
-                                     );
-                if (error != ERROR_NONE)
-                {
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot set owner ship of directory '%s' (error: %s)",
-                               String_cString(parentDirectoryName),
-                               Error_getText(error)
-                              );
-                    String_delete(parentDirectoryName);
-                    String_delete(destinationFileName);
-                    (void)Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(fileName);
-                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    continue;
-                  }
-                  else
-                  {
-                    printWarning("cannot set owner ship of directory '%s' (error: %s)",
-                                 String_cString(parentDirectoryName),
-                                 Error_getText(error)
-                                );
-                  }
-                }
-              }
-              String_delete(parentDirectoryName);
-            }
-
-            // check if link areadly exists
-            if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
-            {
-              printInfo(1,
-                        "  Restore link '%s'...skipped (file exists)\n",
-                        String_cString(destinationFileName)
-                       );
-              String_delete(destinationFileName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              String_delete(linkName);
-              if (!jobOptions->noStopOnErrorFlag)
-              {
-                restoreInfo.failError = ERRORX(FILE_EXISTS_,0,String_cString(destinationFileName));
-              }
-              continue;
-            }
-
-            printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
-
-            // create link
-            if (!dryRun)
-            {
-              error = File_makeLink(destinationFileName,fileName);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("cannot create link '%s' -> '%s' (error: %s)",
-                           String_cString(destinationFileName),
-                           String_cString(fileName),
-                           Error_getText(error)
-                          );
-                String_delete(destinationFileName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(fileName);
-                String_delete(linkName);
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-            }
-
-            // set file time, file owner/group, file permission, file attributes
-            if (!dryRun)
-            {
-              error = File_setInfo(&fileInfo,destinationFileName);
-              if (error != ERROR_NONE)
-              {
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot set file info of '%s' (error: %s)",
-                             String_cString(destinationFileName),
-                             Error_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  String_delete(linkName);
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  continue;
-                }
-                else
-                {
-                  printWarning("cannot set file info of '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                }
-              }
-
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
-              if (error != ERROR_NONE)
-              {
-                if (   !jobOptions->noStopOnOwnerErrorFlag
-                    && !File_isNetworkFileSystem(fragmentNode->name)
-                   )
-                {
-                  printInfo(1,"FAIL!\n");
-                  printError("cannot set file owner/group of '%s' (error: %s)",
-                             String_cString(fragmentNode->name),
-                             Error_getText(error)
-                            );
-                  return error;
-                }
-                else
-                {
-                  printWarning("cannot set file owner/group of '%s' (error: %s)",
-                               String_cString(fragmentNode->name),
-                               Error_getText(error)
-                              );
-                }
-              }
-
-              error = File_setAttributes(fileInfo.attributes,destinationFileName);
-              if (error != ERROR_NONE)
-              {
-                if (!jobOptions->noStopOnAttributeErrorFlag)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot set file info of '%s' (error: %s)",
-                             String_cString(destinationFileName),
-                             Error_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  String_delete(linkName);
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  continue;
-                }
-                else
-                {
-                  printWarning("cannot set file info of '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                }
-              }
-            }
-
-            if (!dryRun)
-            {
-              printInfo(2,"OK\n");
-            }
-            else
-            {
-              printInfo(2,"OK (dry-run)\n");
-            }
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printWarning("unexpected data at end of link entry '%S'",linkName);
-            }
-
-            // free resources
-            String_delete(destinationFileName);
-          }
-          else
-          {
-            // skip
-            printInfo(3,"  Restore '%s'...skipped\n",String_cString(linkName));
-          }
-
-          // close archive entry
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printWarning("close 'link' entry fail (error: %s)",Error_getText(error));
-          }
-
-          // free resources
-          String_delete(fileName);
-          String_delete(linkName);
-        }
-        break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        {
-          StringList       fileNameList;
-          FileInfo         fileInfo;
-          uint64           fragmentOffset,fragmentSize;
-          String           hardLinkFileName;
-          String           destinationFileName;
-          bool             restoredDataFlag;
-          const StringNode *stringNode;
-          String           fileName;
-          FragmentNode     *fragmentNode;
-          String           parentDirectoryName;
-//            FileInfo         localFileInfo;
-          FileHandle       fileHandle;
-          uint64           length;
-          ulong            n;
-
-          // read hard link
-          StringList_init(&fileNameList);
-          error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                            &archiveHandle,
-                                            NULL,
-                                            NULL,
-                                            NULL,
-                                            &fileNameList,
-                                            &fileInfo,
-                                            &fragmentOffset,
-                                            &fragmentSize
-                                           );
-          if (error != ERROR_NONE)
-          {
-            printError("cannot read 'hardlink' content of archive '%s' (error: %s)!",
-                       String_cString(printableArchiveName),
-                       Error_getText(error)
-                      );
-            StringList_done(&fileNameList);
-            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-            continue;
-          }
-
-          hardLinkFileName    = String_new();
-          destinationFileName = String_new();
-          restoredDataFlag    = FALSE;
-          STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-          {
-            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-               )
-            {
-              String_set(restoreInfo.statusInfo.name,fileName);
-              restoreInfo.statusInfo.entryDoneBytes  = 0LL;
-              restoreInfo.statusInfo.entryTotalBytes = fragmentSize;
-              abortFlag = !updateStatusInfo(&restoreInfo);
-
-              // get destination filename
-              getDestinationFileName(destinationFileName,
-                                     fileName,
-                                     jobOptions->destination,
-                                     jobOptions->directoryStripCount
-                                    );
-
-              printInfo(2,"  Restore hard link '%s'...",String_cString(destinationFileName));
-
-              // create parent directories if not existing
-              if (!dryRun)
-              {
-                parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-                if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
-                {
-                  // create directory
-                  error = File_makeDirectory(parentDirectoryName,
-                                             FILE_DEFAULT_USER_ID,
-                                             FILE_DEFAULT_GROUP_ID,
-                                             FILE_DEFAULT_PERMISSIONS
-                                            );
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot create directory '%s' (error: %s)",
-                               String_cString(parentDirectoryName),
-                               Error_getText(error)
-                              );
-                    String_delete(parentDirectoryName);
-                    if (!jobOptions->noStopOnErrorFlag)
-                    {
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      continue;
-                    }
-                  }
-
-                  // set directory owner ship
-                  error = File_setOwner(parentDirectoryName,
-                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
-                                       );
-                  if (error != ERROR_NONE)
-                  {
-                    if (!jobOptions->noStopOnErrorFlag)
-                    {
-                      printInfo(2,"FAIL!\n");
-                      printError("cannot set owner ship of directory '%s' (error: %s)",
-                                 String_cString(parentDirectoryName),
-                                 Error_getText(error)
-                                );
-                      String_delete(parentDirectoryName);
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      printWarning("cannot set owner ship of directory '%s' (error: %s)",
-                                   String_cString(parentDirectoryName),
-                                   Error_getText(error)
-                                  );
-                    }
-                  }
-                }
-                String_delete(parentDirectoryName);
-              }
-
-              if (!restoredDataFlag)
-              {
-                // check if file fragment already eixsts, file already exists
-                fragmentNode = FragmentList_find(&fragmentList,fileName);
-                if (fragmentNode != NULL)
-                {
-                  if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
-                  {
-                    printInfo(2,"skipped (file part %"PRIu64"..%"PRIu64" exists)\n",
-                              String_cString(destinationFileName),
-                              fragmentOffset,
-                              (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
-                             );
-                    continue;
-                  }
-                }
-                else
-                {
-                  if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
-                  {
-                    printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
-                    continue;
-                  }
-                  fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
-                }
-
-                // create file
-                if (!dryRun)
-                {
-                  // open file
-                  error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot create/write to file '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                    if (!jobOptions->noStopOnErrorFlag)
-                    {
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      continue;
-                    }
-                  }
-
-                  // seek to fragment position
-                  error = File_seek(&fileHandle,fragmentOffset);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot write file '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                    File_close(&fileHandle);
-                    if (!jobOptions->noStopOnErrorFlag)
-                    {
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      continue;
-                    }
-                  }
-                  String_set(hardLinkFileName,destinationFileName);
-                }
-
-                // write file data
-                length = 0;
-                while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-                       && (length < fragmentSize)
-                      )
-                {
-                  // pause
-                  while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
-                  {
-                    Misc_udelay(500L*US_PER_MS);
-                  }
-
-                  n = MIN(fragmentSize-length,BUFFER_SIZE);
-
-                  error = Archive_readData(&archiveEntryInfo,buffer,n);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot read content of archive '%s' (error: %s)!",
-                               String_cString(printableArchiveName),
-                               Error_getText(error)
-                              );
-                    restoreInfo.failError = error;
-                    break;
-                  }
-                  if (!dryRun)
-                  {
-                    error = File_write(&fileHandle,buffer,n);
-                    if (error != ERROR_NONE)
-                    {
-                      printInfo(2,"FAIL!\n");
-                      printError("cannot write file '%s' (error: %s)",
-                                 String_cString(destinationFileName),
-                                 Error_getText(error)
-                                );
-                      if (!jobOptions->noStopOnErrorFlag)
-                      {
-                        restoreInfo.failError = error;
-                      }
-                      break;
-                    }
-                  }
-                  restoreInfo.statusInfo.entryDoneBytes += n;
-                  abortFlag = !updateStatusInfo(&restoreInfo);
-
-                  length += n;
-                }
-                if      (restoreInfo.failError != ERROR_NONE)
-                {
-                  if (!dryRun)
-                  {
-                    File_close(&fileHandle);
-                    break;
-                  }
-                }
-                else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
-                {
-                  printInfo(2,"ABORTED\n");
-                  File_close(&fileHandle);
-                  break;
-                }
-
-                // add fragment to file fragment list
-                FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-
-                // set file size
-                if (!dryRun)
-                {
-                  if (File_getSize(&fileHandle) > fileInfo.size)
-                  {
-                    File_truncate(&fileHandle,fileInfo.size);
-                  }
-                }
-
-                // close file
-                if (!dryRun)
-                {
-                  File_close(&fileHandle);
-                }
-
-                // set file time, file owner/group, file permission, file attributes
-                if (!dryRun)
-                {
-                  error = File_setInfo(&fileInfo,destinationFileName);
-                  if (error != ERROR_NONE)
-                  {
-                    if (!jobOptions->noStopOnErrorFlag)
-                    {
-                      printInfo(2,"FAIL!\n");
-                      printError("cannot set file info of '%s' (error: %s)",
-                                 String_cString(destinationFileName),
-                                 Error_getText(error)
-                                );
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      printWarning("cannot set file info of '%s' (error: %s)",
-                                   String_cString(destinationFileName),
-                                   Error_getText(error)
-                                  );
-                    }
-                  }
-
-                  if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-                  if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-                  error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
-                  if (error != ERROR_NONE)
-                  {
-                    if (   !jobOptions->noStopOnOwnerErrorFlag
-                        && !File_isNetworkFileSystem(fragmentNode->name)
-                       )
-                    {
-                      printInfo(1,"FAIL!\n");
-                      printError("cannot set file owner/group of '%s' (error: %s)",
-                                 String_cString(fragmentNode->name),
-                                 Error_getText(error)
-                                );
-                      return error;
-                    }
-                    else
-                    {
-                      printWarning("cannot set file owner/group of '%s' (error: %s)",
-                                   String_cString(fragmentNode->name),
-                                   Error_getText(error)
-                                  );
-                    }
-                  }
-
-                  error = File_setAttributes(fileInfo.attributes,destinationFileName);
-                  if (error != ERROR_NONE)
-                  {
-                    if (!jobOptions->noStopOnAttributeErrorFlag)
-                    {
-                      printInfo(2,"FAIL!\n");
-                      printError("cannot set file info of '%s' (error: %s)",
-                                 String_cString(destinationFileName),
-                                 Error_getText(error)
-                                );
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      printWarning("cannot set file info of '%s' (error: %s)",
-                                   String_cString(destinationFileName),
-                                   Error_getText(error)
-                                  );
-                    }
-                  }
-                }
-
-                if (!dryRun)
-                {
-                  printInfo(2,"OK\n");
-                }
-                else
-                {
-                  printInfo(2,"OK (dry-run)\n");
-                }
-
-                // discard fragment list if file is complete
-                if (FragmentList_checkEntryComplete(fragmentNode))
-                {
-                  FragmentList_discard(&fragmentList,fragmentNode);
-                }
-
-                restoredDataFlag = TRUE;
-              }
-              else
-              {
-                // check file if exists
-                if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
-                {
-                  printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
-                  continue;
-                }
-
-                // create hard link
-                if (!dryRun)
-                {
-                  error = File_makeHardLink(destinationFileName,hardLinkFileName);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot create/write to file '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                    if (!jobOptions->noStopOnErrorFlag)
-                    {
-                      restoreInfo.failError = error;
-                      break;
-                    }
-                    else
-                    {
-                      continue;
-                    }
-                  }
-                }
-
-                if (!dryRun)
-                {
-                  printInfo(2,"OK\n");
-                }
-                else
-                {
-                  printInfo(2,"OK (dry-run)\n");
-                }
-
-                /* check if all data read.
-                   Note: it is not possible to check if all data is read when
-                   compression is used. The decompressor may not all data even
-                   data is _not_ corrupt.
-                */
-                if (   !Compress_isCompressed(archiveEntryInfo.hardLink.compressAlgorithm)
-                    && !Archive_eofData(&archiveEntryInfo))
-                {
-                  printWarning("unexpected data at end of hard link entry '%S'",fileName);
-                }
-              }
-            }
-            else
-            {
-              // skip
-              printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
-            }
-          }
-          String_delete(destinationFileName);
-          String_delete(hardLinkFileName);
-          if (restoreInfo.failError != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            StringList_done(&fileNameList);
-            continue;
-          }
-
-          // close archive entry
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printWarning("close 'hardlink' entry fail (error: %s)",Error_getText(error));
-          }
-
-          // free resources
-          StringList_done(&fileNameList);
-        }
-        break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        {
-          String   fileName;
-          FileInfo fileInfo;
-          String   destinationFileName;
-          String   parentDirectoryName;
-//            FileInfo localFileInfo;
-
-          // read special device
-          fileName = String_new();
-          error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                           &archiveHandle,
-                                           NULL,
-                                           NULL,
-                                           fileName,
-                                           &fileInfo
-                                          );
-          if (error != ERROR_NONE)
-          {
-            printError("cannot read 'special' content of archive '%s' (error: %s)!",
-                       String_cString(printableArchiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-              && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-             )
-          {
-            String_set(restoreInfo.statusInfo.name,fileName);
-            restoreInfo.statusInfo.entryDoneBytes  = 0LL;
-            restoreInfo.statusInfo.entryTotalBytes = 00L;
-            abortFlag = !updateStatusInfo(&restoreInfo);
-
-            // get destination filename
-            destinationFileName = getDestinationFileName(String_new(),
-                                                         fileName,
-                                                         jobOptions->destination,
-                                                         jobOptions->directoryStripCount
-                                                        );
-
-            // create parent directories if not existing
-            if (!dryRun)
-            {
-              parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-              if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
-              {
-                // create directory
-                error = File_makeDirectory(parentDirectoryName,
-                                           FILE_DEFAULT_USER_ID,
-                                           FILE_DEFAULT_GROUP_ID,
-                                           FILE_DEFAULT_PERMISSIONS
-                                          );
-                if (error != ERROR_NONE)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot create directory '%s' (error: %s)",
-                             String_cString(parentDirectoryName),
-                             Error_getText(error)
-                            );
-                  String_delete(parentDirectoryName);
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                  continue;
-                }
-
-                // set directory owner ship
-                error = File_setOwner(parentDirectoryName,
-                                      (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                      (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
-                                     );
-                if (error != ERROR_NONE)
-                {
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    printInfo(2,"FAIL!\n");
-                    printError("cannot set owner ship of directory '%s' (error: %s)",
-                               String_cString(parentDirectoryName),
-                               Error_getText(error)
-                              );
-                    String_delete(parentDirectoryName);
-                    String_delete(destinationFileName);
-                    (void)Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(fileName);
-                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    continue;
-                  }
-                  else
-                  {
-                    printWarning("cannot set owner ship of directory '%s' (error: %s)",
-                                 String_cString(parentDirectoryName),
-                                 Error_getText(error)
-                                );
-                  }
-                }
-              }
-              String_delete(parentDirectoryName);
-            }
-
-            // check if special file already exists
-            if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
-            {
-              printInfo(1,
-                        "  Restore special device '%s'...skipped (file exists)\n",
-                        String_cString(destinationFileName)
-                       );
-              String_delete(destinationFileName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              if (!jobOptions->noStopOnErrorFlag)
-              {
-                restoreInfo.failError = ERRORX(FILE_EXISTS_,0,String_cString(destinationFileName));
-              }
-              continue;
-            }
-
-            printInfo(2,"  Restore special device '%s'...",String_cString(destinationFileName));
-
-            // create special device
-            if (!dryRun)
-            {
-              error = File_makeSpecial(destinationFileName,
-                                       fileInfo.specialType,
-                                       fileInfo.major,
-                                       fileInfo.minor
-                                      );
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("cannot create special device '%s' (error: %s)",
-                           String_cString(fileName),
-                           Error_getText(error)
-                          );
-                String_delete(destinationFileName);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(fileName);
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-            }
-
-            // set file time, file owner/group, file permission, file attributes
-            if (!dryRun)
-            {
-              error = File_setInfo(&fileInfo,destinationFileName);
-              if (error != ERROR_NONE)
-              {
-                if (!jobOptions->noStopOnErrorFlag)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot set file info of '%s' (error: %s)",
-                             String_cString(destinationFileName),
-                             Error_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  continue;
-                }
-                else
-                {
-                  printWarning("cannot set file info of '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                }
-              }
-
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
-              if (error != ERROR_NONE)
-              {
-                if (   !jobOptions->noStopOnOwnerErrorFlag
-                    && !File_isNetworkFileSystem(fragmentNode->name)
-                   )
-                {
-                  printInfo(1,"FAIL!\n");
-                  printError("cannot set file owner/group of '%s' (error: %s)",
-                             String_cString(fragmentNode->name),
-                             Error_getText(error)
-                            );
-                  return error;
-                }
-                else
-                {
-                  printWarning("cannot set file owner/group of '%s' (error: %s)",
-                               String_cString(fragmentNode->name),
-                               Error_getText(error)
-                              );
-                }
-              }
-
-              error = File_setAttributes(fileInfo.attributes,destinationFileName);
-              if (error != ERROR_NONE)
-              {
-                if (!jobOptions->noStopOnAttributeErrorFlag)
-                {
-                  printInfo(2,"FAIL!\n");
-                  printError("cannot set file info of '%s' (error: %s)",
-                             String_cString(destinationFileName),
-                             Error_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  (void)Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  if (!jobOptions->noStopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
-                  continue;
-                }
-                else
-                {
-                  printWarning("cannot set file info of '%s' (error: %s)",
-                               String_cString(destinationFileName),
-                               Error_getText(error)
-                              );
-                }
-              }
-            }
-
-            if (!dryRun)
-            {
-              printInfo(2,"OK\n");
-            }
-            else
-            {
-              printInfo(2,"OK (dry-run)\n");
-            }
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printWarning("unexpected data at end of special entry '%S'",fileName);
-            }
-
-            // free resources
-            String_delete(destinationFileName);
-          }
-          else
-          {
-            // skip
-            printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
-          }
-
-          // close archive entry
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printWarning("close 'special' entry fail (error: %s)",Error_getText(error));
-          }
-
-          // free resources
-          String_delete(fileName);
-        }
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-    }
-  }
-
-
-  // free resources
-  Archive_close(&destinationArchiveHandle,TRUE);
-  Archive_close(&sourceArchiveHandle,FALSE);
-
-  return ERROR_NONE;
-}
-#endif /* 0 */
 
 #ifdef __cplusplus
   }

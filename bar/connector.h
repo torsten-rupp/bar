@@ -177,6 +177,17 @@ Errors Connector_connect(ConnectorInfo *connectorInfo,
 void Connector_disconnect(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
+* Name   : Connector_shutdown
+* Purpose: shutdown connector
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Connector_shutdown(ConnectorInfo *connectorInfo);
+
+/***********************************************************************\
 * Name   : Connector_isAuthorized
 * Purpose: check if connector is authorized
 * Input  : connectorInfo - connector info

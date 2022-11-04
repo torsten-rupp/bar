@@ -357,6 +357,7 @@ LOCAL Thread                jobThread;                   // thread executing job
 LOCAL Thread                schedulerThread;             // thread for scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Thread                pairingThread;               // thread for pairing master/slaves
+LOCAL Semaphore             pairingThreadTrigger;
 LOCAL Semaphore             updateIndexThreadTrigger;
 LOCAL Thread                updateIndexThread;           // thread to add/update index
 LOCAL Semaphore             autoIndexThreadTrigger;
@@ -1330,6 +1331,10 @@ LOCAL void pairingThreadCode(void)
                                            jobNode->job.slaveHost.tlsMode
                                           );
                 }
+                else
+                {
+                  slaveNode->tlsMode = jobNode->job.slaveHost.tlsMode;
+                }
               }
             }
 
@@ -1489,12 +1494,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
         if (!anyOfflineFlag && !anyUnpairedFlag)
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+          delayThread(SLEEP_TIME_PAIRING_THREAD,&pairingThreadTrigger);
         }
         else
         {
           // short sleep
-          delayThread(30,NULL);
+          delayThread(30,&pairingThreadTrigger);
         }
         break;
       case SERVER_MODE_SLAVE:
@@ -1550,12 +1555,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
            )
         {
           // short sleep
-          delayThread(5,NULL);
+          delayThread(5,&pairingThreadTrigger);
         }
         else
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,NULL);
+          delayThread(SLEEP_TIME_PAIRING_THREAD,&pairingThreadTrigger);
         }
         break;
     }
@@ -1807,18 +1812,6 @@ LOCAL void schedulerThreadCode(void)
 
                           if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
                           {
-// TODO: remove
-#if 0
-char s[100];
-fprintf(stderr,"%s:%d: %s: %d %d %s\n",__FILE__,__LINE__,String_cString(jobScheduleNode->jobUUID),
-jobScheduleNode->archiveType,
-Continuous_isEntryAvailable(&continuousDatabaseHandle,
-                                                                    String_cString(jobScheduleNode->jobUUID),
-                                                                    String_cString(jobScheduleNode->scheduleUUID)
-                                                                   ),
-Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
-);
-#endif
                             if      (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_FULL)
                                      && (   (executeScheduleNode == NULL)
                                          || (   (executeScheduleNode->archiveType == jobScheduleNode->archiveType)
@@ -1900,7 +1893,10 @@ Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
           scheduleNode = Job_findScheduleByUUID(jobNode,executeScheduleNode->scheduleUUID);
 
           // trigger job
-          if ((jobNode != NULL) && (scheduleNode != NULL))
+          if (   (jobNode != NULL)
+              && (scheduleNode != NULL)
+              && !Job_isActive(jobNode->jobState)
+             )
           {
             Job_trigger(jobNode,
                         scheduleNode->uuid,
@@ -1929,7 +1925,7 @@ Misc_formatDateTimeCString(s,sizeof(s),scheduleDateTime,TRUE,NULL)
     if (!isQuit())
     {
       // sleep and check quit flag
-      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
+      delayThread(SLEEP_TIME_SCHEDULER_THREAD,&pairingThreadTrigger);
     }
   }
   List_done(&jobScheduleList);
@@ -10505,8 +10501,9 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
-      // set modified
+      // set modified, trigger re-pairing
       Job_setModified(jobNode);
+      Semaphore_signalModified(&pairingThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
     }
     else
     {
@@ -15411,6 +15408,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &storageInfo,
                        NULL,  // archive name
                        NULL,  // deltaSourceList
+                       ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
                        CALLBACK_(NULL,NULL),
                        NULL  // logHandle
                       );
@@ -15425,7 +15423,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // list contents
   error = ERROR_NONE;
-  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS)
+  while (   !Archive_eof(&archiveHandle)
          && (error == ERROR_NONE)
          && !isCommandAborted(clientInfo,id)
         )
@@ -15435,7 +15433,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
                                         NULL,  // offset
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
+                                        NULL  // size
                                        );
     if (error == ERROR_NONE)
     {
@@ -15468,6 +15466,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                           &byteCompressAlgorithm,
                                           &cryptType,
                                           &cryptAlgorithm,
+                                          NULL,  // cryptSalt
+                                          NULL,  // cryptKey
                                           fileName,
                                           &fileInfo,
                                           NULL, // fileExtendedAttributeList
@@ -15534,6 +15534,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                            &byteCompressAlgorithm,
                                            &cryptType,
                                            &cryptAlgorithm,
+                                           NULL,  // cryptSalt
+                                           NULL,  // cryptKey
                                            imageName,
                                            &deviceInfo,
                                            &fileSystemType,
@@ -15592,6 +15594,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                                &archiveHandle,
                                                &cryptType,
                                                &cryptAlgorithm,
+                                               NULL,  // cryptSalt
+                                               NULL,  // cryptKey
                                                directoryName,
                                                &fileInfo,
                                                NULL   // fileExtendedAttributeList
@@ -15636,6 +15640,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                           &archiveHandle,
                                           &cryptType,
                                           &cryptAlgorithm,
+                                          NULL,  // cryptSalt
+                                          NULL,  // cryptKey
                                           linkName,
                                           name,
                                           NULL,  // fileInfo
@@ -15690,6 +15696,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                               &byteCompressAlgorithm,
                                               &cryptType,
                                               &cryptAlgorithm,
+                                              NULL,  // cryptSalt
+                                              NULL,  // cryptKey
                                               &fileNameList,
                                               &fileInfo,
                                               NULL,  // fileExtendedAttributeList
@@ -15747,6 +15755,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                              &archiveHandle,
                                              &cryptType,
                                              &cryptAlgorithm,
+                                             NULL,  // cryptSalt
+                                             NULL,  // cryptKey
                                              name,
                                              &fileInfo,
                                              NULL   // fileExtendedAttributeList
@@ -15780,6 +15790,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           }
           break;
         case ARCHIVE_ENTRY_TYPE_META:
+        case ARCHIVE_ENTRY_TYPE_SALT:
+        case ARCHIVE_ENTRY_TYPE_KEY:
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           error = Archive_skipNextEntry(&archiveHandle);
           if (error != ERROR_NONE)
@@ -20913,52 +20925,45 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         isIndexOpen = (Index_open(&indexHandle,NULL,10*MS_PER_SECOND) == ERROR_NONE);
       }
 
-      if      (Index_isAvailable() && isIndexOpen)
+      // add command info
+      commandInfoNode = NULL;
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        // add command info
-        commandInfoNode = NULL;
-        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
+        if (commandInfoNode == NULL)
         {
-          commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
-          if (commandInfoNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          commandInfoNode->id          = command.id;
-          commandInfoNode->indexHandle = Index_isAvailable() ? &indexHandle : NULL;
-          List_append(&clientInfo->commandInfoList,commandInfoNode);
+          HALT_INSUFFICIENT_MEMORY();
         }
-
-        // execute command
-        #ifndef NDEBUG
-          t0 = 0LL;
-          if (globalOptions.debug.serverLevel >= 1)
-          {
-            t0 = Misc_getTimestamp();
-          }
-        #endif /* not NDEBUG */
-        command.serverCommandFunction(clientInfo,
-                                      &indexHandle,
-                                      command.id,
-                                      command.argumentMap
-                                     );
-        #ifndef NDEBUG
-          if (globalOptions.debug.serverLevel >= 2)
-          {
-            t1 = Misc_getTimestamp();
-            fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
-          }
-        #endif /* not DEBUG */
-
-        // remove command info
-        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-        {
-          List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
-        }
+        commandInfoNode->id          = command.id;
+        commandInfoNode->indexHandle = Index_isAvailable() ? &indexHandle : NULL;
+        List_append(&clientInfo->commandInfoList,commandInfoNode);
       }
-      else if (Index_isAvailable())
+
+      // execute command
+      #ifndef NDEBUG
+        t0 = 0LL;
+        if (globalOptions.debug.serverLevel >= 1)
+        {
+          t0 = Misc_getTimestamp();
+        }
+      #endif /* not NDEBUG */
+      command.serverCommandFunction(clientInfo,
+                                    (Index_isAvailable() && isIndexOpen) ? &indexHandle : NULL,
+                                    command.id,
+                                    command.argumentMap
+                                   );
+      #ifndef NDEBUG
+        if (globalOptions.debug.serverLevel >= 2)
+        {
+          t1 = Misc_getTimestamp();
+          fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
+        }
+      #endif /* not DEBUG */
+
+      // remove command info
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_DATABASE_CONNECT,"");
+        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode);
       }
     }
     else
@@ -22021,6 +22026,7 @@ Errors Server_socket(void)
     {
       HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
     }
+    Semaphore_init(&pairingThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize pause thread!");
@@ -22551,6 +22557,7 @@ Errors Server_socket(void)
       HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
     }
     Thread_done(&pairingThread);
+    Semaphore_done(&pairingThreadTrigger);
     if (!Thread_join(&schedulerThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");

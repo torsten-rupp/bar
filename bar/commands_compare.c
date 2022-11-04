@@ -82,11 +82,11 @@ typedef struct
 // entry message send to compare threads
 typedef struct
 {
-  uint                   archiveIndex;
-  const ArchiveHandle    *archiveHandle;
-  ArchiveEntryTypes      archiveEntryType;
-  const ArchiveCryptInfo *archiveCryptInfo;
-  uint64                 offset;
+  uint                archiveIndex;
+  const ArchiveHandle *archiveHandle;
+  ArchiveEntryTypes   archiveEntryType;
+  ArchiveCryptInfo    *archiveCryptInfo;
+  uint64              offset;
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -292,6 +292,8 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                                 &byteCompressAlgorithm,
                                 NULL,  // cryptType
                                 NULL,  // cryptAlgorithm
+                                NULL,  // cryptSalt
+                                NULL,  // cryptKey
                                 fileName,
                                 &fileInfo,
                                 NULL,  // fileExtendedAttributeList
@@ -502,7 +504,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
     }
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
@@ -598,6 +600,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                  &byteCompressAlgorithm,
                                  NULL,  // cryptType
                                  NULL,  // cryptAlgorithm
+                                 NULL,  // cryptSalt
+                                 NULL,  // cryptKey
                                  deviceName,
                                  &deviceInfo,
                                  NULL,  // fileSystemType
@@ -870,15 +874,15 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),blockCount*(uint64)deviceInfo.blockSize);
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
     }
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
       stringFormat(fragmentString,sizeof(fragmentString),
                    ", fragment %*"PRIu64"..%*"PRIu64,
-                   stringInt64Length(deviceInfo.size),blockOffset*(uint64)deviceInfo.blockSize,
-                   stringInt64Length(deviceInfo.size),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL
+                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize,
+                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL
                   );
     }
 
@@ -949,6 +953,8 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
                                      archiveHandle,
                                      NULL,  // cryptType
                                      NULL,  // cryptAlgorithm
+                                     NULL,  // cryptSalt
+                                     NULL,  // cryptKey
                                      directoryName,
                                      &fileInfo,
                                      NULL   // fileExtendedAttributeList
@@ -1073,6 +1079,8 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
                                 archiveHandle,
                                 NULL,  // cryptType
                                 NULL,  // cryptAlgorithm
+                                NULL,  // cryptSalt
+                                NULL,  // cryptKey
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -1262,6 +1270,8 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                     &byteCompressAlgorithm,
                                     NULL,  // cryptType
                                     NULL,  // cryptAlgorithm
+                                    NULL,  // cryptSalt
+                                    NULL,  // cryptKey
                                     &fileNameList,
                                     &fileInfo,
                                     NULL,  // fileExtendedAttributeList
@@ -1507,7 +1517,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
@@ -1519,7 +1529,6 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                       );
         }
 
-        // output
         printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
 
         comparedDataFlag = TRUE;
@@ -1535,7 +1544,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fileInfo.size);
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
@@ -1553,7 +1562,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          printInfo(1,"xxx11 FAIL!\n");
+          printInfo(1,"FAIL!\n");
         }
       }
     }
@@ -1611,6 +1620,8 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                                    archiveHandle,
                                    NULL,  // cryptType
                                    NULL,  // cryptAlgorithm
+                                   NULL,  // cryptSalt
+                                   NULL,  // cryptKey
                                    fileName,
                                    &fileInfo,
                                    NULL   // fileExtendedAttributeList
@@ -1883,6 +1894,8 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         case ARCHIVE_ENTRY_TYPE_META:
           error = Archive_skipNextEntry(&archiveHandle);
           break;
+        case ARCHIVE_ENTRY_TYPE_SALT:
+        case ARCHIVE_ENTRY_TYPE_KEY:
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -1943,19 +1956,19 @@ LOCAL Errors compareArchive(CompareInfo      *compareInfo,
                             ConstString      archiveName
                            )
 {
-  AutoFreeList           autoFreeList;
-  String                 printableStorageName;
-  uint                   compareThreadCount;
-  StorageInfo            storageInfo;
-  Errors                 error;
-  uint                   i;
-  ArchiveHandle          archiveHandle;
-  CryptSignatureStates   allCryptSignatureState;
-  uint64                 lastSignatureOffset;
-  ArchiveEntryTypes      archiveEntryType;
-  const ArchiveCryptInfo *archiveCryptInfo;
-  uint64                 offset;
-  EntryMsg               entryMsg;
+  AutoFreeList         autoFreeList;
+  String               printableStorageName;
+  uint                 compareThreadCount;
+  StorageInfo          storageInfo;
+  Errors               error;
+  uint                 i;
+  ArchiveHandle        archiveHandle;
+  CryptSignatureStates allCryptSignatureState;
+  uint64               lastSignatureOffset;
+  ArchiveEntryTypes    archiveEntryType;
+  ArchiveCryptInfo     *archiveCryptInfo;
+  uint64               offset;
+  EntryMsg             entryMsg;
 
   assert(compareInfo != NULL);
   assert(storageSpecifier != NULL);
@@ -2009,6 +2022,7 @@ NULL, // masterSocketHandle
                        &storageInfo,
                        archiveName,
                        &compareInfo->jobOptions->deltaSourceList,
+                       ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE),
                        CALLBACK_(compareInfo->getNamePasswordFunction,compareInfo->getNamePasswordUserData),
                        compareInfo->logHandle
                       );
@@ -2089,7 +2103,7 @@ NULL, // masterSocketHandle
   lastSignatureOffset    = Archive_tell(&archiveHandle);
   while (   (compareInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
          && ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
-         && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
+         && !Archive_eof(&archiveHandle)
         )
   {
     // get next archive entry type
@@ -2097,7 +2111,7 @@ NULL, // masterSocketHandle
                                         &archiveEntryType,
                                         &archiveCryptInfo,
                                         &offset,
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
+                                        NULL  // size
                                        );
     if (error != ERROR_NONE)
     {

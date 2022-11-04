@@ -95,11 +95,11 @@ typedef struct
 // entry message send to restore threads
 typedef struct
 {
-  uint                   archiveIndex;
-  const ArchiveHandle    *archiveHandle;
-  ArchiveEntryTypes      archiveEntryType;
-  const ArchiveCryptInfo *archiveCryptInfo;
-  uint64                 offset;
+  uint                archiveIndex;
+  const ArchiveHandle *archiveHandle;
+  ArchiveEntryTypes   archiveEntryType;
+  ArchiveCryptInfo    *archiveCryptInfo;
+  uint64              offset;
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -725,6 +725,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                                 NULL,  // byteCompressAlgorithm
                                 NULL,  // cryptType
                                 NULL,  // cryptAlgorithm
+                                NULL,  // cryptSalt
+                                NULL,  // cryptKey
                                 fileName,
                                 &fileInfo,
                                 &fileExtendedAttributeList,
@@ -1161,7 +1163,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
     else
     {
-      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fileInfo.size);
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
     }
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
@@ -1277,6 +1279,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                  NULL,  // byteCompressAlgorithm
                                  NULL,  // cryptType
                                  NULL,  // cryptAlgorithm
+                                 NULL,  // cryptSalt
+                                 NULL,  // cryptKey
                                  deviceName,
                                  &deviceInfo,
                                  NULL,  // fileSystemType
@@ -1680,7 +1684,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                   );
     }
 
-    // output result
     if (!restoreInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
@@ -1763,6 +1766,8 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                                      archiveHandle,
                                      NULL,  // cryptType
                                      NULL,  // cryptAlgorithm
+                                     NULL,  // cryptSalt
+                                     NULL,  // cryptKey
                                      directoryName,
                                      &fileInfo,
                                      &fileExtendedAttributeList
@@ -2065,6 +2070,8 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                                 archiveHandle,
                                 NULL,  // cryptType
                                 NULL,  // cryptAlgorithm
+                                NULL,  // cryptSalt
+                                NULL,  // cryptKey
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -2355,6 +2362,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                     NULL,  // byteCompressAlgorithm
                                     NULL,  // cryptType
                                     NULL,  // cryptAlgorithm
+                                    NULL,  // cryptSalt
+                                    NULL,  // cryptKey
                                     &fileNameList,
                                     &fileInfo,
                                     &fileExtendedAttributeList,
@@ -2816,7 +2825,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                       );
         }
 
-        // output result
         if (!restoreInfo->jobOptions->dryRun)
         {
           printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
@@ -2934,6 +2942,8 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                                    archiveHandle,
                                    NULL,  // cryptType
                                    NULL,  // cryptAlgorithm
+                                   NULL,  // cryptSalt
+                                   NULL,  // cryptKey
                                    fileName,
                                    &fileInfo,
                                    &fileExtendedAttributeList
@@ -3294,6 +3304,8 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
         case ARCHIVE_ENTRY_TYPE_META:
           error = Archive_skipNextEntry(&archiveHandle);
           break;
+        case ARCHIVE_ENTRY_TYPE_SALT:
+        case ARCHIVE_ENTRY_TYPE_KEY:
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -3365,7 +3377,7 @@ LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
   CryptSignatureStates   allCryptSignatureState;
   uint64                 lastSignatureOffset;
   ArchiveEntryTypes      archiveEntryType;
-  const ArchiveCryptInfo *archiveCryptInfo;
+  ArchiveCryptInfo       *archiveCryptInfo;
   uint64                 offset;
   EntryMsg               entryMsg;
 
@@ -3427,7 +3439,7 @@ NULL, // masterIO
   // check if storage exists
   if (!Storage_exists(&storageInfo,archiveName))
   {
-    printError("archive not found '%s'!",
+    printError("storage not found '%s'!",
                String_cString(printableStorageName)
               );
     error = handleError(restoreInfo,ERRORX_(ARCHIVE_NOT_FOUND,0,"%s",String_cString(printableStorageName)));
@@ -3440,6 +3452,7 @@ NULL, // masterIO
                        &storageInfo,
                        archiveName,
                        &restoreInfo->jobOptions->deltaSourceList,
+                       ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE),
                        CALLBACK_(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        restoreInfo->logHandle
                       );
@@ -3526,7 +3539,7 @@ NULL, // masterIO
   while (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
          && (restoreInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
-         && !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
+         && !Archive_eof(&archiveHandle)
         )
   {
     // pause
@@ -3540,7 +3553,7 @@ NULL, // masterIO
                                         &archiveEntryType,
                                         &archiveCryptInfo,
                                         &offset,
-                                        isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE
+                                        NULL  // size
                                        );
     if (error != ERROR_NONE)
     {

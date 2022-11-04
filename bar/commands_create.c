@@ -3925,6 +3925,7 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
                        storageInfo,
                        archiveName,
                        NULL,  // deltaSourceList,
+                       ARCHIVE_FLAG_NONE,
                        CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                        NULL // logHandle
                       );
@@ -3936,6 +3937,7 @@ Misc_udelay(1000*1000);
                          storageInfo,
                          archiveName,
                          NULL,  // deltaSourceList,
+                         ARCHIVE_FLAG_NONE,
                          CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                          NULL // logHandle
                         );
@@ -3948,7 +3950,7 @@ Misc_udelay(1000*1000);
   // simple test: read and skip content of archive entries
   error = ERROR_NONE;
   while (   (error == ERROR_NONE)
-         && !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
+         && !Archive_eof(&archiveHandle)
         )
   {
     // get next archive entry type
@@ -3956,7 +3958,7 @@ Misc_udelay(1000*1000);
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo,
                                         NULL,  // offset,
-                                        ARCHIVE_FLAG_NONE
+                                        NULL  // size
                                        );
     if (error == ERROR_NONE)
     {
@@ -3975,6 +3977,8 @@ Misc_udelay(1000*1000);
                                         NULL,  // byteCompressAlgorithm
                                         NULL,  // cryptType
                                         NULL,  // cryptAlgorithm
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         NULL,  // fileName,
                                         NULL,  // fileInfo,
                                         NULL,  // fileExtendedAttributeList
@@ -3995,6 +3999,8 @@ Misc_udelay(1000*1000);
                                          NULL,  // byteCompressAlgorithm
                                          NULL,  // cryptType
                                          NULL,  // cryptAlgorithm
+                                         NULL,  // cryptSalt
+                                         NULL,  // cryptKey
                                          NULL,  // deviceName,
                                          NULL,  // deviceInfo,
                                          NULL,  // fileSystemType
@@ -4013,6 +4019,8 @@ Misc_udelay(1000*1000);
                                              &archiveHandle,
                                              NULL,  // cryptType
                                              NULL,  // cryptAlgorithm
+                                             NULL,  // cryptSalt
+                                             NULL,  // cryptKey
                                              NULL,  // directoryName,
                                              NULL,  // fileInfo,
                                              NULL   // fileExtendedAttributeList
@@ -4027,6 +4035,8 @@ Misc_udelay(1000*1000);
                                         &archiveHandle,
                                         NULL,  // cryptType
                                         NULL,  // cryptAlgorithm
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         NULL,  // linkName,
                                         NULL,  // fileName,
                                         NULL,  // fileInfo,
@@ -4044,6 +4054,8 @@ Misc_udelay(1000*1000);
                                             NULL,  // byteCompressAlgorithm
                                             NULL,  // cryptType
                                             NULL,  // cryptAlgorithm
+                                            NULL,  // cryptSalt
+                                            NULL,  // cryptKey
                                             NULL,  // fileNameList,
                                             NULL,  // fileInfo,
                                             NULL,  // fileExtendedAttributeList
@@ -4062,6 +4074,8 @@ Misc_udelay(1000*1000);
                                            &archiveHandle,
                                            NULL,  // cryptType
                                            NULL,  // cryptAlgorithm
+                                           NULL,  // cryptSalt
+                                           NULL,  // cryptKey
                                            NULL,  // fileName,
                                            NULL,  // fileInfo,
                                            NULL   // fileExtendedAttributeList
@@ -4073,6 +4087,14 @@ Misc_udelay(1000*1000);
           break;
         case ARCHIVE_ENTRY_TYPE_META:
           error = Archive_skipNextEntry(&archiveHandle);
+          break;
+        case ARCHIVE_ENTRY_TYPE_SALT:
+        case ARCHIVE_ENTRY_TYPE_KEY:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNREACHABLE();
+          #else
+            error = Archive_skipNextEntry(&archiveHandle);
+          #endif /* NDEBUG */
           break;
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
           error = Archive_skipNextEntry(&archiveHandle);
@@ -5810,6 +5832,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                                  createInfo->jobOptions->compressAlgorithms.delta,
                                  createInfo->jobOptions->compressAlgorithms.byte,
                                  createInfo->jobOptions->cryptAlgorithms[0],
+                                 NULL,  // cryptSalt
+                                 NULL,  // cryptKey
                                  archiveEntryName,
                                  fileInfo,
                                  &fileExtendedAttributeList,
@@ -6017,9 +6041,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
     if (!createInfo->jobOptions->dryRun)
     {
-      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-      printInfo(1,"OK (%*"PRIu64" bytes%s%s)\n",
-                (int)d,
+      printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -6036,9 +6058,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
     else
     {
-      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-      printInfo(1,"OK (%*"PRIu64" bytes%s%s, dry-run)\n",
-                (int)d,
+      printInfo(1,"OK (%"PRIu64" bytes%s%s, dry-run)\n",
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -6056,9 +6076,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       }
     }
 
-    d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-    printInfo(1,"OK (%*"PRIu64" bytes, not stored)\n",
-              (int)d,
+    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
               fragmentSize
              );
   }
@@ -6257,6 +6275,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                                   createInfo->jobOptions->compressAlgorithms.delta,
                                   createInfo->jobOptions->compressAlgorithms.byte,
                                   createInfo->jobOptions->cryptAlgorithms[0],
+                                  NULL,  // cryptSalt
+                                  NULL,  // cryptKey
                                   archiveEntryName,
                                   deviceInfo,
                                   fileSystemHandle.type,
@@ -6482,10 +6502,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     // output result
     if (!createInfo->jobOptions->dryRun)
     {
-      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-      printInfo(1,"OK (%s, %*"PRIu64" bytes%s%s)\n",
+      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
-                (int)d,
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -6502,10 +6520,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
     else
     {
-      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-      printInfo(1,"OK (%s, %*"PRIu64" bytes%s%s, dry-run)\n",
+      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s, dry-run)\n",
                 fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
-                (int)d,
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -6643,6 +6659,8 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       createInfo->jobOptions->cryptAlgorithms[0],
+                                      NULL,  // cryptSalt
+                                      NULL,  // cryptKey
                                       archiveEntryName,
                                       fileInfo,
                                       &fileExtendedAttributeList
@@ -6844,6 +6862,8 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  createInfo->jobOptions->cryptAlgorithms[0],
+                                 NULL,  // cryptSalt
+                                 NULL,  // cryptKey
                                  archiveEntryName,
                                  fileName,
                                  fileInfo,
@@ -7109,6 +7129,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      createInfo->jobOptions->compressAlgorithms.delta,
                                      createInfo->jobOptions->compressAlgorithms.byte,
                                      createInfo->jobOptions->cryptAlgorithms[0],
+                                     NULL,  // cryptSalt
+                                     NULL,  // cryptKey
                                      &archiveEntryNameList,
                                      fileInfo,
                                      &fileExtendedAttributeList,
@@ -7321,9 +7343,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // output result
     if (!createInfo->jobOptions->dryRun)
     {
-      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-      printInfo(1,"OK (%*"PRIu64" bytes%s%s)\n",
-                (int)d,
+      printInfo(1,"OK (%"PRIu64" bytes%s%s)\n",
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -7339,9 +7359,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
     else
     {
-      d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-      printInfo(1,"OK (%*"PRIu64" bytes%s%s, dry-run)\n",
-                (int)d,
+      printInfo(1,"OK (%"PRIu64" bytes%s%s, dry-run)\n",
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -7359,9 +7377,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       }
     }
 
-    d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-    printInfo(1,"OK (%*"PRIu64" bytes, not stored)\n",
-              (int)d,
+    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
               fragmentSize
              );
   }
@@ -7489,6 +7505,8 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     createInfo->jobOptions->cryptAlgorithms[0],
+                                    NULL,  // cryptSalt
+                                    NULL,  // cryptKey
                                     archiveEntryName,
                                     fileInfo,
                                     &fileExtendedAttributeList
@@ -8107,8 +8125,10 @@ Errors Command_create(ServerIO                     *masterIO,
                          archiveType,
                          jobOptions->dryRun,
                          createdDateTime,
-                         TRUE,  // createMeta
                          NULL,  // cryptPassword
+                           ARCHIVE_FLAG_CREATE_SALT
+                         | ARCHIVE_FLAG_CREATE_KEY
+                         | ARCHIVE_FLAG_CREATE_META,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
                          CALLBACK_(archiveGetSize,&createInfo),

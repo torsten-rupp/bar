@@ -160,6 +160,8 @@ typedef struct
 } EncryptedKeyInfo;
 
 /***************************** Variables *******************************/
+uint cryptKeyLengths[CRYPT_ALGORITHM_MAX];
+uint cryptBlockLengths[CRYPT_ALGORITHM_MAX];
 
 /****************************** Macros *********************************/
 
@@ -172,11 +174,251 @@ typedef struct
 #endif
 
 #ifdef HAVE_GCRYPT
+/***********************************************************************\
+* Name   : getCryptKeyLength
+* Purpose: get key length of crypt algorihm
+* Input  : cryptAlgorithm - crypt algorithm
+* Output : keyLength - key length
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getCryptKeyLength(CryptAlgorithms cryptAlgorithm,
+                               uint            *keyLength
+                              )
+{
+  assert(keyLength != NULL);
+
+  switch (cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:
+      (*keyLength) = 0;
+      break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
+    case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
+      #ifdef HAVE_GCRYPT
+        {
+          int          gcryptAlgorithm;
+          gcry_error_t gcryptError;
+          size_t       n;
+
+          gcryptAlgorithm = 0;
+          switch (cryptAlgorithm)
+          {
+            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
+            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
+            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
+            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
+            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
+            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
+            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
+            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
+            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
+            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
+            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
+            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
+            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
+            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
+          }
+
+          // check if algorithm available
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_TEST_ALGO,
+                                              NULL,
+                                              NULL
+                                             );
+          if (gcryptError != 0)
+          {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+            return ERRORX_(INIT_CIPHER,
+                           gcryptError,
+                           "cipher '%s' not available: %s",
+                           Crypt_algorithmToString(cryptAlgorithm,NULL),
+                           buffer
+                          );
+          }
+
+          // get key length
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_GET_KEYLEN,
+                                              NULL,
+                                              &n
+                                             );
+          if (gcryptError != 0)
+          {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+            return ERRORX_(INIT_CIPHER,
+                           gcryptError,
+                           "detect key length of '%s': %s",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           buffer
+                          );
+          }
+          (*keyLength) = n*8;
+        }
+      #else /* not HAVE_GCRYPT */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : getCryptBlockLength
+* Purpose: get block length of crypt algorihm
+* Input  : cryptAlgorithm - crypt algorithm
+* Output : blockLength - block length
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getCryptBlockLength(CryptAlgorithms cryptAlgorithm,
+                                 uint            *blockLength
+                                )
+{
+  assert(blockLength != NULL);
+
+  switch (cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:
+      (*blockLength) = BLOCK_LENGTH_CRYPT_NONE;
+      break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
+    case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
+      #ifdef HAVE_GCRYPT
+        {
+          int          gcryptAlgorithm;
+          gcry_error_t gcryptError;
+          size_t       n;
+
+          gcryptAlgorithm = 0;
+          switch (cryptAlgorithm)
+          {
+            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
+            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
+            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
+            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
+            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
+            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
+            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
+            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
+            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
+            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
+            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
+            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
+            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
+            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
+          }
+
+          // check if algorithm available
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_TEST_ALGO,
+                                              NULL,
+                                              NULL
+                                             );
+          if (gcryptError != 0)
+          {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+            return ERRORX_(INIT_CIPHER,
+                           gcryptError,
+                           "cipher '%s' not available: %s",
+                           Crypt_algorithmToString(cryptAlgorithm,NULL),
+                           buffer
+                          );
+          }
+
+          // get block length
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_GET_BLKLEN,
+                                              NULL,
+                                              &n
+                                             );
+          if (gcryptError != 0)
+          {
+            char buffer[128];
+
+            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
+            return ERRORX_(INIT_CIPHER,
+                           gcryptError,
+                           "detect block length of '%s': %s",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           buffer
+                          );
+          }
+          (*blockLength) = n;
+        }
+      #else /* not HAVE_GCRYPT */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return ERROR_NONE;
+}
+#endif /* HAVE_GCRYPT */
+
+#ifdef HAVE_GCRYPT
 //  GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif /* HAVE_GCRYPT */
 
 Errors Crypt_initAll(void)
 {
+  #ifdef HAVE_GCRYPT
+    Errors error;
+  #endif /* HAVE_GCRYPT */
+
   #ifdef HAVE_GCRYPT
     // check version and do internal library init
     assert(GCRYPT_VERSION_NUMBER >= 0x010600);
@@ -190,6 +432,70 @@ Errors Crypt_initAll(void)
 //NYI: required/useful?
 //      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
     #endif
+
+    // get key lengths
+    error = getCryptKeyLength(CRYPT_ALGORITHM_NONE,&cryptKeyLengths[CRYPT_ALGORITHM_NONE]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_3DES,&cryptKeyLengths[CRYPT_ALGORITHM_3DES]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_CAST5,&cryptKeyLengths[CRYPT_ALGORITHM_CAST5]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_BLOWFISH,&cryptKeyLengths[CRYPT_ALGORITHM_BLOWFISH]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_AES128,&cryptKeyLengths[CRYPT_ALGORITHM_AES128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_AES192,&cryptKeyLengths[CRYPT_ALGORITHM_AES192]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_AES256,&cryptKeyLengths[CRYPT_ALGORITHM_AES256]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_TWOFISH128,&cryptKeyLengths[CRYPT_ALGORITHM_TWOFISH128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_TWOFISH256,&cryptKeyLengths[CRYPT_ALGORITHM_TWOFISH256]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_SERPENT128,&cryptKeyLengths[CRYPT_ALGORITHM_SERPENT128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_SERPENT192,&cryptKeyLengths[CRYPT_ALGORITHM_SERPENT192]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_SERPENT256,&cryptKeyLengths[CRYPT_ALGORITHM_SERPENT256]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_CAMELLIA128,&cryptKeyLengths[CRYPT_ALGORITHM_CAMELLIA128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_CAMELLIA192,&cryptKeyLengths[CRYPT_ALGORITHM_CAMELLIA192]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptKeyLength(CRYPT_ALGORITHM_CAMELLIA256,&cryptKeyLengths[CRYPT_ALGORITHM_CAMELLIA256]);
+    if (error != ERROR_NONE) return error;
+
+    // get block lengths
+    error = getCryptBlockLength(CRYPT_ALGORITHM_NONE,&cryptBlockLengths[CRYPT_ALGORITHM_NONE]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_3DES,&cryptBlockLengths[CRYPT_ALGORITHM_3DES]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_CAST5,&cryptBlockLengths[CRYPT_ALGORITHM_CAST5]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_BLOWFISH,&cryptBlockLengths[CRYPT_ALGORITHM_BLOWFISH]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_AES128,&cryptBlockLengths[CRYPT_ALGORITHM_AES128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_AES192,&cryptBlockLengths[CRYPT_ALGORITHM_AES192]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_AES256,&cryptBlockLengths[CRYPT_ALGORITHM_AES256]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_TWOFISH128,&cryptBlockLengths[CRYPT_ALGORITHM_TWOFISH128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_TWOFISH256,&cryptBlockLengths[CRYPT_ALGORITHM_TWOFISH256]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_SERPENT128,&cryptBlockLengths[CRYPT_ALGORITHM_SERPENT128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_SERPENT192,&cryptBlockLengths[CRYPT_ALGORITHM_SERPENT192]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_SERPENT256,&cryptBlockLengths[CRYPT_ALGORITHM_SERPENT256]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_CAMELLIA128,&cryptBlockLengths[CRYPT_ALGORITHM_CAMELLIA128]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_CAMELLIA192,&cryptBlockLengths[CRYPT_ALGORITHM_CAMELLIA192]);
+    if (error != ERROR_NONE) return error;
+    error = getCryptBlockLength(CRYPT_ALGORITHM_CAMELLIA256,&cryptBlockLengths[CRYPT_ALGORITHM_CAMELLIA256]);
+    if (error != ERROR_NONE) return error;
   #endif /* HAVE_GCRYPT */
 
   return ERROR_NONE;
@@ -205,7 +511,7 @@ CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt)
 {
   assert(cryptSalt != NULL);
 
-  cryptSalt->length = 0;
+  cryptSalt->dataLength = 0;
 
   return cryptSalt;
 }
@@ -214,10 +520,10 @@ CryptSalt *Crypt_duplicateSalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptS
 {
   assert(cryptSalt != NULL);
   assert(fromCryptSalt != NULL);
-  assert(sizeof(cryptSalt->data) >= fromCryptSalt->length);
+  assert(sizeof(cryptSalt->data) >= fromCryptSalt->dataLength);
 
-  cryptSalt->length = MIN(fromCryptSalt->length,sizeof(cryptSalt->data));
-  memCopyFast(cryptSalt->data,cryptSalt->length,fromCryptSalt->data,fromCryptSalt->length);
+  cryptSalt->dataLength = MIN(fromCryptSalt->dataLength,sizeof(cryptSalt->data));
+  memCopyFast(cryptSalt->data,cryptSalt->dataLength,fromCryptSalt->data,fromCryptSalt->dataLength);
 
   return cryptSalt;
 }
@@ -229,13 +535,13 @@ void Crypt_doneSalt(CryptSalt *cryptSalt)
   UNUSED_VARIABLE(cryptSalt);
 }
 
-CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length)
+CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint dataLength)
 {
   assert(cryptSalt != NULL);
   assert(data != NULL);
 
-  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),data,length);
-  cryptSalt->length = MIN(sizeof(cryptSalt->data),length);
+  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),data,dataLength);
+  cryptSalt->dataLength = MIN(sizeof(cryptSalt->data),dataLength);
 
   return cryptSalt;
 }
@@ -245,7 +551,7 @@ CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt)
   assert(cryptSalt != NULL);
 
   memClear(cryptSalt->data,sizeof(cryptSalt->data));
-  cryptSalt->length = 0;
+  cryptSalt->dataLength = 0;
 
   return cryptSalt;
 }
@@ -254,10 +560,10 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt)
 {
   assert(cryptSalt != NULL);
   assert(fromCryptSalt != NULL);
-  assert(sizeof(cryptSalt->data) >= fromCryptSalt->length);
+  assert(sizeof(cryptSalt->data) >= fromCryptSalt->dataLength);
 
-  cryptSalt->length = MIN(fromCryptSalt->length,sizeof(cryptSalt->data));
-  memCopyFast(cryptSalt->data,cryptSalt->length,fromCryptSalt->data,fromCryptSalt->length);
+  cryptSalt->dataLength = MIN(fromCryptSalt->dataLength,sizeof(cryptSalt->data));
+  memCopyFast(cryptSalt->data,cryptSalt->dataLength,fromCryptSalt->data,fromCryptSalt->dataLength);
 
   return cryptSalt;
 }
@@ -267,7 +573,7 @@ CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt)
   assert(cryptSalt != NULL);
 
   Crypt_randomize(cryptSalt->data,sizeof(cryptSalt->data));
-  cryptSalt->length = sizeof(cryptSalt->data);
+  cryptSalt->dataLength = sizeof(cryptSalt->data);
 
   return cryptSalt;
 }
@@ -499,222 +805,6 @@ void Crypt_randomize(byte *buffer, uint length)
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
-                          uint            *keyLength
-                         )
-{
-  assert(keyLength != NULL);
-
-  switch (cryptAlgorithm)
-  {
-    case CRYPT_ALGORITHM_NONE:
-      (*keyLength) = 0;
-      break;
-    case CRYPT_ALGORITHM_3DES:
-    case CRYPT_ALGORITHM_CAST5:
-    case CRYPT_ALGORITHM_BLOWFISH:
-    case CRYPT_ALGORITHM_AES128:
-    case CRYPT_ALGORITHM_AES192:
-    case CRYPT_ALGORITHM_AES256:
-    case CRYPT_ALGORITHM_TWOFISH128:
-    case CRYPT_ALGORITHM_TWOFISH256:
-    case CRYPT_ALGORITHM_SERPENT128:
-    case CRYPT_ALGORITHM_SERPENT192:
-    case CRYPT_ALGORITHM_SERPENT256:
-    case CRYPT_ALGORITHM_CAMELLIA128:
-    case CRYPT_ALGORITHM_CAMELLIA192:
-    case CRYPT_ALGORITHM_CAMELLIA256:
-      #ifdef HAVE_GCRYPT
-        {
-          int          gcryptAlgorithm;
-          gcry_error_t gcryptError;
-          size_t       n;
-
-          gcryptAlgorithm = 0;
-          switch (cryptAlgorithm)
-          {
-            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
-            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
-            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
-            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
-            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
-            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
-            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
-            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
-            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
-            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
-            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
-            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
-            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
-            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break;
-          }
-
-          // check if algorithm available
-          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
-                                              GCRYCTL_TEST_ALGO,
-                                              NULL,
-                                              NULL
-                                             );
-          if (gcryptError != 0)
-          {
-            char buffer[128];
-
-            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
-            return ERRORX_(INIT_CIPHER,
-                           gcryptError,
-                           "cipher '%s' not available: %s",
-                           Crypt_algorithmToString(cryptAlgorithm,NULL),
-                           buffer
-                          );
-          }
-
-          // get key length
-          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
-                                              GCRYCTL_GET_KEYLEN,
-                                              NULL,
-                                              &n
-                                             );
-          if (gcryptError != 0)
-          {
-            char buffer[128];
-
-            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
-            return ERRORX_(INIT_CIPHER,
-                           gcryptError,
-                           "detect key length of '%s': %s",
-                           gcry_cipher_algo_name(gcryptAlgorithm),
-                           buffer
-                          );
-          }
-          (*keyLength) = n*8;
-        }
-      #else /* not HAVE_GCRYPT */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_GCRYPT */
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
-
-  return ERROR_NONE;
-}
-
-Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
-                            uint            *blockLength
-                           )
-{
-  assert(blockLength != NULL);
-
-  switch (cryptAlgorithm)
-  {
-    case CRYPT_ALGORITHM_NONE:
-      (*blockLength) = BLOCK_LENGTH_CRYPT_NONE;
-      break;
-    case CRYPT_ALGORITHM_3DES:
-    case CRYPT_ALGORITHM_CAST5:
-    case CRYPT_ALGORITHM_BLOWFISH:
-    case CRYPT_ALGORITHM_AES128:
-    case CRYPT_ALGORITHM_AES192:
-    case CRYPT_ALGORITHM_AES256:
-    case CRYPT_ALGORITHM_TWOFISH128:
-    case CRYPT_ALGORITHM_TWOFISH256:
-    case CRYPT_ALGORITHM_SERPENT128:
-    case CRYPT_ALGORITHM_SERPENT192:
-    case CRYPT_ALGORITHM_SERPENT256:
-    case CRYPT_ALGORITHM_CAMELLIA128:
-    case CRYPT_ALGORITHM_CAMELLIA192:
-    case CRYPT_ALGORITHM_CAMELLIA256:
-      #ifdef HAVE_GCRYPT
-        {
-          int          gcryptAlgorithm;
-          gcry_error_t gcryptError;
-          size_t       n;
-
-          gcryptAlgorithm = 0;
-          switch (cryptAlgorithm)
-          {
-            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
-            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
-            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
-            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
-            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
-            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
-            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
-            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
-            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
-            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
-            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
-            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
-            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
-            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break;
-          }
-
-          // check if algorithm available
-          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
-                                              GCRYCTL_TEST_ALGO,
-                                              NULL,
-                                              NULL
-                                             );
-          if (gcryptError != 0)
-          {
-            char buffer[128];
-
-            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
-            return ERRORX_(INIT_CIPHER,
-                           gcryptError,
-                           "cipher '%s' not available: %s",
-                           Crypt_algorithmToString(cryptAlgorithm,NULL),
-                           buffer
-                          );
-          }
-
-          // get block length
-          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
-                                              GCRYCTL_GET_BLKLEN,
-                                              NULL,
-                                              &n
-                                             );
-          if (gcryptError != 0)
-          {
-            char buffer[128];
-
-            gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
-            return ERRORX_(INIT_CIPHER,
-                           gcryptError,
-                           "detect block length of '%s': %s",
-                           gcry_cipher_algo_name(gcryptAlgorithm),
-                           buffer
-                          );
-          }
-          (*blockLength) = n;
-        }
-      #else /* not HAVE_GCRYPT */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_GCRYPT */
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
-
-  return ERROR_NONE;
-}
-
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
@@ -740,7 +830,7 @@ Errors __Crypt_init(const char      *__fileName__,
   // init variables
   cryptInfo->cryptAlgorithm = cryptAlgorithm;
   cryptInfo->cryptMode      = cryptMode;
-  if (Crypt_isSalt(cryptSalt))
+  if (Crypt_isSaltAvailable(cryptSalt))
   {
     Crypt_copySalt(&cryptInfo->cryptSalt,cryptSalt);
   }
@@ -864,7 +954,11 @@ Errors __Crypt_init(const char      *__fileName__,
           keyLength = (uint)(n*8);
 //fprintf(stderr,"%s, %d: blockLength=%d\n",__FILE__,__LINE__,cryptInfo->blockLength);
 
-          // check key length
+          // check key
+          if (!Crypt_isKeyAvailable(cryptKey))
+          {
+            return ERROR_NO_CRYPT_KEY;
+          }
           if (keyLength > cryptKey->dataLength*8)
           {
             return ERROR_INVALID_KEY_LENGTH;
@@ -913,9 +1007,9 @@ Errors __Crypt_init(const char      *__fileName__,
           }
 
           // set salt as IV
-          if (Crypt_isSalt(&cryptInfo->cryptSalt))
+          if (Crypt_isSaltAvailable(&cryptInfo->cryptSalt))
           {
-            if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
+            if (cryptInfo->cryptSalt.dataLength < cryptInfo->blockLength)
             {
               gcry_cipher_close(cryptInfo->gcry_cipher_hd);
               return ERROR_INVALID_SALT_LENGTH;
@@ -1089,9 +1183,9 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
 
           // set salt as IV
-          if (Crypt_isSalt(&cryptInfo->cryptSalt))
+          if (Crypt_isSaltAvailable(&cryptInfo->cryptSalt))
           {
-            if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
+            if (cryptInfo->cryptSalt.dataLength < cryptInfo->blockLength)
             {
               return ERROR_INVALID_SALT_LENGTH;
             }
@@ -1472,19 +1566,22 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   uint dataLength;
   void *data;
   #ifdef HAVE_GCRYPT
-    gcry_error_t gcryptError;
+//    gcry_error_t gcryptError;
     gcry_sexp_t  key;
   #endif /* HAVE_GCRYPT */
 
   // allocate secure memory
-  dataLength = cryptKey->dataLength;
+  dataLength = fromCryptKey->dataLength;
   data       = allocSecure(dataLength);
   if (data == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
   memCopyFast(data,dataLength,fromCryptKey->data,fromCryptKey->dataLength);
+  key = NULL;
 
+// TODO: remove
+#if 0
   // create key
   #ifdef HAVE_GCRYPT
     gcryptError = gcry_sexp_new(&key,
@@ -1502,6 +1599,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
     }
     assert(key != NULL);
   #endif /* HAVE_GCRYPT */
+#endif
 
   // set key
   cryptKey->cryptPaddingType = fromCryptKey->cryptPaddingType;
@@ -1661,12 +1759,13 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         gcryptError = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
+fprintf(stderr,"%s:%d: dataLength=%d\n",__FILE__,__LINE__,dataLength);
           gcryptError = gcry_kdf_derive(plainPassword,
                                         (size_t)Password_length(password),
                                         KEY_DERIVE_ALGORITHM,
                                         KEY_DERIVE_HASH_ALGORITHM,
                                         (cryptSalt != NULL) ? cryptSalt->data : NO_SALT,
-                                        (cryptSalt != NULL) ? cryptSalt->length : sizeof(NO_SALT),
+                                        (cryptSalt != NULL) ? cryptSalt->dataLength : sizeof(NO_SALT),
                                         KEY_DERIVE_ITERATIONS,
                                         dataLength,
                                         data
@@ -1754,11 +1853,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
 
   #ifdef HAVE_GCRYPT
     // get crypt algorithm block length
-    error = Crypt_getBlockLength(SECRET_KEY_CRYPT_ALGORITHM,&blockLength);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    blockLength = Crypt_getBlockLength(SECRET_KEY_CRYPT_ALGORITHM);
 
     // find key token (public/private)
     sexpToken = NULL;
@@ -1795,13 +1890,8 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     // encrypt key (if password given)
     if (password != NULL)
     {
-      // get key length
-      error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
-      if (error != ERROR_NONE)
-      {
-        freeSecure(encryptedKeyInfo);
-        return error;
-      }
+      // get required key length for algorithm
+      keyLength = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM);
 
       // initialize crypt
       Crypt_initKey(&encryptKey,CRYPT_PADDING_TYPE_NONE);
@@ -1941,11 +2031,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 
   #ifdef HAVE_GCRYPT
     // get crypt algorithm block length
-    error = Crypt_getBlockLength(SECRET_KEY_CRYPT_ALGORITHM,&blockLength);
-    if (error != ERROR_NONE)
-    {
-      return ERROR_INVALID_BLOCK_LENGTH_;
-    }
+    blockLength = Crypt_getBlockLength(SECRET_KEY_CRYPT_ALGORITHM);
 
     // check min. key length
     encryptedKeyInfoLength = Misc_base64DecodeLengthBuffer(encryptedKeyData,encryptedKeyDataLength);
@@ -2003,13 +2089,8 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     // decrypt key
     if (password != NULL)
     {
-      // get key length
-      error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
-      if (error != ERROR_NONE)
-      {
-        freeSecure(data);
-        return error;
-      }
+      // get required key length for algorithm
+      keyLength = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM);
 
       // initialize crypt
       Crypt_initKey(&encryptKey,CRYPT_PADDING_TYPE_NONE);
@@ -3942,7 +4023,7 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 
   if (cryptKey->dataLength > 0)
   {
-    fprintf(stderr,"Crypt key: %dbytes\n",cryptKey->dataLength);
+    fprintf(stderr,"Crypt key: %ubytes\n",cryptKey->dataLength);
     debugDumpMemory(cryptKey->data,cryptKey->dataLength,FALSE);
   }
 
@@ -4051,8 +4132,13 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 void Crypt_dumpSalt(const CryptSalt *cryptSalt)
 {
   assert(cryptSalt != NULL);
+  assert(cryptSalt->dataLength <= CRYPT_SALT_LENGTH);
 
-  debugDumpMemory(cryptSalt->data,cryptSalt->length,FALSE);
+  if (cryptSalt->dataLength > 0)
+  {
+    fprintf(stderr,"Crypt salt: %ubytes\n",cryptSalt->dataLength);
+    debugDumpMemory(cryptSalt->data,cryptSalt->dataLength,FALSE);
+  }
 }
 
 void Crypt_dumpHash(const CryptHash *cryptHash)
