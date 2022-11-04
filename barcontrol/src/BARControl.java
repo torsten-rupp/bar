@@ -2193,7 +2193,7 @@ public class BARControl
    */
   public static void printError(Throwable throwable)
   {
-    System.err.println(BARControl.tr("ERROR")+": "+throwable.getMessage());
+    System.err.println(BARControl.tr("ERROR")+": "+((throwable.getMessage() != null) ? throwable.getMessage() : throwable.toString()));
   }
 
   /** print error to stderr
@@ -3608,7 +3608,7 @@ if (false) {
                 try
                 {
                   reconnect(BARServer.TLSModes.FORCE,false);
-                  
+
                   Settings.serverNoTLS       = false;
                   Settings.serverForceTLS    = true;
                   Settings.serverInsecureTLS = false;
@@ -3651,7 +3651,7 @@ if (false) {
                       Settings.serverNoTLS       = false;
                       Settings.serverForceTLS    = true;
                       Settings.serverInsecureTLS = true;
-                      
+
                       reconnected = true;
                     }
                     catch (ConnectionError error)
@@ -6312,12 +6312,12 @@ Dprintf.dprintf("still not supported");
     {
       internalError(error);
     }
-    catch (Error error)
+    catch (Throwable throwable)
     {
-      printError(error);
+      printError(throwable);
       if (Settings.debugLevel > 0)
       {
-        printStackTrace(error);
+        printStackTrace(throwable);
       }
       System.exit(ExitCodes.FAIL);
     }
