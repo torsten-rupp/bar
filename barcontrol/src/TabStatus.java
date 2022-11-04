@@ -2459,15 +2459,15 @@ public class TabStatus
                                    boolean             slaveInsecureTLS       = valueMap.getBoolean("slaveInsecureTLS",true               );
                                    ArchiveTypes        archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class      );
                                    long                archivePartSize        = valueMap.getLong   ("archivePartSize"                     );
-//TODO: enum?                                                                                      
+//TODO: enum?
                                    String              deltaCompressAlgorithm = valueMap.getString ("deltaCompressAlgorithm"              );
-//TODO: enum?                                                                                      
+//TODO: enum?
                                    String              byteCompressAlgorithm  = valueMap.getString ("byteCompressAlgorithm"               );
-//TODO: enum?                                                                                      
+//TODO: enum?
                                    String              cryptAlgorithm         = valueMap.getString ("cryptAlgorithm"                      );
-//TODO: enum?                                                                                      
+//TODO: enum?
                                    String              cryptType              = valueMap.getString ("cryptType"                           );
-//TODO: enum?                                                                                      
+//TODO: enum?
                                    String              cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                   );
                                    long                lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                );
                                    long                estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                   );
@@ -2567,6 +2567,10 @@ public class TabStatus
                   if (jobData.slaveTLS)
                   {
                     tableItem.setImage(2,jobData.slaveInsecureTLS ? IMAGE_LOCK_INSECURE : IMAGE_LOCK);
+                  }
+                  else
+                  {
+                    tableItem.setImage(2,(Image)null);
                   }
 
                   // keep table item

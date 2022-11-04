@@ -1576,6 +1576,26 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   return scheduleNode;
 }
 
+void Job_setModified(JobNode *jobNode)
+{
+  ConnectorInfo *connectorInfo;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  // force reconnect slave
+  connectorInfo = Job_connectorLock(jobNode,1000);
+  if (   (connectorInfo != NULL)
+      && Connector_isConnected(connectorInfo)
+     )
+  {
+    Connector_shutdown(connectorInfo);
+  }
+  Job_connectorUnlock(connectorInfo);
+
+  jobNode->modifiedFlag = TRUE;
+}
+
 void Job_setScheduleModified(JobNode *jobNode)
 {
   assert(jobNode != NULL);

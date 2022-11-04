@@ -3805,6 +3805,11 @@ void Connector_disconnect(ConnectorInfo *connectorInfo)
   connectorDisconnect(connectorInfo);
 }
 
+void Connector_shutdown(ConnectorInfo *connectorInfo)
+{
+  setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
+}
+
 Errors Connector_authorize(ConnectorInfo *connectorInfo, long timeout)
 {
   Errors error;
