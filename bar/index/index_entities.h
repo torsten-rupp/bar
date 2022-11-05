@@ -51,7 +51,7 @@
 Errors IndexEntity_cleanUp(IndexHandle *indexHandle);
 
 /***********************************************************************\
-* Name   : IndexEntity_purge
+* Name   : IndexEntity_delete
 * Purpose: delete entity
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
@@ -62,11 +62,11 @@ Errors IndexEntity_cleanUp(IndexHandle *indexHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexEntity_purge(IndexHandle *indexHandle,
-                         bool        *doneFlag,
-                         ulong       *deletedCounter,
-                         IndexId     entityId
-                        );
+Errors IndexEntity_delete(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter,
+                          IndexId     entityId
+                         );
 
 /***********************************************************************\
 * Name   : IndexEntity_prune

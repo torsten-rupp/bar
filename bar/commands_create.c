@@ -8105,10 +8105,7 @@ Errors Command_create(ServerIO                     *masterIO,
     }
     assert(!INDEX_ID_IS_NONE(entityId));
     DEBUG_TESTCODE() { (void)Index_purgeEntity(&indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)Index_purgeEntity(&indexHandle,entityId); });
-
-//TODO
-    // purge expired entities
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)Index_unlockEntity(&indexHandle,entityId); (void)Index_purgeEntity(&indexHandle,entityId); });
   }
 
   // create new archive
@@ -8240,6 +8237,7 @@ Errors Command_create(ServerIO                     *masterIO,
     }
 
     // unlock entity
+    AUTOFREE_REMOVE(&autoFreeList,&entityId);
     (void)Index_unlockEntity(&indexHandle,entityId);
 
     if (   (createInfo.failError == ERROR_NONE)
@@ -8251,7 +8249,7 @@ Errors Command_create(ServerIO                     *masterIO,
       error = Index_pruneEntity(&indexHandle,entityId);
       if (error != ERROR_NONE)
       {
-        printError("cannot create index for '%s' (error: %s)!",
+        printError("cannot delete empty entity for '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -8261,11 +8259,15 @@ Errors Command_create(ServerIO                     *masterIO,
     }
     else
     {
-      // delete entity on error/abort
-      (void)Index_deleteEntity(&indexHandle,entityId);
+      // delete entity on error/dry-run/abort
+      error = Index_deleteEntity(&indexHandle,entityId);
+      {
+        printWarning("cannot delete entity for '%s' (error: %s)!",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+      }
     }
-
-    AUTOFREE_REMOVE(&autoFreeList,&entityId);
   }
 
   // output statics
@@ -8369,6 +8371,7 @@ Errors Command_create(ServerIO                     *masterIO,
   Storage_done(&createInfo.storageInfo);
 
   // unmount devices
+  AUTOFREE_REMOVE(&autoFreeList,&jobOptions->mountList);
   error = unmountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
