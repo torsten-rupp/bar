@@ -2058,13 +2058,13 @@ bool Job_read(JobNode *jobNode)
                               {
                                 UNUSED_VARIABLE(userData);
 
-                                printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
+                                printError("%s in %S, line %ld: '%S'",errorMessage,jobNode->fileName,lineNb,line);
                               },NULL),
                               CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
-                                printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
+                                printWarning("%s in %S, line %ld: '%S'",warningMessage,jobNode->fileName,lineNb,line);
                               },NULL),
                               scheduleNode,
                               &commentList
@@ -2078,10 +2078,10 @@ bool Job_read(JobNode *jobNode)
         }
         else
         {
-          printError("syntax error in %S, line %ld: '%s' - skipped",
+          printError("syntax error in %S, line %ld: '%S' - skipped",
                      jobNode->fileName,
                      lineNb,
-                     String_cString(line)
+                     line
                     );
           failFlag = TRUE;
         }
@@ -2171,13 +2171,13 @@ bool Job_read(JobNode *jobNode)
                                 {
                                   UNUSED_VARIABLE(userData);
 
-                                  printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
+                                  printError("%s in %S, line %ld: '%S'",errorMessage,jobNode->fileName,lineNb,line);
                                 },NULL),
                                 CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                                 {
                                   UNUSED_VARIABLE(userData);
 
-                                  printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
+                                  printWarning("%s in %S, line %ld: '%S'",warningMessage,jobNode->fileName,lineNb,line);
                                 },NULL),
                                 persistenceNode,
                                 &commentList
@@ -2185,16 +2185,16 @@ bool Job_read(JobNode *jobNode)
             }
             else
             {
-              printError("unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+              printError("unknown value '%S' in %S, line %ld",name,String_cString(jobNode->fileName),lineNb);
               failFlag = TRUE;
             }
           }
           else
           {
-            printError("syntax error in %S, line %ld: '%s' - skipped",
+            printError("syntax error in %S, line %ld: '%S' - skipped",
                        jobNode->fileName,
                        lineNb,
-                       String_cString(line)
+                       line
                       );
             failFlag = TRUE;
           }
@@ -2266,13 +2266,13 @@ bool Job_read(JobNode *jobNode)
                           {
                             UNUSED_VARIABLE(userData);
 
-                            printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
+                            printError("%s in %S, line %ld: '%S'",errorMessage,jobNode->fileName,lineNb,line);
                           },NULL),
                           CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
-                            printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
+                            printWarning("%s in %S, line %ld: '%S'",warningMessage,jobNode->fileName,lineNb,line);
                           },NULL),
                           jobNode,
                           &commentList
@@ -2286,10 +2286,10 @@ bool Job_read(JobNode *jobNode)
     }
     else
     {
-      printError("syntax error in %S, line %ld: '%s' - skipped",
+      printError("syntax error in %S, line %ld: '%S' - skipped",
                  jobNode->fileName,
                  lineNb,
-                 String_cString(line)
+                 line
                 );
       failFlag = TRUE;
     }
