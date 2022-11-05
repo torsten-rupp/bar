@@ -800,11 +800,11 @@ UNUSED_VARIABLE(indexHandle);
   return error;
 }
 
-Errors IndexEntity_purge(IndexHandle *indexHandle,
-                         bool        *doneFlag,
-                         ulong       *deletedCounter,
-                         IndexId     entityId
-                        )
+Errors IndexEntity_delete(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter,
+                          IndexId     entityId
+                         )
 {
   String       string;
   Errors       error;
@@ -967,11 +967,11 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
     // delete if not locked and entity is empty
     if ((lockedCount == 0L) && isEmptyEntity(indexHandle,entityId))
     {
-      error = IndexEntity_purge(indexHandle,
-                                doneFlag,
-                                deletedCounter,
-                                entityId
-                               );
+      error = IndexEntity_delete(indexHandle,
+                                 doneFlag,
+                                 deletedCounter,
+                                 entityId
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -2438,6 +2438,7 @@ bool Index_isLockedEntity(IndexHandle *indexHandle,
   return (error == ERROR_NONE) && (lockedCount > 0);
 }
 
+// TODO: renamed to Index_purgeEntity
 Errors Index_deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          )
@@ -2484,7 +2485,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
       }
       uuidId = INDEX_ID_UUID(databaseId);
 
-      // get storages to delete
+      // get storages to purge
       error = Database_getIds(&indexHandle->databaseHandle,
                               &storageIds,
                               "storages \
@@ -2646,6 +2647,7 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
   return emptyFlag;
 }
 
+// TODO: renamed to Index_deleteEntity()
 Errors Index_purgeEntity(IndexHandle *indexHandle,
                          IndexId     entityId
                         )
@@ -2661,11 +2663,11 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      return IndexEntity_purge(indexHandle,
-                               NULL,  // doneFlag
-                               NULL,  // deletedCounter
-                               entityId
-                              );
+      return IndexEntity_delete(indexHandle,
+                                NULL,  // doneFlag
+                                NULL,  // deletedCounter
+                                entityId
+                               );
     });
   }
   else

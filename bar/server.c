@@ -3023,6 +3023,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   uint             age;
   uint             totalEntityCount;
   uint64           totalEntitySize;
+  AutoFreeList     autoFreeList;
   char             string[64];
 
   assert(indexHandle != NULL);
@@ -3198,18 +3199,27 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     {
       Array_append(&entityIdArray,&expiredEntityId);
 
+      AutoFree_init(&autoFreeList);
       error = ERROR_NONE;
 
       // lock entity
       if (error == ERROR_NONE)
       {
         error = Index_lockEntity(indexHandle,expiredEntityId);
+        if (error == ERROR_NONE)
+        {
+          AUTOFREE_ADD(&autoFreeList,&expiredEntityId,{ (void)Index_unlockEntity(indexHandle,expiredEntityId); });
+        }
       }
 
       // mount devices
       if (error == ERROR_NONE)
       {
         error = mountAll(&mountList);
+        if (error == ERROR_NONE)
+        {
+          AUTOFREE_ADD(&autoFreeList,&mountList,{ (void)unmountAll(&mountList); });
+        }
       }
 
       // delete expired entity
@@ -3243,12 +3253,14 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
       // unmount devices
       if (error == ERROR_NONE)
       {
+        AUTOFREE_REMOVE(&autoFreeList,&mountList);
         (void)unmountAll(&mountList);
       }
 
       // unlock entity
       if (error == ERROR_NONE)
       {
+        AUTOFREE_REMOVE(&autoFreeList,&expiredEntityId);
         (void)Index_unlockEntity(indexHandle,expiredEntityId);
       }
 
@@ -3273,10 +3285,17 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                    );
       }
 
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+      }
+
       if (failError == ERROR_NONE)
       {
         failError = error;
       }
+
+      AutoFree_done(&autoFreeList);
     }
 
     // free resources
@@ -3730,6 +3749,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   ArchiveTypes     moveToArchiveType;
   uint64           moveToCreatedDateTime;
   JobOptions       jobOptions;
+  AutoFreeList     autoFreeList;
   char             string[64];
 
   // init variables
@@ -3890,12 +3910,17 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     {
       Array_append(&entityIdArray,&moveToEntityId);
 
+      AutoFree_init(&autoFreeList);
       error = ERROR_NONE;
 
       // lock entity
       if (error == ERROR_NONE)
       {
         error = Index_lockEntity(indexHandle,moveToEntityId);
+        if (error == ERROR_NONE)
+        {
+          AUTOFREE_ADD(&autoFreeList,&moveToEntityId,{ (void)Index_unlockEntity(indexHandle,moveToEntityId); });
+        }
       }
 
       // mount devices
@@ -3908,6 +3933,10 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
           {
             error = mountAll(&jobNode->job.options.mountList);
           }
+        }
+        if (error == ERROR_NONE)
+        {
+          AUTOFREE_ADD(&autoFreeList,&jobNode->job.options.mountList,{ (void)unmountAll(&jobNode->job.options.mountList); });
         }
       }
 
@@ -3927,6 +3956,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       // unmount devices
       if (error == ERROR_NONE)
       {
+        AUTOFREE_REMOVE(&autoFreeList,&jobNode->job.options.mountList);
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           jobNode = Job_findByUUID(moveToJobUUID);
@@ -3940,6 +3970,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       // unlock entity
       if (error == ERROR_NONE)
       {
+        AUTOFREE_REMOVE(&autoFreeList,&moveToEntityId);
         (void)Index_unlockEntity(indexHandle,moveToEntityId);
       }
 
@@ -3968,6 +3999,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    Error_getText(error)
                    );
       }
+
+      AutoFree_done(&autoFreeList);
     }
   }
   while (   !INDEX_ID_IS_NONE(moveToEntityId)
@@ -15884,14 +15917,10 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
   error = ERROR_NONE;
 
   // lock entity
+  error = Index_lockEntity(indexHandle,entityId);
   if (error == ERROR_NONE)
   {
-    error = Index_lockEntity(indexHandle,entityId);
-  }
-
-  // move storages of entity to new path
-  if (error == ERROR_NONE)
-  {
+    // move storages of entity to new path
     error = moveEntity(indexHandle,
                        &jobOptions,
                        entityId,
@@ -15933,14 +15962,10 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
                           return isCommandAborted(clientInfo,id);
                         },NULL)
                        );
-  }
 
-  // unlock entity
-  if (error == ERROR_NONE)
-  {
+    // unlock entity
     (void)Index_unlockEntity(indexHandle,entityId);
   }
-
   if (error != ERROR_NONE)
   {
     Storage_doneSpecifier(&storageSpecifier);
