@@ -651,21 +651,21 @@ INTERMEDIATE_HEADERS        = errors.h \
                               index_definition.h \
 
 ALL_SOURCES                 = $(BAR_SOURCES) \
-															$(BAR_HEADERS) \
-															$(BAR_SOURCES_OTHER) \
-															$(DESTROYER_SOURCES) \
-															$(DESTROYER_HEADERS) \
-															$(BAR_MINIDUMP_SOURCES) \
-															$(BAR_MINIDUMP_SOURCES_COMMON) \
-															$(BAR_MINIDUMP_HEADERS) \
-															$(BAR_INDEX_SOURCES) \
-															$(BAR_INDEX_SOURCES_COMMON) \
-															$(BAR_INDEX_HEADERS) \
-															$(BAR_INDEX_HEADERS_COMMON) \
-															$(BAR_INDEX_SOURCES_OTHER) \
+                              $(BAR_HEADERS) \
+                              $(BAR_SOURCES_OTHER) \
+                              $(DESTROYER_SOURCES) \
+                              $(DESTROYER_HEADERS) \
+                              $(BAR_MINIDUMP_SOURCES) \
+                              $(BAR_MINIDUMP_SOURCES_COMMON) \
+                              $(BAR_MINIDUMP_HEADERS) \
+                              $(BAR_INDEX_SOURCES) \
+                              $(BAR_INDEX_SOURCES_COMMON) \
+                              $(BAR_INDEX_HEADERS) \
+                              $(BAR_INDEX_HEADERS_COMMON) \
+                              $(BAR_INDEX_SOURCES_OTHER) \
                               $(COMMON_SOURCES) \
-															$(COMMON_HEADERS) \
-															$(COMMON_SOURCES_OTHER) \
+                              $(COMMON_HEADERS) \
+                              $(COMMON_SOURCES_OTHER) \
 
 TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
                               bar-debug@EXEEXT@ bar-debug.sym \

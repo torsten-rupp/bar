@@ -551,12 +551,12 @@ memcheck_extended:
 # ----------------------------------------------------------------------------
 # distribution
 
-.PHONY: dist clean_dist
-dist:
+.PHONY: distribution dist clean_distribution clean_dist
+distribution dist:
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
 
-clean_dist:
+clean_distribution clean_dist:
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 
 # create distribution
