@@ -1585,13 +1585,11 @@ void Job_setModified(JobNode *jobNode)
 
   // force reconnect slave
   connectorInfo = Job_connectorLock(jobNode,1000);
-  if (   (connectorInfo != NULL)
-      && Connector_isConnected(connectorInfo)
-     )
+  if (connectorInfo != NULL)
   {
-    Connector_shutdown(connectorInfo);
+    if (Connector_isConnected(connectorInfo)) Connector_shutdown(connectorInfo);
+    Job_connectorUnlock(connectorInfo);
   }
-  Job_connectorUnlock(connectorInfo);
 
   jobNode->modifiedFlag = TRUE;
 }
