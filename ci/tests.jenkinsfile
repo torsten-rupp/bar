@@ -26,8 +26,6 @@ TEST_STEPS = ["basic",
               "config",
               "misc"
              ];
-xxxTEST_STEPS = ["server"
-];
 
 // tests
 def tests()
@@ -49,6 +47,24 @@ def tests()
           // make (Note: avoid race condition in depend by not create dependencies in parallel)
           sh "make depend"
           sh "make -j`nproc --ignore=1`"
+        }
+      }
+    }
+
+    stage("Distribution")
+    {
+      docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+      {
+        script
+        {
+          sh "make distribution"
+
+          sh "tar xf backup-archiver*.tar.bz2"
+          sh "(cd backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
+          sh "(cd backup-archiver*; ./download-third-party-packages.sh)"
+          sh "(cd backup-archiver*; ./configure)"
+          sh "(cd backup-archiver*; make depend)"
+          sh "(cd backup-archiver*; make -j`nproc --ignore=1`)"
         }
       }
     }
