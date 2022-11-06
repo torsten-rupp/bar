@@ -208,7 +208,9 @@ LOCAL bool demangleSymbolName(const char *symbolName,
                               uint       demangledSymbolNameSize
                              )
 {
+#if defined(HAVE_LIBIBERTY_DEMANGLE_H)
   char *s;
+#endif
 
   assert(symbolName != NULL);
   assert(demangledSymbolName != NULL);
@@ -229,6 +231,10 @@ LOCAL bool demangleSymbolName(const char *symbolName,
     return FALSE;
   }
 #else
+  UNUSED_VARIABLE(symbolName);
+  UNUSED_VARIABLE(demangledSymbolName);
+  UNUSED_VARIABLE(demangledSymbolNameSize);
+
   return FALSE;
 #endif
 }

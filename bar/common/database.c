@@ -8680,7 +8680,11 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   }
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
-    return ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString);
+    #ifndef NDEBUG
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),sqlString);
+    #else
+      return ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString);
+    #endif
   }
   else
   {
@@ -8892,7 +8896,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   else if (Misc_isTimeout(&timeoutInfo))
   {
     #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
     #else
       return ERROR_DATABASE_TIMEOUT;
     #endif
@@ -9180,7 +9184,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
     #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
     #else
       return ERROR_DATABASE_TIMEOUT;
     #endif
@@ -9224,7 +9228,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
   i = 0;
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -10908,7 +10912,7 @@ Errors Database_getTableList(StringList     *tableList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -11039,7 +11043,7 @@ Errors Database_getViewList(StringList     *viewList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -11168,7 +11172,7 @@ Errors Database_getIndexList(StringList     *indexList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -11386,7 +11390,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -14203,7 +14207,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     DATABASE_DOX(error,
                  #ifndef NDEBUG
-                   ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                   ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
                  #else
                    ERROR_DATABASE_TIMEOUT,
                  #endif
@@ -14456,9 +14460,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       String_delete(sqlString);
       #ifndef NDEBUG
-        return ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__fileName__,__lineNb__,debugGetLockedByInfo(databaseHandle));
+        return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle));
       #else /* NDEBUG */
-        return ERRORX_(DATABASE_TIMEOUT,0,"%s %d",__FILE__,__LINE__);
+        return ERROR_DATABASE_TIMEOUT;
       #endif /* not NDEBUG */
     }
 
@@ -15026,9 +15030,9 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",sqlString,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),sqlString),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
@@ -15280,9 +15284,9 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
@@ -15479,9 +15483,9 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
@@ -15624,9 +15628,9 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
@@ -15740,9 +15744,9 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
@@ -15845,9 +15849,9 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
@@ -15962,9 +15966,9 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
     Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
     DATABASE_DOX(error,
                  #ifndef NDEBUG
-                   ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                   ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                  #else
-                   ERROR_DATABASE_TIMEOUT,
+                   ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                  #endif
                  databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
@@ -16151,9 +16155,9 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   if (!Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ,databaseHandle->timeout))
   {
     #ifndef NDEBUG
-      error = ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle));
+      error = ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString));
     #else
-      error = ERROR_DATABASE_TIMEOUT;
+      error = ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString));
     #endif
     finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
@@ -16602,9 +16606,9 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
 // TODO:
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s, locked %s",String_cString(sqlString),debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
-                 ERROR_DATABASE_TIMEOUT,
+                 ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
@@ -17344,7 +17348,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
   error = ERROR_UNKNOWN;
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"%s:%d, locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
