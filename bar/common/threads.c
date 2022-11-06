@@ -610,12 +610,12 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber)
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_SIGQUIT
-#ifdef HAVE_SIGACTION
+#if defined(ENABLE_DEBUG_THREAD_CRASH_HANDLERS) && defined(HAVE_SIGQUIT) && defined(HAVE_SIGACTION)
+#if defined(HAVE_SIGQUIT) && defined(HAVE_SIGACTION)
 LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, void *context)
-#else /* not HAVE_SIGACTION */
+#else /* not defined(HAVE_SIGQUIT) && defined(HAVE_SIGACTION) */
 LOCAL void debugThreadSignalQuitHandler(int signalNumber)
-#endif /* HAVE_SIGACTION */
+#endif /* defined(HAVE_SIGQUIT) && defined(HAVE_SIGACTION) */
 {
   UNUSED_VARIABLE(siginfo);
   UNUSED_VARIABLE(context);
@@ -634,7 +634,7 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber)
     }
   #endif /* HAVE_SIGACTION */
 }
-#endif /* HAVE_SIGQUIT */
+#endif /* defined(ENABLE_DEBUG_THREAD_CRASH_HANDLERS) && defined(HAVE_SIGQUIT) && defined(HAVE_SIGACTION) */
 
 /***********************************************************************\
 * Name   : debugThreadInit
