@@ -1,7 +1,13 @@
-2022-11-03 0.22b
-  * fixed slave mode
+2022-11-06 0.22b
+  * fixed slave mode: avoid reading local jobs
   * fixed typing error when deleting entries in index
   * fixed warnings
+  * improved timeout messages
+  * fixed print configuration error messages
+  * fixed reading keys/certificates: after configuration
+  * fixed write multiple configuration values
+  * removed some debug code
+  * BARControl: fixed update TLS state
 
 2022-10-31 0.22a
   * disabled TLS port by default (TLS also work on
