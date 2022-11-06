@@ -1494,12 +1494,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
         if (!anyOfflineFlag && !anyUnpairedFlag)
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,&pairingThreadTrigger);
+          delayThread(SLEEP_TIME_PAIRING_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
         }
         else
         {
           // short sleep
-          delayThread(30,&pairingThreadTrigger);
+          delayThread(30,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
         }
         break;
       case SERVER_MODE_SLAVE:
@@ -1555,12 +1555,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
            )
         {
           // short sleep
-          delayThread(5,&pairingThreadTrigger);
+          delayThread(5,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
         }
         else
         {
           // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,&pairingThreadTrigger);
+          delayThread(SLEEP_TIME_PAIRING_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
         }
         break;
     }
@@ -1925,7 +1925,7 @@ LOCAL void schedulerThreadCode(void)
     if (!isQuit())
     {
       // sleep and check quit flag
-      delayThread(SLEEP_TIME_SCHEDULER_THREAD,&pairingThreadTrigger);
+      delayThread(SLEEP_TIME_SCHEDULER_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
     }
   }
   List_done(&jobScheduleList);
@@ -10536,7 +10536,10 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
 
       // set modified, trigger re-pairing
       Job_setModified(jobNode);
-      Semaphore_signalModified(&pairingThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+      if (globalOptions.serverMode == SERVER_MODE_MASTER)
+      {
+        Semaphore_signalModified(&pairingThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+      }
     }
     else
     {
