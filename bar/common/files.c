@@ -2218,7 +2218,8 @@ Errors __File_openDescriptor(const char *__fileName__,
                             )
 #endif /* NDEBUG */
 {
-  int newFileDescriptor;
+  int    newFileDescriptor;
+  Errors error;
 
   assert(fileHandle != NULL);
   assert(fileDescriptor != -1);
@@ -2230,20 +2231,27 @@ Errors __File_openDescriptor(const char *__fileName__,
   }
 
   #ifdef NDEBUG
-    return initFileHandle(fileHandle,
-                          newFileDescriptor,
-                          NULL,  // fileName
-                          fileMode
-                         );
+    error = initFileHandle(fileHandle,
+                           newFileDescriptor,
+                           NULL,  // fileName
+                           fileMode
+                          );
   #else /* not NDEBUG */
-    return initFileHandle(__fileName__,
-                          __lineNb__,
-                          fileHandle,
-                          newFileDescriptor,
-                          NULL,  // fileName
-                          fileMode
-                         );
+    error = initFileHandle(__fileName__,
+                           __lineNb__,
+                           fileHandle,
+                           newFileDescriptor,
+                           NULL,  // fileName
+                           fileMode
+                          );
   #endif /* NDEBUG */
+  if (error != ERROR_NONE)
+  {
+    close(newFileDescriptor);
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 #ifdef NDEBUG
