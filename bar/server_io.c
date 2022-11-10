@@ -449,6 +449,24 @@ LOCAL bool receiveData(ServerIO *serverIO, long timeout)
         }
         break;
       case SERVER_IO_TYPE_BATCH:
+        // read only single character
+// TODO: how to read as much characters as possible without blocking?
+#if 1
+        (void)File_read(&serverIO->file.inputHandle,
+                        &serverIO->inputBuffer[serverIO->inputBufferLength],
+                        1,
+                        &readBytes
+                       );
+        if (readBytes > 0)
+        {
+          serverIO->inputBufferLength += (uint)readBytes;
+        }
+        else
+        {
+          // disconnect
+          return FALSE;
+        }
+#else
         (void)File_read(&serverIO->file.inputHandle,
                         &serverIO->inputBuffer[serverIO->inputBufferLength],
                         maxBytes,
@@ -483,6 +501,7 @@ LOCAL bool receiveData(ServerIO *serverIO, long timeout)
           // disconnect
           return FALSE;
         }
+#endif
         break;
     #ifndef NDEBUG
       default:
