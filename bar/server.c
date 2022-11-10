@@ -1925,7 +1925,7 @@ LOCAL void schedulerThreadCode(void)
     if (!isQuit())
     {
       // sleep and check quit flag
-      delayThread(SLEEP_TIME_SCHEDULER_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
     }
   }
   List_done(&jobScheduleList);
@@ -4290,6 +4290,7 @@ LOCAL void updateIndexThreadCode(void)
       pauseIndexUpdate();
       if (isQuit()) break;
 
+      storageId = INDEX_ID_NONE;
       if (   Index_isInitialized()
           && globalOptions.indexDatabaseUpdateFlag
           && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
@@ -22731,28 +22732,41 @@ Errors Server_batch(int inputDescriptor,
 
   // start threads
   Semaphore_init(&delayThreadTrigger,SEMAPHORE_TYPE_BINARY);
-  if (Index_isAvailable())
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
+    if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
+    }
+    Semaphore_init(&pairingThreadTrigger,SEMAPHORE_TYPE_BINARY);
+    if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize pause thread!");
+    }
+
+    if (Index_isAvailable())
+    {
 //TODO: required?
-    // init database pause callbacks
-    Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
+      // init database pause callbacks
+      Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
-    Semaphore_init(&updateIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-    if (!Thread_init(&updateIndexThread,"BAR index",globalOptions.niceLevel,updateIndexThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize update index thread!");
-    }
+      Semaphore_init(&updateIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&updateIndexThread,"BAR index",globalOptions.niceLevel,updateIndexThreadCode,NULL))
+      {
+        HALT_FATAL_ERROR("Cannot initialize update index thread!");
+      }
 
-    Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-    if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize index update thread!");
-    }
+      Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
+      {
+        HALT_FATAL_ERROR("Cannot initialize index update thread!");
+      }
 
-    Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
-    if (!Thread_init(&persistenceThread,"BAR purge expired",globalOptions.niceLevel,persistenceThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+      Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&persistenceThread,"BAR purge expired",globalOptions.niceLevel,persistenceThreadCode,NULL))
+      {
+        HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+      }
     }
   }
 
@@ -22790,6 +22804,7 @@ Errors Server_batch(int inputDescriptor,
 #endif
 
   // process client requests
+#if 1
   name        = String_new();
   argumentMap = StringMap_new();
 #if 1
@@ -22819,8 +22834,6 @@ Errors Server_batch(int inputDescriptor,
       setQuit();
     }
   }
-  StringMap_delete(argumentMap);
-  String_delete(name);
 #else /* 0 */
 String_setCString(commandString,"1 SET crypt-password password='muster'");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"2 ADD_INCLUDE_PATTERN type=REGEX pattern=test/[^/]*");processCommand(&clientInfo,commandString);
@@ -22828,35 +22841,55 @@ String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&
 //String_setCString(commandString,"3 ARCHIVE_LIST backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
 processCommand(&clientInfo,commandString);
 #endif /* 0 */
+  StringMap_delete(argumentMap);
+  String_delete(name);
+#endif
 
   // wait for thread exit
-  if (Index_isAvailable())
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
-    if (!Thread_join(&persistenceThread))
+    if (Index_isAvailable())
     {
-      HALT_INTERNAL_ERROR("Cannot stop persistence thread!");
-    }
-    Thread_done(&persistenceThread);
-    Semaphore_done(&persistenceThreadTrigger);
+      if (!Thread_join(&persistenceThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop persistence thread!");
+      }
+      Thread_done(&persistenceThread);
+      Semaphore_done(&persistenceThreadTrigger);
 
-    if (!Thread_join(&autoIndexThread))
+      if (!Thread_join(&autoIndexThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
+      }
+      Thread_done(&autoIndexThread);
+      Semaphore_done(&autoIndexThreadTrigger);
+
+      if (!Thread_join(&updateIndexThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop index thread!");
+      }
+      Thread_done(&updateIndexThread);
+      Semaphore_done(&updateIndexThreadTrigger);
+
+      // done database pause callbacks
+      Index_setPauseCallback(CALLBACK_(NULL,NULL));
+    }
+
+    if (!Thread_join(&pairingThread))
     {
-      HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
+      HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
     }
-    Thread_done(&autoIndexThread);
-    Semaphore_done(&autoIndexThreadTrigger);
-
-    if (!Thread_join(&updateIndexThread))
+    Thread_done(&pairingThread);
+    Semaphore_done(&pairingThreadTrigger);
+    if (!Thread_join(&schedulerThread))
     {
-      HALT_INTERNAL_ERROR("Cannot stop index thread!");
+      HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
     }
-    Thread_done(&updateIndexThread);
-    Semaphore_done(&updateIndexThreadTrigger);
-
-    // done database pause callbacks
-    Index_setPauseCallback(CALLBACK_(NULL,NULL));
+    Thread_done(&schedulerThread);
   }
   Semaphore_done(&delayThreadTrigger);
+
+  doneClient(&clientInfo);
 
   // done index
   if (Index_isAvailable())
@@ -22865,7 +22898,6 @@ processCommand(&clientInfo,commandString);
   }
 
   // free resources
-  doneClient(&clientInfo);
   if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
   Crypt_doneHash(&newMaster.uuidHash);
   String_delete(newMaster.name);
