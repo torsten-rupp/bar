@@ -554,13 +554,13 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
 * Name   : File_splitFileName
 * Purpose: split file name into path name and base name
 * Input  : fileName - file name
-* Output : directoryName - directory name (allocated string)
-*          baseName      - base name (allocated string)
+* Output : directoryPath - directory path (can be NULL)
+*          baseName      - base name (can be NULL)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void File_splitFileName(ConstString fileName, String *directoryName, String *baseName);
+void File_splitFileName(ConstString fileName, String directoryPath, String baseName);
 
 /***********************************************************************\
 * Name   : File_initSplitFileName, File_doneSplitFileName

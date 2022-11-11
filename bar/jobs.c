@@ -1671,7 +1671,7 @@ void Job_flushAll()
 
 Errors Job_readScheduleInfo(JobNode *jobNode)
 {
-  String          fileName,pathName,baseName;
+  String          fileName,baseName;
   FileHandle      fileHandle;
   Errors          error;
   String          line;
@@ -1697,11 +1697,10 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
 
   // get filename
   fileName = String_new();
-  File_splitFileName(jobNode->fileName,&pathName,&baseName);
-  File_setFileName(fileName,pathName);
+  baseName = String_new();
+  File_splitFileName(jobNode->fileName,fileName,baseName);
   File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
   String_delete(baseName);
-  String_delete(pathName);
 
   if (File_exists(fileName))
   {
@@ -1843,7 +1842,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
 Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 executeEndDateTime)
 {
   ScheduleNode *scheduleNode;
-  String       fileName,pathName,baseName;
+  String       fileName,baseName;
   FileHandle   fileHandle;
   Errors       error;
   uint64       lastExecutedDateTime;
@@ -1864,11 +1863,10 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
   {
     // get filename
     fileName = String_new();
-    File_splitFileName(jobNode->fileName,&pathName,&baseName);
-    File_setFileName(fileName,pathName);
+    baseName = String_new();
+    File_splitFileName(jobNode->fileName,fileName,baseName);
     File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
     String_delete(baseName);
-    String_delete(pathName);
 
     // create file .name
     error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
@@ -2802,7 +2800,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->slavePreProcessScript                     = String_new();
   jobOptions->slavePostProcessScript                    = String_new();
 
-  jobOptions->storageOnMasterFlag                           = TRUE;
+  jobOptions->storageOnMasterFlag                       = TRUE;
   initOptionsFileServer(&jobOptions->fileServer);
   initOptionsFTPServer(&jobOptions->ftpServer);
   initOptionsSSHServer(&jobOptions->sshServer);
@@ -2825,7 +2823,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->ignoreNoDumpAttributeFlag                 = globalOptions.ignoreNoDumpAttributeFlag;
   jobOptions->archiveFileMode                           = globalOptions.archiveFileMode;
   jobOptions->restoreEntryMode                          = globalOptions.restoreEntryMode;
-  jobOptions->sparseFilesFlag                                = globalOptions.sparseFilesFlag;
+  jobOptions->sparseFilesFlag                           = globalOptions.sparseFilesFlag;
   jobOptions->errorCorrectionCodesFlag                  = globalOptions.errorCorrectionCodesFlag;
   jobOptions->alwaysCreateImageFlag                     = globalOptions.alwaysCreateImageFlag;
   jobOptions->blankFlag                                 = globalOptions.blankFlag;
@@ -2933,7 +2931,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->slavePreProcessScript                     = String_duplicate(fromJobOptions->slavePreProcessScript);
   jobOptions->slavePostProcessScript                    = String_duplicate(fromJobOptions->slavePostProcessScript);
 
-  jobOptions->storageOnMasterFlag                           = fromJobOptions->storageOnMasterFlag;
+  jobOptions->storageOnMasterFlag                       = fromJobOptions->storageOnMasterFlag;
   duplicateOptionsFileServer(&jobOptions->fileServer,&fromJobOptions->fileServer);
   duplicateOptionsFTPServer(&jobOptions->ftpServer,&fromJobOptions->ftpServer);
   duplicateOptionsSSHServer(&jobOptions->sshServer,&fromJobOptions->sshServer);
@@ -2955,7 +2953,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->ignoreNoDumpAttributeFlag                 = fromJobOptions->ignoreNoDumpAttributeFlag;
   jobOptions->archiveFileMode                           = fromJobOptions->archiveFileMode;
   jobOptions->restoreEntryMode                          = fromJobOptions->restoreEntryMode;
-  jobOptions->sparseFilesFlag                                = fromJobOptions->sparseFilesFlag;
+  jobOptions->sparseFilesFlag                            = fromJobOptions->sparseFilesFlag;
   jobOptions->errorCorrectionCodesFlag                  = fromJobOptions->errorCorrectionCodesFlag;
   jobOptions->alwaysCreateImageFlag                     = fromJobOptions->alwaysCreateImageFlag;
   jobOptions->blankFlag                                 = fromJobOptions->blankFlag;

@@ -278,8 +278,6 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 {
-  Errors error;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);

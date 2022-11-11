@@ -4657,7 +4657,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   StorageMsg       storageMsg;
   Errors           error;
   String           printableStorageName;
-  String           directoryName;
+  String           directoryPath;
   FileInfo         fileInfo;
   Server           server;
   FileHandle       fileHandle;
@@ -4686,13 +4686,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
   printableStorageName  = String_new();
-  directoryName         = String_new();
+  directoryPath         = String_new();
   existingStorageName   = String_new();
   existingDirectoryName = String_new();
   Storage_initSpecifier(&existingStorageSpecifier);
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
+  AUTOFREE_ADD(&autoFreeList,directoryPath,{ String_delete(directoryPath); });
   AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
   AUTOFREE_ADD(&autoFreeList,existingDirectoryName,{ String_delete(existingDirectoryName); });
   AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
@@ -4779,17 +4779,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
          )
       {
-        String directoryName,baseName;
+        String directoryPath,baseName;
         String prefixFileName,postfixFileName;
         long   index;
         uint   n;
 
         // rename new archive
-        directoryName   = String_new();
+        directoryPath   = String_new();
         baseName        = String_new();
         prefixFileName  = String_new();
         postfixFileName = String_new();
-        File_splitFileName(storageMsg.archiveName,&directoryName,&baseName);
+        File_splitFileName(storageMsg.archiveName,directoryPath,baseName);
         index = String_findLastChar(baseName,STRING_END,'.');
         if (index >= 0)
         {
@@ -4803,7 +4803,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         n = 0;
         do
         {
-          String_set(storageMsg.archiveName,directoryName);
+          String_set(storageMsg.archiveName,directoryPath);
           File_appendFileName(storageMsg.archiveName,prefixFileName);
           String_appendFormat(storageMsg.archiveName,"-%u",n);
           String_append(storageMsg.archiveName,postfixFileName);
@@ -4811,7 +4811,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
         while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
         String_delete(baseName);
-        String_delete(directoryName);
+        String_delete(directoryPath);
         String_delete(postfixFileName);
         String_delete(prefixFileName);
       }
@@ -5178,7 +5178,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
             // find matching entity and assign storage to entity
-            File_getDirectoryName(directoryName,storageMsg.archiveName);
+            File_getDirectoryName(directoryPath,storageMsg.archiveName);
             error = Index_initListStorages(&indexQueryHandle,
                                            createInfo->indexHandle,
                                            storageMsg.uuidId,
@@ -5231,7 +5231,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               File_getDirectoryName(existingDirectoryName,existingStorageName);
               if (   !INDEX_ID_EQUALS(storageId,existingStorageId)
                   && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
-                  && Storage_equalSpecifiers(&existingStorageSpecifier,directoryName,&existingStorageSpecifier,existingDirectoryName)
+                  && Storage_equalSpecifiers(&existingStorageSpecifier,directoryPath,&existingStorageSpecifier,existingDirectoryName)
                  )
               {
 //fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
@@ -5478,7 +5478,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   Storage_doneSpecifier(&existingStorageSpecifier);
   String_delete(existingDirectoryName);
   String_delete(existingStorageName);
-  String_delete(directoryName);
+  String_delete(directoryPath);
   String_delete(printableStorageName);
   free(buffer);
   AutoFree_done(&autoFreeList);

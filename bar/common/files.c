@@ -991,37 +991,37 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
   return fileName;
 }
 
-String File_getDirectoryName(String pathName, ConstString fileName)
+String File_getDirectoryName(String directoryPath, ConstString fileName)
 {
   long n;
 
-  assert(pathName != NULL);
+  assert(directoryPath != NULL);
 
   if (fileName != NULL)
   {
     n = String_findLastChar(fileName,STRING_END,FILE_PATH_SEPARATOR_CHAR);
     if (n >= 0)
     {
-      String_sub(pathName,fileName,STRING_BEGIN,n);
+      String_sub(directoryPath,fileName,STRING_BEGIN,n);
     }
     else
     {
-      String_clear(pathName);
+      String_clear(directoryPath);
     }
   }
   else
   {
-    String_clear(pathName);
+    String_clear(directoryPath);
   }
 
-  return pathName;
+  return directoryPath;
 }
 
-String File_getDirectoryNameCString(String pathName, const char *fileName)
+String File_getDirectoryNameCString(String directoryPath, const char *fileName)
 {
   long i;
 
-  assert(pathName != NULL);
+  assert(directoryPath != NULL);
 
   if (fileName != NULL)
   {
@@ -1031,19 +1031,19 @@ String File_getDirectoryNameCString(String pathName, const char *fileName)
     // get path
     if (i >= 0L)
     {
-      String_setBuffer(pathName,fileName,i);
+      String_setBuffer(directoryPath,fileName,i);
     }
     else
     {
-      String_clear(pathName);
+      String_clear(directoryPath);
     }
   }
   else
   {
-    String_clear(pathName);
+    String_clear(directoryPath);
   }
 
-  return pathName;
+  return directoryPath;
 }
 
 String File_getBaseName(String baseName, ConstString fileName)
@@ -1265,14 +1265,12 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
   return absoluteFileName;
 }
 
-void File_splitFileName(ConstString fileName, String *pathName, String *baseName)
+void File_splitFileName(ConstString fileName, String directoryPath, String baseName)
 {
   assert(fileName != NULL);
-  assert(pathName != NULL);
-  assert(baseName != NULL);
 
-  (*pathName) = File_getDirectoryName(File_newFileName(),fileName);
-  (*baseName) = File_getBaseName(File_newFileName(),fileName);
+  if (directoryPath != NULL) File_getDirectoryName(directoryPath,fileName);
+  if (baseName      != NULL) File_getBaseName(baseName,fileName);
 }
 
 void File_initSplitFileName(StringTokenizer *stringTokenizer, ConstString fileName)

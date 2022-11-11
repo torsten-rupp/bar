@@ -136,8 +136,14 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
+    String_delete(orderString);
+    Database_deleteFilter(filterString);
     return error;
   }
+
+  // free resources
+  String_delete(orderString);
+  Database_deleteFilter(filterString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 

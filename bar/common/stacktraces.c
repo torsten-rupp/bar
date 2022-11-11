@@ -342,10 +342,11 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   }
 
   // find symbol
-  addressInfo.symbols     = symbols;
-  addressInfo.symbolCount = symbolCount;
-  addressInfo.address     = address;
-  addressInfo.symbolFound = FALSE;
+  addressInfo.symbols      = symbols;
+  addressInfo.symbolCount  = symbolCount;
+  addressInfo.address      = address;
+  addressInfo.sectionFound = FALSE;
+  addressInfo.symbolFound  = FALSE;
   bfd_map_over_sections(abfd,findAddressInSection,(PTR)&addressInfo);
   if (!addressInfo.sectionFound)
   {
