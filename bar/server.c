@@ -3344,7 +3344,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 {
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           directoryName,baseName;
+  String           directoryPath,baseName;
   String           moveToArchivePath;
   BandWidthList    maxFromBandWidthList,maxToBandWidthList;
   Errors           error;
@@ -3368,7 +3368,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   // init variables
   storageName       = String_new();
   Storage_initSpecifier(&storageSpecifier);
-  directoryName     = String_new();
+  directoryPath     = String_new();
   baseName          = String_new();
   moveToArchivePath = String_new();
 // TODO: bandwidht limitor NYI
@@ -3475,7 +3475,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
         if (moveError == ERROR_NONE)
         {
           // get new archive name
-          File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
+          File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName);
           File_setFileName(moveToArchivePath,moveToPath);
           File_appendFileName(moveToArchivePath,baseName);
 
@@ -3712,7 +3712,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   List_done(&maxFromBandWidthList);
   String_delete(moveToArchivePath);
   String_delete(baseName);
-  String_delete(directoryName);
+  String_delete(directoryPath);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
 
@@ -3733,7 +3733,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   Array            entityIdArray;
   StorageSpecifier moveToStorageSpecifier;
   StorageSpecifier storageSpecifier;
-  String           directoryName,baseName;
+  String           directoryPath,baseName;
   String           moveToPath;
   String           moveToArchivePath;
   String           storageName;
@@ -3756,7 +3756,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Storage_initSpecifier(&moveToStorageSpecifier);
   Storage_initSpecifier(&storageSpecifier);
-  directoryName     = String_new();
+  directoryPath     = String_new();
   baseName          = String_new();
   moveToPath        = String_new();
   moveToArchivePath = String_new();
@@ -3853,13 +3853,15 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                             )
                     )
               {
-                // parse storage name, get path
+                // parse storage name
                 error = Storage_parseName(&storageSpecifier,storageName);
                 if (error != ERROR_NONE)
                 {
                   continue;
                 }
-                File_splitFileName(storageSpecifier.archiveName,&directoryName,&baseName);
+
+                // get path
+                File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName);
 
                 // get move-to path name (expand macros)
                 error = Archive_formatName(moveToPath,
@@ -4008,18 +4010,18 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
         );
 
   // free resources
+  List_done(&entityList);
+  Job_doneOptions(&jobOptions);
   String_delete(moveToJobName);
   String_delete(moveToJobUUID);
   String_delete(storageName);
   String_delete(moveToArchivePath);
   String_delete(moveToPath);
   String_delete(baseName);
-  String_delete(directoryName);
+  String_delete(directoryPath);
   Storage_doneSpecifier(&storageSpecifier);
-  Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&moveToStorageSpecifier);
   Array_done(&entityIdArray);
-  List_done(&entityList);
 
   return error;
 }
@@ -11346,7 +11348,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   JobNode      *jobNode;
   Errors       error;
-  String       fileName,pathName,baseName;
+  String       fileName,baseName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11392,12 +11394,11 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 
       // delete job schedule state file
       fileName = String_new();
-      File_splitFileName(jobNode->fileName,&pathName,&baseName);
-      File_setFileName(fileName,pathName);
+      baseName = String_new();
+      File_splitFileName(jobNode->fileName,fileName,baseName);
       File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
-      String_delete(baseName);
-      String_delete(pathName);
       (void)File_delete(fileName,FALSE);
+      String_delete(baseName);
       String_delete(fileName);
     }
 
@@ -13914,8 +13915,8 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
 
   // get expiration entity list
   getEntityList(&entityList,
-                          indexHandle
-                         );
+                indexHandle
+               );
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -13973,10 +13974,13 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
         }
       }
     }
+
+    // free resources
+    List_done(&jobEntityList);
   }
 
   // free resources
-  List_done(&jobEntityList);
+  List_done(&entityList);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }

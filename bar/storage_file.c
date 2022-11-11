@@ -309,7 +309,7 @@ LOCAL bool StorageFile_isWritable(const StorageInfo *storageInfo, ConstString ar
 
 LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
-  String directoryName,baseName;
+  String directoryPath,baseName;
   Errors result;
 
   assert(archiveName != NULL);
@@ -318,13 +318,15 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
 
   UNUSED_VARIABLE(storageInfo);
 
-  File_splitFileName(archiveName,&directoryName,&baseName);
+  directoryPath = String_new();
+  baseName      = String_new();
+  File_splitFileName(archiveName,directoryPath,baseName);
   result = File_getTmpFileName(archiveName,
                                String_cString(baseName),
-                               !String_isEmpty(directoryName) ? directoryName : tmpDirectory
+                               !String_isEmpty(directoryPath) ? directoryPath : tmpDirectory
                               );
   String_delete(baseName);
-  String_delete(directoryName);
+  String_delete(directoryPath);
 
   return result;
 }

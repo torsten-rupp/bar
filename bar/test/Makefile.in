@@ -163,7 +163,7 @@ LCOV           = lcov
 GENHTML        = genhtml
 
 VALGRIND       = valgrind
-VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BAR_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(BAR_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 
 INFO           = echo >&2
 INFO_NO_LF     = echo -n >&2

@@ -279,13 +279,17 @@ LOCAL String getDestinationFileName(String      destinationFileName,
                                     int         directoryStripCount
                                    )
 {
-  String          pathName,baseName;
+  String          directoryPath,baseName;
   StringTokenizer fileNameTokenizer;
   ConstString     token;
   int             i;
 
   assert(destinationFileName != NULL);
   assert(fileName != NULL);
+
+  // init variables
+  directoryPath = String_new();
+  baseName      = String_new();
 
   // get destination base directory
   if (!String_isEmpty(destination))
@@ -297,13 +301,13 @@ LOCAL String getDestinationFileName(String      destinationFileName,
     String_clear(destinationFileName);
   }
 
-  // split original name
-  File_splitFileName(fileName,&pathName,&baseName);
+  // get original name
+  File_splitFileName(fileName,directoryPath,baseName);
 
   // strip directory
   if (directoryStripCount != DIRECTORY_STRIP_NONE)
   {
-    File_initSplitFileName(&fileNameTokenizer,pathName);
+    File_initSplitFileName(&fileNameTokenizer,directoryPath);
     i = 0;
     while (   ((directoryStripCount == DIRECTORY_STRIP_ANY) || (i < directoryStripCount))
            && File_getNextSplitFileName(&fileNameTokenizer,&token)
@@ -318,15 +322,15 @@ LOCAL String getDestinationFileName(String      destinationFileName,
   }
   else
   {
-    File_appendFileName(destinationFileName,pathName);
+    File_appendFileName(destinationFileName,directoryPath);
   }
 
   // append file name
   File_appendFileName(destinationFileName,baseName);
 
   // free resources
-  String_delete(pathName);
   String_delete(baseName);
+  String_delete(directoryPath);
 
   return destinationFileName;
 }
@@ -628,14 +632,17 @@ LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
 
 LOCAL String getUniqName(String destinationFileName)
 {
-  String pathName,baseName;
+  String directoryPath,baseName;
   String prefixFileName,postfixFileName;
   long   index;
   uint   n;
 
   assert(destinationFileName != NULL);
 
-  File_splitFileName(destinationFileName,&pathName,&baseName);
+  directoryPath = String_new();
+  baseName      = String_new();
+
+  File_splitFileName(destinationFileName,directoryPath,baseName);
   prefixFileName  = String_new();
   postfixFileName = String_new();
   index = String_findLastChar(baseName,STRING_END,'.');
@@ -648,7 +655,7 @@ LOCAL String getUniqName(String destinationFileName)
   {
     String_set(prefixFileName,baseName);
   }
-  File_setFileName(destinationFileName,pathName);
+  File_setFileName(destinationFileName,directoryPath);
   File_appendFileName(destinationFileName,prefixFileName);
   String_append(destinationFileName,postfixFileName);
   if (File_exists(destinationFileName))
@@ -656,7 +663,7 @@ LOCAL String getUniqName(String destinationFileName)
     n = 0;
     do
     {
-      File_setFileName(destinationFileName,pathName);
+      File_setFileName(destinationFileName,directoryPath);
       File_appendFileName(destinationFileName,prefixFileName);
       String_appendFormat(destinationFileName,"-%u",n);
       String_append(destinationFileName,postfixFileName);
@@ -667,7 +674,7 @@ LOCAL String getUniqName(String destinationFileName)
   String_delete(postfixFileName);
   String_delete(prefixFileName);
   String_delete(baseName);
-  String_delete(pathName);
+  String_delete(directoryPath);
 
   return destinationFileName;
 }
