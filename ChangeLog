@@ -1,6 +1,6 @@
-2022-11-10 0.22c
+2022-11-15 0.22c
   * fixed trigger pairing thread
-  * fixed memory leak
+  * fixed memory leaks
 
 2022-11-06 0.22b
   * fixed slave mode: avoid reading local jobs

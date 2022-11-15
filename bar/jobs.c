@@ -2953,7 +2953,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->ignoreNoDumpAttributeFlag                 = fromJobOptions->ignoreNoDumpAttributeFlag;
   jobOptions->archiveFileMode                           = fromJobOptions->archiveFileMode;
   jobOptions->restoreEntryMode                          = fromJobOptions->restoreEntryMode;
-  jobOptions->sparseFilesFlag                            = fromJobOptions->sparseFilesFlag;
+  jobOptions->sparseFilesFlag                           = fromJobOptions->sparseFilesFlag;
   jobOptions->errorCorrectionCodesFlag                  = fromJobOptions->errorCorrectionCodesFlag;
   jobOptions->alwaysCreateImageFlag                     = fromJobOptions->alwaysCreateImageFlag;
   jobOptions->blankFlag                                 = fromJobOptions->blankFlag;
