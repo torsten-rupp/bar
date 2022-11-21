@@ -1970,25 +1970,28 @@ LOCAL void pauseThreadCode(void)
           // continue all slaves
           if (globalOptions.serverMode == SERVER_MODE_MASTER)
           {
-            JOB_SLAVE_LIST_ITERATE(slaveNode)
+            JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
             {
-              if (Connector_isAuthorized(&slaveNode->connectorInfo))
+              JOB_SLAVE_LIST_ITERATE(slaveNode)
               {
-                error = Connector_executeCommand(&slaveNode->connectorInfo,
-                                                 1,
-                                                 10*MS_PER_SECOND,
-                                                 CALLBACK_(NULL,NULL),
-                                                 "CONTINUE"
-                                                );
-                if (error != ERROR_NONE)
+                if (Connector_isAuthorized(&slaveNode->connectorInfo))
                 {
-                  logMessage(NULL,  // logHandle,
-                             LOG_TYPE_WARNING,
-                             "Continue slave '%s:%u' fail (error: %s)",
-                             String_cString(slaveNode->name),
-                             slaveNode->port,
-                             Error_getText(error)
-                            );
+                  error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                                   1,
+                                                   10*MS_PER_SECOND,
+                                                   CALLBACK_(NULL,NULL),
+                                                   "CONTINUE"
+                                                  );
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(NULL,  // logHandle,
+                               LOG_TYPE_WARNING,
+                               "Continue slave '%s:%u' fail (error: %s)",
+                               String_cString(slaveNode->name),
+                               slaveNode->port,
+                               Error_getText(error)
+                              );
+                  }
                 }
               }
             }
@@ -8418,17 +8421,20 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       error = ERROR_NONE;
-      JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+      JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        if (Connector_isAuthorized(&slaveNode->connectorInfo))
+        JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
         {
-          error = Connector_executeCommand(&slaveNode->connectorInfo,
-                                           1,
-                                           10*MS_PER_SECOND,
-                                           CALLBACK_(NULL,NULL),
-                                           "SUSPEND modeMask=%S",
-                                           modeMask
-                                          );
+          if (Connector_isAuthorized(&slaveNode->connectorInfo))
+          {
+            error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                             1,
+                                             10*MS_PER_SECOND,
+                                             CALLBACK_(NULL,NULL),
+                                             "SUSPEND modeMask=%S",
+                                             modeMask
+                                            );
+          }
         }
       }
       if (error != ERROR_NONE)
@@ -8542,17 +8548,20 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       error = ERROR_NONE;
-      JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+      JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        if (Connector_isAuthorized(&slaveNode->connectorInfo))
+        JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
         {
-          error = Connector_executeCommand(&slaveNode->connectorInfo,
-                                           1,
-                                           10*MS_PER_SECOND,
-                                           CALLBACK_(NULL,NULL),
-                                           "SUSPEND modeMask=%S",
-                                           modeMask
-                                          );
+          if (Connector_isAuthorized(&slaveNode->connectorInfo))
+          {
+            error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                             1,
+                                             10*MS_PER_SECOND,
+                                             CALLBACK_(NULL,NULL),
+                                             "SUSPEND modeMask=%S",
+                                             modeMask
+                                            );
+          }
         }
       }
       if (error != ERROR_NONE)
@@ -8619,16 +8628,19 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       error = ERROR_NONE;
-      JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+      JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        if (Connector_isAuthorized(&slaveNode->connectorInfo))
+        JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
         {
-          error = Connector_executeCommand(&slaveNode->connectorInfo,
-                                           1,
-                                           10*MS_PER_SECOND,
-                                           CALLBACK_(NULL,NULL),
-                                           "CONTINUE"
-                                          );
+          if (Connector_isAuthorized(&slaveNode->connectorInfo))
+          {
+            error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                             1,
+                                             10*MS_PER_SECOND,
+                                             CALLBACK_(NULL,NULL),
+                                             "CONTINUE"
+                                            );
+          }
         }
       }
       if (error != ERROR_NONE)
@@ -8640,7 +8652,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // set running state
-    serverState            = SERVER_STATE_RUNNING;
+    serverState = SERVER_STATE_RUNNING;
 
     // log info
     logMessage(NULL,  // logHandle,
@@ -21236,7 +21248,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     // wait for commands done
     while (!List_isEmpty(&clientInfo->commandInfoList))
     {
-      Semaphore_waitModified(&clientInfo->lock,WAIT_FOREVER);
+      Semaphore_waitModified(&clientInfo->lock,500);
     }
   }
 
