@@ -366,3 +366,26 @@
    fun:initialize
    fun:_gcry_create_nonce
 }
+
+# --- libbfd ----------------------------------------------------------
+{
+   libbfd1
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:scan_unit_for_symbols
+   fun:comp_unit_maybe_decode_line_info
+   fun:comp_unit_find_nearest_line
+   fun:_bfd_dwarf2_find_nearest_line
+   fun:_bfd_elf_find_nearest_line
+   fun:findAddressInSection
+   fun:bfd_map_over_sections
+   fun:addressToSymbolInfo
+   fun:getSymbolInfoFromFile
+   fun:Stacktrace_getSymbolInfo
+   fun:debugDumpStackTrace
+   fun:debugDumpCurrentStackTrace
+   fun:debugPrintStackTrace
+   fun:main
+}
