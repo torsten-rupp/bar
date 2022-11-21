@@ -8261,6 +8261,7 @@ Errors Command_create(ServerIO                     *masterIO,
     {
       // delete entity on error/dry-run/abort
       error = Index_deleteEntity(&indexHandle,entityId);
+      if (error != ERROR_NONE)
       {
         printWarning("cannot delete entity for '%s' (error: %s)!",
                    String_cString(printableStorageName),
