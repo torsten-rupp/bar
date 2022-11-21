@@ -347,7 +347,10 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   addressInfo.address      = address;
   addressInfo.sectionFound = FALSE;
   addressInfo.symbolFound  = FALSE;
-  bfd_map_over_sections(abfd,findAddressInSection,(PTR)&addressInfo);
+  addressInfo.fileName     = NULL;
+  addressInfo.symbolName   = NULL;
+  addressInfo.lineNb       = 0;
+  bfd_map_over_sections(abfd,findAddressInSection,&addressInfo);
   if (!addressInfo.sectionFound)
   {
     if (errorMessage != NULL)

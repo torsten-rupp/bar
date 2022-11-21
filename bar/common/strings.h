@@ -936,7 +936,7 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
 
   if (string != NULL)
   {
-    if      (((string->data[index] & 0xF8) == 0xF0) && ((index+4) <= string->length))
+    if      (((index+4) <= string->length) && ((string->data[index] & 0xF8) == 0xF0))
     {
       // 4 byte UTF8 codepoint
       codepoint =   (Codepoint)((string->data[index+0] & 0x07) << 18)
@@ -945,7 +945,7 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
                   | (Codepoint)((string->data[index+3] & 0x3F) <<  0);
       if (nextIndex != NULL) (*nextIndex) = index+4;
     }
-    else if (((string->data[index] & 0xF0) == 0xE0) && ((index+3) <= string->length))
+    else if (((index+3) <= string->length) && ((string->data[index] & 0xF0) == 0xE0))
     {
       // 3 byte UTF8 codepoint
       codepoint =   (Codepoint)((string->data[index+0] & 0x0F) << 12)
@@ -953,14 +953,14 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
                   | (Codepoint)((string->data[index+2] & 0x3F) <<  0);
       if (nextIndex != NULL) (*nextIndex) = index+3;
     }
-    else if (((string->data[index] & 0xE0) == 0xC0) && ((index+2) <= string->length))
+    else if (((index+2) <= string->length) && ((string->data[index] & 0xE0) == 0xC0))
     {
       // 2 byte UTF8 codepoint
       codepoint =   (Codepoint)((string->data[index+0] & 0x1F) << 6)
                   | (Codepoint)((string->data[index+1] & 0x3F) << 0);
       if (nextIndex != NULL) (*nextIndex) = index+2;
     }
-    else if (                                          ((index+1) <= string->length))
+    else if (((index+1) <= string->length))
     {
       // 1 byte UTF8 codepoint
       codepoint = (Codepoint)string->data[index];

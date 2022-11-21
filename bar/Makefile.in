@@ -207,7 +207,7 @@ LCOV            = @LCOV@
 GENHTML         = @GENHTML@
 
 VALGRIND        = valgrind
-VALGRIND_FLAGS  = --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+VALGRIND_FLAGS  = --gen-suppressions=no --num-callers=32 --track-fds=yes --track-origins=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 CALLGRIND_FLAGS = -v
 
 #------------------------ specific variables/settings ------------------------
