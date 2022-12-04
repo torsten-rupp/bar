@@ -831,12 +831,12 @@ INLINE char String_index(ConstString string, ulong index)
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : String_isValidUTF8
-* Purpose: check if string has valid UTF8 encoding
+* Name   : String_isValidUTF8Codepoint
+* Purpose: check if valid UTF codepoint in string
 * Input  : string - string
 *          index  - index [0..n-1]
 * Output : -
-* Return : TRUE iff encoding is valid
+* Return : TRUE iff codepoint is valid
 * Notes  : -
 \***********************************************************************/
 
@@ -936,40 +936,7 @@ INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex
 
   if (string != NULL)
   {
-    if      (((string->data[index] & 0xF8) == 0xF0) && ((index+4) <= string->length))
-    {
-      // 4 byte UTF8 codepoint
-      codepoint =   (Codepoint)((string->data[index+0] & 0x07) << 18)
-                  | (Codepoint)((string->data[index+1] & 0x3F) << 12)
-                  | (Codepoint)((string->data[index+2] & 0x3F) <<  6)
-                  | (Codepoint)((string->data[index+3] & 0x3F) <<  0);
-      if (nextIndex != NULL) (*nextIndex) = index+4;
-    }
-    else if (((string->data[index] & 0xF0) == 0xE0) && ((index+3) <= string->length))
-    {
-      // 3 byte UTF8 codepoint
-      codepoint =   (Codepoint)((string->data[index+0] & 0x0F) << 12)
-                  | (Codepoint)((string->data[index+1] & 0x3F) <<  6)
-                  | (Codepoint)((string->data[index+2] & 0x3F) <<  0);
-      if (nextIndex != NULL) (*nextIndex) = index+3;
-    }
-    else if (((string->data[index] & 0xE0) == 0xC0) && ((index+2) <= string->length))
-    {
-      // 2 byte UTF8 codepoint
-      codepoint =   (Codepoint)((string->data[index+0] & 0x1F) << 6)
-                  | (Codepoint)((string->data[index+1] & 0x3F) << 0);
-      if (nextIndex != NULL) (*nextIndex) = index+2;
-    }
-    else if (                                          ((index+1) <= string->length))
-    {
-      // 1 byte UTF8 codepoint
-      codepoint = (Codepoint)string->data[index];
-      if (nextIndex != NULL) (*nextIndex) = index+1;
-    }
-    else
-    {
-      codepoint = 0x00000000;
-    }
+    codepoint = stringAtUTF8n(string->data,string->length,index,nextIndex);
   }
   else
   {
