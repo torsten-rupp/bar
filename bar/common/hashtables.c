@@ -497,7 +497,7 @@ bool HashTable_init(HashTable               *hashTable,
 void HashTable_done(HashTable *hashTable)
 {
   uint           i;
-  HashTableEntry *hashTableEntry;
+  HashTableEntry *hashTableEntry,*nextHashTableEntry;
 
   assert(hashTable != NULL);
   assert(hashTable->entries != NULL);
@@ -508,8 +508,24 @@ void HashTable_done(HashTable *hashTable)
     {
       #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
         hashTableEntry = &hashTable->entries[i];
-        while (hashTableEntry != NULL)
+        if (hashTableEntry->keyData != NULL)
         {
+          if (hashTable->freeFunction != NULL)
+          {
+            hashTable->freeFunction(hashTableEntry->data,
+                                    hashTableEntry->length,
+                                    hashTable->freeUserData
+                                   );
+          }
+          if (hashTableEntry->data != NULL) free(hashTableEntry->data);
+          free(hashTableEntry->keyData);
+        }
+                
+        nextHashTableEntry = hashTableEntry->next;
+        while (nextHashTableEntry != NULL)
+        {
+          hashTableEntry = nextHashTableEntry;
+
           if (hashTableEntry->keyData != NULL)
           {
             if (hashTable->freeFunction != NULL)
@@ -522,8 +538,9 @@ void HashTable_done(HashTable *hashTable)
             if (hashTableEntry->data != NULL) free(hashTableEntry->data);
             free(hashTableEntry->keyData);
           }
-
-          hashTableEntry = hashTableEntry->next;
+          
+          nextHashTableEntry = hashTableEntry->next;
+          free(hashTableEntry);
         }
       #else
         if (hashTableEntry->keyData != NULL)
