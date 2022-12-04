@@ -1,3 +1,7 @@
+2022-11-24 0.23c
+  * add missing lock slave list
+  * fixed valgrind warning
+
 2022-11-15 0.22c
   * fixed trigger pairing thread
   * fixed memory leaks
