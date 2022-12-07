@@ -3188,7 +3188,6 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
 {
   uint                 n;
   const HashTableEntry *hashTableEntry;
-  bool                 prepared;
   PGresult             *postgresqlResult;
   Errors               error;
   ExecStatusType       postgreSQLExecStatus;
@@ -3210,7 +3209,12 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                                  );
   if (hashTableEntry != NULL)
   {
-    prepared = TRUE;
+    stringFormat(statement->name,sizeof(statement->name),
+                 "s%016"PRIx64,
+                 (intptr_t)hashTableEntry
+                );
+
+    error = ERROR_NONE;
   }
   else
   {
@@ -3220,54 +3224,57 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                                    NULL,
                                    0
                                   );
-    prepared = FALSE;
-  }
-  assert(hashTableEntry != NULL);
-  stringFormat(statement->name,sizeof(statement->name),
-               "s%016"PRIx64,
-               (intptr_t)hashTableEntry
-              );
+    assert(hashTableEntry != NULL);
 
-  // prepare statement
-  if (!prepared)
-  {
+    stringFormat(statement->name,sizeof(statement->name),
+                 "s%016"PRIx64,
+                 (intptr_t)hashTableEntry
+                );
+
+    // prepare statement
     postgresqlResult = PQprepare(databaseHandle->postgresql.handle,
                                  statement->name,
                                  sqlString,
                                  parameterCount,
                                  NULL  // paramTypes
                                 );
-    if (postgresqlResult == NULL)
+    if (postgresqlResult != NULL)
     {
-      return ERRORX_(DATABASE,
-                     0,
-                     "%s: %s",
-                     postgresqlErrorMessage(databaseHandle->postgresql.handle),
-                     sqlString
-                    );
-    }
-
-    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
-    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
-         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
-       )
-    {
-      error = ERROR_NONE;
+      postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+      if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+           || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+         )
+      {
+        error = ERROR_NONE;
+      }
+      else
+      {
+        HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
+                         sqlString,
+                         n+1
+                        );
+        error = ERRORX_(DATABASE,
+                        postgreSQLExecStatus,
+                        "%s: %s",
+                        PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
+                        sqlString
+                       );
+      }
+      PQclear(postgresqlResult);
     }
     else
     {
+      HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
+                       sqlString,
+                       n+1
+                      );
       error = ERRORX_(DATABASE,
-                      postgreSQLExecStatus,
+                      0,
                       "%s: %s",
-                      PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
+                      postgresqlErrorMessage(databaseHandle->postgresql.handle),
                       sqlString
                      );
     }
-    PQclear(postgresqlResult);
-  }
-  else
-  {
-    error = ERROR_NONE;
   }
 
   return error;

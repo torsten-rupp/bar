@@ -1040,24 +1040,43 @@ LOCAL Errors deleteFTSEntry(IndexHandle  *indexHandle,
 {
   Errors error;
 
+  assert(indexHandle != NULL);
+
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  error = ERROR_NONE;
 
-  if (error == ERROR_NONE)
+  switch (Database_getType(&indexHandle->databaseHandle))
   {
-    error = Database_delete(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount,
-                            "FTS_entries",
-                            DATABASE_FLAG_NONE,
-                            "entryId MATCH ?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(entryId)
-                            ),
-                            DATABASE_UNLIMITED
-                           );
+    case DATABASE_TYPE_SQLITE3:
+      error = Database_delete(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount,
+                              "FTS_entries",
+                              DATABASE_FLAG_NONE,
+                              "entryId=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entryId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      break;
+    case DATABASE_TYPE_MARIADB:
+      error = ERROR_NONE;
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      error = Database_delete(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount,
+                              "FTS_entries",
+                              DATABASE_FLAG_NONE,
+                              "entryId=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entryId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      break;
   }
 
   // free resources
