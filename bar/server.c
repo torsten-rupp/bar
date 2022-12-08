@@ -22627,6 +22627,7 @@ Errors Server_socket(void)
   // done index
   if (Index_isAvailable())
   {
+fprintf(stderr,"%s:%d: close server index\n",__FILE__,__LINE__);
     Index_close(&indexHandle);
   }
 

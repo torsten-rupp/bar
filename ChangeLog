@@ -1,4 +1,5 @@
-2022-11-24 0.23c
+2022-12-04 0.22d
+  * fixed memory leak in PostgreSQL API call
   * add missing lock slave list
   * fixed valgrind warning
 

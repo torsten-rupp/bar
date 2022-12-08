@@ -1520,91 +1520,95 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
   struct tm  *tm;
 
   assert(context != NULL);
-  assert(argc >= 1);
   assert(argv != NULL);
 
-  UNUSED_VARIABLE(argc);
-
-  // get text to convert, optional date/time format
-  text   = (const char*)sqlite3_value_text(argv[0]);
-  format = (argc >= 2) ? (const char *)argv[1] : NULL;
-
-  timestamp = 0LL;
-
-  // convert to Unix timestamp
-  if (text != NULL)
+  if (argc >= 1)
   {
-    // try convert number value
-    if (stringToUInt64(text,&timestamp,NULL))
+    // get text to convert, optional date/time format
+    text   = (const char*)sqlite3_value_text(argv[0]);
+    format = (argc >= 2) ? (const char *)argv[1] : NULL;
+
+    timestamp = 0LL;
+
+    // convert to Unix timestamp
+    if (text != NULL)
     {
-      // done
-    }
-    else
-    {
-      // try convert string value
-      #if   defined(HAVE_GETDATE_R)
-        tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
-      #elif defined(HAVE_GETDATE)
-        tm = getdate(text);
-      #else
-#ifndef WERROR
-#warning implement strptime
-#endif
-//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
-        tm = NULL;
-      #endif /* HAVE_GETDATE... */
-      if (tm != NULL)
+      // try convert number value
+      if (stringToUInt64(text,&timestamp,NULL))
       {
-        #ifdef HAVE_TIMEGM
-          timestamp = (uint64)timegm(tm);
-        #else
-#ifndef WERROR
-#warning implement timegm
-#endif
-        #endif
+        // done
       }
       else
       {
-        s = NULL;
-        #ifdef HAVE_STRPTIME
-          memClear(&tmBuffer,sizeof(tmBuffer));
-          if (format != NULL)
-          {
-            s = strptime(text,format,&tmBuffer);
-          }
-          else
-          {
-            i = 0;
-            do
-            {
-              s = strptime(text,DATE_TIME_FORMATS[i],&tmBuffer);
-              i++;
-            }
-            while ((s == NULL) && (i < SIZE_OF_ARRAY(DATE_TIME_FORMATS)));
-          }
+        // try convert string value
+        #if   defined(HAVE_GETDATE_R)
+          tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
+        #elif defined(HAVE_GETDATE)
+          tm = getdate(text);
         #else
-UNUSED_VARIABLE(format);
-#ifndef WERROR
-#warning implement strptime
-#endif
-//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
-          s = NULL;
-        #endif
-        if ((s != NULL) && stringIsEmpty(s))
+  #ifndef WERROR
+  #warning implement strptime
+  #endif
+  //TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+          tm = NULL;
+        #endif /* HAVE_GETDATE... */
+        if (tm != NULL)
         {
           #ifdef HAVE_TIMEGM
-            timestamp = (uint64)timegm(&tmBuffer);
+            timestamp = (uint64)timegm(tm);
           #else
-#ifndef WERROR
-#warning implement timegm
-#endif
+  #ifndef WERROR
+  #warning implement timegm
+  #endif
           #endif
         }
         else
         {
-          timestamp = 0LL;
+          s = NULL;
+          #ifdef HAVE_STRPTIME
+            memClear(&tmBuffer,sizeof(tmBuffer));
+            if (format != NULL)
+            {
+              s = strptime(text,format,&tmBuffer);
+            }
+            else
+            {
+              i = 0;
+              do
+              {
+                s = strptime(text,DATE_TIME_FORMATS[i],&tmBuffer);
+                i++;
+              }
+              while ((s == NULL) && (i < SIZE_OF_ARRAY(DATE_TIME_FORMATS)));
+            }
+          #else
+  UNUSED_VARIABLE(format);
+  #ifndef WERROR
+  #warning implement strptime
+  #endif
+  //TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+            s = NULL;
+          #endif
+          if ((s != NULL) && stringIsEmpty(s))
+          {
+            #ifdef HAVE_TIMEGM
+              timestamp = (uint64)timegm(&tmBuffer);
+            #else
+  #ifndef WERROR
+  #warning implement timegm
+  #endif
+            #endif
+          }
+          else
+          {
+            timestamp = 0LL;
+          }
         }
       }
+    }
+    else
+    {
+      timestamp = 0LL;
     }
   }
   else
@@ -3188,7 +3192,6 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
 {
   uint                 n;
   const HashTableEntry *hashTableEntry;
-  bool                 prepared;
   PGresult             *postgresqlResult;
   Errors               error;
   ExecStatusType       postgreSQLExecStatus;
@@ -3210,7 +3213,12 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                                  );
   if (hashTableEntry != NULL)
   {
-    prepared = TRUE;
+    stringFormat(statement->name,sizeof(statement->name),
+                 "s%016"PRIx64,
+                 (intptr_t)hashTableEntry
+                );
+
+    error = ERROR_NONE;
   }
   else
   {
@@ -3220,54 +3228,57 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                                    NULL,
                                    0
                                   );
-    prepared = FALSE;
-  }
-  assert(hashTableEntry != NULL);
-  stringFormat(statement->name,sizeof(statement->name),
-               "s%016"PRIx64,
-               (intptr_t)hashTableEntry
-              );
+    assert(hashTableEntry != NULL);
 
-  // prepare statement
-  if (!prepared)
-  {
+    stringFormat(statement->name,sizeof(statement->name),
+                 "s%016"PRIx64,
+                 (intptr_t)hashTableEntry
+                );
+
+    // prepare statement
     postgresqlResult = PQprepare(databaseHandle->postgresql.handle,
                                  statement->name,
                                  sqlString,
                                  parameterCount,
                                  NULL  // paramTypes
                                 );
-    if (postgresqlResult == NULL)
+    if (postgresqlResult != NULL)
     {
-      return ERRORX_(DATABASE,
-                     0,
-                     "%s: %s",
-                     postgresqlErrorMessage(databaseHandle->postgresql.handle),
-                     sqlString
-                    );
-    }
-
-    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
-    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
-         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
-       )
-    {
-      error = ERROR_NONE;
+      postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+      if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+           || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+         )
+      {
+        error = ERROR_NONE;
+      }
+      else
+      {
+        HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
+                         sqlString,
+                         n+1
+                        );
+        error = ERRORX_(DATABASE,
+                        postgreSQLExecStatus,
+                        "%s: %s",
+                        PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
+                        sqlString
+                       );
+      }
+      PQclear(postgresqlResult);
     }
     else
     {
+      HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
+                       sqlString,
+                       n+1
+                      );
       error = ERRORX_(DATABASE,
-                      postgreSQLExecStatus,
+                      0,
                       "%s: %s",
-                      PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
+                      postgresqlErrorMessage(databaseHandle->postgresql.handle),
                       sqlString
                      );
     }
-    PQclear(postgresqlResult);
-  }
-  else
-  {
-    error = ERROR_NONE;
   }
 
   return error;
@@ -4210,11 +4221,17 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           HashTable_iterate(&databaseHandle->postgresql.sqlStringHashTable,
                             CALLBACK_INLINE(bool,(const HashTableEntry *hashTableEntry, void *userData),
                             {
+                              PGresult *postgresqlResult;
+
                               UNUSED_VARIABLE(userData);
 
-                              PQexec(databaseHandle->postgresql.handle,
-                                     stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
-                                    );
+                              postgresqlResult = PQexec(databaseHandle->postgresql.handle,
+                                                        stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
+                                                       );
+                              if (postgresqlResult != NULL)
+                              {
+                                PQclear(postgresqlResult);
+                              }
 
                               return TRUE;
                             },NULL)
@@ -11005,8 +11022,8 @@ Errors Database_getTableList(StringList     *tableList,
                                NULL,  // changedRowCount
                                DATABASE_PLAIN("SELECT tablename \
                                                FROM pg_catalog.pg_tables \
-                                               WHERE     schemaname != 'pg_catalog' \
-                                                     AND schemaname != 'information_schema' \
+                                               WHERE     schemaname!='pg_catalog' \
+                                                     AND schemaname!='information_schema' \
                                               "
                                              ),
                                DATABASE_COLUMNS
@@ -11134,7 +11151,11 @@ Errors Database_getViewList(StringList     *viewList,
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               DATABASE_PLAIN("SELECT table_name FROM INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(FALSE))"),
+                               DATABASE_PLAIN("SELECT table_name \
+                                               FROM INFORMATION_SCHEMA.views \
+                                               WHERE table_schema=ANY(current_schemas(FALSE)) \
+                                              "
+                                             ),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_STRING("table_name")
@@ -11346,8 +11367,8 @@ Errors Database_getIndexList(StringList     *indexList,
                                NULL,  // changedRowCount
                                DATABASE_PLAIN("SELECT * \
                                                FROM pg_indexes \
-                                               WHERE     schemaname != 'pg_catalog' \
-                                                     AND schemaname != 'information_schema' \
+                                               WHERE     schemaname!='pg_catalog' \
+                                                     AND schemaname!='information_schema' \
                                               "
                                              ),
                                DATABASE_COLUMNS
