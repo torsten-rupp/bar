@@ -1346,6 +1346,7 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
+fprintf(stderr,"%s:%d: %"PRIu64"\n",__FILE__,__LINE__,dateTime);
   n = (time_t)dateTime;
   if (utcFlag)
   {
@@ -3097,6 +3098,143 @@ bool Misc_getRegistryString(String string, HKEY parentKey, const char *subKey, c
   #undef BUFFER_SIZE
 }
 #endif /* PLATFORM_... */
+
+char *Misc_translate(const char *format, ...)
+{
+  // Note: cannot use ICU u_vformatMessage(), because string arguments have to be Unicode
+#if 1
+  #define MAX_TEXT_LENGTH 256
+  #define MAX_VALUES      16
+
+  #define APPEND(ch) \
+    do \
+    { \
+      if (i < (MAX_TEXT_LENGTH-1)) \
+      { \
+        text[i] = (ch); \
+        i++; \
+      } \
+    } \
+    while (0)
+
+  typedef union
+  {
+    int        i;
+    int64      i64;
+    uint       u;
+    uint64     u64;
+    const char *s;
+  } Argument;
+
+  static char text[MAX_TEXT_LENGTH];
+
+  va_list    arguments;
+  const char *s;
+  uint       i;
+  Argument        values[MAX_VALUES];
+  CStringIterator cStringIterator;
+  Codepoint       codepoint;
+  uint            index;
+
+  // get argument values
+  memClear(values,sizeof(values));
+  index = 0;
+  va_start(arguments,format);
+  CSTRING_CHAR_ITERATE(format,cStringIterator,codepoint)
+  {
+    switch (codepoint)
+    {
+      case '\\':
+        stringIteratorNext(&cStringIterator);
+        break;
+      case '{':
+        do
+        {
+          stringIteratorNext(&cStringIterator);
+          codepoint = stringIteratorGet(&cStringIterator);
+        }
+        while (codepoint != '}');
+        if (index < MAX_VALUES)
+        {
+          values[index].s = va_arg(arguments,char*);
+          index++;
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  va_end(arguments);
+
+  // format
+  va_start(arguments,format);
+  i = 0;
+  CSTRING_CHAR_ITERATE(format,cStringIterator,codepoint)
+  {
+    switch (codepoint)
+    {
+      case '\\':
+        stringIteratorNext(&cStringIterator);
+        APPEND(stringIteratorGet(&cStringIterator));
+        break;
+      case '{':
+        index = 0;
+        do
+        {
+          stringIteratorNext(&cStringIterator);
+          codepoint = stringIteratorGet(&cStringIterator);
+          if (IS_IN_RANGE('0',codepoint,'9'))
+          {
+            index = index*10+(uint)(codepoint-'0');
+          }
+        }
+        while (codepoint != '}');
+        if (index < MAX_VALUES)
+        {
+          s = values[index].s;
+          if (s != NULL)
+          {
+            while ((*s) != NUL)
+            {
+              APPEND(*s); s++;
+            }
+          }
+        }
+        break;
+      default:
+        APPEND(codepoint);
+        break;
+    }
+  }
+  va_end(arguments);
+  text[i] = NUL;
+
+  return text;
+#else
+/*
+#define U_CHARSET_IS_UTF8 1
+#include "unicode/utypes.h"
+#include "unicode/umsg.h"
+#include "unicode/ustring.h"
+*/
+  static char text[256];
+
+  UChar pattern[256];
+  UChar result[256];
+  int32_t resultLength;
+  UErrorCode errorCode;
+  va_list    arguments;
+
+  va_start(arguments,format);
+  u_uastrncpy(pattern, format, 256);
+  resultLength = u_vformatMessage( "en_US", pattern,u_strlen(pattern),result,100,arguments,&errorCode);
+  va_end(arguments);
+
+  u_austrncpy(text, result, 256);
+
+  return text;
+#endif
+}
 
 #ifdef __cplusplus
   }

@@ -1767,7 +1767,7 @@ error = testInfo.failError;
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,tr("Test fail: %s\n"),Error_getText(error));
+    printInfo(1,tr("Test fail: {0}\n",Error_getText(error)));
   }
 
   return error;
