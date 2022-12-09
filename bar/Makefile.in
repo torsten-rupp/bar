@@ -71,8 +71,7 @@ CC_FLAGS_OPTIMIZE_VALGRIND = @CC_FLAGS_OPTIMIZE_DEBUG@
 CC_FLAGS_GCOV              = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage
 CC_FLAGS_GPROF             = @CC_FLAGS_GPROF@ -DGPROF -pg
 CC_FLAGS_VALGRIND          = @CC_FLAGS_VALGRIND@ -fno-builtin
-# TODO: tr() with arguments
-CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s,...)=s"
+CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG 'tr(...)=Misc_translate(__VA_ARGS__)'
 CC_DEFINES_RELEASE         = @CC_DEFINES_RELEASE@
 CC_DEFINES_DEBUG           = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG

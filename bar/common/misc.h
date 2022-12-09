@@ -1636,6 +1636,17 @@ uint Misc_hexDecodeLengthCString(const char *s);
 bool Misc_getRegistryString(String string, HKEY parentKey, const char *subKey, const char *name);
 #endif /* PLATFORM_... */
 
+/***********************************************************************\
+* Name   : Misc_translate
+* Purpose: get translated text with arguments
+* Input  : format - text to translate with {n}
+* Output : -
+* Return : translated and formated text
+* Notes  : -
+\***********************************************************************/
+
+char *Misc_translate(const char *format, ...);
+
 #ifdef __cplusplus
   }
 #endif

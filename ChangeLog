@@ -2,6 +2,8 @@
   * fixed memory leak in PostgreSQL API call
   * add missing lock slave list
   * fixed valgrind warning
+  * fixed format error messages with arguments
+  * fixed format some log lines
 
 2022-11-15 0.22c
   * fixed trigger pairing thread
