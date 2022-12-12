@@ -14489,7 +14489,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -22654,7 +22654,6 @@ Errors Server_socket(void)
   // done index
   if (Index_isAvailable())
   {
-fprintf(stderr,"%s:%d: close server index\n",__FILE__,__LINE__);
     Index_close(&indexHandle);
   }
 

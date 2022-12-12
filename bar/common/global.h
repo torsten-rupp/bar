@@ -896,6 +896,18 @@ typedef byte* BitSet;
 //#endif
 
 /***********************************************************************\
+* Name   : IS_IN_RANGE
+* Purpose: check if value is in range
+* Input  : l,h - lower/upper bound
+*          x   - number
+* Output : -
+* Return : TRUE if l <= x <= h
+* Notes  : -
+\***********************************************************************/
+
+#define IS_IN_RANGE(l,x,h) (((l) <= (x)) && ((x) <= (h)))
+
+/***********************************************************************\
 * Name   : IN_RANGE
 * Purpose: get value in range
 * Input  : l,h - lower/upper bound
@@ -1155,9 +1167,9 @@ typedef byte* BitSet;
 \***********************************************************************/
 
 #define CSTRING_CHAR_ITERATE(string,iteratorVariable,variable) \
-  for (stringIteratorInit(&iteratorVariable,string), variable = stringIteratorAt(&iteratorVariable); \
+  for (stringIteratorInit(&iteratorVariable,string), variable = stringIteratorGet(&iteratorVariable); \
        !stringIteratorEnd(&iteratorVariable); \
-       stringIteratorNext(&iteratorVariable), variable = stringIteratorAt(&iteratorVariable) \
+       stringIteratorNext(&iteratorVariable), variable = stringIteratorGet(&iteratorVariable) \
       )
 
 /***********************************************************************\
@@ -3856,7 +3868,7 @@ static inline void stringIteratorDone(CStringIterator *cStringIterator)
 }
 
 /***********************************************************************\
-* Name   : stringIteratorAt
+* Name   : stringIteratorGet
 * Purpose: get character (codepoint) from string iterator
 * Input  : cStringIterator - string iterator
 * Output : -
@@ -3864,7 +3876,7 @@ static inline void stringIteratorDone(CStringIterator *cStringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringIteratorAt(CStringIterator *cStringIterator)
+static inline Codepoint stringIteratorGet(CStringIterator *cStringIterator)
 {
   assert(cStringIterator != NULL);
 
@@ -3875,13 +3887,13 @@ static inline Codepoint stringIteratorAt(CStringIterator *cStringIterator)
 * Name   : stringIteratorAtX
 * Purpose: get character (codepoint) from string iterator
 * Input  : cStringIterator - string iterator
-*          i               - index (0..n-1)
+*          index           - index (0..n-1)
 * Output : -
 * Return : character
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringIteratorAtX(CStringIterator *cStringIterator, ulong n)
+static inline Codepoint stringIteratorAtX(CStringIterator *cStringIterator, ulong index)
 {
   Codepoint codepoint;
   ulong     nextIndex;
@@ -3890,10 +3902,10 @@ static inline Codepoint stringIteratorAtX(CStringIterator *cStringIterator, ulon
 
   codepoint = cStringIterator->codepoint;
   nextIndex = cStringIterator->nextIndex;
-  while ((n > 0) && (cStringIterator->s[nextIndex] != NUL))
+  while ((index > 0) && (cStringIterator->s[nextIndex] != NUL))
   {
     codepoint = stringAtUTF8(cStringIterator->s,nextIndex,&nextIndex);
-    n--;
+    index--;
   }
 
   return codepoint;
@@ -3942,7 +3954,7 @@ static inline void stringIteratorNext(CStringIterator *cStringIterator)
 * Name   : stringIteratorNextX
 * Purpose: increment string iterator
 * Input  : cStringIterator - string iterator
-*          n               - number of chracters
+*          n               - number of chracters to increment
 * Output : -
 * Return : -
 * Notes  : -
@@ -3960,15 +3972,15 @@ static inline void stringIteratorNextX(CStringIterator *cStringIterator, ulong n
 }
 
 /***********************************************************************\
-* Name   : stringIteratorGet
-* Purpose: get character (codepoint) from string iterator
+* Name   : stringIteratorGetNext
+* Purpose: get next character (codepoint) from string iterator
 * Input  : cStringIterator - string iterator
-* Output : -
+* Output : cStringIterator - incremented string iterator
 * Return : character
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringIteratorGet(CStringIterator *cStringIterator)
+static inline Codepoint stringIteratorGetNext(CStringIterator *cStringIterator)
 {
   Codepoint codepoint;
 
