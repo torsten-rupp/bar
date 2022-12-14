@@ -1013,7 +1013,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterString    = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -2360,7 +2360,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   orderString      = String_new();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -3293,7 +3293,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3453,7 +3453,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3614,7 +3614,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3772,7 +3772,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3934,7 +3934,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -4094,7 +4094,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries","name",name);
 
   // get id sets
   entityIdsString = String_new();

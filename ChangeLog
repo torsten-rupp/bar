@@ -1,9 +1,12 @@
-2022-12-04 0.22d
+2022-12-18 0.22d
   * fixed memory leak in PostgreSQL API call
   * add missing lock slave list
   * fixed valgrind warning
   * fixed format error messages with arguments
   * fixed format some log lines
+  * fixed full-text-search matching for SQLite
+  * fixed SQLite database locking when new storage
+    is inserted
 
 2022-11-15 0.22c
   * fixed trigger pairing thread

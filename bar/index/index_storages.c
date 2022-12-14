@@ -2026,19 +2026,19 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
             doneFlag = TRUE;
 // TODO:
             error = IndexCommon_delete(indexHandle,
-                                      &doneFlag,
-                                      #ifndef NDEBUG
-                                        &deletedCounter,
-                                      #else
-                                        NULL,  // deletedCounter
-                                      #endif
-                                      "FTS_storages",
-                                      "storageId=?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
-                                      )
-                                     );
+                                       &doneFlag,
+                                       #ifndef NDEBUG
+                                         &deletedCounter,
+                                       #else
+                                         NULL,  // deletedCounter
+                                       #endif
+                                       "FTS_storages",
+                                       "storageId=?",
+                                       DATABASE_FILTERS
+                                       (
+                                         DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                       )
+                                      );
             if (error == ERROR_NONE)
             {
               error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
@@ -2065,19 +2065,19 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
             doneFlag = TRUE;
 // TODO:
             error = IndexCommon_delete(indexHandle,
-                                      &doneFlag,
-                                      #ifndef NDEBUG
-                                        &deletedCounter,
-                                      #else
-                                        NULL,  // deletedCounter
-                                      #endif
-                                      "FTS_storages",
-                                      "storageId=?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
-                                      )
-                                     );
+                                       &doneFlag,
+                                       #ifndef NDEBUG
+                                         &deletedCounter,
+                                       #else
+                                         NULL,  // deletedCounter
+                                       #endif
+                                       "FTS_storages",
+                                       "storageId=?",
+                                       DATABASE_FILTERS
+                                       (
+                                         DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                       )
+                                      );
             if (error == ERROR_NONE)
             {
               error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
@@ -2800,10 +2800,6 @@ UNUSED_VARIABLE(progressInfo);
     ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
     {
       error = IndexEntity_prune(indexHandle,NULL,NULL,entityId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
       DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
     }
 
@@ -2811,10 +2807,6 @@ UNUSED_VARIABLE(progressInfo);
     ARRAY_ITERATEX(&uuidIds,arrayIterator,entityId,error == ERROR_NONE)
     {
       error = IndexUUID_prune(indexHandle,NULL,NULL,entityId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
       DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
     }
 
@@ -5027,7 +5019,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -5336,7 +5328,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   orderString    = String_new();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -6228,12 +6220,17 @@ Errors Index_purgeAllStoragesByName(IndexHandle            *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return IndexStorage_purgeAllByName(indexHandle,
-                                       storageSpecifier,
-                                       archiveName,
-                                       keepIndexId,
-                                       NULL  // progressInfo
-                                      );
+    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      error = IndexStorage_purgeAllByName(indexHandle,
+                                         storageSpecifier,
+                                         archiveName,
+                                         keepIndexId,
+                                         NULL  // progressInfo
+                                        );
+    }
+    
+    return error;
   });
 
   return error;

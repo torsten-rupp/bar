@@ -499,8 +499,11 @@ String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text);
 /***********************************************************************\
 * Name   : IndexCommon_getFTSMatchString
 * Purpose: get full-text-search filter match string
-* Input  : string      - string variable
-*          patternText - pattern text
+* Input  : string         - string variable
+*          databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          patternText    - pattern text
 * Output : -
 * Return : string for WHERE filter-statement
 * Notes  : -
@@ -508,6 +511,7 @@ String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text);
 
 String IndexCommon_getFTSMatchString(String         string,
                                      DatabaseHandle *databaseHandle,
+                                     const char     *tableName,
                                      const char     *columnName,
                                      ConstString    patternText
                                     );
@@ -525,7 +529,11 @@ String IndexCommon_getFTSMatchString(String         string,
 \***********************************************************************/
 
 // TODO: replace by separate parameter in select
-void IndexCommon_appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering);
+void IndexCommon_appendOrdering(String          orderString,
+                                bool            condition,
+                                const char      *columnName,
+                                DatabaseOrdering ordering
+                               );
 
 /***********************************************************************\
 * Name   : IndexCommon_initIndexQueryHandle
