@@ -9223,72 +9223,13 @@ void Configuration_deleteServerNode(ServerNode *serverNode)
   LIST_DELETE_NODE(serverNode);
 }
 
-void Configuration_setServerNodeType(ServerNode *serverNode, ServerTypes serverType)
+void Configuration_setServerNode(ServerNode *serverNode, ConstString name, ServerTypes serverType)
 {
   assert(serverNode != NULL);
+  assert(name != NULL);
 
-  if (serverNode->server.type != serverType)
-  {
-    switch (serverNode->server.type)
-    {
-      case SERVER_TYPE_NONE:
-        break;
-      case SERVER_TYPE_FILE:
-        break;
-      case SERVER_TYPE_FTP:
-        Password_done(&serverNode->server.ftp.password);
-        String_delete(serverNode->server.ftp.loginName);
-        break;
-      case SERVER_TYPE_SSH:
-        if (Configuration_isKeyAvailable(&serverNode->server.ssh.privateKey)) Configuration_doneKey(&serverNode->server.ssh.privateKey);
-        if (Configuration_isKeyAvailable(&serverNode->server.ssh.publicKey)) Configuration_doneKey(&serverNode->server.ssh.publicKey);
-        Password_done(&serverNode->server.ssh.password);
-        String_delete(serverNode->server.ssh.loginName);
-        break;
-      case SERVER_TYPE_WEBDAV:
-        if (Configuration_isKeyAvailable(&serverNode->server.webDAV.privateKey)) Configuration_doneKey(&serverNode->server.webDAV.privateKey);
-        if (Configuration_isKeyAvailable(&serverNode->server.webDAV.publicKey)) Configuration_doneKey(&serverNode->server.webDAV.publicKey);
-        Password_done(&serverNode->server.webDAV.password);
-        String_delete(serverNode->server.webDAV.loginName);
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; // not reached
-      #endif /* NDEBUG */
-    }
-
-    serverNode->server.type = serverType;
-    switch (serverType)
-    {
-      case SERVER_TYPE_NONE:
-        break;
-      case SERVER_TYPE_FILE:
-        break;
-      case SERVER_TYPE_FTP:
-        serverNode->server.ftp.loginName = String_new();
-        Password_init(&serverNode->server.ftp.password);
-        break;
-      case SERVER_TYPE_SSH:
-        serverNode->server.ssh.port      = 22;
-        serverNode->server.ssh.loginName = String_new();
-        Password_init(&serverNode->server.ssh.password);
-        Configuration_initKey(&serverNode->server.ssh.publicKey);
-        Configuration_initKey(&serverNode->server.ssh.privateKey);
-        break;
-      case SERVER_TYPE_WEBDAV:
-        serverNode->server.webDAV.loginName = String_new();
-        Password_init(&serverNode->server.webDAV.password);
-        Configuration_initKey(&serverNode->server.webDAV.publicKey);
-        Configuration_initKey(&serverNode->server.webDAV.privateKey);
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; // not reached
-      #endif /* NDEBUG */
-    }
-  }
+  Configuration_doneServer(&serverNode->server);
+  Configuration_initServer(&serverNode->server,name,serverType);
 }
 
 void Configuration_initCDSettings(OpticalDisk      *cd,

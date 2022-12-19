@@ -594,7 +594,7 @@ void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer);
 /***********************************************************************\
 * Name   : Configuration_newServerNode
 * Purpose: new config file node
-* Input  : name       - name
+* Input  : name       - sever name
 *          serverType - server type
 * Output : -
 * Return : server node
@@ -615,16 +615,17 @@ ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType
 void Configuration_deleteServerNode(ServerNode *serverNode);
 
 /***********************************************************************\
-* Name   : Configuration_setServerNodeType
-* Purpose: set server node type
+* Name   : Configuration_setServerNode
+* Purpose: set server node
 * Input  : serverNode - server node
+*          name       - sever name
 *          serverType - server type
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Configuration_setServerNodeType(ServerNode *serverNode, ServerTypes serverType);
+void Configuration_setServerNode(ServerNode *serverNode, ConstString name, ServerTypes serverType);
 
 // ----------------------------------------------------------------------
 
