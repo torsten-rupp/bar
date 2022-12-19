@@ -8100,8 +8100,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // update storage server settings
-    Configuration_setServerNodeType(serverNode,serverType);
-    String_set(serverNode->server.name,name);
+    Configuration_setServerNode(serverNode,name,serverType);
     switch (serverType)
     {
       case SERVER_TYPE_NONE:
