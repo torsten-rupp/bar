@@ -18575,6 +18575,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
           {
             error = Index_newStorage(indexHandle,
                                      INDEX_ID_NONE, // uuidId
+// TODO: id correct?
 //INDEX_DEFAULT_ENTITY_ID,//                                     INDEX_ID_NONE, // entityId
                                      INDEX_ID_NONE, // entityId
                                      NULL,  // hostName

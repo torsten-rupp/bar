@@ -219,6 +219,7 @@ String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text)
 
 String IndexCommon_getFTSMatchString(String         string,
                                      DatabaseHandle *databaseHandle,
+                                     const char     *tableName,
                                      const char     *columnName,
                                      ConstString    patternText
                                     )
@@ -231,6 +232,7 @@ String IndexCommon_getFTSMatchString(String         string,
 
   assert(string != NULL);
   assert(databaseHandle != NULL);
+  assert(tableName != NULL);
   assert(columnName != NULL);
 
   String_clear(string);
@@ -240,7 +242,7 @@ String IndexCommon_getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_formatAppend(string,"%s MATCH '",columnName);
+        String_formatAppend(string,"%s MATCH '",tableName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,
@@ -285,7 +287,7 @@ String IndexCommon_getFTSMatchString(String         string,
         String_formatAppend(string,"'");
         break;
       case DATABASE_TYPE_MARIADB:
-        String_formatAppend(string,"MATCH(%s) AGAINST('",columnName);
+        String_formatAppend(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,
@@ -333,7 +335,7 @@ String IndexCommon_getFTSMatchString(String         string,
         {
           bool firstTokenFlag;
 
-          String_formatAppend(string,"%s @@ to_tsquery('",columnName);
+          String_formatAppend(string,"%s.%s @@ to_tsquery('",tableName,columnName);
 
           String_initTokenizer(&stringTokenizer,
                                patternText,
@@ -392,7 +394,11 @@ String IndexCommon_getFTSMatchString(String         string,
   return string;
 }
 
-void IndexCommon_appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering)
+void IndexCommon_appendOrdering(String          orderString,
+                                bool            condition,
+                                const char      *columnName,
+                                DatabaseOrdering ordering
+                               )
 {
   assert(orderString != NULL);
 

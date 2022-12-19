@@ -554,7 +554,7 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
 
   // get FTS match string
 // TODO: FTS_uuids do not exists
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids","name",name);
 
   Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
@@ -1329,7 +1329,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   filterString   = Database_newFilter();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
 
   // get filters
   string = String_new();
