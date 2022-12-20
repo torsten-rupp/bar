@@ -6228,12 +6228,17 @@ Errors Index_purgeAllStoragesByName(IndexHandle            *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return IndexStorage_purgeAllByName(indexHandle,
-                                       storageSpecifier,
-                                       archiveName,
-                                       keepIndexId,
-                                       NULL  // progressInfo
-                                      );
+    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      error = IndexStorage_purgeAllByName(indexHandle,
+                                          storageSpecifier,
+                                          archiveName,
+                                          keepIndexId,
+                                          NULL  // progressInfo
+                                         );
+    }
+    
+    return error;
   });
 
   return error;

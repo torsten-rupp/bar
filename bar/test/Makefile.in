@@ -5935,8 +5935,8 @@ test_index_operations-valgrind: \
 functionServerCommandSocket = \
   id=$$(($$id+1)); \
   $(ECHO) $1: $$id $2; \
-  $(ECHO) $$id $2|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done; \
-  if test $$? -ne 0; then exit 1; fi
+  ($(ECHO) $$id $2|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
+  test $$?
 # send command to batch server: <command>
 functionServerCommandBatch = \
   id=$$(($$id+1)); \
@@ -5945,8 +5945,8 @@ functionServerCommandBatch = \
 functionSlaveCommandSocket = \
   id=$$(($$id+1)); \
   $(ECHO) $1: $$id $2; \
-  $(ECHO) $$id $2|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done; \
-  if test $$? -ne 0; then exit 1; fi
+  ($(ECHO) $$id $2|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
+  test $$?
 
 .PHONY: test_server_operations test_server_operations_batch test_server_operations_socket test_master_slave_operations
 test_server_operations: \
@@ -6545,11 +6545,7 @@ test_master_slave_operations_master: \
               --debug-server \
               --debug-server-fixed-ids \
               $(ADDITIONAL_OPTIONS); \
-            if test $$? -eq 0; then \
-              $(SLEEP) 10; \
-            else \
-              exit 1; \
-            fi; \
+            exit $$?; \
           ) $(LOG); \
           $(ECHO) Master server started; \
         else \
@@ -6623,11 +6619,7 @@ test_master_slave_operations_slave: \
                 --debug-server-fixed-ids \
                 $(ADDITIONAL_OPTIONS); \
             fi; \
-            if test $$? -eq 0; then \
-              $(SLEEP) 10; \
-            else \
-              exit 1; \
-            fi; \
+            exit $$?; \
           ) $(LOG); \
           $(ECHO) Slave server started; \
         else \
@@ -6666,6 +6658,7 @@ test_master_slave_operations_create: \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
+            \
             : wait for pairing; \
             (for i in `$(SEQ) 1 18`; do \
                if test -n "`$(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_LIST)|$(GREP) slaveState='PAIRED'`"; then \
@@ -6691,8 +6684,8 @@ test_master_slave_operations_create: \
             $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
             : done; \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),QUIT); \
-            $(call functionSlaveCommandSocket, localhost $(TEST_SLAVE_PORT), QUIT); \
+            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),QUIT) || true; \
+            $(call functionSlaveCommandSocket, localhost $(TEST_SLAVE_PORT), QUIT) || true; \
           ) $(LOG); \
         else \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
