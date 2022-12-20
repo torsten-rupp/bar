@@ -4401,7 +4401,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   error = Configuration_readAll(isPrintInfo(2) || printInfoFlag);
   if (error != ERROR_NONE)
   {
-    printWarning("%s",Error_getText(error));
+    return error;
   }
 
   // special case: set verbose level/quiet flag in interactive mode

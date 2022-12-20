@@ -7,6 +7,8 @@
   * fixed full-text-search matching for SQLite
   * fixed SQLite database locking when new storage
     is inserted
+  * fixed configuration issue handling: report as
+    error
 
 2022-11-15 0.22c
   * fixed trigger pairing thread
