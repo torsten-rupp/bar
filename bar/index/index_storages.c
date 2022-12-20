@@ -6223,11 +6223,11 @@ Errors Index_purgeAllStoragesByName(IndexHandle            *indexHandle,
     DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       error = IndexStorage_purgeAllByName(indexHandle,
-                                         storageSpecifier,
-                                         archiveName,
-                                         keepIndexId,
-                                         NULL  // progressInfo
-                                        );
+                                          storageSpecifier,
+                                          archiveName,
+                                          keepIndexId,
+                                          NULL  // progressInfo
+                                         );
     }
     
     return error;
