@@ -111,7 +111,8 @@ def tests()
                   sh "sudo /etc/init.d/vsftpd start"
 
                   sh "rm -f bar-test.log"
-                  sh "make test_smoke-"+binaryExtension+" O='--verbose=1' | tee -a bar-test.log"
+                  // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
+                  sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" O=\'--verbose=1\' | tee -a bar-test.log'"
 
                   // stop services
                   sh "sudo /etc/init.d/vsftpd stop || true"
@@ -130,7 +131,8 @@ def tests()
                   sh "sudo /etc/init.d/vsftpd start"
 
                   sh "rm -f bar-test.log"
-                  TEST_STEPS.each { step -> sh "make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1' | tee -a bar-test.log" }
+                  // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
+                  TEST_STEPS.each { step -> sh "bash -o pipefail -c 'make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
 
                   // stop services
                   sh "sudo /etc/init.d/vsftpd stop || true"
@@ -163,7 +165,8 @@ def tests()
               sh "sudo /etc/init.d/vsftpd start"
 
               sh "rm -f bar-test-valgrind.log"
-              sh "make test_smoke-valgrind O='--verbose=1' | tee -a bar-test-valgrind.log"
+              // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
+              sh "bash -o pipefail -c 'make test_smoke-valgrind O=\'--verbose=1\' | tee -a bar-test-valgrind.log'"
 
               // stop services
               sh "sudo /etc/init.d/vsftpd stop || true"
@@ -193,7 +196,7 @@ def tests()
               sh "sudo /etc/init.d/vsftpd start"
 
               sh "make -C bar gcov_clean"
-              TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS }
+              TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
               sh "make -C bar gcov_html"
 
               // stop services
@@ -234,7 +237,7 @@ def tests()
               sh "sudo /etc/init.d/vsftpd start"
 
               sh "make -C bar gprof_clean"
-              TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS }
+              TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
 
               // stop services
               sh "sudo /etc/init.d/vsftpd stop || true"
