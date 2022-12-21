@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-11-10 05:19+0100\n"
+"POT-Creation-Date: 2022-12-20 09:38+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,28 +17,27 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/torsten/projects/bar/bar/archive.c:6369
+#: /home/rupp/tools/bar/bar/archive.c:6369
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_compare.c:2399
+#: /home/rupp/tools/bar/bar/commands_compare.c:2399
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2658
+#: /home/rupp/tools/bar/bar/commands_convert.c:2658
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_restore.c:3947
+#: /home/rupp/tools/bar/bar/commands_restore.c:3954
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_test.c:1770
-#, c-format
-msgid "Test fail: %s\n"
+#: /home/rupp/tools/bar/bar/commands_test.c:1770
+msgid "Test fail: {0}\n"
 msgstr ""
 
 #: errors.def:23
@@ -571,8 +570,7 @@ msgid "read directory failed"
 msgstr ""
 
 #: errors.def:524
-#, c-format
-msgid "file '%s' already exists"
+msgid "file '{0}' already exists"
 msgstr ""
 
 #: errors.def:528
