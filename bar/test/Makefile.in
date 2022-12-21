@@ -1233,7 +1233,7 @@ test2 test_compress: \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test-####" \
             BAR_PATTERN="test-*" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=500000 --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
             test_file_operations_large \
             ; \
           rc=$$?; \
@@ -1244,7 +1244,7 @@ test2 test_compress: \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test-####" \
             BAR_PATTERN="test-*" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=500000 --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
             test_file_operations_large \
             ; \
           rc=$$?; \
