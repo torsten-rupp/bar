@@ -9,6 +9,7 @@
 //***********************************************************************
 
 INCLUDE <config.h>
+INCLUDE <common/misc.h>
 
 #ifdef HAVE_LIBSSH2
 INCLUDE "libssh2.h"
