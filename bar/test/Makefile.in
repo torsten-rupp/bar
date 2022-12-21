@@ -1227,6 +1227,7 @@ test1-valgrind test_basic-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_basic
 
 # Note: limit computation effort with min. compress names for some operations
+# TODO: split into test_compress test_compress_large
 test2 test_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
@@ -3978,7 +3979,7 @@ test_file_operations_large: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	for z in $(TEST_FILES_LARGE); do \
-          $(DIFF) data/$$y $(INTERMEDIATE_DIR)/restore/$$z; \
+          $(DIFF) $$z $(INTERMEDIATE_DIR)/restore/$$z; \
           rc=$$?; \
           if test $$rc -eq 0; then \
             exit $$rc; \
