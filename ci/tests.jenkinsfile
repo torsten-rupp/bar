@@ -147,7 +147,7 @@ def tests()
       }
     }
 
-    timeout(time: 240, unit: 'MINUTES')
+    timeout(time: 360, unit: 'MINUTES')
     {
       stage("Valgrind")
       {
@@ -179,7 +179,7 @@ def tests()
       }
     }
 
-    timeout(time: 180, unit: 'MINUTES')
+    timeout(time: 240, unit: 'MINUTES')
     {
       stage("Code coverage")
       {
