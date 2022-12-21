@@ -1075,8 +1075,7 @@ endif
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
 
 # test timeout command (Note: older versions of the timeout command may not support --kill-after)
-#TEST_TIMEOUT            = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIMEOUT) --signal=QUIT 600
-TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foreground --signal=ABRT 800 $(TIMEOUT) --foreground --signal=QUIT 600
+TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 2400 $(TIMEOUT) --foreground --signal=ABRT 1800 $(TIMEOUT) --foreground --signal=QUIT 1200
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
