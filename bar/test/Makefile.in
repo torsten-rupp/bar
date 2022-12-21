@@ -1953,6 +1953,7 @@ test10 test_huge: \
 	@$(call functionInfoBegin,Test 10: huge files)
 	for compress in $(TEST_COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
+            BAR_STORAGE="$(INTERMEDIATE_DIR)" \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
