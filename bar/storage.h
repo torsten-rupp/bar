@@ -1819,7 +1819,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 *          storageProgressUserData - storage progress callback user data
 * Output : -
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : abort if storageFunction() return not ERROR_NONE
 \***********************************************************************/
 
 Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,

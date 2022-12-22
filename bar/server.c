@@ -4838,8 +4838,15 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
 
                                  // throddle database access
                                  Misc_mdelay(500);
-
-                                 return error;
+                                 
+                                 if (!isQuit())
+                                 {
+                                   return error;
+                                 }
+                                 else
+                                 {
+                                   return ERROR_ABORTED;
+                                 }
                                },NULL),
                                CALLBACK_(NULL,NULL)
                               );
