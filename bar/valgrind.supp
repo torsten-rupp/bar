@@ -161,11 +161,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
-   fun:flushFileDataBlocks
-   fun:__Archive_closeEntry
-   fun:storeFileEntry.constprop.24
 }
 {
    lzma2
@@ -177,11 +172,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
-   fun:flushFileDataBlocks
-   fun:__Archive_closeEntry
-   fun:storeFileEntry.constprop.24
 }
 {
    lzma3
@@ -196,8 +186,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
 }
 {
    lzma4
@@ -212,8 +200,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
 }
 {
    lzma5
@@ -227,9 +213,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
-   fun:flushFileDataBlocks
 }
 {
    lzma6
@@ -242,10 +225,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
-   fun:flushFileDataBlocks
-   fun:__Archive_closeEntry
 }
 {
    lzma7
@@ -260,8 +239,6 @@
    fun:block_encode
    fun:stream_encode
    fun:lzma_code
-   fun:compressData
-   fun:Compress_getAvailableCompressedBlocks
 }
 
 # --- libssh2 ---------------------------------------------------------
@@ -379,13 +356,212 @@
    fun:comp_unit_find_nearest_line
    fun:_bfd_dwarf2_find_nearest_line
    fun:_bfd_elf_find_nearest_line
-   fun:findAddressInSection
-   fun:bfd_map_over_sections
-   fun:addressToSymbolInfo
-   fun:getSymbolInfoFromFile
-   fun:Stacktrace_getSymbolInfo
-   fun:debugDumpStackTrace
-   fun:debugDumpCurrentStackTrace
-   fun:debugPrintStackTrace
-   fun:main
+}
+
+# --- sqlite3 ---------------------------------------------------------
+{
+   sqlite3_1
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+}
+{
+   sqlite3_2
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+}
+{
+   sqlite3_3
+   Memcheck:Cond
+   fun:bcmp
+   fun:btreeOverwriteContent
+   fun:btreeOverwriteCell
+   fun:sqlite3BtreeInsert
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+}
+{
+   sqlite3_4
+   Memcheck:Param
+   write(buf)
+   fun:__libc_write
+   fun:write
+   fun:seekAndWriteFd
+   fun:seekAndWrite
+   fun:unixWrite
+   fun:sqlite3OsWrite
+   fun:pager_write_pagelist
+   fun:sqlite3PagerCommitPhaseOne
+   fun:sqlite3BtreeCommitPhaseOne
+   fun:vdbeCommit
+   fun:sqlite3VdbeHalt
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+}
+{
+   sqlite3_5
+   Memcheck:Cond
+   fun:__memcmp_sse4_1
+   fun:btreeOverwriteContent
+   fun:btreeOverwriteCell
+   fun:sqlite3BtreeInsert
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+}
+
+# --- sqlite3 ---------------------------------------------------------
+{
+   sqlite3_1
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{                                                                                                                  
+   sqlite3_2
+   Memcheck:Cond                                                                                                   
+   fun:sqlite3AtoF                                                                                                 
+   fun:applyNumericAffinity                                                                                        
+   fun:applyAffinity                                                                                               
+   fun:sqlite3VdbeExec                                                                                             
+   fun:sqlite3Step                                                                                                 
+   fun:sqlite3_step                                                                                                
+   fun:executePreparedQuery                                                                                        
+   fun:__closure__.20010                                                                                           
+   fun:Database_insert                                                                                             
+   fun:__closure__.37755                                                                                           
+   fun:Index_newStorage                                                                                            
+   fun:runDebug                                                                                                    
+} 
+{
+   sqlite3_3
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_4
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_5
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_6
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_7
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_8
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_9
+   Memcheck:Cond
+   fun:bcmp
+   fun:btreeOverwriteContent
+   fun:btreeOverwriteCell
+   fun:sqlite3BtreeInsert
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20088
+   fun:Database_update
+   fun:__closure__.36648
+   fun:clearStorageAggregates
 }
