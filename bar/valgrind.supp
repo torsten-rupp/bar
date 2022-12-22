@@ -389,3 +389,149 @@
    fun:debugPrintStackTrace
    fun:main
 }
+
+# --- sqlite3 ---------------------------------------------------------
+{
+   sqlite3_1
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{                                                                                                                  
+   sqlite3_2
+   Memcheck:Cond                                                                                                   
+   fun:sqlite3AtoF                                                                                                 
+   fun:applyNumericAffinity                                                                                        
+   fun:applyAffinity                                                                                               
+   fun:sqlite3VdbeExec                                                                                             
+   fun:sqlite3Step                                                                                                 
+   fun:sqlite3_step                                                                                                
+   fun:executePreparedQuery                                                                                        
+   fun:__closure__.20010                                                                                           
+   fun:Database_insert                                                                                             
+   fun:__closure__.37755                                                                                           
+   fun:Index_newStorage                                                                                            
+   fun:runDebug                                                                                                    
+} 
+{
+   sqlite3_3
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_4
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_5
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_6
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_7
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_8
+   Memcheck:Value8
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
+{
+   sqlite3_9
+   Memcheck:Cond
+   fun:bcmp
+   fun:btreeOverwriteContent
+   fun:btreeOverwriteCell
+   fun:sqlite3BtreeInsert
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20088
+   fun:Database_update
+   fun:__closure__.36648
+   fun:clearStorageAggregates
+}
