@@ -4677,7 +4677,9 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
   // read directory and scan all sub-directories
   StringList_append(&directoryList,(directory != NULL) ? directory : storageSpecifier->archiveName);
   doneCount = 0L;
-  while (!StringList_isEmpty(&directoryList))
+  while (   !StringList_isEmpty(&directoryList)
+         && (error == ERROR_NONE)
+        )
   {
     StringList_removeLast(&directoryList,name);
 
