@@ -1045,7 +1045,7 @@ LOCAL Errors deleteFTSEntry(IndexHandle  *indexHandle,
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-
+  error = ERROR_UNKNOWN;
   switch (Database_getType(&indexHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -1078,6 +1078,7 @@ LOCAL Errors deleteFTSEntry(IndexHandle  *indexHandle,
                              );
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   // free resources
 
@@ -6237,7 +6238,7 @@ Errors Index_purgeAllStoragesByName(IndexHandle            *indexHandle,
                                           NULL  // progressInfo
                                          );
     }
-    
+
     return error;
   });
 

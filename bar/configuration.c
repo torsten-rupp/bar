@@ -2123,11 +2123,15 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
   else
   {
     stringFormat(errorMessage,errorMessageSize,"Unknown transform value '%s'",value);
+    String_delete(replace);
+    String_delete(patternString);
     return FALSE;
   }
   if (!Pattern_isValid(patternString,PATTERN_TYPE_EXTENDED_REGEX))
   {
     stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
+    String_delete(replace);
+    String_delete(patternString);
     return FALSE;
   }
 
