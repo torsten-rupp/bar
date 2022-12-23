@@ -319,6 +319,7 @@ LOCAL String getDestinationFileName(String      destinationFileName,
     {
       File_appendFileName(destinationFileName,token);
     }
+    File_doneSplitFileName(&fileNameTokenizer);
   }
   else
   {
