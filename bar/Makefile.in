@@ -1895,7 +1895,7 @@ gcov_html:
 ifneq ($(GENHTML),)
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
-	$(GENHTML) -o coverage bar-gcov.info --legend
+	$(GENHTML) -o coverage bar-gcov.info --legend --ignore-errors source
 	# work-around for bug in genhtml?
 	$(LN) -sfT coverage/gcov.css gcov.css
 else
