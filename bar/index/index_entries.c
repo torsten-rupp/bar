@@ -1857,13 +1857,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return error;
     });
     if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
-    if (error != ERROR_NONE)
-    {
-    }
-    assert(   (error == ERROR_NONE)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-          );
+    assertx(   (error == ERROR_NONE)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            "%s",Error_getText(error)
+           );
 
     #ifdef INDEX_DEBUG_LIST_INFO
       t1 = Misc_getTimestamp();
@@ -2031,10 +2029,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
       return ERROR_NONE;
     });
-    assert(   (error == ERROR_NONE)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-          );
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+    assertx(   (error == ERROR_NONE)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            "%s",Error_getText(error)
+           );
 
     #ifdef INDEX_DEBUG_LIST_INFO
       t1 = Misc_getTimestamp();
@@ -2171,10 +2171,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
       return ERROR_NONE;
     });
-    assert(   (error == ERROR_NONE)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-          );
+    assertx(   (error == ERROR_NONE)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            "%s",Error_getText(error)
+           );
 
     #ifdef INDEX_DEBUG_LIST_INFO
       t1 = Misc_getTimestamp();
@@ -2293,10 +2294,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
       return ERROR_NONE;
     });
-    assert(   (error == ERROR_NONE)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-           || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-          );
+    assertx(   (error == ERROR_NONE)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            "%s",Error_getText(error)
+           );
 
     #ifdef INDEX_DEBUG_LIST_INFO
       t1 = Misc_getTimestamp();
