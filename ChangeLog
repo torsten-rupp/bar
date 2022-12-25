@@ -1,4 +1,4 @@
-2022-12-18 0.22d
+2022-12-25 0.22d
   * fixed memory leak in PostgreSQL API call
   * add missing lock slave list
   * fixed valgrind warning
@@ -9,6 +9,7 @@
     is inserted
   * fixed configuration issue handling: report as
     error
+  * fixed memory leak in --transform
 
 2022-11-15 0.22c
   * fixed trigger pairing thread
