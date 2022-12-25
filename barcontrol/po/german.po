@@ -1452,7 +1452,8 @@ msgid "read directory failed"
 msgstr "Fehler beim Lesen des Verzeichnisses"
 
 #: src/BARException.java:908
-msgid "file ''%s'' already exists"
+#, fuzzy, java-format
+msgid "file ''{0}'' already exists"
 msgstr "Date ''%s'' existiert bereits"
 
 #: src/BARException.java:912

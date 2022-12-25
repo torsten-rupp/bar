@@ -1899,7 +1899,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   orderString    = String_new();
 
   // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
 
   // get filters
   string = String_new();

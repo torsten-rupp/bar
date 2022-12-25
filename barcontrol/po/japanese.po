@@ -1592,7 +1592,8 @@ msgid "read directory failed"
 msgstr "ディレクトリサイズ"
 
 #: src/BARException.java:908
-msgid "file ''%s'' already exists"
+#, java-format
+msgid "file ''{0}'' already exists"
 msgstr ""
 
 #: src/BARException.java:912
