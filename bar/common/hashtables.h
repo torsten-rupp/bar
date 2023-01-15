@@ -86,9 +86,13 @@ typedef struct HashTablEntry
 // hash table
 typedef struct
 {
-  HashTableEntry          *entries;         // entries array
-  ulong                   entryCount;       // number of entries in array
-  ulong                   size;             // size (see TABLE_SIZES)
+  #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
+    HashTableEntry        **entries;         // entries list array
+  #else
+    HashTableEntry        *entries;          // entries array
+  #endif
+  ulong                   entryCount;        // number of entries in array
+  ulong                   size;              // size (see TABLE_SIZES)
 
   HashTableHashFunction   hashFunction;
   void                    *hashUserData;
@@ -103,7 +107,7 @@ typedef struct
   const HashTable *hashTable;
   ulong           i;
   #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
-    const HashTableEntry *hashTableEntry;
+    HashTableEntry *nextHashTableEntry;
   #endif
 } HashTableIterator;
 
@@ -340,10 +344,10 @@ void HashTable_remove(HashTable  *hashTable,
 * Notes  : -
 \***********************************************************************/
 
-const HashTableEntry *HashTable_find(HashTable  *hashTable,
-                                     const void *keyData,
-                                     ulong      keyLength
-                                    );
+HashTableEntry *HashTable_find(HashTable  *hashTable,
+                               const void *keyData,
+                               ulong      keyLength
+                              );
 
 /***********************************************************************\
 * Name   : HashTable_containss
@@ -400,20 +404,21 @@ void HashTable_doneIterator(HashTableIterator *hashTableIterator);
 /***********************************************************************\
 * Name   : HashTable_getNext
 * Purpose: get next entry from hash table
-* Input  : hashTable - hash table
-* Output : key       - key value
-*          data      - entry data (can be NULL)
-*          length    - length of data (can be NULL)
-* Return : TRUE if got entry, FALSE if no more entries
+* Input  : hashTable     - hash table
+* Output : keyData       - key data
+*          keyDataLength - length of key data (can be NULL)
+*          data          - data (can be NULL)
+*          length        - length of data (can be NULL)
+* Return : hash table entry or NULL if no more entries
 * Notes  : -
 \***********************************************************************/
 
-bool HashTable_getNext(HashTableIterator *hashTableIterator,
-                       const void        **keyData,
-                       ulong             *keyLength,
-                       const void        **data,
-                       ulong             *length
-                      );
+HashTableEntry *HashTable_getNext(HashTableIterator *hashTableIterator,
+                                  const void        **keyData,
+                                  ulong             *keyLength,
+                                  const void        **data,
+                                  ulong             *length
+                                 );
 
 /***********************************************************************\
 * Name   : HashTable_iterate
@@ -432,6 +437,30 @@ bool HashTable_iterate(HashTable                *hashTable,
                       );
 
 #ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : HashTable_dump
+* Purpose: dump hashs table
+* Input  : handle    - file handle
+*          hashTable - hash table
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void HashTable_dump(FILE *handle, const HashTable *hashTable);
+
+/***********************************************************************\
+* Name   : HashTable_print
+* Purpose: print hash table
+* Input  : hashTable - hash table
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void HashTable_print(const HashTable *hashTable);
+
 /***********************************************************************\
 * Name   : HashTable_printStatistic
 * Purpose: print hash table statistics
@@ -442,6 +471,7 @@ bool HashTable_iterate(HashTable                *hashTable,
 \***********************************************************************/
 
 void HashTable_printStatistic(const HashTable *hashTable);
+
 #endif /* NDEBUG */
 
 #ifdef __cplusplus

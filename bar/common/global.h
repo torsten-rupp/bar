@@ -1396,7 +1396,7 @@ typedef byte* BitSet;
 
 /***********************************************************************\
 * Name   : __B
-* Purpose: braakpoint
+* Purpose: breakpoint
 * Input  : -
 * Output : -
 * Return : -
@@ -1404,7 +1404,12 @@ typedef byte* BitSet;
 \***********************************************************************/
 
 #if defined(__x86_64__) || defined(__i386)
-  #define __B() do { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); } while (0)
+  #define __B() \
+    do \
+    { \
+      fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); \
+    } \
+    while (0)
 #else
   #define __B() do { } while (0)
 #endif
