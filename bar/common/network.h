@@ -402,7 +402,11 @@ INLINE bool Network_isInsecureTLS(const SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
 
-  return (socketHandle->type == SOCKET_TYPE_TLS) && !socketHandle->gnuTLS.verifiedCertificate;
+  #ifdef HAVE_GNU_TLS
+    return (socketHandle->type == SOCKET_TYPE_TLS) && !socketHandle->gnuTLS.verifiedCertificate;
+  #else
+    return FALSE;
+  #endif
 }
 #endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 
