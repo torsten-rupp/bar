@@ -1015,10 +1015,14 @@ Errors Network_connect(SocketHandle *socketHandle,
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(loginName);
         UNUSED_VARIABLE(password);
-        UNUSED_VARIABLE(sshPublicKeyData);
-        UNUSED_VARIABLE(sshPublicKeyLength);
-        UNUSED_VARIABLE(sshPrivateKeyData);
-        UNUSED_VARIABLE(sshPrivateKeyLength);
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+        UNUSED_VARIABLE(publicKeyData);
+        UNUSED_VARIABLE(publicKeyLength);
+        UNUSED_VARIABLE(privateKeyData);
+        UNUSED_VARIABLE(privateKeyLength);
 
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
