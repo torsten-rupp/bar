@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: database functions (SQLite3)
+* Contents: database functions (SQLite3, MariaDB, PostgreSQL)
 * Systems: all
 *
 \***********************************************************************/
@@ -604,8 +604,6 @@ typedef struct
   typedef struct
   {
     MYSQL_STMT        *statementHandle;
-// TODO:
-DatabaseDataTypes *dataTypes;
     struct
     {
       MYSQL_BIND      *bind;
@@ -639,6 +637,7 @@ DatabaseDataTypes *dataTypes;
 
   typedef struct
   {
+    HashTableEntry *hashTableEntry;
     char           name[1+16+1];
 
     PostgreSQLBind *bind;

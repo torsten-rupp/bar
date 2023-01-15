@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Database functions
+* Contents: database functions (SQLite3, MariaDB, PostgreSQL)
 * Systems: all
 *
 \***********************************************************************/
@@ -17,7 +17,7 @@
          PGTYPESnumeric_to_int64(). If the binary interface is used
          "wrong" - guess what may be wrong - an internal protocol error
          may occur (08P01).  :-((
-         It looks like this "binary interface" operate direct on the
+         It looks like this "binary interface" operate directly on the
          protocol data without any checks.
 */
 #define _POSTGRESQL_BINARY_INTERFACE
@@ -157,10 +157,13 @@ LOCAL const char *DATABASE_DATATYPE_NAMES[] =
     /* PostgreSQL store timestamp since 2000-01-01 00:00:00 in us
        See: https://www.postgresql.org/docs/9.1/datatype-datetime.html
     */
-    #define POSTGRES_BASE_TIMESTAMP 946681200LL
+    #define POSTGRESQL_BASE_TIMESTAMP 946681200LL
   #else
     #define POSTGRESQL_DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S"
   #endif /* POSTGRESQL_BINARY_INTERFACE */
+
+  #define POSTGRESQL_HASHTABLE_CLEAN_SIZE 256
+  #define POSTGRESQL_HASHTABLE_CLEAN_TIME 60   // [s]
 #endif /* HAVE_POSTGRESQL */
 
 /***************************** Datatypes *******************************/
@@ -193,7 +196,11 @@ typedef union
 
 // PostgreSQL specific types
 #ifdef HAVE_POSTGRESQL
-  char PostgreSQLPreparedStatementName[MISC_UUID_STRING_LENGTH];
+  typedef struct
+  {
+    uint   count;
+    uint64 timestamp;
+  } PostgresSQLUseInfo;
 #endif /* HAVE_POSTGRESQL */
 
 #ifndef NDEBUG
@@ -2777,7 +2784,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     values[i]   = value
 
   const char     *keywords[6+1],*values[6+1];
-  PGconn         *handle;
+  PGconn         *connection;
   ConnStatusType postgreSQLConnectionStatus;
   char           sqlString[256];
   PGresult       *postgresqlResult;
@@ -2795,8 +2802,8 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
     POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
 
-    handle = PQconnectdbParams(keywords,values,0);
-    if (handle != NULL)
+    connection = PQconnectdbParams(keywords,values,0);
+    if (connection != NULL)
     {
       error = ERROR_NONE;
     }
@@ -2814,18 +2821,18 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     return error;
   }
 
-  postgreSQLConnectionStatus = PQstatus(handle);
+  postgreSQLConnectionStatus = PQstatus(connection);
   if (postgreSQLConnectionStatus != CONNECTION_OK)
   {
     error = ERRORX_(DATABASE,
                     postgreSQLConnectionStatus,
                     "%s",
-                    postgresqlErrorMessage(handle)
+                    postgresqlErrorMessage(connection)
                    );
-    PQfinish(handle);
+    PQfinish(connection);
     return error;
   }
-  PQsetNoticeReceiver(handle,
+  PQsetNoticeReceiver(connection,
                       postgresqlReceiveMessageHandler,NULL
                      );
 
@@ -2837,7 +2844,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                characterSet,
                collate
               );
-  postgresqlResult = PQexec(handle,sqlString);
+  postgresqlResult = PQexec(connection,sqlString);
   if (postgresqlResult != NULL)
   {
     // Note: ignore status
@@ -2849,12 +2856,12 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     error = ERRORX_(DATABASE,
                     0,
                     "%s",
-                    postgresqlErrorMessage(handle)
+                    postgresqlErrorMessage(connection)
                    );
   }
 
   // disconnect
-  PQfinish(handle);
+  PQfinish(connection);
 
   return error;
 
@@ -2884,7 +2891,7 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     values[i]   = value
 
   const char     *keywords[6+1],*values[6+1];
-  PGconn         *handle;
+  PGconn         *connection;
   ConnStatusType postgreSQLConnectionStatus;
   char           sqlString[256];
   PGresult       *postgresqlResult;
@@ -2902,8 +2909,8 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     POSTGRESQL_CONNECT_PARAMETER(5,"client_encoding","UTF-8");
     POSTGRESQL_CONNECT_PARAMETER(6,NULL,NULL);
 
-    handle = PQconnectdbParams(keywords,values,0);
-    if (handle != NULL)
+    connection = PQconnectdbParams(keywords,values,0);
+    if (connection != NULL)
     {
       error = ERROR_NONE;
     }
@@ -2921,18 +2928,18 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     return error;
   }
 
-  postgreSQLConnectionStatus = PQstatus(handle);
+  postgreSQLConnectionStatus = PQstatus(connection);
   if (postgreSQLConnectionStatus != CONNECTION_OK)
   {
     error = ERRORX_(DATABASE,
                     postgreSQLConnectionStatus,
                     "%s",
-                    postgresqlErrorMessage(handle)
+                    postgresqlErrorMessage(connection)
                    );
-    PQfinish(handle);
+    PQfinish(connection);
     return error;
   }
-  PQsetNoticeReceiver(handle,
+  PQsetNoticeReceiver(connection,
                       postgresqlReceiveMessageHandler,NULL
                      );
 
@@ -2941,7 +2948,7 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
                "DROP DATABASE %s",
                databaseName
               );
-  postgresqlResult = PQexec(handle,sqlString);
+  postgresqlResult = PQexec(connection,sqlString);
   if (postgresqlResult != NULL)
   {
     // Note: ignore status
@@ -2953,12 +2960,12 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     error = ERRORX_(DATABASE,
                     0,
                     "%s",
-                    postgresqlErrorMessage(handle)
+                    postgresqlErrorMessage(connection)
                    );
   }
 
   // disconnect
-  PQfinish(handle);
+  PQfinish(connection);
 
   return error;
 
@@ -2968,17 +2975,17 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
 /***********************************************************************\
 * Name   : postgresqlConnect
 * Purpose: connect to PostgreSQL database
-* Input  : handle       - connection handle variable
+* Input  : connection   - connection handle variable
 *          serverName   - server name
 *          userName     - user name
 *          password     - password
 *          databaseName - database name
-* Output : handle - connection handle
+* Output : connection - connection handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlConnect(PGconn         **handle,
+LOCAL Errors postgresqlConnect(PGconn         **connection,
                                const char     *serverName,
                                const char     *userName,
                                const Password *password,
@@ -3004,7 +3011,7 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
   ConnStatusType            postgreConnectionSQLStatus;
   Errors                    error;
 
-  assert(handle != NULL);
+  assert(connection != NULL);
   assert(serverName != NULL);
   assert(databaseName != NULL);
 
@@ -3022,23 +3029,23 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
     POSTGRESQL_CONNECT_PARAMETER("client_encoding","UTF-8");
     POSTGRESQL_DONE_CONNECT_PARAMETER();
 
-    (*handle) = PQconnectStartParams(keywords,values,0);
-    if ((*handle) != NULL)
+    (*connection) = PQconnectStartParams(keywords,values,0);
+    if ((*connection) != NULL)
     {
       do
       {
-        postgresPollingStatusType = PQconnectPoll(*handle);
+        postgresPollingStatusType = PQconnectPoll(*connection);
         if (   (postgresPollingStatusType == PGRES_POLLING_READING)
             || (postgresPollingStatusType == PGRES_POLLING_READING)
            )
         {
-          (void)Misc_waitHandle(PQsocket(*handle),NULL,HANDLE_EVENT_INPUT|HANDLE_EVENT_OUTPUT,60*MS_PER_SECOND);
+          (void)Misc_waitHandle(PQsocket(*connection),NULL,HANDLE_EVENT_INPUT|HANDLE_EVENT_OUTPUT,60*MS_PER_SECOND);
         }
       }
       while (   (postgresPollingStatusType != PGRES_POLLING_OK)
              && (postgresPollingStatusType != PGRES_POLLING_FAILED)
             );
-      switch (PQstatus(*handle))
+      switch (PQstatus(*connection))
       {
         case CONNECTION_OK:
           error = ERROR_NONE;
@@ -3050,7 +3057,7 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
                           0,
                           "connect"
                          );
-          PQfinish(*handle);
+          PQfinish(*connection);
           break;
         default:
           // something went wrong with the connection
@@ -3058,7 +3065,7 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
                           0,
                           "connect"
                          );
-          PQfinish(*handle);
+          PQfinish(*connection);
           break;
       }
     }
@@ -3078,15 +3085,15 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
   }
   String_delete(string);
 
-  postgreConnectionSQLStatus = PQstatus(*handle);
+  postgreConnectionSQLStatus = PQstatus(*connection);
   if (postgreConnectionSQLStatus != CONNECTION_OK)
   {
     error = ERRORX_(DATABASE,
                     postgreConnectionSQLStatus,
                     "%s",
-                    postgresqlErrorMessage(*handle)
+                    postgresqlErrorMessage(*connection)
                    );
-    PQfinish(*handle);
+    PQfinish(*connection);
     return error;
   }
 
@@ -3109,7 +3116,7 @@ LOCAL Errors postgresqlConnect(PGconn         **handle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlExecute(PGconn     *handle,
+LOCAL Errors postgresqlExecute(PGconn     *connection,
                                ulong      *changedRowCount,
                                const char *sqlString,
                                const Oid  parameterTypes[],
@@ -3123,10 +3130,10 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
   ExecStatusType postgreSQLExecStatus;
   Errors         error;
 
-  assert(handle != NULL);
+  assert(connection != NULL);
   assert(sqlString != NULL);
 
-  postgresqlResult = PQexecParams(handle,
+  postgresqlResult = PQexecParams(connection,
                                   sqlString,
                                   parameterCount,
                                   parameterTypes,
@@ -3165,7 +3172,7 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
     error = ERRORX_(DATABASE,
                     0,
                     "%s",
-                    postgresqlErrorMessage(handle)
+                    postgresqlErrorMessage(connection)
                    );
   }
 
@@ -3176,7 +3183,7 @@ LOCAL Errors postgresqlExecute(PGconn     *handle,
 * Name   : postgresqlPrepareStatement
 * Purpose: prepare PostgreSQL statement
 * Input  : statement      - statement variable
-*          handle         - database handle
+*          databaseHandle - database handle
 *          sqlString      - SQL string
 *          parameterCount - number of parameters
 * Output : statement - statement
@@ -3190,11 +3197,10 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
                                         uint                 parameterCount
                                        )
 {
-  uint                 n;
-  const HashTableEntry *hashTableEntry;
-  PGresult             *postgresqlResult;
-  Errors               error;
-  ExecStatusType       postgreSQLExecStatus;
+  uint           n;
+  PGresult       *postgresqlResult;
+  Errors         error;
+  ExecStatusType postgreSQLExecStatus;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -3207,32 +3213,45 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
 
   // get prepared statement name (via hash table)
   n = stringLength(sqlString);
-  hashTableEntry = HashTable_find(&databaseHandle->postgresql.sqlStringHashTable,
-                                  sqlString,
-                                  n+1
-                                 );
-  if (hashTableEntry != NULL)
+  statement->hashTableEntry = HashTable_find(&databaseHandle->postgresql.sqlStringHashTable,
+                                             sqlString,
+                                             n
+                                            );
+  if (statement->hashTableEntry != NULL)
   {
+    PostgresSQLUseInfo *useInfo;
+
+    useInfo = (PostgresSQLUseInfo*)statement->hashTableEntry->data;
+    assert(statement->hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+    useInfo->count++;
+    useInfo->timestamp = Misc_getTimestamp();
+
     stringFormat(statement->name,sizeof(statement->name),
                  "s%016"PRIx64,
-                 (intptr_t)hashTableEntry
+                 (intptr_t)statement->hashTableEntry
                 );
 
     error = ERROR_NONE;
   }
   else
   {
-    hashTableEntry = HashTable_put(&databaseHandle->postgresql.sqlStringHashTable,
-                                   sqlString,
-                                   n+1,
-                                   NULL,
-                                   0
-                                  );
-    assert(hashTableEntry != NULL);
+    PostgresSQLUseInfo useInfo;
+
+    // add SQL string to hashtable, get statement name
+    useInfo.count     = 1;
+    useInfo.timestamp = Misc_getTimestamp();
+
+    statement->hashTableEntry = HashTable_put(&databaseHandle->postgresql.sqlStringHashTable,
+                                              sqlString,
+                                              n,
+                                              &useInfo,
+                                              sizeof(useInfo)
+                                             );
+    assert(statement->hashTableEntry != NULL);
 
     stringFormat(statement->name,sizeof(statement->name),
                  "s%016"PRIx64,
-                 (intptr_t)hashTableEntry
+                 (intptr_t)statement->hashTableEntry
                 );
 
     // prepare statement
@@ -3255,7 +3274,7 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
       {
         HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
                          sqlString,
-                         n+1
+                         n
                         );
         error = ERRORX_(DATABASE,
                         postgreSQLExecStatus,
@@ -3270,7 +3289,7 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
     {
       HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
                        sqlString,
-                       n+1
+                       n
                       );
       error = ERRORX_(DATABASE,
                       0,
@@ -3288,27 +3307,24 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
 * Name   : postgresqlExecutePreparedStatement
 * Purpose: execute PostgreSQL prepared statement
 * Input  : statement      - prepared statement
-*          handle         - connection handle
-*          parameterCount
+*          connection     - connection handle
+*          parameterCount - parameter count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
-                                                PGconn               *handle,
+                                                PGconn               *connection,
                                                 uint                 parameterCount
                                                )
 {
-  PGresult       *postgresqlResult;
-  ExecStatusType postgreSQLExecStatus;
-  Errors         error;
+  Errors error;
 
-  assert(handle != NULL);
+  assert(connection != NULL);
   assert(statement != NULL);
 
 // TODO:
-#if 1
 #if 0
 fprintf(stderr,"%s:%d: parameterCount=%d\n",__FILE__,__LINE__,parameterCount);
 for (int i =0; i < parameterCount; i++) {
@@ -3316,38 +3332,32 @@ for (int i =0; i < parameterCount; i++) {
 }
 #endif
 
-  postgresqlResult = PQexecPrepared(handle,
-                                    statement->name,
-                                    parameterCount,
-                                    statement->parameterValues,
-                                    statement->parameterLengths,
-                                    statement->parameterFormats,
-                                    0  /* resultFormat text;
-                                          Note: binary would be more efficient, but PostgreSQL lake any useful
-                                                documentation how to do that :-(
-                                                E. g. how to convert a PostgreSQL binary "numeric" into a uint64?
-                                                There is only a PGTYPESnumeric_to_long()
-                                       */
-                                   );
-  if (postgresqlResult != NULL)
+  if (PQsendQueryPrepared(connection,
+                          statement->name,
+                          parameterCount,
+                          statement->parameterValues,
+                          statement->parameterLengths,
+                          statement->parameterFormats,
+                          0  /* resultFormat text;
+                                Note: binary would be more efficient, but PostgreSQL lake any useful
+                                      documentation how to do that :-(
+                                      E. g. how to convert a PostgreSQL binary "numeric" into a uint64?
+                                      There is only a PGTYPESnumeric_to_long()
+                             */
+                         ) == 1)
   {
-    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
-    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
-         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
-       )
+    if (PQsetSingleRowMode(connection) == 1)
     {
-      statement->result = postgresqlResult;
-      stringToUInt64(PQcmdTuples(postgresqlResult),&statement->rowCount,NULL);
+      statement->result = NULL;
       error = ERROR_NONE;
     }
     else
     {
       error = ERRORX_(DATABASE,
-                      postgreSQLExecStatus,
+                      0,
                       "%s",
-                      PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
+                      postgresqlErrorMessage(connection)
                      );
-      PQclear(postgresqlResult);
     }
   }
   else
@@ -3355,48 +3365,11 @@ for (int i =0; i < parameterCount; i++) {
     error = ERRORX_(DATABASE,
                     0,
                     "%s",
-                    postgresqlErrorMessage(handle)
+                    postgresqlErrorMessage(connection)
                    );
   }
 
   return error;
-#else
-// cannot be used becuase PostgreSQL is unable to run multiple queries in parallel due to poor interface design
-//  PQexecStart(conn)
-  if (!PQsendQueryPrepared(handle,
-                           statementName,
-                           parameterCount,
-                           parameterValues,
-                           parameterLengths,
-                           parameterFormats,
-                           0  /* resultFormat text;
-                                 Note: binary would be more efficient, but PostgreSQL lake any useful
-                                       documentation how to do that :-(
-                                       E. g. how to convert a PostgreSQL binary "numeric" into a uint64?
-                                       There is only a PGTYPESnumeric_to_long()
-                              */
-                          )
-     )
-  {
-    return ERRORX_(DATABASE,
-                    0,
-                    "%s",
-                    postgresqlErrorMessage(handle)
-                   );
-  }
-  if (!PQsetSingleRowMode(handle))
-  {
-    return ERRORX_(DATABASE,
-                    0,
-                    "%s",
-                    postgresqlErrorMessage(handle)
-                   );
-  }
-
-//  PQexecFinish(conn)
-
-  return ERROR_NONE;
-#endif
 }
 
 /***********************************************************************\
@@ -5973,6 +5946,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 {
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((columnsCount == 0) || (columns != NULL));
   assertx(columnsCount <= databaseStatementHandle->resultCount,
@@ -6246,6 +6221,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
 
   #ifdef NDEBUG
@@ -6373,31 +6350,76 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        // finalize statement
-        if (databaseStatementHandle->postgresql.result != NULL)
         {
-          PQclear(databaseStatementHandle->postgresql.result);
+          PostgresSQLUseInfo *useInfo;
+
+          assert(databaseStatementHandle->postgresql.hashTableEntry != NULL);
+          assert(databaseStatementHandle->postgresql.hashTableEntry->data != NULL);
+          assert(databaseStatementHandle->postgresql.hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+
+          // finalize statement
+          if (databaseStatementHandle->postgresql.result != NULL)
+          {
+            PQclear(databaseStatementHandle->postgresql.result);
+          }
+          useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
+          assert(useInfo->count > 0);
+          useInfo->count--;
+
+          if (HashTable_count(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable) >= POSTGRESQL_HASHTABLE_CLEAN_SIZE)
+          {
+            // clean-up SQL string hashtable
+            HashTable_iterate(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
+                              CALLBACK_INLINE(bool,(const HashTableEntry *hashTableEntry, void *userData),
+                              {
+                                PostgresSQLUseInfo *useInfo;
+                                PGresult           *postgresqlResult;
+                                char               sqlString[256];
+                                ExecStatusType     postgreSQLExecStatus;
+
+                                assert(hashTableEntry != NULL);
+                                assert(hashTableEntry->keyData != NULL);
+                                assert(hashTableEntry->data != NULL);
+                                assert(hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+
+                                UNUSED_VARIABLE(userData);
+
+                                useInfo = (PostgresSQLUseInfo*)hashTableEntry->data;
+                                if (   (useInfo->count == 0)
+                                    && (Misc_getTimestamp() >= (useInfo->timestamp+POSTGRESQL_HASHTABLE_CLEAN_TIME*US_PER_S))
+                                   )
+                                {
+                                  postgresqlResult = PQexec(databaseStatementHandle->databaseHandle->postgresql.handle,
+                                                            stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
+                                                           );
+                                  if (postgresqlResult != NULL)
+                                  {
+                                    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+                                    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+                                         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+                                       )
+                                    {
+                                      HashTable_remove(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
+                                                       hashTableEntry->keyData,
+                                                       hashTableEntry->keyLength
+                                                      );
+                                    }
+
+                                    PQclear(postgresqlResult);
+                                  }
+                                }
+
+                                return TRUE;
+                              },NULL)
+                             );
+          }
+
+          // free bind data
+          free(databaseStatementHandle->postgresql.parameterFormats);
+          free(databaseStatementHandle->postgresql.parameterLengths);
+          free(databaseStatementHandle->postgresql.parameterValues);
+          free(databaseStatementHandle->postgresql.bind);
         }
-
-// does not work: Postgres report sometimes "not found"
-#if 0
-        {
-          char sqlString[256];
-
-stringFormat(sqlString,sizeof(sqlString),
-        "DEALLOCATE %s",databaseStatementHandle->postgresql.name
-        );
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
-        PQexec(databaseStatementHandle->databaseHandle->postgresql.handle,
-        sqlString);
-      }
-#endif
-
-        // free bind data
-        free(databaseStatementHandle->postgresql.parameterFormats);
-        free(databaseStatementHandle->postgresql.parameterLengths);
-        free(databaseStatementHandle->postgresql.parameterValues);
-        free(databaseStatementHandle->postgresql.bind);
       #else /* HAVE_POSTGRESQL */
         return;
       #endif /* HAVE_POSTGRESQL */
@@ -6421,6 +6443,24 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
 * Return : TRUE if next row, FALSE end of data or error
 * Notes  : -
 \***********************************************************************/
+
+#if 0
+struct {
+    pqbool  header;      /* print output field headings and row count */
+    pqbool  align;       /* fill align the fields */
+    pqbool  standard;    /* old brain dead format */
+    pqbool  html3;       /* output html tables */
+    pqbool  expanded;    /* expand tables */
+    pqbool  pager;       /* use pager for output if needed */
+    char    *fieldSep;   /* field separator */
+    char    *tableOpt;   /* insert to HTML table ... */
+    char    *caption;    /* HTML caption */
+    char    **fieldName; /* null terminated array of replacement field names */
+} PQprintOpt;
+#endif
+
+char *a[] = {NULL};
+PQprintOpt p = {TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,"|","","",a};
 
 LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                       uint                    flags,
@@ -6675,11 +6715,33 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           uint       i;
           const char *tail;
 
-          if (databaseStatementHandle->postgresql.rowIndex < databaseStatementHandle->postgresql.rowCount)
+          while (   (databaseStatementHandle->postgresql.result == NULL)
+                 || (databaseStatementHandle->postgresql.rowIndex >= databaseStatementHandle->postgresql.rowCount)
+                )
           {
+//fprintf(stderr,"%s:%d: result=%p\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.result);
+            if (databaseStatementHandle->postgresql.result != NULL) PQclear(databaseStatementHandle->postgresql.result);
+//PQconsumeInput(databaseStatementHandle->databaseHandle->postgresql.handle);
+            databaseStatementHandle->postgresql.result = PQgetResult(databaseStatementHandle->databaseHandle->postgresql.handle);
+            if (databaseStatementHandle->postgresql.result == NULL)
+            {
+              break;
+            }
+            databaseStatementHandle->postgresql.rowIndex = 0;
+//            stringToUInt64(PQcmdTuples(databaseStatementHandle->postgresql.result),&databaseStatementHandle->postgresql.rowCount,NULL);
+            databaseStatementHandle->postgresql.rowCount = PQntuples(databaseStatementHandle->postgresql.result);
+          }
+
+          if (   (databaseStatementHandle->postgresql.result != NULL)
+              && (databaseStatementHandle->postgresql.rowIndex < databaseStatementHandle->postgresql.rowCount)
+             )
+          {
+//fprintf(stderr,"%s:%d: result=%p rows=%d values=%d\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowCount,PQnfields(databaseStatementHandle->postgresql.result));
+//PQprint(stdout,databaseStatementHandle->postgresql.result,&p);
             for (i = 0; i < databaseStatementHandle->resultCount; i++)
             {
               assert(PQfformat(databaseStatementHandle->postgresql.result,i) == 0);  // expect text format
+//fprintf(stderr,"%s:%d: row=%d i=%d/%d\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.rowIndex,i,databaseStatementHandle->resultCount);
 
               // get name
               if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
@@ -7076,7 +7138,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                   break;
                 case DATABASE_DATATYPE_DATETIME:
                   #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
+                    statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRESQL_BASE_TIMESTAMP)*US_PER_SECOND);
                     statement.parameterValues[i]  = (const char*)&statement.bind[i].dateTime;
                     statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
                     statement.parameterFormats[i] = 1;
@@ -7215,6 +7277,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
 
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((valueCount == 0) || (values != NULL));
 
@@ -7779,7 +7843,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                         databaseStatementHandle->parameterCount
                        );
                 #ifdef POSTGRESQL_BINARY_INTERFACE
-                  databaseStatementHandle->postgresql.bind[i].dateTime = htobe64(((int64)values[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
+                  databaseStatementHandle->postgresql.bind[i].dateTime = htobe64(((int64)values[i].dateTime-POSTGRESQL_BASE_TIMESTAMP)*US_PER_SECOND);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = (const char*)&databaseStatementHandle->postgresql.bind[i].dateTime;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
@@ -8449,7 +8513,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                         databaseStatementHandle->parameterCount
                        );
                 #ifdef POSTGRESQL_BINARY_INTERFACE
-                  databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime = htobe64(((int64)filters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
+                  databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime = htobe64(((int64)filters[i].dateTime-POSTGRESQL_BASE_TIMESTAMP)*US_PER_SECOND);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = (const char*)&databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
