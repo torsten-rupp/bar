@@ -1,4 +1,4 @@
-2022-01-15 0.22e
+2023-01-15 0.22e
   * fixed PostgreSQL memory consumption: use single
     row mode
   * fixed memory leak

@@ -2504,7 +2504,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
-            printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
             logMessage(createInfo->logHandle,
                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                        "Access denied '%s' (error: %s)",
@@ -2845,7 +2845,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
-            printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
             logMessage(createInfo->logHandle,
                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                        "Access denied '%s' (error: %s)",
@@ -2997,7 +2997,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     error = File_readDirectoryList(&directoryListHandle,fileName);
                     if (error != ERROR_NONE)
                     {
-                      printError("Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                      printError("Cannot read directory '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
                       logMessage(createInfo->logHandle,
                                  LOG_TYPE_ENTRY_ACCESS_DENIED,
                                  "Access denied '%s' (error: %s)",
@@ -3018,7 +3018,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     error = File_getInfo(&fileInfo,fileName);
                     if (error != ERROR_NONE)
                     {
-                      printError("Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
+                      printError("Cannot access '%s' (error: %s) - skipped",String_cString(fileName),Error_getText(error));
                       logMessage(createInfo->logHandle,
                                  LOG_TYPE_ENTRY_ACCESS_DENIED,
                                  "Access denied '%s' (error: %s)",
@@ -3120,7 +3120,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         {
                                           if (createInfo->jobOptions->skipUnreadableFlag)
                                           {
-                                            printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
+                                            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(fileName),Error_getText(error));
                                             logMessage(createInfo->logHandle,
                                                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                                                        "Access denied '%s' (error: %s)",
@@ -3283,7 +3283,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       error = Device_getInfo(&deviceInfo,fileName,TRUE);
                                       if (error != ERROR_NONE)
                                       {
-                                        printError("Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                                        printError("Cannot access '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
                                         logMessage(createInfo->logHandle,
                                                    LOG_TYPE_ENTRY_ACCESS_DENIED,
                                                    "Access denied '%s' (error: %s)",
@@ -3603,7 +3603,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               if (createInfo->jobOptions->skipUnreadableFlag)
                               {
-                                printError("Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                                printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
                                 logMessage(createInfo->logHandle,
                                            LOG_TYPE_ENTRY_ACCESS_DENIED,
                                            "Access denied '%s' (error: %s)",
@@ -3684,14 +3684,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       }
       if (n <= 0)
       {
-        if (createInfo->jobOptions->skipUnreadableFlag)
-        {
-          printWarning("no matching entry found for '%s' - skipped",
-                       String_cString(includeEntryNode->string)
-                      );
-          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s' - skipped",String_cString(includeEntryNode->string));
-        }
-        else
+        if (!createInfo->jobOptions->skipUnreadableFlag)
         {
           printError("no matching entry found for '%s'!",
                      String_cString(includeEntryNode->string)
