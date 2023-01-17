@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-22 16:34+0100\n"
+"POT-Creation-Date: 2023-01-17 10:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -31,7 +31,7 @@ msgstr ""
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/rupp/tools/bar/bar/commands_restore.c:3954
+#: /home/rupp/tools/bar/bar/commands_restore.c:3955
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
