@@ -11,8 +11,8 @@ ENV DEBIAN_FRONTEND noninteractive
 # update
 RUN apt-get -y update
 
-# install packages
-RUN apt-get -y install \
+# install packages (Note: ignore expired key with --force-yes)
+RUN apt-get -y --force-yes install \
   bc \
   bzip2 \
   coreutils \
@@ -40,7 +40,7 @@ RUN apt-get -y install \
   wget \
   xz-utils \
   ;
-RUN apt-get -y install \
+RUN apt-get -y --force-yes install \
   autotools-dev \
   dh-autoreconf \
   gcc \
