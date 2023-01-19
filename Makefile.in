@@ -58,6 +58,7 @@ OPENSSL                = @OPENSSL@
 KEYTOOL                = @KEYTOOL@
 
 DOCKER_RUN_FLAGS       = run -i -t
+DOCKER_PROMPT          = '\[\e[0;38;5;39m\]\u\[\e[0;38;5;39m\]@\[\e[0;38;5;39m\]\H\[\e[0;38;5;39m\]:\[\e[0;38;5;39m\]\w \[\e[0;38;5;39m\]$$ \[\e[0m\]'
 
 TXT2MAN                = @TXT2MAN@
 UNOCONV                = @UNOCONV@
@@ -291,14 +292,14 @@ help:
 	@$(ECHO) "  win32"
 	@$(ECHO) "  clean_win32"
 	@$(ECHO) ""
-	@$(ECHO) "  update_docker"
-	@$(ECHO) "  purge_docker"
+	@$(ECHO) "  docker_update"
+	@$(ECHO) "  docker_purge"
 	@$(ECHO) ""
-	@$(ECHO) "  build_docker"
+	@$(ECHO) "  docker_run"
 	@$(ECHO) ""
-	@$(ECHO) "  rpm_docker"
-	@$(ECHO) "  deb_docker"
-	@$(ECHO) "  win32_docker"
+	@$(ECHO) "  docker_rpm"
+	@$(ECHO) "  docker_den"
+	@$(ECHO) "  docker_win32"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test"
 	@$(ECHO) ""
@@ -780,8 +781,8 @@ packages: \
   deb \
   gui
 
-.PHONY: update_docker
-update_docker:
+.PHONY: docker_update update_docker
+docker_update update_docker:
 	# base images
 	$(DOCKER) pull i386/centos:6
 	$(DOCKER) pull centos:6
@@ -832,18 +833,23 @@ update_docker:
 	# build image
 	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build .)
 
-.PHONY: purge_docker
-purge_docker:
+.PHONY: docker_purge purge_docker
+docker_purge purge_docker:
 	$(DOCKER) rm $$($(DOCKER) ps -a -q)
 
-.PHONY: build_docker
-build_docker:
-	# Note: no image operations in docker, because /dev/loop* and mount only
-	#       work with --privileges=true which may cause dangerous/instable
-	#       behaviour
+.PHONY: docker_run build_docker
+docker_run build_docker:
+	# Notes: - no image operations in docker, because /dev/loop* and mount only
+	#          work with --privileges=true which may cause dangerous/instable
+	#          behaviour
+	#        - do not enable host network, because of sftp/ssh/apache instances
+	#          in container; just map ssh port
+#TODO: use sudo?
+	#        - need root privileges in container to start services
 	$(DOCKER) $(DOCKER_RUN_FLAGS) \
           --rm \
           -p 2222:22 \
+          -e TERM=xterm-256color \
           -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
           -e TEST_BASE_DIR=/home/test \
           -e TEST_LOGIN_NAME=test \
@@ -856,25 +862,27 @@ build_docker:
           -w $(PWD) \
           --name=bar-build \
           bar:build \
-          /bin/bash
-
+          /bin/bash -c "echo export PS1=\'$(DOCKER_PROMPT)\' >> ~/.bashrc && /bin/bash"
+          
+.PHONY: docker_rpm docker_rpm-x86_64 docker_den docker_den-x86_64 docker_win32 docker_win32-x86_64
 .PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
-rpm_docker:
+docker_rpm rpm_docker:
 	echo TODO
-rpm_docker-x86_64:
-	echo TODO
-
-deb_docker:
-	echo TODO
-deb_docker-x86_64:
+docker_rpm-x86_64 rpm_docker-x86_64:
 	echo TODO
 
-win32_docker:
+docker_deb deb_docker:
+	echo TODO
+docker_deb-x86_64 deb_docker-x86_64:
+	echo TODO
+
+docker_win32 win32_docker:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            --net=host \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
-            --net=host \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
             --name=bar-win32 \
@@ -887,11 +895,12 @@ win32_docker:
               $(WINE) \
               $(DISTRIBUTION_NAME)-setup; \
         )
-win32_docker-x86_64:
+docker_win32-x86_64 win32_docker-x86_64:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            --rm \
             --net=host \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
             --name=bar-win32-x86_64 \
@@ -938,9 +947,10 @@ $(DISTRIBUTION_NAME).rpm: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            --net=host \
+            --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
-            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-centos:6 setarch i686 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
@@ -954,8 +964,9 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             --net=host \
+            --user $(shell id -u):$(shell id -g) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
@@ -1020,8 +1031,9 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             --net=host \
+            --user $(shell id -u):$(shell id -g) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-debian:8 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
@@ -1034,8 +1046,9 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             --net=host \
+            --user $(shell id -u):$(shell id -g) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-debian-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
@@ -1078,9 +1091,10 @@ $(DISTRIBUTION_NAME)-setup.exe: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            --net=host \
+            --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
-            --net=host \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
@@ -1124,8 +1138,9 @@ install_test_rpm: \
 functionInstallTestRPM = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
-      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       --net=host \
+      --user $(shell id -u):$(shell id -g) \
+      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_rpm.sh \
@@ -1135,8 +1150,9 @@ functionInstallTestRPM = \
 functionInstallTestDEB = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
-      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       --net=host \
+      --user $(shell id -u):$(shell id -g) \
+      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_deb.sh \
