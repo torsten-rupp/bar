@@ -74,7 +74,7 @@ fatalError()
   echo >&2 FAIL!
   echo >&2 ERROR: $message
 
-  exit 1
+  exit 4
 }
 
 
@@ -527,6 +527,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -569,6 +570,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -611,6 +613,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -653,6 +656,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -695,6 +699,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -737,6 +742,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -779,6 +785,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -821,6 +828,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
 
     # gpg-error, gcrypt
@@ -861,6 +869,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -903,6 +912,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
 
     # curl
@@ -943,6 +953,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -985,6 +996,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1027,6 +1039,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1069,6 +1082,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1111,6 +1125,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
 
     # gmp
@@ -1151,6 +1166,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
 
     # libidn2
@@ -1191,6 +1207,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
 
     # gnutls
@@ -1231,6 +1248,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1273,6 +1291,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
 
     # libcdio
@@ -1313,6 +1332,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1355,6 +1375,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1397,6 +1418,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1439,6 +1461,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1481,6 +1504,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1523,6 +1547,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1565,6 +1590,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1607,6 +1633,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1649,6 +1676,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1680,6 +1708,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1722,6 +1751,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1764,6 +1794,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 
@@ -1831,6 +1862,7 @@ if test $cleanFlag -eq 0; then
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
     esac
   fi
 else
