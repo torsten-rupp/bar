@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-09 14:25+0100\n"
-"PO-Revision-Date: 2022-10-18 15:44+0200\n"
+"POT-Creation-Date: 2023-01-20 15:40+0100\n"
+"PO-Revision-Date: 2023-01-20 15:51+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -876,7 +876,6 @@ msgid "insufficient memory"
 msgstr "Speicher nicht ausreichend"
 
 #: src/BARException.java:293
-#, fuzzy
 msgid "initialize failed"
 msgstr "Initialisierung fehlgeschlagen"
 
@@ -909,19 +908,16 @@ msgid "function still not implemented"
 msgstr "Funktion noch nicht implementiert"
 
 #: src/BARException.java:317
-#, fuzzy
 msgid "run as daemon failed"
 msgstr "Ausführung als Dienst fehlgeschlagen"
 
 #: src/BARException.java:320
-#, fuzzy
 msgid "inter-process communication failed"
 msgstr "Prozesskommunikation fehlgeschlagen"
 
 #: src/BARException.java:323
-#, fuzzy
 msgid "initialize password failed"
-msgstr "Fehler bei Passwortinitialisierung"
+msgstr "Fehler bei der Passwortinitialisierung"
 
 #: src/BARException.java:326 src/BARException.java:384
 msgid "no password given"
@@ -932,7 +928,6 @@ msgid "invalid password"
 msgstr "Ungültiges Passwort"
 
 #: src/BARException.java:332
-#, fuzzy
 msgid "process data failed"
 msgstr "Datenverarbeitung fehlgeschlagen"
 
@@ -953,12 +948,10 @@ msgid "host not found"
 msgstr "Rechner nicht gefunden"
 
 #: src/BARException.java:358
-#, fuzzy
 msgid "bind failed"
 msgstr "Netzwerkverbindung fehlgeschlagen"
 
 #: src/BARException.java:365
-#, fuzzy
 msgid "connect failed"
 msgstr "Verbindung fehlgeschlagen"
 
@@ -979,17 +972,14 @@ msgid "no login name given"
 msgstr "Kein Login-Name angegeben"
 
 #: src/BARException.java:387
-#, fuzzy
 msgid "sending data failed"
 msgstr "Senden der Daten fehlgeschlagen"
 
 #: src/BARException.java:394
-#, fuzzy
 msgid "receiving data failed"
 msgstr "Datenempfang fehlgeschlagen"
 
 #: src/BARException.java:397
-#, fuzzy
 msgid "execute command failed"
 msgstr "Befehlsausführung fehlgeschlagen"
 
@@ -1010,9 +1000,8 @@ msgid "invalid response from remote program"
 msgstr "Ungültige Rückmeldung von Programm auf anderem Rechner"
 
 #: src/BARException.java:412
-#, fuzzy
 msgid "initialize TLS (SSL) failed"
-msgstr "Initialisierung vonTLS (SSL) fehlgeschlagen"
+msgstr "Initialisierung von TLS (SSL) fehlgeschlagen"
 
 #: src/BARException.java:415
 msgid "no TLS (SSL) certificate authority file"
@@ -1043,7 +1032,6 @@ msgid "TLS (SSL) certificate is still not active"
 msgstr "TLS (SSL)-Zertifikat noch nicht aktiv"
 
 #: src/BARException.java:444
-#, fuzzy
 msgid "TLS (SSL) handshake failedure"
 msgstr "TLS (SSL)-Protokollfehler"
 
@@ -1079,12 +1067,10 @@ msgid "invalid SSH private key"
 msgstr "Ungültiger privater SSH-Schlüssel"
 
 #: src/BARException.java:481
-#, fuzzy
 msgid "initialize SSH session failed"
-msgstr "Initialisierung SSH-Sitzung fehlgeschlagen"
+msgstr "Initialisierung der SSH-Sitzung fehlgeschlagen"
 
 #: src/BARException.java:484
-#, fuzzy
 msgid "SSH authentication failed"
 msgstr "SSH-Authentifizierung fehlgeschlagen"
 
@@ -1103,22 +1089,18 @@ msgid "job ''{0}'' running"
 msgstr "Auftrag ''{0}'' wird ausgeführt"
 
 #: src/BARException.java:504
-#, fuzzy
 msgid "create job failed"
 msgstr "Erzeugen eines neuen Auftrags fehlgeschlagen"
 
 #: src/BARException.java:511
-#, fuzzy
 msgid "delete job failed"
 msgstr "Löschen eines Auftrags fehlgeschlagen"
 
 #: src/BARException.java:518
-#, fuzzy
 msgid "rename job failed"
-msgstr "Umbenennen eines Auftrags fehlgeschlagen"
+msgstr "Umbenennen eines Auftrags fehlgeschlagem"
 
 #: src/BARException.java:525
-#, fuzzy
 msgid "initialize storage failed"
 msgstr "Initialisierung der Archivierung fehlgeschlagen"
 
@@ -1135,9 +1117,8 @@ msgid "invalid FTP specifier"
 msgstr "Ungültiger FTP-Prefix"
 
 #: src/BARException.java:541
-#, fuzzy
 msgid "initialize FTP session failed"
-msgstr "Initialisierung FTP-Sitzung fehlgeschlagen"
+msgstr "Initialisierung der FTP-Sitzung fehlgeschlagen"
 
 #: src/BARException.java:548
 msgid "no FTP password given"
@@ -1152,18 +1133,16 @@ msgid "invalid FTP user/password"
 msgstr "Ungültiger FTP-Benutzer/Passwort"
 
 #: src/BARException.java:561
-#, fuzzy
 msgid "get FTP file size failed"
-msgstr "Ermitteln der FTP-Dateigröße fehlgeschlagen"
+msgstr "Ermitteln der FTP-Dateigröße fehlgeschlagem"
 
 #: src/BARException.java:564
 msgid "invalid WebDAV specifier"
 msgstr "Ungültiger WebDAV-Prefix"
 
 #: src/BARException.java:567
-#, fuzzy
 msgid "initialize WebDAV session failed"
-msgstr "Initialisierung WebDAV-Sitzung fehlgeschlagen"
+msgstr "Initialisierung der WebDAV-Sitzung fehlgeschlagen"
 
 #: src/BARException.java:570
 msgid "no WebDAV password given"
@@ -1186,34 +1165,28 @@ msgid "get WebDAV file size"
 msgstr "Ermitteln der WebDAV-Dateigröße fehlgeschlagen"
 
 #: src/BARException.java:592
-#, fuzzy
 msgid "failed"
 msgstr "fehlgeschlagen"
 
 #: src/BARException.java:595
-#, fuzzy
 msgid "WebDAV upload failed"
 msgstr "Senden von Daten mit WebDAV fehlgeschlagen"
 
 #: src/BARException.java:602
-#, fuzzy
 msgid "WebDAV download failed"
-msgstr "Empfangen Daten mit WebDAV fehlgeschlagen"
+msgstr "Empfangen der Daten mit WebDAV fehlgeschlagen"
 
 #: src/BARException.java:609
-#, fuzzy
 msgid "WebDAV failed"
 msgstr "Initialisierung WebDAV fehlgeschlagen"
 
 #: src/BARException.java:616
-#, fuzzy
 msgid "initialize compress failed"
-msgstr "Initialisierung Kompression fehlgeschlagen"
+msgstr "Initialisierung der Kompression fehlgeschlagen"
 
 #: src/BARException.java:623
-#, fuzzy
 msgid "initialize decompress failed"
-msgstr "Initialisierung Dekompression fehlgeschlagen"
+msgstr "Initialisierung der Dekompression fehlgeschlagen"
 
 #: src/BARException.java:630
 msgid "end of compressed file"
@@ -1236,12 +1209,10 @@ msgid "compress algorithm not supported"
 msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren"
 
 #: src/BARException.java:649
-#, fuzzy
 msgid "compress failed"
-msgstr "Kompression fehlgeschlag"
+msgstr "Kompression fehlgeschlagen"
 
 #: src/BARException.java:656
-#, fuzzy
 msgid "decompress failed"
 msgstr "Dekompression fehlgeschlagen"
 
@@ -1250,14 +1221,12 @@ msgid "unsupported block length"
 msgstr "Nicht unterstützte Blocklänge"
 
 #: src/BARException.java:666
-#, fuzzy
 msgid "initialize crypt failed"
-msgstr "Initialisierung Verschlüsselung fehlgeschlagen"
+msgstr "Initialisierung der Verschlüsselung fehlgeschlagen"
 
 #: src/BARException.java:673
-#, fuzzy
 msgid "no crypt key for cipher"
-msgstr "Keinen Schlüssel für Entschlüsslung gefunden"
+msgstr "Keinen Schlüssel für die Entschlüsslung gefunden"
 
 #: src/BARException.java:676
 msgid "no password given for cipher"
@@ -1272,26 +1241,22 @@ msgid "encryption passwords mismatch"
 msgstr "Nicht gleiche Entschlüsselungspassworte angegeben"
 
 #: src/BARException.java:685
-#, fuzzy
 msgid "initialize cipher failed"
-msgstr "Initialisierung von Verschlüssung fehlgeschlagen"
+msgstr "Initialisierung der Verschlüsselung fehlgeschlagen"
 
 #: src/BARException.java:692
-#, fuzzy
 msgid "create public/private key failed"
 msgstr "Erzeugen des öffentlichen/privaten Schlüsselpaars fehlgeschlagen"
 
 #: src/BARException.java:702
-#, fuzzy
 msgid "initialize key failed"
-msgstr "Initialisierung Schlüssel fehlgeschlagen"
+msgstr "Initialisierung des Schlüssels fehlgeschlagen"
 
 #: src/BARException.java:709
 msgid "public/private key not found"
 msgstr "Öffentlicher/privater Schlüssel nicht gefunden"
 
 #: src/BARException.java:716
-#, fuzzy
 msgid "read public/private key failed"
 msgstr "Lesen des öffentlichen/privaten Schlüsselpaars fehlgeschlagen"
 
@@ -1344,14 +1309,12 @@ msgid "key is not a private signature key"
 msgstr "Schlüssel ist kein privater Signatur-Schlüssel"
 
 #: src/BARException.java:779
-#, fuzzy
 msgid "key encryption failed"
-msgstr "Verschlüsselung von Schlüssel fehlgeschlagen"
+msgstr "Verschlüsselung des Schlüssels fehlgeschlagen"
 
 #: src/BARException.java:786
-#, fuzzy
 msgid "key decryption failed"
-msgstr "Entschlüsselung von Schlüssel fehlgeschlagen"
+msgstr "Entschlüsselung des Schlüssels fehlgeschlagen"
 
 #: src/BARException.java:793
 msgid "wrong private decryption key"
@@ -1366,19 +1329,16 @@ msgid "unknown encryption algorithm"
 msgstr "Unbekannter Verschlüsselungsalgorithmus"
 
 #: src/BARException.java:802
-#, fuzzy
 msgid "encrypt failed"
-msgstr "Verschlüsselung fehlgeschlag"
+msgstr "Verschlüsselung fehlgeschlagen"
 
 #: src/BARException.java:809
-#, fuzzy
 msgid "decrypt failed"
 msgstr "Entschlüsselung fehlgeschlagen"
 
 #: src/BARException.java:816
-#, fuzzy
 msgid "initialize hash failed"
-msgstr "Initialisierung Hash fehlgeschlagen"
+msgstr "Initialisierung des Hashwerts fehlgeschlagen"
 
 #: src/BARException.java:819
 msgid "invalid hash algorithm"
@@ -1389,9 +1349,8 @@ msgid "unknown hash algorithm"
 msgstr "Unbekannter Hash-Algorithmus"
 
 #: src/BARException.java:825
-#, fuzzy
 msgid "initialize message authentication code failed"
-msgstr "Initialisierung von MAC fehlgeschlagen"
+msgstr "Initialisierung des MAC fehlgeschlagen"
 
 #: src/BARException.java:828
 msgid "invalid message authentication code algorithm"
@@ -1410,22 +1369,18 @@ msgid "no file name given"
 msgstr "kein Dateiname angegeben"
 
 #: src/BARException.java:844
-#, fuzzy
 msgid "create file failed"
-msgstr "Erzeugen der Datei festgeschlagen"
+msgstr "Erzeugen der Datei fehlgeschlagen"
 
 #: src/BARException.java:857
-#, fuzzy
 msgid "open file failed"
 msgstr "Öffnen der Datei fehlgeschlagen"
 
 #: src/BARException.java:861
-#, fuzzy
 msgid "create directory failed"
 msgstr "Erzeugen des Verzeichnisses festgeschlagen"
 
 #: src/BARException.java:868
-#, fuzzy
 msgid "read file failed"
 msgstr "Datei lesen fehlgeschlagen"
 
@@ -1434,12 +1389,10 @@ msgid "end of file"
 msgstr "Unerwartetes Dateiende"
 
 #: src/BARException.java:882
-#, fuzzy
 msgid "write file failed"
 msgstr "Datei schreiben fehlgeschlagen"
 
 #: src/BARException.java:889
-#, fuzzy
 msgid "delete file failed"
 msgstr "Datei löschen fehlgeschlagen"
 
@@ -1448,14 +1401,13 @@ msgid "open directory"
 msgstr "Verzeichnis öffnen"
 
 #: src/BARException.java:903
-#, fuzzy
 msgid "read directory failed"
 msgstr "Fehler beim Lesen des Verzeichnisses"
 
 #: src/BARException.java:908
-#, fuzzy, java-format
+#, java-format
 msgid "file ''{0}'' already exists"
-msgstr "Date ''%s'' existiert bereits"
+msgstr "Datei ''{0}'' existiert bereits"
 
 #: src/BARException.java:912
 msgid "file already exists"
@@ -1478,9 +1430,8 @@ msgid "end of directory list"
 msgstr "Unerwartetes Verzeichnisende"
 
 #: src/BARException.java:936
-#, fuzzy
 msgid "init file notify failed"
-msgstr "Initialisierung von Dateiänderungsbenachrichtigungen fehlgeschlagen"
+msgstr "Initialisierung der Dateiänderungsbenachrichtigungen fehlgeschlagen"
 
 #: src/BARException.java:943
 msgid "insufficient file notify entries"
@@ -1495,21 +1446,18 @@ msgid "CD/DVD/BD device not found"
 msgstr "CD/DVD/BD-Gerät nicht gefunden"
 
 #: src/BARException.java:960
-#, fuzzy
 msgid "open CD/DVD/BD disk failed"
-msgstr "Öffnen CD/DVD/BD-Medium fehlgeschlage"
+msgstr "Öffnen des CD/DVD/BD-Medium fehlgeschlagen"
 
 #: src/BARException.java:967
-#, fuzzy
 msgid "open ISO 9660 image failed"
-msgstr "Öffnen ISO 9669-Abbild fehlgeschlagen"
+msgstr "Öffnen des ISO 9669-Abbilds fehlgeschlagen"
 
 #: src/BARException.java:974
 msgid "no device name given"
 msgstr "Kein Gerätename angegeben"
 
 #: src/BARException.java:977
-#, fuzzy
 msgid "open device failed"
 msgstr "Öffnen des Geräts fehlgeschlagen"
 
@@ -1518,26 +1466,22 @@ msgid "invalid device block size"
 msgstr "Ungültige Blockgröße des Geräts"
 
 #: src/BARException.java:987
-#, fuzzy
 msgid "read device failed"
 msgstr "Lesen von Gerät fehlgeschlagen"
 
 #: src/BARException.java:990
-#, fuzzy
 msgid "write device failed"
-msgstr "Schreiben auf Gerät fehlgeschlagen"
+msgstr "Schreiben auf das Gerät fehlgeschlagen"
 
 #: src/BARException.java:993
 msgid "error parsing device list"
 msgstr "Fehler beim Einlesen der Geräteliste"
 
 #: src/BARException.java:996
-#, fuzzy
 msgid "mount failed"
 msgstr "Dateisystem einhängen fehlgeschlagen"
 
 #: src/BARException.java:1003
-#, fuzzy
 msgid "unmount failed"
 msgstr "Dateisystem aushängen fehlgeschlagen"
 
@@ -1658,63 +1602,52 @@ msgid "invalid device specifier"
 msgstr "Ungültiges Geräte-Prefix"
 
 #: src/BARException.java:1140
-#, fuzzy
 msgid "load volume failed"
 msgstr "Medium laden fehlgeschlagen"
 
 #: src/BARException.java:1143
-#, fuzzy
 msgid "parse command failed"
 msgstr "Ungültige Befehlssyntax"
 
 #: src/BARException.java:1150
-#, fuzzy
 msgid "expand command template failed"
-msgstr "Befehlserzeugung fehlgeschlagen"
+msgstr "Befehlserzeugung aus Vorlage fehlgeschlagen"
 
 #: src/BARException.java:1153
-#, fuzzy
 msgid "i/o redirect failed"
 msgstr "Ein-/Ausgabeumleitung fehlgeschlagen"
 
 #: src/BARException.java:1160
-#, fuzzy
 msgid "execute external program failed"
-msgstr "Ausführen eines externen Programms fehlgeschlagen"
+msgstr "Ausführen des externen Programms fehlgeschlagen"
 
 #: src/BARException.java:1167
 msgid "terminated external program"
 msgstr "Externes Programm wurde beendet"
 
 #: src/BARException.java:1174
-#, fuzzy
 msgid "parsing data failed"
 msgstr "Fehler beim Verarbeiten der Daten"
 
 #: src/BARException.java:1181
-#, fuzzy
 msgid "parsing date failed"
-msgstr "Fehler beim Verarbeiten des Datums"
+msgstr "Fehler beim Lesen des Datums"
 
 #: src/BARException.java:1188
-#, fuzzy
 msgid "parsing time failed"
 msgstr "Fehler beim Lesen einer Zeitangabe"
 
 #: src/BARException.java:1195
-#, fuzzy
 msgid "parsing weekdays failed"
 msgstr "Fehler beim Lesen der Wochentagsangabe"
 
 #: src/BARException.java:1202
-#, fuzzy
 msgid "parsing maintenance failed"
-msgstr "Fehler beim Verarbeiten der Wartungszeit"
+msgstr "Fehler beim Lesen der Wartungszeit"
 
 #: src/BARException.java:1209
-#, fuzzy
 msgid "parsing schedule failed"
-msgstr "Fehler beim Lesen eines Zeitplans"
+msgstr "Fehler beim Lesen des Zeitplans"
 
 #: src/BARException.java:1216
 msgid "unknown command"
@@ -1793,7 +1726,6 @@ msgid "database not found"
 msgstr "Datenbank nicht gefunden"
 
 #: src/BARException.java:1364
-#, fuzzy
 msgid "connect to database failed"
 msgstr "Verbindung zur Datenbank fehlgeschlagen"
 
@@ -1830,9 +1762,8 @@ msgid "obsolete column"
 msgstr "Überflüssige Datenbankspalte"
 
 #: src/BARException.java:1411
-#, fuzzy
 msgid "database bind failed"
-msgstr "Datenbank Datenverknüpfung fehlgeschlagen"
+msgstr "Datenbankverknüpfung fehlgeschlagen"
 
 #: src/BARException.java:1418
 msgid "type mismatch"
@@ -1855,9 +1786,8 @@ msgid "invalid index"
 msgstr "Ungültiger Index"
 
 #: src/BARException.java:1441
-#, fuzzy
 msgid "parse index id failed"
-msgstr "Fehler beim Lesen einer Datensatzkennung"
+msgstr "Fehler beim Lesen der Datensatzkennung"
 
 #: src/BARException.java:1448
 msgid "database busy"
@@ -1968,9 +1898,9 @@ msgstr "Netzwerk"
 
 #: src/BARServer.java:1894 src/BARServer.java:1901 src/BARServer.java:2050
 #: src/BARServer.java:2215 src/BARServer.java:2222 src/BARServer.java:2368
-#, fuzzy, java-format
+#, java-format
 msgid "Connection to host ''{0}:{1}'' failed (error: {2})"
-msgstr "Verbindung zu Rechner ''{0}:{1}'' fehlgeschlagen (Fehler: {2})"
+msgstr "Verbindung zum Rechner ''{0}:{1}'' fehlgeschlagen (Fehler: {2})"
 
 #: src/BARServer.java:1908 src/BARServer.java:1919 src/BARServer.java:2057
 #: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
@@ -1981,36 +1911,36 @@ msgstr "TLS (SSL) Fehler: {0}"
 
 #: src/BARServer.java:1926 src/BARServer.java:2075 src/BARServer.java:2089
 #: src/BARServer.java:2247 src/BARServer.java:2393
-#, fuzzy, java-format
+#, java-format
 msgid "Host ''{0}:{1}'' unreachable (error: {2})"
-msgstr "Rechner ''{0}:{1}'' nicht erreichbar (Fehler: {2})"
+msgstr "Rechner ''{0}:{1}'' ist nicht erreichbar (Fehler: {2})"
 
 #: src/BARServer.java:1933 src/BARServer.java:2254 src/BARServer.java:2400
 #: src/BARServer.java:2476
-#, fuzzy, java-format
+#, java-format
 msgid "Connection to host ''{0}:{1}'' refused"
-msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
+msgstr "Verbindung zum Rechner ''{0}:{1}'' wurde abgelehnt"
 
 #: src/BARServer.java:1940 src/BARServer.java:2261 src/BARServer.java:2407
 #: src/BARServer.java:2483
-#, fuzzy, java-format
+#, java-format
 msgid "Host ''{0}:{1}'' unreachable (error: no route to host)"
 msgstr ""
-"Rechner ''{0}:{1}'' nicht erreichbar (Fehler: kein Weiterleitung zum Rechner)"
+"Rechner ''{0}:{1}'' ist nicht erreichbar (Fehler: kein Weiterleitung zum "
+"Rechner)"
 
 #: src/BARServer.java:1947 src/BARServer.java:2096 src/BARServer.java:2268
 #: src/BARServer.java:2414 src/BARServer.java:2490
-#, fuzzy, java-format
+#, java-format
 msgid "Unknown host ''{0}:{1}''"
 msgstr "Unbekannter Rechner ''{0}:{1}''"
 
 #: src/BARServer.java:2082
-#, fuzzy, java-format
+#, java-format
 msgid "Connection to host ''{0}:{1}''refused"
-msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
+msgstr "Verbindung zum Rechner ''{0}:{1}'' wurde abgelehnt"
 
 #: src/BARServer.java:2517
-#, fuzzy
 msgid "No server ports specified"
 msgstr "Keine Server-Portnummern angegeben"
 
@@ -5262,14 +5192,12 @@ msgstr ""
 "  auf WebDAV-Secure-Server\n"
 
 #: src/TabJobs.java:15053
-#, fuzzy
 msgid "No max. keep set!"
-msgstr "max. Alter"
+msgstr "Kein max. Anzahl angegeben"
 
 #: src/TabJobs.java:15059
-#, fuzzy
 msgid "No max. age set!"
-msgstr "max. Alter"
+msgstr "Kein max. Alter angegeben"
 
 #: src/TabJobs.java:15124
 #, java-format
@@ -6581,6 +6509,18 @@ msgstr "Anzahl"
 #: src/TabStatus.java:3636
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#, fuzzy
+#~ msgid "3Connection to host ''{0}:{1}'' refused"
+#~ msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
+
+#, fuzzy
+#~ msgid "4Connection to host ''{0}:{1}'' refused"
+#~ msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
+
+#, fuzzy
+#~ msgid "5Connection to host ''{0}:{1}'' refused"
+#~ msgstr "Verbindung zu Rechner ''{0}:{1}'' abgelehnt"
 
 #, fuzzy
 #~ msgid ""

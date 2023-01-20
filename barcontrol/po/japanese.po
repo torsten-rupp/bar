@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-09 14:25+0100\n"
+"POT-Creation-Date: 2023-01-20 15:40+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -6907,6 +6907,18 @@ msgstr ""
 #, fuzzy
 msgid "Average time"
 msgstr "現存エントリの上書き"
+
+#, fuzzy
+#~ msgid "3Connection to host ''{0}:{1}'' refused"
+#~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
+
+#, fuzzy
+#~ msgid "4Connection to host ''{0}:{1}'' refused"
+#~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
+
+#, fuzzy
+#~ msgid "5Connection to host ''{0}:{1}'' refused"
+#~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
 #, fuzzy
 #~ msgid ""
