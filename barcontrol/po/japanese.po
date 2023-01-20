@@ -6899,6 +6899,18 @@ msgid "Average time"
 msgstr "現存エントリの上書き"
 
 #, fuzzy
+#~ msgid "3Connection to host ''{0}:{1}'' refused"
+#~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
+
+#, fuzzy
+#~ msgid "4Connection to host ''{0}:{1}'' refused"
+#~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
+
+#, fuzzy
+#~ msgid "5Connection to host ''{0}:{1}'' refused"
+#~ msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
+
+#, fuzzy
 #~ msgid ""
 #~ "Reconnect with new certificate authority fail:\n"
 #~ "\n"
