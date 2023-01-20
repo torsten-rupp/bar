@@ -1530,7 +1530,7 @@ public class ServerSettings
 
                   BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
                                                                maintenanceData.getDate(),
-                                                               maintenanceData.getWeekDays(),
+                                                               maintenanceData.weekDaysToString(),
                                                                maintenanceData.getBeginTime(),
                                                                maintenanceData.getEndTime()
                                                               ),
@@ -1578,7 +1578,7 @@ public class ServerSettings
                     BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_UPDATE id=%d date=%s weekDays=%s beginTime=%s endTime=%s",
                                                                  maintenanceData.id,
                                                                  maintenanceData.getDate(),
-                                                                 maintenanceData.getWeekDays(),
+                                                                 maintenanceData.weekDaysToString(),
                                                                  maintenanceData.getBeginTime(),
                                                                  maintenanceData.getEndTime()
                                                                 ),
@@ -1626,7 +1626,7 @@ public class ServerSettings
 
                     BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
                                                                  cloneMaintenanceData.getDate(),
-                                                                 cloneMaintenanceData.getWeekDays(),
+                                                                 cloneMaintenanceData.weekDaysToString(),
                                                                  cloneMaintenanceData.getBeginTime(),
                                                                  cloneMaintenanceData.getEndTime()
                                                                 ),
