@@ -492,7 +492,8 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   assert(maintenanceNode != NULL);
   assert(date != NULL);
   assert(weekDays != NULL);
-  assert(time != NULL);
+  assert(beginTime != NULL);
+  assert(endTime != NULL);
 
   error = ERROR_NONE;
 
