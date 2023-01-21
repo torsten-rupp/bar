@@ -6958,6 +6958,10 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             mysql_stmt_close(statementHandle);
           }
         #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(changedRowCount);
+          UNUSED_VARIABLE(parameters);
+          UNUSED_VARIABLE(parameterCount);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -7191,8 +7195,10 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             free(statement.bind);
           }
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(changedRowCount);
           UNUSED_VARIABLE(parameters);
           UNUSED_VARIABLE(parameterCount);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -10350,7 +10356,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           error = openDatabase(&databaseHandle,databaseSpecifier,"",DATABASE_OPEN_MODE_READ,NO_WAIT);
           if (error != ERROR_NONE)
           {
-            return error;
+            break;
           }
 
           // create new database
@@ -10375,7 +10381,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           if (error != ERROR_NONE)
           {
             closeDatabase(&databaseHandle);
-            return error;
+            break;
           }
 
           // rename tables
@@ -10399,7 +10405,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           {
             closeDatabase(&databaseHandle);
             StringList_done(&tableNameList);
-            return error;
+            break;
           }
           StringList_done(&tableNameList);
 
@@ -10411,7 +10417,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           String_setCString(databaseSpecifier->mariadb.databaseName,newDatabaseName);
         }
       #else /* HAVE_MARIADB */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
@@ -10425,7 +10431,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           error = openDatabase(&databaseHandle,databaseSpecifier,"",DATABASE_OPEN_MODE_READ,NO_WAIT);
           if (error != ERROR_NONE)
           {
-            return error;
+            break;
           }
 
           // rename database
@@ -10446,7 +10452,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           if (error != ERROR_NONE)
           {
             closeDatabase(&databaseHandle);
-            return error;
+            break;
           }
 
           // close database
@@ -10457,7 +10463,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           String_setCString(databaseSpecifier->postgresql.databaseName,newDatabaseName);
         }
       #else /* HAVE_POSTGRESQL */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
     #ifndef NDEBUG
@@ -10468,7 +10474,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
   }
   assert(error != ERROR_UNKNOWN);
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Database_create(const DatabaseSpecifier *databaseSpecifier,

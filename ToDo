@@ -189,6 +189,23 @@ rest time
 - bar-index: password option
 - use MongoDB for full text search
 - scheduler: test jobs
+- BARControl: show installed slave versions
+- BARControl: graphical history of job execution
+- skip leading directories on restore
+- use libmount
+- reload configuration on SIGHUB
+- backup set info file
+- use always UTF-8 name encoding
+- purge backup archives on exhausted free disk space
+- code formater
+- coding style guide
+- error correction codes
+- bar-index: command line option parser
+- support continuous jobs for slave
+- assign-to progress update
+- test+compare in job dialog
+
+
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
