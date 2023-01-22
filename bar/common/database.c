@@ -6449,9 +6449,6 @@ struct {
 } PQprintOpt;
 #endif
 
-char *a[] = {NULL};
-PQprintOpt p = {TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,"|","","",a};
-
 LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                       uint                    flags,
                       long                    timeout
