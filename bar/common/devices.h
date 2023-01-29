@@ -20,7 +20,6 @@
 
 #include "common/global.h"
 #include "common/strings.h"
-#include "common/bitmaps.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
@@ -40,7 +39,7 @@ typedef enum
 typedef struct
 {
   String name;
-  FILE   *file;
+  int    handle;
   uint64 index;
   uint64 size;
 } DeviceHandle;
@@ -141,7 +140,16 @@ Errors Device_close(DeviceHandle *deviceHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool Device_eof(DeviceHandle *deviceHandle);
+INLINE bool Device_eof(DeviceHandle *deviceHandle);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
+INLINE bool Device_eof(DeviceHandle *deviceHandle)
+{
+  assert(deviceHandle != NULL);
+  assert(deviceHandle->handle != -1);
+
+  return deviceHandle->index >= deviceHandle->size;
+}
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Device_read
@@ -225,6 +233,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
 * Notes  : -
 \***********************************************************************/
 
+// TODO: implement
 #if 0
 bool Device_getUsedBlocks(DeviceHandle *deviceHandle,
                           uint64       blockOffset,
@@ -333,7 +342,9 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 *          sizesFlag  - TRUE to detect block size+device size
 * Output : deviceInfo - device info
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : only in debug version: if environment variable
+*          DEBUG_EMULATE_BLOCK_DEVICE is set to a file name a device of
+*          that name is emulated
 \***********************************************************************/
 
 Errors Device_getInfo(DeviceInfo  *deviceInfo,

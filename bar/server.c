@@ -492,7 +492,8 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   assert(maintenanceNode != NULL);
   assert(date != NULL);
   assert(weekDays != NULL);
-  assert(time != NULL);
+  assert(beginTime != NULL);
+  assert(endTime != NULL);
 
   error = ERROR_NONE;
 
@@ -14495,7 +14496,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
       Job_listUnlock();
       String_delete(name);
       return;

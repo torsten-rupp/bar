@@ -67,7 +67,6 @@
     deprecated
   * fixed auto-index: add move-to paths for search
   * fixed lost resources in --convert
-  * fixed multiple triggering of a job
   * BARConrol: fixed possible dead-lock in server
     communication
   * BARControl: added option --insecure-tls, improved

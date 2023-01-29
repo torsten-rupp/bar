@@ -1376,7 +1376,10 @@ bool File_isHiddenCString(const char *fileName);
 *          fileName - file name
 * Output : fileInfo - file info
 * Return : ERROR_NONE or error code
-* Notes  : if getting attributes fail no error is reported
+* Notes  : - if getting attributes fail no error is reported
+*          - only in debug version: if environment variable
+*            DEBUG_EMULATE_BLOCK_DEVICE is set to a file name a device
+*            of that name is emulated
 \***********************************************************************/
 
 Errors File_getInfo(FileInfo    *fileInfo,

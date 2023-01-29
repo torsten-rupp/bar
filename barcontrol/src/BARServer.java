@@ -1905,7 +1905,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
                                                       (serverCertificateChain != null)
                                                         ? serverCertificateChain[0].toString()
                                                         : null
@@ -1916,7 +1916,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
               }
             }
             catch (SocketTimeoutException exception)
@@ -2054,7 +2054,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
                                                       (serverCertificateChain != null)
                                                         ? serverCertificateChain[0].toString()
                                                         : null
@@ -2065,7 +2065,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
               }
             }
             catch (SocketTimeoutException exception)
@@ -2226,7 +2226,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
                                                       (serverCertificateChain != null)
                                                         ? serverCertificateChain[0].toString()
                                                         : null
@@ -2237,7 +2237,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
               }
             }
             catch (SocketTimeoutException exception)
@@ -2372,7 +2372,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
                                                       (serverCertificateChain != null)
                                                         ? serverCertificateChain[0].toString()
                                                         : null
@@ -2383,7 +2383,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS (SSL) failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
+                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()));
               }
             }
             catch (SocketTimeoutException exception)

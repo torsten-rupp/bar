@@ -3785,13 +3785,51 @@ bool File_isDevice(ConstString fileName)
 
 bool File_isDeviceCString(const char *fileName)
 {
+  bool     isDevice;
   FileStat fileStat;
+  #ifndef NDEBUG
+    const char       *debugEmulateBlockDevice;
+    CStringTokenizer stringTokenizer;
+    const char       *emulateDeviceName;
+  #endif /* not NDEBUG */
 
   assert(fileName != NULL);
 
-  return (   (STAT(fileName,&fileStat) == 0)
-          && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
-         );
+  #ifndef NDEBUG     
+    debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
+
+    if (debugEmulateBlockDevice != NULL)
+    {
+      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");     
+      if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+          && stringEquals(fileName,emulateDeviceName)
+         )
+      {
+        // emulate block device
+        isDevice = TRUE;
+      }
+      else
+      {
+        // use block device
+        isDevice = (   (STAT(fileName,&fileStat) == 0)
+                    && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+                   );
+      }
+      stringTokenizerDone(&stringTokenizer);
+    }
+    else
+    {
+      isDevice = (   (STAT(fileName,&fileStat) == 0)
+                  && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+                 );
+    }
+  #else /* NDEBUG */
+    isDevice = (   (STAT(fileName,&fileStat) == 0)
+                && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+              );
+  #endif /* not NDEBUG */
+
+  return isDevice;
 }
 
 bool File_isReadable(ConstString fileName)
@@ -3956,6 +3994,11 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
 {
   FileStat   fileStat;
   DeviceInfo deviceInfo;
+  #ifndef NDEBUG
+    const char       *debugEmulateBlockDevice;
+    CStringTokenizer stringTokenizer;
+    const char       *emulateDeviceName;
+  #endif /* not NDEBUG */
 
   assert(fileInfo != NULL);
   assert(fileName != NULL);
@@ -3991,7 +4034,35 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   // store specific meta data
   if      (S_ISREG(fileStat.st_mode))
   {
-    fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+    #ifndef NDEBUG     
+      debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
+
+      if (debugEmulateBlockDevice != NULL)
+      {
+        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");     
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(fileName,emulateDeviceName)
+           )
+        {
+          // emulate block device
+          fileInfo->type        = FILE_TYPE_SPECIAL;
+          fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+          fileInfo->attributes  = 0LL;
+        }
+        else
+        {
+          // use block device
+          fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+        }
+        stringTokenizerDone(&stringTokenizer);
+      }
+      else
+      {
+        fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+      }
+    #else /* NDEBUG */
+      fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+    #endif /* not NDEBUG */
     fileInfo->size = fileStat.st_size;
 
     // get file attributes

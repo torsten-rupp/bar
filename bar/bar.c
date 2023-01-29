@@ -980,15 +980,13 @@ void printWarning(const char *text, ...)
 
   assert(text != NULL);
 
-  // init variables
-  line = String_new();
-
   // output log line
   va_start(arguments,text);
   vlogMessage(NULL,LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
   // output line
+  line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
   String_appendVFormat(line,text,arguments);
@@ -1002,8 +1000,6 @@ void printWarning(const char *text, ...)
     restoreConsole(stderr,&saveLine);
     UNUSED_VARIABLE(bytesWritten);
   }
-
-  // free resources
   String_delete(line);
 }
 
@@ -1114,63 +1110,68 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 {
   static uint64 lastReopenTimestamp = 0LL;
 
-  String dateTime;
-  String line;
-  uint64 nowTimestamp;
+  String  dateTime;
+  va_list tmpArguments;
+  uint64  nowTimestamp;
 
   assert(text != NULL);
 
-  // init variables
-  dateTime = String_new();
-  line     = String_new();
-
-  // format line with date/time+prefix
-  String_formatAppend(line,"%S> ",Misc_formatDateTime(dateTime,Misc_getCurrentDateTime(),FALSE,globalOptions.logFormat));
-  if (prefix != NULL)
-  {
-    String_appendCString(line,prefix);
-    String_appendCString(line,": ");
-  }
-  String_appendVFormat(line,text,arguments);
-  String_appendChar(line,'\n');
-
-  // write log
   SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if ((logType == LOG_TYPE_ALWAYS) || ((globalOptions.logTypes & logType) != 0))
+    if ((logHandle != NULL) || (logFile != NULL))
     {
-      // log to session log file
-      if (logHandle != NULL)
+      if ((logType == LOG_TYPE_ALWAYS) || ((globalOptions.logTypes & logType) != 0))
       {
-        // append to job log file (if possible)
-        if (logHandle->logFile != NULL)
-        {
-          (void)fwrite(String_cString(line),1,String_length(line),logHandle->logFile);
-          fflush(logHandle->logFile);
-        }
-      }
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),FALSE,globalOptions.logFormat);
 
-      // log to global log file
-      if (logFile != NULL)
-      {
-        // re-open log for log-rotation
-        nowTimestamp = Misc_getTimestamp();
-        if (nowTimestamp > (lastReopenTimestamp+10LL*US_PER_MINUTE))
+        // log to session log file
+        if (logHandle != NULL)
         {
-          reopenLog();
-          lastReopenTimestamp = nowTimestamp;
+          // append to job log file (if possible)
+          if (logHandle->logFile != NULL)
+          {
+            (void)fprintf(logHandle->logFile,"%s> ",String_cString(dateTime));
+            if (prefix != NULL)
+            {
+              (void)fputs(prefix,logHandle->logFile);
+              (void)fprintf(logHandle->logFile,": ");
+            }
+            va_copy(tmpArguments,arguments);
+            (void)vfprintf(logHandle->logFile,text,tmpArguments);
+            va_end(tmpArguments);
+            fputc('\n',logHandle->logFile);
+          }
         }
 
-        // append to log file
-        (void)fwrite(String_cString(line),1,String_length(line),logFile);
-        fflush(logFile);
+        // log to global log file
+        if (logFile != NULL)
+        {
+          // re-open log for log-rotation
+          nowTimestamp = Misc_getTimestamp();
+          if (nowTimestamp > (lastReopenTimestamp+10LL*US_PER_MINUTE))
+          {
+            reopenLog();
+            lastReopenTimestamp = nowTimestamp;
+          }
+
+          // append to log file
+          (void)fprintf(logFile,"%s> ",String_cString(dateTime));
+          if (prefix != NULL)
+          {
+            (void)fputs(prefix,logFile);
+            (void)fprintf(logFile,": ");
+          }
+          va_copy(tmpArguments,arguments);
+          (void)vfprintf(logFile,text,tmpArguments);
+          va_end(tmpArguments);
+          fputc('\n',logFile);
+          fflush(logFile);
+        }
+
+        String_delete(dateTime);
       }
     }
   }
-
-  // free resources
-  String_delete(line);
-  String_delete(dateTime);
 }
 
 void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...)

@@ -586,6 +586,7 @@ ERROR OPEN_ISO9660_FILE
 
 // --- device i/o -------------------------------------------------------
 ERROR NO_DEVICE_NAME                   TR("no device name given")
+ERROR NOT_A_DEVICE                     TR("not a device")
 
 ERROR OPEN_DEVICE
   stringSet(errorText,sizeof(errorText),TR("open device failed"));

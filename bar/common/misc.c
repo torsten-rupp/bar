@@ -1346,6 +1346,7 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
+fprintf(stderr,"%s:%d: %"PRIu64"\n",__FILE__,__LINE__,dateTime);
   n = (time_t)dateTime;
   if (utcFlag)
   {
