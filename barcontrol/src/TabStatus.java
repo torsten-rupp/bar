@@ -2471,7 +2471,6 @@ public class TabStatus
                                    String              cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                   );
                                    long                lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                );
                                    long                estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                   );
-Dprintf.dprintf("%s: slaveTLS=%s slaveInsecureTLS=%s",name,slaveTLS,slaveInsecureTLS);
 
                                    JobData jobData = jobDataMap.get(jobUUID);
                                    if (jobData != null)

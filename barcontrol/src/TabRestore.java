@@ -2272,8 +2272,8 @@ Dprintf.dprintf("");
               {
                 TreeItem uuidTreeItem = Widgets.updateInsertTreeItem(widgetStorageTree,
                                                                      indexDataComparator,
-                                                                     Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                      uuidIndexData,
+                                                                     Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                      uuidIndexData.name,
                                                                      "",  // hostName
                                                                      "",  // date/time drawn in tree item renderer
@@ -2430,8 +2430,8 @@ Dprintf.dprintf("");
 
                 TreeItem entityTreeItem = Widgets.updateInsertTreeItem(uuidTreeItem,
                                                                        indexDataComparator,
-                                                                       Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                        entityIndexData,
+                                                                       Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                        entityIndexData.archiveType.toString(),
                                                                        "",  // hostName
                                                                        "",  // date/time drawn in tree item renderer
@@ -2677,8 +2677,8 @@ Dprintf.dprintf("");
                 {
                   TreeItem storageTreeItem = Widgets.updateInsertTreeItem(entityTreeItem,
                                                                           indexDataComparator,
-                                                                          Widgets.TREE_ITEM_FLAG_NONE,
                                                                           storageIndexData,
+                                                                          Widgets.TREE_ITEM_FLAG_NONE,
                                                                           storageIndexData.name,
                                                                           storageIndexData.hostName,
                                                                           "",  // date/time drawn in tree item renderer
