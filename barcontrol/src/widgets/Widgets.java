@@ -9207,7 +9207,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                                         Object... values
                                        )
   {
-    return insertTreeItem(parentTreeItem,index,data,null,flags,values);
+    return insertTreeItem(parentTreeItem,index,data,(Image)null,flags,values);
   }
 
   /** add sub-tree item at end
@@ -9235,15 +9235,20 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, int flags, Object... values)
+  public static TreeItem addTreeItem(TreeItem  parentTreeItem,
+                                     Object    data,
+                                     int       flags,
+                                     Object... values
+                                    )
   {
-    return addTreeItem(parentTreeItem,data,null,flags,values);
+    return addTreeItem(parentTreeItem,data,(Image)null,flags,values);
   }
 
   /** update tree item
    * @param tree tree
    * @param comparator data comparator
    * @param data item data
+   * @param image image
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return updated tree item or null
@@ -9251,6 +9256,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   public static <T> TreeItem updateTreeItem(final Tree          tree,
                                             final Comparator<T> comparator,
                                             final T             data,
+                                            final Image         image,
                                             final int           flags,
                                             final Object...     values
                                            )
@@ -9301,6 +9307,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           {
             // update
             existingTreeItem.setData(data);
+            existingTreeItem.setImage(image);
             for (int i = 0; i < values.length; i++)
             {
               if (values[i] != null)
@@ -9354,6 +9361,60 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update tree item
    * @param tree tree
+   * @param comparator data comparator
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated tree item or null
+   */
+  public static <T> TreeItem updateTreeItem(final Tree          tree,
+                                            final Comparator<T> comparator,
+                                            final T             data,
+                                            final int           flags,
+                                            final Object...     values
+                                           )
+  {
+    return updateTreeItem(tree,
+                          comparator,
+                          data,
+                          (Image)null,
+                          flags,
+                          values
+                         );
+  }
+
+  /** update tree item
+   * @param tree tree
+   * @param data item data
+   * @oaram image image
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated tree item or null
+   */
+  public static <T extends Comparable> TreeItem updateTreeItem(Tree      tree,
+                                                               T         data,
+                                                               Image     image,
+                                                               int       flags,
+                                                               Object... values
+                                                              )
+  {
+    return updateTreeItem(tree,
+                          new Comparator<T>()
+                          {
+                            public int compare(T data0, T data1)
+                            {
+                              return data0.compareTo(data1);
+                            }
+                          },
+                          data,
+                          image,
+                          flags,
+                          values
+                         );
+  }
+
+  /** update tree item
+   * @param tree tree
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
@@ -9366,14 +9427,8 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                                                               )
   {
     return updateTreeItem(tree,
-                           new Comparator<T>()
-                           {
-                             public int compare(T data0, T data1)
-                             {
-                               return data0.compareTo(data1);
-                             }
-                           },
                           data,
+                          (Image)null,
                           flags,
                           values
                          );
@@ -9396,15 +9451,17 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   /** update or insert tree item
    * @param tree tree widget
    * @param comparator tree item comperator
-   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param data item data
+   * @param image image
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return updated or inserted tree item
    */
   public static <T> TreeItem updateInsertTreeItem(final Tree          tree,
                                                   final Comparator<T> comparator,
-                                                  final int           flags,
                                                   final T             data,
+                                                  final Image         image,
+                                                  final int           flags,
                                                   final Object...     values
                                                  )
   {
@@ -9429,6 +9486,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                )
             {
               existingTreeItem.setData(data);
+              existingTreeItem.setImage(image);
               for (int i = 0; i < values.length; i++)
               {
                 if (values[i] != null)
@@ -9483,6 +9541,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
           treeItem = new TreeItem(tree,SWT.NONE,getTreeItemIndex(tree,comparator,data));
           treeItem.setData(data);
+          treeItem.setImage(image);
           if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
           {
             Button checked = new Button(tree,SWT.CHECK);
@@ -9581,16 +9640,42 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   }
 
   /** update or insert tree item
-   * @param tree tree
-   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param tree tree widget
+   * @param comparator tree item comperator
    * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return updated or inserted tree item
    */
-  public static <T extends Comparable> TreeItem updateInsertTreeItem(final Tree      tree,
-                                                                     final int       flags,
-                                                                     final T         data,
-                                                                     final Object... values
+  public static <T> TreeItem updateInsertTreeItem(Tree          tree,
+                                                  Comparator<T> comparator,
+                                                  T             data,
+                                                  int           flags,
+                                                  Object...     values
+                                                 )
+  {
+    return updateInsertTreeItem(tree,
+                                comparator,
+                                data,
+                                (Image)null,
+                                flags,
+                                values
+                               );
+  }
+
+  /** update or insert tree item
+   * @param tree tree
+   * @param data item data
+   * @param image image
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(Tree      tree,
+                                                                     T         data,
+                                                                     Image     image,
+                                                                     int       flags,
+                                                                     Object... values
                                                                     )
   {
     return updateInsertTreeItem(tree,
@@ -9601,8 +9686,29 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                                     return data0.compareTo(data1);
                                   }
                                 },
-                                flags,
                                 data,
+                                flags,
+                                values
+                               );
+  }
+
+  /** update or insert tree item
+   * @param tree tree
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(Tree      tree,
+                                                                     T         data,
+                                                                     int       flags,
+                                                                     Object... values
+                                                                    )
+  {
+    return updateInsertTreeItem(tree,
+                                data,
+                                (Image)null,
+                                flags,
                                 values
                                );
   }
@@ -9610,10 +9716,12 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   /** update tree item
    * @param treeItem tree item to update
    * @param data item data
+   * @param image image
    * @param values values list
    */
   public static <T> void updateTreeItem(final TreeItem  treeItem,
                                         final T         data,
+                                        final Image     image,
                                         final Object... values
                                        )
   {
@@ -9626,6 +9734,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           if (!treeItem.isDisposed())
           {
             treeItem.setData(data);
+            treeItem.setImage(image);
             for (int i = 0; i < values.length; i++)
             {
               if (values[i] != null)
@@ -9662,18 +9771,33 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     }
   }
 
+  /** update tree item
+   * @param treeItem tree item to update
+   * @param data item data
+   * @param values values list
+   */
+  public static <T> void updateTreeItem(final TreeItem  treeItem,
+                                        final T         data,
+                                        final Object... values
+                                       )
+  {
+    updateTreeItem(treeItem,data,(Image)null,values);
+  }
+
   /** update or insert tree item
    * @param parentTreeItem parent tree item
    * @param comparator tree item comperator
-   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param data item data
+   * @param image image
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return updated or added tree item
    */
   public static <T> TreeItem updateInsertTreeItem(final TreeItem      parentTreeItem,
                                                   final Comparator<T> comparator,
-                                                  final int           flags,
                                                   final T             data,
+                                                  final Image         image,
+                                                  final int           flags,
                                                   final Object...     values
                                                  )
   {
@@ -9711,6 +9835,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           {
             // update
             existingTreeItem.setData(data);
+            existingTreeItem.setImage(image);
             for (int i = 0; i < values.length; i++)
             {
               if (values[i] != null)
@@ -9794,7 +9919,6 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           treeItem = new TreeItem(parentTreeItem,SWT.NONE,getTreeItemIndex(parentTreeItem,comparator,data));
           if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
           {
-
             Button checked = new Button(tree,SWT.CHECK);
             checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
             Widgets.layout(checked,0,0,TableLayoutData.NSWE);
@@ -9827,6 +9951,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           }
           if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
           treeItem.setData(data);
+          treeItem.setImage(image);
           if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
           {
             if (!parentTreeItem.getExpanded())
@@ -9904,15 +10029,41 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param parentTreeItem parent tree item
-   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param comparator tree item comperator
    * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return updated or added tree item
    */
-  public static <T extends Comparable> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
-                                                                     final int       flags,
-                                                                     final T         data,
-                                                                     final Object... values
+  public static <T> TreeItem updateInsertTreeItem(final TreeItem      parentTreeItem,
+                                                  final Comparator<T> comparator,
+                                                  final T             data,
+                                                  final int           flags,
+                                                  final Object...     values
+                                                 )
+  {
+    return updateInsertTreeItem(parentTreeItem,
+                                comparator,
+                                data,
+                                (Image)null,
+                                flags,
+                                values
+                               );
+  }
+
+  /** update or insert tree item
+   * @param parentTreeItem parent tree item
+   * @param data item data
+   * @param image image
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or added tree item
+   */
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(TreeItem  parentTreeItem,
+                                                                     T         data,
+                                                                     Image     image,
+                                                                     int       flags,
+                                                                     Object... values
                                                                     )
   {
     return updateInsertTreeItem(parentTreeItem,
@@ -9923,8 +10074,30 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                                     return data0.compareTo(data1);
                                   }
                                 },
-                                flags,
                                 data,
+                                image,
+                                flags,
+                                values
+                               );
+  }
+
+  /** update or insert tree item
+   * @param parentTreeItem parent tree item
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or added tree item
+   */
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(TreeItem  parentTreeItem,
+                                                                     T         data,
+                                                                     int       flags,
+                                                                     Object... values
+                                                                    )
+  {
+    return updateInsertTreeItem(parentTreeItem,
+                                data,
+                                (Image)null,
+                                flags,
                                 values
                                );
   }
@@ -10750,6 +10923,69 @@ private static void printTree(Tree tree)
       }
     }
   }
+
+  /** get top-level tree items in tree
+   * @param tree tree
+   * @param openFlag true for open items only
+   * @return tree items set
+   */
+  public static HashSet<TreeItem> getTreeItems(Tree tree, boolean openFlag)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!tree.isDisposed())
+    {
+      for (TreeItem treeItem : tree.getItems())
+      {
+        if (!openFlag || treeItem.getExpanded())
+        {
+          treeItemSet.add(treeItem);
+        }
+      }
+    }
+
+    return treeItemSet;
+  }
+
+  /** get top-level tree items in tree
+   * @param tree tree
+   * @return tree items set
+   */
+  public static HashSet<TreeItem> getTreeItems(Tree tree)
+  {
+    return getTreeItems(tree,false);
+  }
+
+  /** get sub-tree items in tree
+   * @param treeItem tree item
+   * @param openFlag true for open items only
+   * @return sub-tree items set
+   */
+  public static HashSet<TreeItem> getTreeItems(TreeItem treeItem, boolean openFlag)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!treeItem.isDisposed())
+    {
+      for (TreeItem subTreeItem : treeItem.getItems())
+      {
+        if (!openFlag || subTreeItem.getExpanded())
+        {
+          treeItemSet.add(subTreeItem);
+        }
+      }
+    }
+
+    return treeItemSet;
+  }
+
+  /** get sub-tree items in tree
+   * @param treeItem tree item
+   * @return sub-tree items set
+   */
+  public static HashSet<TreeItem> getTreeItems(TreeItem treeItem)
+  {
+    return getTreeItems(treeItem,false);
+  }
+
 
   /** get all tree items in tree
    * @param tree tree

@@ -9455,10 +9455,6 @@ throw new Error("NYI");
       }
       try
       {
-        // update root/device lists
-        updateRootList();
-        updateDevicesList();
-
         // get job data
         BARServer.getJobOption(selectedJobData.uuid,slaveHostName);
         BARServer.getJobOption(selectedJobData.uuid,slaveHostPort);
@@ -9566,7 +9562,7 @@ throw new Error("NYI");
         updateRootList();
         updateDevicesList();
 
-        // update trees/tables
+        // update persistence tree
         updatePersistenceTree(selectedJobData);
       }
       catch (Throwable throwable)
@@ -9675,6 +9671,10 @@ throw new Error("NYI");
     clearScheduleTable();
     clearPersistenceTable();
 
+    // update root/device lists
+    updateRootList();
+    updateDevicesList();
+
     // set selected job
     display.syncExec(new Runnable()
     {
@@ -9773,29 +9773,42 @@ throw new Error("NYI");
     {
       // ignored
     }
-    Collections.sort(rootNameList);
 
-    // update list
-    display.syncExec(new Runnable()
+    if (!widgetFileTree.isDisposed())
     {
-      @Override
-      public void run()
+      // insert entry, request directory info
+      display.syncExec(new Runnable()
       {
-        if (!widgetFileTree.isDisposed())
+        @Override
+        public void run()
         {
-          Widgets.removeAllTreeItems(widgetFileTree);
-          for (String rootName : rootNameList)
+          final FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
+
+          // update/insert/remove tree items
+          HashSet<TreeItem> removeTreeItems = Widgets.getTreeItems(widgetFileTree);
+          for (final String rootName : rootNameList)
           {
-            Widgets.addTreeItem(widgetFileTree,
-                                new FileTreeData(rootName,BARServer.FileTypes.DIRECTORY,rootName,false,false),
-                                IMAGE_DIRECTORY,
-                                Widgets.TREE_ITEM_FLAG_FOLDER,
-                                rootName
-                               );
+            final Image image;
+            if      (includeHashMap.containsKey(rootName) && !excludeHashSet.contains(rootName))
+              image = IMAGE_DIRECTORY_INCLUDED;
+            else if (excludeHashSet.contains(rootName))
+              image = IMAGE_DIRECTORY_EXCLUDED;
+            else
+              image = IMAGE_DIRECTORY;
+
+            TreeItem treeItem = Widgets.updateInsertTreeItem(widgetFileTree,
+                                                             fileTreeDataComparator,
+                                                             new FileTreeData(rootName,BARServer.FileTypes.DIRECTORY,rootName,false,false),
+                                                             image,
+                                                             Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                             rootName
+                                                            );
+            removeTreeItems.remove(treeItem);
           }
+          Widgets.removeTreeItems(removeTreeItems);
         }
-      }
-    });
+      });
+    }
   }
 
   /** close all sub-directories in file tree
@@ -10048,7 +10061,15 @@ throw new Error("NYI");
       {
         final FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
 
-        treeItem.removeAll();
+        // if not expanded clear place-holder item
+        if (!treeItem.getExpanded())
+        {
+          treeItem.removeAll();
+        }
+
+        final HashSet<TreeItem> removeTreeItems = Widgets.getTreeItems(treeItem);
+
+        // update/insert/remove tree items
         for (final FileTreeData fileTreeData : fileTreeDataList)
         {
           switch (fileTreeData.fileType)
@@ -10069,16 +10090,18 @@ throw new Error("NYI");
                   @Override
                   public void run()
                   {
-                    Widgets.insertTreeItem(treeItem,
-                                           fileTreeDataComparator,
-                                           fileTreeData,
-                                           image,
-                                           Widgets.TREE_ITEM_FLAG_NONE,
-                                           fileTreeData.title,
-                                           "FILE",
-                                           Units.formatByteSize(fileTreeData.size),
-                                           SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                          );
+                    TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                        fileTreeDataComparator,
+                                                                        fileTreeData,
+                                                                        image,
+                                                                        Widgets.TREE_ITEM_FLAG_NONE,
+                                                                        fileTreeData.title,
+                                                                        "FILE",
+                                                                        Units.formatByteSize(fileTreeData.size),
+                                                                        SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                       );
+
+                    removeTreeItems.remove(subTreeItem);
                   }
                 });
               }
@@ -10099,16 +10122,18 @@ throw new Error("NYI");
                   @Override
                   public void run()
                   {
-                    TreeItem subTreeItem = Widgets.insertTreeItem(treeItem,
-                                                                  fileTreeDataComparator,
-                                                                  fileTreeData,
-                                                                  image,
-                                                                  Widgets.TREE_ITEM_FLAG_FOLDER,
-                                                                  fileTreeData.title,
-                                                                  "DIR",
-                                                                  null,
-                                                                  SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                                                 );
+                    TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                        fileTreeDataComparator,
+                                                                        fileTreeData,
+                                                                        image,
+                                                                        Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                                        fileTreeData.title,
+                                                                        "DIR",
+                                                                        null,
+                                                                        SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                       );
+                    removeTreeItems.remove(subTreeItem);
+
                     directoryInfoThread.add(selectedJobData.uuid,fileTreeData.name,subTreeItem);
                   }
                 });
@@ -10130,16 +10155,17 @@ throw new Error("NYI");
                   @Override
                   public void run()
                   {
-                    Widgets.insertTreeItem(treeItem,
-                                           fileTreeDataComparator,
-                                           fileTreeData,
-                                           image,
-                                           Widgets.TREE_ITEM_FLAG_NONE,
-                                           fileTreeData.title,
-                                           "LINK",
-                                           null,
-                                           SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                          );
+                    TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                        fileTreeDataComparator,
+                                                                        fileTreeData,
+                                                                        image,
+                                                                        Widgets.TREE_ITEM_FLAG_NONE,
+                                                                        fileTreeData.title,
+                                                                        "LINK",
+                                                                        null,
+                                                                        SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                       );
+                    removeTreeItems.remove(subTreeItem);
                   }
                 });
               }
@@ -10160,16 +10186,17 @@ throw new Error("NYI");
                   @Override
                   public void run()
                   {
-                    Widgets.insertTreeItem(treeItem,
-                                           fileTreeDataComparator,
-                                           fileTreeData,
-                                           image,
-                                           Widgets.TREE_ITEM_FLAG_NONE,
-                                           fileTreeData.title,
-                                           "HARDLINK",
-                                           Units.formatByteSize(fileTreeData.size),
-                                           SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                          );
+                    TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                        fileTreeDataComparator,
+                                                                        fileTreeData,
+                                                                        image,
+                                                                        Widgets.TREE_ITEM_FLAG_NONE,
+                                                                        fileTreeData.title,
+                                                                        "HARDLINK",
+                                                                        Units.formatByteSize(fileTreeData.size),
+                                                                        SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                       );
+                    removeTreeItems.remove(subTreeItem);
                   }
                 });
               }
@@ -10192,15 +10219,16 @@ throw new Error("NYI");
                       @Override
                       public void run()
                       {
-                        Widgets.insertTreeItem(treeItem,
-                                               fileTreeDataComparator,
-                                               fileTreeData,
-                                               image,
-                                               Widgets.TREE_ITEM_FLAG_NONE,
-                                               fileTreeData.title,
-                                               "CHARACTER DEVICE",
-                                               SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                              );
+                        TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                            fileTreeDataComparator,
+                                                                            fileTreeData,
+                                                                            image,
+                                                                            Widgets.TREE_ITEM_FLAG_NONE,
+                                                                            fileTreeData.title,
+                                                                            "CHARACTER DEVICE",
+                                                                            SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                           );
+                        removeTreeItems.remove(subTreeItem);
                       }
                     });
                     break;
@@ -10210,16 +10238,16 @@ throw new Error("NYI");
                       @Override
                       public void run()
                       {
-                        Widgets.insertTreeItem(treeItem,
-                                               fileTreeDataComparator,
-                                               fileTreeData,
-                                               image,
-                                               Widgets.TREE_ITEM_FLAG_NONE,
-                                               fileTreeData.title,
-                                               "BLOCK DEVICE",
-                                               (fileTreeData.size > 0) ? Units.formatByteSize(fileTreeData.size) : null,
-                                               SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                              );
+                        TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                            fileTreeDataComparator,
+                                                                            fileTreeData,
+                                                                            image,
+                                                                            Widgets.TREE_ITEM_FLAG_NONE,
+                                                                            fileTreeData.title,
+                                                                            "BLOCK DEVICE",
+                                                                            (fileTreeData.size > 0) ? Units.formatByteSize(fileTreeData.size) : null,
+                                                                            SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                           );
                       }
                     });
                     break;
@@ -10229,16 +10257,17 @@ throw new Error("NYI");
                       @Override
                       public void run()
                       {
-                        Widgets.insertTreeItem(treeItem,
-                                               fileTreeDataComparator,
-                                               fileTreeData,
-                                               image,
-                                               Widgets.TREE_ITEM_FLAG_NONE,
-                                               fileTreeData.title,
-                                               "FIFO",
-                                               null,
-                                               SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                              );
+                        TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                            fileTreeDataComparator,
+                                                                            fileTreeData,
+                                                                            image,
+                                                                            Widgets.TREE_ITEM_FLAG_NONE,
+                                                                            fileTreeData.title,
+                                                                            "FIFO",
+                                                                            null,
+                                                                            SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                           );
+                        removeTreeItems.remove(subTreeItem);
                       }
                     });
                     break;
@@ -10248,15 +10277,16 @@ throw new Error("NYI");
                       @Override
                       public void run()
                       {
-                        Widgets.insertTreeItem(treeItem,
-                                               fileTreeDataComparator,
-                                               fileTreeData,
-                                               image,
-                                               Widgets.TREE_ITEM_FLAG_NONE,
-                                               fileTreeData.title,
-                                               "SOCKET",
-                                               SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                              );
+                        TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                            fileTreeDataComparator,
+                                                                            fileTreeData,
+                                                                            image,
+                                                                            Widgets.TREE_ITEM_FLAG_NONE,
+                                                                            fileTreeData.title,
+                                                                            "SOCKET",
+                                                                            SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                           );
+                        removeTreeItems.remove(subTreeItem);
                       }
                     });
                     break;
@@ -10266,15 +10296,16 @@ throw new Error("NYI");
                       @Override
                       public void run()
                       {
-                        Widgets.insertTreeItem(treeItem,
-                                               fileTreeDataComparator,
-                                               fileTreeData,
-                                               image,
-                                               Widgets.TREE_ITEM_FLAG_NONE,
-                                               fileTreeData.title,
-                                               "SPECIAL",
-                                               SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
-                                              );
+                        TreeItem subTreeItem = Widgets.updateInsertTreeItem(treeItem,
+                                                                            fileTreeDataComparator,
+                                                                            fileTreeData,
+                                                                            image,
+                                                                            Widgets.TREE_ITEM_FLAG_NONE,
+                                                                            fileTreeData.title,
+                                                                            "SPECIAL",
+                                                                            SIMPLE_DATE_FORMAT.format(new Date(fileTreeData.dateTime*1000))
+                                                                           );
+                        removeTreeItems.remove(subTreeItem);
                       }
                     });
                     break;
@@ -10283,6 +10314,8 @@ throw new Error("NYI");
               break;
           }
         }
+
+        Widgets.removeTreeItems(removeTreeItems);
       }
     }
     catch (Exception exception)
@@ -14615,8 +14648,7 @@ throw new Error("NYI");
         {
           final PersistenceDataComparator persistenceDataComparator = new PersistenceDataComparator(PersistenceDataComparator.SortModes.MAX_AGE);
 
-
-          HashSet<TreeItem>         removedTreeItems       = Widgets.getAllTreeItems(widgetPersistenceTree);
+          HashSet<TreeItem> removeTreeItems = Widgets.getAllTreeItems(widgetPersistenceTree);
 
           // add persistence nodes
           final HashMap<Integer,TreeItem> persistenceTreeItemMap = new HashMap<Integer,TreeItem>();
@@ -14624,8 +14656,8 @@ throw new Error("NYI");
           {
             TreeItem treeItem = Widgets.updateInsertTreeItem(widgetPersistenceTree,
                                                              persistenceDataComparator,
-                                                             Widgets.TREE_ITEM_FLAG_FOLDER,
                                                              persistenceData,
+                                                             Widgets.TREE_ITEM_FLAG_FOLDER,
                                                              persistenceData.archiveType.getText(),
                                                              Keep.format(persistenceData.minKeep),
                                                              Keep.format(persistenceData.maxKeep),
@@ -14633,18 +14665,18 @@ throw new Error("NYI");
                                                             );
             persistenceTreeItemMap.put(persistenceData.id,treeItem);
 
-            removedTreeItems.remove(treeItem);
+            removeTreeItems.remove(treeItem);
           }
 
-          // add entities to persitences nodes
+          // update/insert/remove persitences nodes
           for (EntityIndexData entityIndexData : entityIndexDataMap.keySet())
           {
             TreeItem persistenceTreeItem = persistenceTreeItemMap.get(entityIndexDataMap.get(entityIndexData));
             if (persistenceTreeItem != null)
             {
               TreeItem treeItem = Widgets.updateInsertTreeItem(persistenceTreeItem,
-                                                               Widgets.TREE_ITEM_FLAG_OPEN,
                                                                entityIndexData,
+                                                               Widgets.TREE_ITEM_FLAG_OPEN,
                                                                "",
                                                                "",
                                                                "",
@@ -14655,11 +14687,11 @@ throw new Error("NYI");
                                                               );
               if (entityIndexData.inTransit) Widgets.setTreeItemColor(treeItem,COLOR_IN_TRANSIT);
 
-              removedTreeItems.remove(treeItem);
+              removeTreeItems.remove(treeItem);
             }
           }
 
-          Widgets.removeTreeItems(removedTreeItems);
+          Widgets.removeTreeItems(removeTreeItems);
         }
       }
     });
