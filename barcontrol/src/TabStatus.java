@@ -2531,12 +2531,7 @@ public class TabStatus
         {
           if (!widgetJobTable.isDisposed())
           {
-            // get table items
-            HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-            for (TableItem tableItem : widgetJobTable.getItems())
-            {
-              removeTableItemSet.add(tableItem);
-            }
+            HashSet<TableItem> removeTableItemSet = Widgets.getAllTableItems(widgetJobTable);
 
             synchronized(jobDataMap)
             {
@@ -2628,11 +2623,7 @@ public class TabStatus
               }
             }
 
-            // remove not existing entries
-            for (TableItem tableItem : removeTableItemSet)
-            {
-              Widgets.removeTableItem(widgetJobTable,tableItem);
-            }
+            Widgets.removeTableItems(removeTableItemSet);
           }
         }
       });

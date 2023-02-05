@@ -7434,16 +7434,18 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param table table
    * @param tableItem table item to remove
    */
-  public static void removeTableItem(final Table table, final TableItem tableItem)
+  public static void removeTableItem(final TableItem tableItem)
   {
-    if (!table.isDisposed())
+    if (!tableItem.isDisposed())
     {
-      table.getDisplay().syncExec(new Runnable()
+      tableItem.getDisplay().syncExec(new Runnable()
       {
         public void run()
         {
-          if (!table.isDisposed())
+          if (!tableItem.isDisposed())
           {
+            Table table = tableItem.getParent();
+
             table.remove(table.indexOf(tableItem));
           }
         }
@@ -7452,29 +7454,28 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   }
 
   /** remove table entries
-   * @param table table
    * @param tableItems table items to remove
    */
-  public static void removeTableItems(Table table, Collection<TableItem> tableItems)
+  public static void removeTableItems(Collection<TableItem> tableItems)
   {
     for (TableItem tableItem : tableItems)
     {
-      removeTableItem(table,tableItem);
+      removeTableItem(tableItem);
     }
   }
 
   /** remove not existing table entries
-   * @param table table
+   * param table table
    * @param existingTableItems still existing table items
    */
   public static void removeObsoleteTableItems(Table table, Collection<TableItem> existingTableItems)
   {
-    TableItem tableItems[] = table.getItems();
-    for (TableItem tableItem : tableItems)
+    HashSet<TableItem> tableItemSet = Widgets.getAllTableItems(table);
+    for (TableItem tableItem : tableItemSet)
     {
       if (!existingTableItems.contains(tableItem))
       {
-        removeTableItem(table,tableItem);
+        removeTableItem(tableItem);
       }
     }
   }
@@ -7534,6 +7535,24 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     }
 
     return null;
+  }
+
+  /** get all table tables
+   * @param table
+   * @return table items
+  */
+  public static HashSet<TableItem> getAllTableItems(Table table)
+  {
+    HashSet<TableItem> tableItemSet = new HashSet<TableItem>();
+    if (!table.isDisposed())
+    {
+      for (TableItem tableItem : table.getItems())
+      {
+        tableItemSet.add(tableItem);
+      }
+    }
+
+    return tableItemSet;
   }
 
   /** update table item
@@ -10153,7 +10172,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   }
 
   /** remove tree item
-   * @param tree item
+   * @param tree tree
    * @param data item data
    */
   public static <T extends Comparable> void removeTreeItem(final Tree tree, final T data)
@@ -10231,8 +10250,23 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     }
   }
 
-  /** remove all tree items of tree item
-   * @param tree tree
+  /** remove not existing table entries
+   * param tree tree
+   * @param existingTreeItems still existing tree items
+   */
+  public static void removeObsoleteTreeItems(Tree tree, Collection<TreeItem> existingTreeItems)
+  {
+    HashSet<TreeItem> treeItemSet = getAllTreeItems(tree);
+    for (TreeItem treeItem : treeItemSet)
+    {
+      if (!existingTreeItems.contains(treeItem))
+      {
+        removeTreeItem(treeItem);
+      }
+    }
+  }
+
+  /** remove all sub-tree items of tree item
    * @treeItem tree item
    */
   public static void removeAllTreeItems(final TreeItem treeItem)
@@ -10907,8 +10941,8 @@ private static void printTree(Tree tree)
     }
   }
 
-  /** get expanded (open) tree items in tree
-   * @param treeItemSet set for expanded tree items
+  /** get sub-tree items of tree item
+   * @param treeItemSet tree item set
    * @param treeItem tree item to start
    * @param openFlag true for open items only
    */
@@ -10924,43 +10958,12 @@ private static void printTree(Tree tree)
     }
   }
 
-  /** get top-level tree items in tree
-   * @param tree tree
-   * @param openFlag true for open items only
-   * @return tree items set
-   */
-  public static HashSet<TreeItem> getTreeItems(Tree tree, boolean openFlag)
-  {
-    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
-    if (!tree.isDisposed())
-    {
-      for (TreeItem treeItem : tree.getItems())
-      {
-        if (!openFlag || treeItem.getExpanded())
-        {
-          treeItemSet.add(treeItem);
-        }
-      }
-    }
-
-    return treeItemSet;
-  }
-
-  /** get top-level tree items in tree
-   * @param tree tree
-   * @return tree items set
-   */
-  public static HashSet<TreeItem> getTreeItems(Tree tree)
-  {
-    return getTreeItems(tree,false);
-  }
-
-  /** get sub-tree items in tree
+  /** get sub-tree items of tree item
    * @param treeItem tree item
    * @param openFlag true for open items only
    * @return sub-tree items set
    */
-  public static HashSet<TreeItem> getTreeItems(TreeItem treeItem, boolean openFlag)
+  public static HashSet<TreeItem> getSubTreeItems(TreeItem treeItem, boolean openFlag)
   {
     HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
     if (!treeItem.isDisposed())
@@ -10977,15 +10980,14 @@ private static void printTree(Tree tree)
     return treeItemSet;
   }
 
-  /** get sub-tree items in tree
+  /** get sub-tree items of tree item
    * @param treeItem tree item
    * @return sub-tree items set
    */
-  public static HashSet<TreeItem> getTreeItems(TreeItem treeItem)
+  public static HashSet<TreeItem> getSubTreeItems(TreeItem treeItem)
   {
-    return getTreeItems(treeItem,false);
+    return getSubTreeItems(treeItem,false);
   }
-
 
   /** get all tree items in tree
    * @param tree tree

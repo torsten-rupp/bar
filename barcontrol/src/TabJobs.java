@@ -9784,8 +9784,9 @@ throw new Error("NYI");
         {
           final FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
 
+          HashSet<TreeItem> removeTreeItems = Widgets.getAllTreeItems(widgetFileTree);
+
           // update/insert/remove tree items
-          HashSet<TreeItem> removeTreeItems = Widgets.getTreeItems(widgetFileTree);
           for (final String rootName : rootNameList)
           {
             final Image image;
@@ -9805,6 +9806,7 @@ throw new Error("NYI");
                                                             );
             removeTreeItems.remove(treeItem);
           }
+
           Widgets.removeTreeItems(removeTreeItems);
         }
       });
@@ -10067,7 +10069,7 @@ throw new Error("NYI");
           treeItem.removeAll();
         }
 
-        final HashSet<TreeItem> removeTreeItems = Widgets.getTreeItems(treeItem);
+        final HashSet<TreeItem> removeTreeItems = Widgets.getSubTreeItems(treeItem);
 
         // update/insert/remove tree items
         for (final FileTreeData fileTreeData : fileTreeDataList)
@@ -10461,17 +10463,21 @@ throw new Error("NYI");
         {
           final DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable);
 
-          Widgets.removeAllTableItems(widgetDeviceTable);
+          HashSet<TableItem> removeTableItems = Widgets.getAllTableItems(widgetDeviceTable);
+
           for (DeviceData deviceData : deviceDataList)
           {
-            Widgets.insertTableItem(widgetDeviceTable,
-                                    deviceDataComparator,
-                                    deviceData,
-                                    IMAGE_DEVICE,
-                                    deviceData.name,
-                                    Units.formatByteSize(deviceData.size)
-                                   );
+            TableItem tableItem = Widgets.updateInsertTableItem(widgetDeviceTable,
+                                                                deviceDataComparator,
+                                                                deviceData,
+                                                                IMAGE_DEVICE,
+                                                                deviceData.name,
+                                                                Units.formatByteSize(deviceData.size)
+                                                               );
+            removeTableItems.remove(tableItem);
           }
+
+          Widgets.removeTableItems(removeTableItems);
         }
       }
     });
@@ -11481,16 +11487,20 @@ throw new Error("NYI");
         {
           final MountDataComparator mountDataComparator = new MountDataComparator(widgetMountTable);
 
-          Widgets.removeAllTableItems(widgetMountTable);
+          HashSet<TableItem> removeTableItems = Widgets.getAllTableItems(widgetMountTable);
+
           for (MountData mountData : mountDataList)
           {
-            Widgets.updateInsertTableItem(widgetMountTable,
-                                          mountDataComparator,
-                                          mountData,
-                                          mountData.name,
-                                          (mountData.device != null) ? mountData.device : ""
-                                         );
+            TableItem tableItem = Widgets.updateInsertTableItem(widgetMountTable,
+                                                                mountDataComparator,
+                                                                mountData,
+                                                                mountData.name,
+                                                                (mountData.device != null) ? mountData.device : ""
+                                                               );
+            removeTableItems.remove(tableItem);
           }
+
+          Widgets.removeTableItems(removeTableItems);
         }
       }
     });
@@ -13831,14 +13841,10 @@ throw new Error("NYI");
           {
             synchronized(scheduleDataMap)
             {
-              // get table items
-              HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-              for (TableItem tableItem : widgetScheduleTable.getItems())
-              {
-                removeTableItemSet.add(tableItem);
-              }
-
               final ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable);
+
+              HashSet<TableItem> removeTableItemSet = Widgets.getAllTableItems(widgetScheduleTable);
+
               for (ScheduleData scheduleData : scheduleDataMap.values())
               {
 /*
@@ -13897,15 +13903,10 @@ throw new Error("NYI");
                                                                    );
                 tableItem.setChecked(scheduleData.enabled);
 
-                // keep table item
                 removeTableItemSet.remove(tableItem);
               }
 
-              // remove not existing entries
-              for (TableItem tableItem : removeTableItemSet)
-              {
-                Widgets.removeTableItem(widgetScheduleTable,tableItem);
-              }
+              Widgets.removeTableItems(removeTableItemSet);
             }
           }
         }
