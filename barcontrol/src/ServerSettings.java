@@ -1681,9 +1681,7 @@ public class ServerSettings
                                              0,  // debugLevel
                                              resultMap
                                             );
-                    Widgets.removeTableItem(widgetMaintenanceTable,
-                                            tableItem
-                                           );
+                    Widgets.removeTableItem(tableItem);
                   }
                   catch (Exception exception)
                   {
@@ -1971,9 +1969,7 @@ public class ServerSettings
                                            0,  // debugLevel
                                            resultMap
                                           );
-                  Widgets.removeTableItem(widgetServerTable,
-                                          tableItem
-                                         );
+                  Widgets.removeTableItem(tableItem);
                 }
                 catch (Exception exception)
                 {
