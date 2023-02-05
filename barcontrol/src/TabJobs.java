@@ -9784,7 +9784,7 @@ throw new Error("NYI");
         {
           final FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
 
-          HashSet<TreeItem> removeTreeItems = Widgets.getAllTreeItems(widgetFileTree);
+          HashSet<TreeItem> removeTreeItems = Widgets.getTreeItems(widgetFileTree);
 
           // update/insert/remove tree items
           for (final String rootName : rootNameList)
