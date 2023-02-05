@@ -10941,6 +10941,37 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** get top-level items of tree item
+   * @param treeItem tree item
+   * @param openFlag true for open items only
+   * @return sub-tree items set
+   */
+  public static HashSet<TreeItem> getTreeItems(Tree tree, boolean openFlag)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!tree.isDisposed())
+    {
+      for (TreeItem treeItem : tree.getItems())
+      {
+        if (!openFlag || treeItem.getExpanded())
+        {
+          treeItemSet.add(treeItem);
+        }
+      }
+    }
+
+    return treeItemSet;
+  }
+
+  /** get top-level tree items of tree item
+   * @param treeItem tree item
+   * @return sub-tree items set
+   */
+  public static HashSet<TreeItem> getTreeItems(Tree tree)
+  {
+    return getTreeItems(tree,false);
+  }
+
   /** get sub-tree items of tree item
    * @param treeItemSet tree item set
    * @param treeItem tree item to start
