@@ -1168,7 +1168,9 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
             n1 = stringLength(name);
             if (   (n0 > n1)
                 && stringEqualsPrefix(fileName,name,n1)
-                && (fileName[n1] == FILE_PATH_SEPARATOR_CHAR)
+                && (   (n1 == n0)
+                    || (fileName[n1] == FILE_PATH_SEPARATOR_CHAR)
+                   )
                )
             {
               String_setCString(deviceName,name);
@@ -1178,7 +1180,7 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
         }
         fclose(handle);
 
-        if (stringStartsWith(fileName,"/"))
+        if (stringStartsWith(fileName,"/") && String_isEmpty(deviceName))
         {
           String_setCString(deviceName,"/");
         }
@@ -3795,12 +3797,12 @@ bool File_isDeviceCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  #ifndef NDEBUG     
+  #ifndef NDEBUG
     debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
 
     if (debugEmulateBlockDevice != NULL)
     {
-      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");     
+      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
       if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
           && stringEquals(fileName,emulateDeviceName)
          )
@@ -4034,12 +4036,12 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   // store specific meta data
   if      (S_ISREG(fileStat.st_mode))
   {
-    #ifndef NDEBUG     
+    #ifndef NDEBUG
       debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
 
       if (debugEmulateBlockDevice != NULL)
       {
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");     
+        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
         if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
             && stringEquals(fileName,emulateDeviceName)
            )
