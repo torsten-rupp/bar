@@ -5434,6 +5434,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         (void)Storage_forAll(&createInfo->storageInfo.storageSpecifier,
                              NULL,  // directory
                              String_cString(pattern),
+                             TRUE,  // skipUnreadableFlag
                              CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
                                StorageSpecifier storageSpecifier;

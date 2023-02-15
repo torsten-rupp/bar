@@ -1811,6 +1811,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 * Input  : storageSpecifier        - storage specifier
 *          directory               - directory (can be NULL)
 *          patternString           - pattern string (can be NULL)
+*          skipUnreadableFlag      - TRUE to skip unreable directories
 *          storageFunction         - storage callback function (can be
 *                                    NULL)
 *          storageUserData         - storage callback user data
@@ -1825,6 +1826,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
                       ConstString             directory,
                       const char              *patternString,
+                      bool                    skipUnreadableFlag,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
                       StorageProgressFunction storageProgressFunction,

@@ -1917,7 +1917,7 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
   printInfo("Check duplicates:\n");
 
   // check duplicate storages
-  printInfo("  storages...");
+  printInfo("  storages...                          ");
   n = 0L;
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
