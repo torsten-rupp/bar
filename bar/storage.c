@@ -4622,6 +4622,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
                       ConstString             directory,
                       const char              *patternString,
+                      bool                    skipUnreadableFlag,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
                       StorageProgressFunction storageProgressFunction,
@@ -4705,8 +4706,10 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
           break;
         }
 
-        // check if sub-directory
-        if (fileInfo.type == FILE_TYPE_DIRECTORY)
+        // check if sub-directory, add to directory list
+        if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
+            && (!skipUnreadableFlag || File_isReadable(name))
+           )
         {
           StringList_append(&directoryList,name);
         }

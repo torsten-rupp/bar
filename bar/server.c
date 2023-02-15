@@ -4710,6 +4710,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
           (void)Storage_forAll(&storageSpecifier,
                                baseName,
                                String_cString(pattern),
+                               TRUE,  // skipUnreadableFlag
                                CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                {
                                  Errors error;
@@ -4839,7 +4840,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
 
                                  // throddle database access
                                  Misc_mdelay(500);
-                                 
+
                                  if (!isQuit())
                                  {
                                    return error;
@@ -18500,8 +18501,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
   // parse storage specifier
   error = Storage_parseName(&storageSpecifier,pattern);
-  error = Storage_parseName(&storageSpecifier,pattern);
-  error = Storage_parseName(&storageSpecifier,pattern);
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
@@ -18630,6 +18629,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     error = Storage_forAll(&storageSpecifier,
                            NULL,  // directory
                            "*" FILE_NAME_EXTENSION_ARCHIVE_FILE,
+                           TRUE,  // skipUnreadableFlag
                            CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
                              ConstString printableStorageName;

@@ -1,5 +1,6 @@
 2023-02-15 0.22f
   * fixed error message: no space left on device
+  * improved find storage files: skip unreadable directories
   * bar-index: fixed remove duplicate storges
   * BARControl: fixed edit serve maintenance time (locale)
   * BARControl: fixed update file lists
