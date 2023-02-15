@@ -122,7 +122,7 @@ LOCAL bool       createAggregatesDirectoryContentFlag = FALSE;  // re-create agg
 LOCAL bool       createAggregatesEntitiesFlag         = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesStoragesFlag         = FALSE;  // re-create aggregates storages data
 LOCAL bool       cleanOrphanedFlag                    = FALSE;  // execute clean orphaned entries
-LOCAL bool       cleanDuplicatesFlag                  = FALSE;  // execute clean duplicate entries
+LOCAL bool       cleanDuplicateEntriesFlag                  = FALSE;  // execute clean duplicate entries
 LOCAL bool       purgeDeletedFlag                     = FALSE;  // execute purge deleted storages
 LOCAL bool       vacuumFlag                           = FALSE;  // execute vacuum
 LOCAL bool       showStoragesFlag                     = FALSE;  // show storages of job
@@ -7049,7 +7049,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : cleanDuplicates
+* Name   : cleanDuplicateEntries
 * Purpose: purge duplicate entries
 * Input  : databaseHandle - database handle
 * Output : -
@@ -7057,12 +7057,15 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
+LOCAL void cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 {
-  String name;
-  Errors error;
-  ulong  totalCount;
-  ulong  n;
+  Array         ids;
+  String        name;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    id;
+  ulong         totalCount;
+  ulong         n;
 
   // init variables
   name       = String_new();
@@ -7070,9 +7073,8 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
 
   printInfo("Clean duplicates:\n");
 
-  // check duplicate storages
-  printInfo("  storages:\n");
-  n = 0L;
+  printInfo("  storages...                          ");
+  Array_init(&ids,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -7090,26 +7092,7 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
 
                          if (String_equals(name,otherName))
                          {
-                           error = Database_update(databaseHandle,
-                                                   NULL,  // changedRowCount
-                                                   "storages",
-                                                   DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES
-                                                   (
-                                                     DATABASE_VALUE_BOOL("deletedFlag",TRUE)
-                                                   ),
-                                                   "id=?",
-                                                   DATABASE_FILTERS
-                                                   (
-                                                     DATABASE_FILTER_KEY  (storageId)
-                                                   )
-                                                  );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           n++;
-                           printInfo("    %s\n",String_cString(otherName));
+                           Array_append(&ids,&storageId);
                          }
                          String_set(name,otherName);
 
@@ -7141,7 +7124,34 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("clean duplicates fail (error: %s)!",Error_getText(error));
   }
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    ARRAY_ITERATEX(&ids,arrayIterator,id,error == ERROR_NONE)
+    {
+      error = Database_update(databaseHandle,
+                              NULL,  // changedRowCount
+                              "storages",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_BOOL("deletedFlag",TRUE)
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY  (id)
+                              )
+                             );
+      if (error == ERROR_NONE)
+      {
+        n++;
+      }
+    }
+  }
+  printInfo("%lu\n",n);
   totalCount += n;
+  Array_done(&ids);
 
   printInfo("Total %lu duplicate entries removed\n",n);
 
@@ -7190,6 +7200,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("purge deleted fail (error: %s)!",Error_getText(error));
+    Array_done(&entryIds);
+    Array_done(&storageIds);
     exit(EXITCODE_FAIL);
   }
 
@@ -7505,12 +7517,15 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("purge deleted fail (error: %s)!",Error_getText(error));
+    Array_done(&entryIds);
+    Array_done(&storageIds);
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
 
   // free resources
   Array_done(&entryIds);
+  Array_done(&storageIds);
 }
 
 /***********************************************************************\
@@ -10664,13 +10679,13 @@ uint xxxShow=0;
     }
     else if (stringEquals(argv[i],"--clean-duplicates"))
     {
-      cleanDuplicatesFlag = TRUE;
+      cleanDuplicateEntriesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--clean"))
     {
       cleanOrphanedFlag   = TRUE;
-      cleanDuplicatesFlag = TRUE;
+      cleanDuplicateEntriesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--purge"))
@@ -10985,7 +11000,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !createAggregatesEntitiesFlag
           && !createAggregatesStoragesFlag
           && !cleanOrphanedFlag
-          && !cleanDuplicatesFlag
+          && !cleanDuplicateEntriesFlag
           && !purgeDeletedFlag
           && !vacuumFlag
           && !showStoragesFlag
@@ -11120,9 +11135,9 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     cleanOrphanedEntries(&databaseHandle);
   }
-  if (cleanDuplicatesFlag)
+  if (cleanDuplicateEntriesFlag)
   {
-    cleanDuplicates(&databaseHandle);
+    cleanDuplicateEntries(&databaseHandle);
   }
 
   // recreate newest data

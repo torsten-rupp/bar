@@ -768,7 +768,7 @@ LOCAL_INLINE bool checkDatabaseInitialized(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   :
+* Name   : areCompatibleTypes
 * Purpose: check if data types are compatible
 * Input  : dataType0, dataType1 - data types
 * Output : -
@@ -1607,16 +1607,8 @@ UNUSED_VARIABLE(format);
 #endif
           #endif
         }
-        else
-        {
-          timestamp = 0LL;
-        }
       }
     }
-  }
-  else
-  {
-    timestamp = 0LL;
   }
 
   sqlite3_result_int64(context,(int64)timestamp);
@@ -4190,11 +4182,17 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
           HashTable_iterate(&databaseHandle->postgresql.sqlStringHashTable,
                             CALLBACK_INLINE(bool,(const HashTableEntry *hashTableEntry, void *userData),
                             {
+                              PGresult *postgresqlResult;
+
                               UNUSED_VARIABLE(userData);
 
-                              PQexec(databaseHandle->postgresql.handle,
-                                     stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
-                                    );
+                              postgresqlResult = PQexec(databaseHandle->postgresql.handle,
+                                                        stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
+                                                       );
+                              if (postgresqlResult != NULL)
+                              {
+                                PQclear(postgresqlResult);
+                              }
 
                               return TRUE;
                             },NULL)
@@ -11079,8 +11077,8 @@ Errors Database_getTableList(StringList     *tableList,
                                NULL,  // changedRowCount
                                DATABASE_PLAIN("SELECT tablename \
                                                FROM pg_catalog.pg_tables \
-                                               WHERE     schemaname != 'pg_catalog' \
-                                                     AND schemaname != 'information_schema' \
+                                               WHERE     schemaname!='pg_catalog' \
+                                                     AND schemaname!='information_schema' \
                                               "
                                              ),
                                DATABASE_COLUMNS
@@ -11208,7 +11206,11 @@ Errors Database_getViewList(StringList     *viewList,
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               DATABASE_PLAIN("SELECT table_name FROM INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(FALSE))"),
+                               DATABASE_PLAIN("SELECT table_name \
+                                               FROM INFORMATION_SCHEMA.views \
+                                               WHERE table_schema=ANY(current_schemas(FALSE)) \
+                                              "
+                                             ),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_STRING("table_name")
@@ -11420,8 +11422,8 @@ Errors Database_getIndexList(StringList     *indexList,
                                NULL,  // changedRowCount
                                DATABASE_PLAIN("SELECT * \
                                                FROM pg_indexes \
-                                               WHERE     schemaname != 'pg_catalog' \
-                                                     AND schemaname != 'information_schema' \
+                                               WHERE     schemaname!='pg_catalog' \
+                                                     AND schemaname!='information_schema' \
                                               "
                                              ),
                                DATABASE_COLUMNS
