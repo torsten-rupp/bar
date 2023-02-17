@@ -162,7 +162,7 @@ typedef struct
 // index types
 typedef enum
 {
-  INDEX_TYPENONE      = 0,
+  INDEX_TYPE_NONE      = 0,
 
   INDEX_TYPE_UUID      = INDEX_CONST_TYPE_UUID,
   INDEX_TYPE_ENTITY    = INDEX_CONST_TYPE_ENTITY,
@@ -176,7 +176,7 @@ typedef enum
   INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
   INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
 
-  INDEX_TYPEANY       = 0xF
+  INDEX_TYPE_ANY       = 0xF
 } IndexTypes;
 
 #define INDEX_TYPEMIN INDEX_TYPE_UUID
@@ -2004,7 +2004,7 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexTypes       - index type or INDEX_TYPENONE
+*          indexTypes       - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
 * Output : totalStorageCount     - total storage count (can be NULL)
@@ -2041,7 +2041,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexType        - index type or INDEX_TYPENONE
+*          indexType        - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
 *          fragmentsCount   - TRUE to get fragments count
@@ -2942,7 +2942,7 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexType        - index type or INDEX_TYPENONE
+*          indexType        - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or

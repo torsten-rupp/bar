@@ -1076,8 +1076,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           switch (indexType)
           {
-            case INDEX_TYPENONE:
-            case INDEX_TYPEANY:
+            case INDEX_TYPE_NONE:
+            case INDEX_TYPE_ANY:
               error = Database_get(&indexHandle->databaseHandle,
                                    CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                    {
@@ -1468,8 +1468,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           switch (indexType)
           {
-            case INDEX_TYPENONE:
-            case INDEX_TYPEANY:
+            case INDEX_TYPE_NONE:
+            case INDEX_TYPE_ANY:
               error = Database_get(&indexHandle->databaseHandle,
                                    CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                    {
@@ -2052,12 +2052,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     if (newestOnly)
     {
       Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
-      Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entriesNewest.type=%u",indexType);
+      Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
     }
     else
     {
       Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-      Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entries.type=%u",indexType);
+      Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
     }
 
     #ifdef INDEX_DEBUG_LIST_INFO
@@ -2399,11 +2399,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
   if (newestOnly)
   {
-    Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entriesNewest.type=%u",indexType);
+    Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
   }
   else
   {
-    Database_filterAppend(filterString,indexType != INDEX_TYPEANY,"AND","entries.type=%u",indexType);
+    Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
   }
 
   // get sort mode, ordering
