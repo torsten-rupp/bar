@@ -3678,11 +3678,11 @@ Dprintf.dprintf("");
             || force
            )
         {
-          this.name                             = name;
-          this.entryType                        = entryType;
-          this.newestOnly                       = newestOnly;
+          this.name                         = name;
+          this.entryType                    = entryType;
+          this.newestOnly                   = newestOnly;
           this.requestUpdateTotalEntryCount = true;
-          this.requestSetUpdateIndicator        = true;
+          this.requestSetUpdateIndicator    = true;
           restart();
         }
       }
@@ -3703,9 +3703,9 @@ Dprintf.dprintf("");
             || (((name.length() == 0) || (name.length() >= 3)) && !this.name.equals(name))
            )
         {
-          this.name                             = name;
+          this.name                         = name;
           this.requestUpdateTotalEntryCount = true;
-          this.requestSetUpdateIndicator        = true;
+          this.requestSetUpdateIndicator    = true;
           restart();
         }
       }
@@ -3720,9 +3720,9 @@ Dprintf.dprintf("");
       {
         if (entryType != this.entryType)
         {
-          this.entryType                        = entryType;
+          this.entryType                    = entryType;
           this.requestUpdateTotalEntryCount = true;
-          this.requestSetUpdateIndicator        = true;
+          this.requestSetUpdateIndicator    = true;
           restart();
         }
       }
@@ -3738,9 +3738,9 @@ Dprintf.dprintf("");
       {
         if (this.newestOnly != newestOnly)
         {
-          this.newestOnly                       = newestOnly;
+          this.newestOnly                   = newestOnly;
           this.requestUpdateTotalEntryCount = true;
-          this.requestSetUpdateIndicator        = true;
+          this.requestSetUpdateIndicator    = true;
           restart();
         }
       }
