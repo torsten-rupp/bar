@@ -158,7 +158,7 @@ typedef enum
 #define DATABASE_FLAG_IGNORE       (1 <<  0)
 #define DATABASE_FLAG_REPLACE      (1 <<  1)
 #define DATABASE_FLAG_PLAIN        (1 <<  2)
-#define DATABASE_FLAG_FETCH_ALL      (1 <<  3)
+#define DATABASE_FLAG_FETCH_ALL    (1 <<  3)
 #define DATABASE_FLAG_COLUMN_NAMES (1 <<  4)
 
 #define DATABASE_FLAG_DEBUG        (1 << 31)  // print SQL statement to console
