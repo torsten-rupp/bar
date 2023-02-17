@@ -143,9 +143,11 @@ LOCAL const char *toFileName                          = NULL;
 //LOCAL bool       helpFlag                             = FALSE;
 //LOCAL bool       xhelpFlag                            = FALSE;
 
-LOCAL char outputProgressBuffer[128];
-LOCAL uint outputProgressBufferLength;
-LOCAL uint outputProgressLength;
+LOCAL ulong outputProgressCount;
+LOCAL uint  outputProgressDigits;
+LOCAL char  outputProgressBuffer[128];
+LOCAL uint  outputProgressBufferLength;
+LOCAL uint  outputProgressLength;
 
 /****************************** Macros *********************************/
 
@@ -467,28 +469,24 @@ LOCAL const char *getByteUnitShort(uint64 n)
 }
 
 /***********************************************************************\
-* Name   : printProgress
-* Purpose: print percentage value (if verbose)
-* Input  : n     - value
-*          count - max. value
+* Name   : initProgress
+* Purpose: init print progress (if verbose)
+* Input  : count - max. value
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printProgress(ulong n, ulong count)
+LOCAL void initProgress(ulong count)
 {
-  double percentage;
-  double d;
   char   buffer[64];
 
   if (verboseFlag)
   {
-    percentage = (count > 0) ? ((double)n*1000.0)/((double)count*10.0) : 0.0;
-    if (percentage > 100.0) percentage = 100.0;
+    outputProgressCount  = count;
+    outputProgressDigits = (count > 0L) ? (uint)lrint(ceil(log10((double)count))) : 1;
 
-    d = (count > 0) ? ceil(log10((double)count)) : 1.0;
-    stringFormat(buffer,sizeof(buffer),"%5.1lf%% (%*"PRIu64"/%*"PRIu64")",percentage,(int)d,n,(int)d,count);
+    stringFormat(buffer,sizeof(buffer),"  0.0%% (%*"PRIu64"/%*"PRIu64")",(int)outputProgressDigits,0,(int)outputProgressDigits,count);
     outputProgressLength = stringLength(buffer);
 
     UNUSED_RESULT(fwrite(buffer,outputProgressLength,1,stdout));
@@ -499,15 +497,44 @@ LOCAL void printProgress(ulong n, ulong count)
 }
 
 /***********************************************************************\
-* Name   : clearProgress
-* Purpose: clear percentage value (if verbose)
+* Name   : printProgress
+* Purpose: print progress (if verbose)
+* Input  : n - value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printProgress(ulong n)
+{
+  double percentage;
+  char   buffer[64];
+
+  if (verboseFlag)
+  {
+    percentage = (outputProgressCount > 0L) ? ((double)n*1000.0)/((double)outputProgressCount*10.0) : 0.0;
+    if (percentage > 100.0) percentage = 100.0;
+
+    stringFormat(buffer,sizeof(buffer),"%5.1lf%% (%*"PRIu64"/%*"PRIu64")",percentage,(int)outputProgressDigits,n,(int)outputProgressDigits,outputProgressCount);
+    outputProgressLength = stringLength(buffer);
+
+    UNUSED_RESULT(fwrite(buffer,outputProgressLength,1,stdout));
+    stringFill(buffer,sizeof(buffer),outputProgressLength,'\b');
+    UNUSED_RESULT(fwrite(buffer,outputProgressLength,1,stdout));
+    fflush(stdout);
+  }
+}
+
+/***********************************************************************\
+* Name   : doneProgress
+* Purpose: done print progress (if verbose)
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void clearProgress(void)
+LOCAL void doneProgress(void)
 {
   char buffer[64];
 
@@ -2009,6 +2036,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     StringList_done(&tableNameList);
     return;
   }
+  initProgress(StringList_count(&tableNameList));
   n = 0;
   STRINGLIST_ITERATE(&tableNameList,stringListIterator,name)
   {
@@ -2044,8 +2072,9 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     }
 
     n++;
-    printProgress(n,StringList_count(&tableNameList));
+    printProgress(n);
   }
+  doneProgress();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -2065,6 +2094,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     printError("get indizes fail (error: %s)!",Error_getText(error));
     return;
   }
+  initProgress(StringList_count(&tableNameList));
   n = 0;
   STRINGLIST_ITERATE(&tableNameList,stringListIterator,name)
   {
@@ -2100,8 +2130,9 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     }
 
     n++;
-    printProgress(n,StringList_count(&tableNameList));
+    printProgress(n);
   }
+  doneProgress();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -2116,66 +2147,190 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : getFTSString
-* Purpose: get full-text-search filter string
-* Input  : string      - string variable
-*          patternText - pattern text
+* Name   : getFTSMatchString
+* Purpose: get full-text-search filter match string
+* Input  : string         - string variable
+*          databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          patternText    - pattern text
 * Output : -
 * Return : string for WHERE filter-statement
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getFTSString(String string, ConstString patternText)
+LOCAL String getFTSMatchString(String         string,
+                               DatabaseHandle *databaseHandle,
+                               const char     *tableName,
+                               const char     *columnName,
+                               ConstString    patternText
+                              )
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
   bool            addedTextFlag,addedPatternFlag;
-  size_t          iteratorVariable;
+  StringIterator  stringIterator;
   Codepoint       codepoint;
+
+  assert(string != NULL);
+  assert(databaseHandle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
 
   String_clear(string);
 
   if (!String_isEmpty(patternText))
   {
-    String_initTokenizer(&stringTokenizer,
-                         patternText,
-                         STRING_BEGIN,
-                         STRING_WHITE_SPACES,
-                         STRING_QUOTES,
-                         TRUE
-                        );
-    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    switch (Database_getType(databaseHandle))
     {
-      addedTextFlag    = FALSE;
-      addedPatternFlag = FALSE;
-      STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
-      {
-        if (isalnum(codepoint) || (codepoint >= 128))
+      case DATABASE_TYPE_SQLITE3:
+        String_formatAppend(string,"%s MATCH '",tableName);
+
+        String_initTokenizer(&stringTokenizer,
+                             patternText,
+                             STRING_BEGIN,
+                             STRING_WHITE_SPACES,
+                             STRING_QUOTES,
+                             TRUE
+                            );
+        while (String_getNextToken(&stringTokenizer,&token,NULL))
         {
-          if (addedPatternFlag)
+          addedTextFlag    = FALSE;
+          addedPatternFlag = FALSE;
+          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
-            String_appendChar(string,' ');
-            addedPatternFlag = FALSE;
+            if (isalnum(codepoint) || (codepoint >= 128))
+            {
+              if (addedPatternFlag)
+              {
+                String_appendChar(string,' ');
+                addedPatternFlag = FALSE;
+              }
+              String_appendCharUTF8(string,codepoint);
+              addedTextFlag = TRUE;
+            }
+            else
+            {
+              if (addedTextFlag && !addedPatternFlag)
+              {
+                String_appendChar(string,'*');
+                addedTextFlag    = FALSE;
+                addedPatternFlag = TRUE;
+              }
+            }
           }
-          String_appendCharUTF8(string,codepoint);
-          addedTextFlag = TRUE;
-        }
-        else
-        {
           if (addedTextFlag && !addedPatternFlag)
           {
             String_appendChar(string,'*');
-            addedTextFlag    = FALSE;
-            addedPatternFlag = TRUE;
           }
         }
-      }
-      if (addedTextFlag && !addedPatternFlag)
-      {
-        String_appendChar(string,'*');
-      }
+        String_doneTokenizer(&stringTokenizer);
+
+        String_formatAppend(string,"'");
+        break;
+      case DATABASE_TYPE_MARIADB:
+        String_formatAppend(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
+
+        String_initTokenizer(&stringTokenizer,
+                             patternText,
+                             STRING_BEGIN,
+                             STRING_WHITE_SPACES,
+                             STRING_QUOTES,
+                             TRUE
+                            );
+        while (String_getNextToken(&stringTokenizer,&token,NULL))
+        {
+          addedTextFlag    = FALSE;
+          addedPatternFlag = FALSE;
+          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
+          {
+            if (isalnum(codepoint) || (codepoint >= 128))
+            {
+              if (addedPatternFlag)
+              {
+                String_appendChar(string,' ');
+                addedPatternFlag = FALSE;
+              }
+              String_appendCharUTF8(string,codepoint);
+              addedTextFlag = TRUE;
+            }
+            else
+            {
+              if (addedTextFlag && !addedPatternFlag)
+              {
+                String_appendChar(string,'*');
+                addedTextFlag    = FALSE;
+                addedPatternFlag = TRUE;
+              }
+            }
+          }
+          if (addedTextFlag && !addedPatternFlag)
+          {
+            String_appendChar(string,'*');
+          }
+        }
+        String_doneTokenizer(&stringTokenizer);
+
+        String_formatAppend(string,"' IN BOOLEAN MODE)");
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        {
+          bool firstTokenFlag;
+
+          String_formatAppend(string,"%s.%s @@ to_tsquery('",tableName,columnName);
+
+          String_initTokenizer(&stringTokenizer,
+                               patternText,
+                               STRING_BEGIN,
+                               STRING_WHITE_SPACES,
+                               STRING_QUOTES,
+                               TRUE
+                              );
+          firstTokenFlag = TRUE;
+          while (String_getNextToken(&stringTokenizer,&token,NULL))
+          {
+            if (!firstTokenFlag)
+            {
+              String_appendCString(string," & ");
+            }
+
+            addedTextFlag    = FALSE;
+            addedPatternFlag = FALSE;
+            STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
+            {
+              if (isalnum(codepoint) || (codepoint >= 128))
+              {
+                if (addedPatternFlag)
+                {
+                  String_appendCString(string," & ");
+                  addedPatternFlag = FALSE;
+                }
+                String_appendCharUTF8(string,codepoint);
+                addedTextFlag = TRUE;
+              }
+              else
+              {
+                if (addedTextFlag && !addedPatternFlag)
+                {
+                  String_appendCString(string,":*");
+                  addedTextFlag    = FALSE;
+                  addedPatternFlag = TRUE;
+                }
+              }
+            }
+            if (addedTextFlag && !addedPatternFlag)
+            {
+              String_appendCString(string,":*");
+            }
+
+            firstTokenFlag = FALSE;
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          String_formatAppend(string,"')");
+        }
+        break;
     }
-    String_doneTokenizer(&stringTokenizer);
   }
 
   return string;
@@ -2687,7 +2842,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                  (
                                    "storages"
                                  ),
-                                 DATABASE_FLAG_NONE,
+                                 DATABASE_FLAG_FETCH_ALL,
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_KEY   ("id"),
@@ -2746,7 +2901,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                  (
                                    "entries"
                                  ),
-                                 DATABASE_FLAG_NONE,
+                                 DATABASE_FLAG_FETCH_ALL,
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_KEY   ("id"),
@@ -3548,6 +3703,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
   if (Array_isEmpty(&storageIds))
   {
     printInfo("Collect data for newest entries...");
+    initProgress(2);
 
     // get storage ids
     error = Database_getIds(databaseHandle,
@@ -3562,14 +3718,14 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                            );
     if (error != ERROR_NONE)
     {
+      doneProgress();
       printInfo("FAIL\n");
       printError("collect newest fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printProgress(1,2);
+    printProgress(1);
 
     // get total counts
-    totalEntriesNewestCount = 0L;
     error = Database_getUInt(databaseHandle,
                              &totalEntriesNewestCount,
                              "entriesNewest",
@@ -3579,16 +3735,19 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                             );
     if (error != ERROR_NONE)
     {
+      doneProgress();
       printInfo("FAIL\n");
       printError("collect newest fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printProgress(2,2);
-    clearProgress();
+    printProgress(2);
+
+    doneProgress();
     printInfo("OK  \n");
 
     // delete all newest entries
     printInfo("Purge newest entries...");
+    initProgress(totalEntriesNewestCount);
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
@@ -3603,10 +3762,11 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                                 1000
                                );
         n += m;
-        printProgress(n,totalEntriesNewestCount);
+        printProgress(n);
       }
       while ((error == ERROR_NONE) && (m > 0));
     }
+    doneProgress();
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
@@ -3614,17 +3774,19 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       exit(EXITCODE_FAIL);
     }
     (void)Database_flush(databaseHandle);
-    printInfo("OK  \n");
+    printInfo("OK\n");
 
     // insert newest entries
     printInfo("Create newest entries...");
+    initProgress(Array_length(&storageIds));
     n = 0L;
     ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
     {
       error = addToNewest(databaseHandle,storageId);
       n++;
-      printProgress(n,Array_length(&storageIds));
+      printProgress(n);
     }
+    doneProgress();
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
@@ -3632,7 +3794,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       exit(EXITCODE_FAIL);
     }
     (void)Database_flush(databaseHandle);
-    printInfo("OK  \n");
+    printInfo("OK\n");
   }
   else
   {
@@ -3681,6 +3843,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 {
   Errors error;
   uint   fileEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
+  uint   fileEntryNewestCount,directoryEntryNewestCount,linkEntryNewestCount,hardlinkEntryNewestCount,specialEntryNewestCount;
   uint   entityCount;
   uint   totalCount;
   ulong  n;
@@ -3699,9 +3862,30 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              &fileEntryCount,
                              "fileEntries \
                                 LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "    entries.id IS NOT NULL \
+                              AND entryFragments.storageId IS NOT NULL \
+                             ",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &fileEntryNewestCount,
+                             "fileEntries \
+                                LEFT JOIN entriesNewest ON entriesNewest.entryId=fileEntries.entryId \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                             ",
+                             "COUNT(entriesNewest.id)",
+                             "    entriesNewest.id IS NOT NULL \
+                              AND entryFragments.storageId IS NOT NULL \
+                             ",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3726,6 +3910,21 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   if (error == ERROR_NONE)
   {
     error = Database_getUInt(databaseHandle,
+                             &directoryEntryNewestCount,
+                             "directoryEntries \
+                                LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
+                             ",
+                             "COUNT(entriesNewest.id)",
+                             "entriesNewest.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
                              &linkEntryCount,
                              "linkEntries \
                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
@@ -3741,12 +3940,48 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   if (error == ERROR_NONE)
   {
     error = Database_getUInt(databaseHandle,
+                             &linkEntryNewestCount,
+                             "linkEntries \
+                                LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
+                             ",
+                             "COUNT(entriesNewest.id)",
+                             "entriesNewest.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
                              &hardlinkEntryCount,
                              "hardlinkEntries \
                                 LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "    entries.id IS NOT NULL \
+                              AND entryFragments.storageId IS NOT NULL \
+                             ",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &hardlinkEntryNewestCount,
+                             "hardlinkEntries \
+                                LEFT JOIN entriesNewest ON entriesNewest.entryId=hardlinkEntries.entryId \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                             ",
+                             "COUNT(entriesNewest.id)",
+                             "    entriesNewest.id IS NOT NULL \
+                              AND entryFragments.storageId IS NOT NULL \
+                             ",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3771,6 +4006,21 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   if (error == ERROR_NONE)
   {
     error = Database_getUInt(databaseHandle,
+                             &specialEntryNewestCount,
+                             "specialEntries \
+                                LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
+                             ",
+                             "COUNT(entriesNewest.id)",
+                             "entriesNewest.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
                              &entityCount,
                              "entities",
                              "COUNT(id)",
@@ -3786,12 +4036,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  totalCount =  2*fileEntryCount
-               +2*directoryEntryCount
-               +2*linkEntryCount
-               +2*hardlinkEntryCount
-               +2*specialEntryCount
-               +2*entityCount;
+  totalCount =  1
+               +fileEntryCount     +fileEntryNewestCount
+               +directoryEntryCount+directoryEntryNewestCount
+               +linkEntryCount     +linkEntryNewestCount
+               +hardlinkEntryCount +hardlinkEntryNewestCount
+               +specialEntryCount  +specialEntryNewestCount;
+
+  initProgress(totalCount);
   n = 0L;
 
   // clear directory content size/count aggregated data
@@ -3810,9 +4062,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             ),
                             DATABASE_FILTERS_NONE
                            );
+    n++;
+    printProgress(n);
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
@@ -3869,7 +4124,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -3881,7 +4136,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
@@ -3955,7 +4210,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -3967,7 +4222,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
@@ -3994,6 +4249,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
@@ -4049,7 +4305,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4060,7 +4316,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
@@ -4128,7 +4384,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4139,7 +4395,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
@@ -4163,6 +4419,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
@@ -4219,7 +4476,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4230,7 +4487,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entries ON entries.id=linkEntries.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
@@ -4298,7 +4555,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4309,7 +4566,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
@@ -4333,6 +4590,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
@@ -4391,7 +4649,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4403,7 +4661,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
@@ -4477,7 +4735,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4489,7 +4747,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
@@ -4516,6 +4774,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
@@ -4571,7 +4830,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4582,7 +4841,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entries ON entries.id=specialEntries.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
@@ -4650,7 +4909,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            String_delete(name);
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -4661,7 +4920,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
                            "
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
@@ -4685,11 +4944,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
+
+  doneProgress();
 
   printInfo("OK  \n");
 }
@@ -4725,7 +4987,6 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   printInfo("Create aggregates for entities...");
 
   // get entities total count
-  totalCount = 0;
   error = Database_getUInt(databaseHandle,
                            &totalCount,
                            "entities",
@@ -4749,6 +5010,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
     exit(EXITCODE_FAIL);
   }
 
+  initProgress(totalCount);
   n = 0L;
 
   // update entities total count/size aggregates
@@ -5166,7 +5428,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                            }
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -5175,7 +5437,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                          (
                            "entities"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY("id")
@@ -5204,12 +5466,15 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     String_delete(entityIdsString);
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
+
+  doneProgress();
 
   printInfo("OK  \n");
 
@@ -5247,7 +5512,6 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   printInfo("Create aggregates for storages...");
 
   // get storage total count
-  totalCount = 0;
   error = Database_getUInt(databaseHandle,
                            &totalCount,
                            "storages",
@@ -5271,6 +5535,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
     exit(EXITCODE_FAIL);
   }
 
+  initProgress(totalCount);
   n = 0L;
 
   // update storage total count/size aggregates
@@ -5898,7 +6163,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            }
 
                            n++;
-                           printProgress(n,totalCount);
+                           printProgress(n);
 
                            return ERROR_NONE;
                          },NULL),
@@ -5907,7 +6172,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                          (
                            "storages"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY("id")
@@ -5936,12 +6201,15 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   }
   if (error != ERROR_NONE)
   {
+    doneProgress();
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     String_delete(storageIdsString);
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
+
+  doneProgress();
 
   printInfo("OK  \n");
 
@@ -6212,7 +6480,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printProgress(0,Array_length(&ids));
+    initProgress(Array_length(&ids));
     n = 0L;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
@@ -6227,9 +6495,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
-    clearProgress();
+    doneProgress();
 
     (void)Database_flush(databaseHandle);
   }
@@ -6255,7 +6523,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printProgress(0,Array_length(&ids));
+    initProgress(Array_length(&ids));
     n = 0L;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
@@ -6270,9 +6538,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
-    clearProgress();
+    doneProgress();
 
     (void)Database_flush(databaseHandle);
   }
@@ -6298,7 +6566,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printProgress(0,Array_length(&ids));
+    initProgress(Array_length(&ids));
     n = 0L;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
@@ -6313,9 +6581,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
-    clearProgress();
+    doneProgress();
 
     (void)Database_flush(databaseHandle);
   }
@@ -6341,7 +6609,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printProgress(0,Array_length(&ids));
+    initProgress(Array_length(&ids));
     n = 0L;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
@@ -6356,9 +6624,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
-    clearProgress();
+    doneProgress();
 
     (void)Database_flush(databaseHandle);
   }
@@ -6384,7 +6652,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printProgress(0,Array_length(&ids));
+    initProgress(Array_length(&ids));
     n = 0L;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
@@ -6399,9 +6667,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
-    clearProgress();
+    doneProgress();
 
     (void)Database_flush(databaseHandle);
   }
@@ -6427,7 +6695,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   if (error == ERROR_NONE)
   {
-    printProgress(0,Array_length(&ids));
+    initProgress(Array_length(&ids));
     n = 0L;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
@@ -6442,9 +6710,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                    Array_segmentLength(&ids,&arraySegmentIterator)
                                   );
       }
-      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator),Array_length(&ids));
+      printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
-    clearProgress();
+    doneProgress();
 
     (void)Database_flush(databaseHandle);
   }
@@ -6754,7 +7022,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           LEFT JOIN entries ON entries.id=fileEntries.entryId \
                        "
                      ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_FLAG_FETCH_ALL,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY  ("fileEntries.id")
@@ -6808,7 +7076,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           LEFT JOIN entries ON entries.id=imageEntries.entryId \
                        "
                      ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_FLAG_FETCH_ALL,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY  ("imageEntries.id")
@@ -6862,7 +7130,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                        "
                      ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_FLAG_FETCH_ALL,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY  ("directoryEntries.id")
@@ -6916,7 +7184,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           LEFT JOIN entries ON entries.id=linkEntries.entryId \
                        "
                      ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_FLAG_FETCH_ALL,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY  ("linkEntries.id")
@@ -6970,7 +7238,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           LEFT JOIN entries ON entries.id=linkEntries.entryId \
                        "
                      ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_FLAG_FETCH_ALL,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY  ("linkEntries.id")
@@ -7024,7 +7292,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           LEFT JOIN entries ON entries.id=specialEntries.entryId \
                        "
                      ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_FLAG_FETCH_ALL,
                      DATABASE_COLUMNS
                      (
                        DATABASE_COLUMN_KEY  ("specialEntries.id")
@@ -7289,7 +7557,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
       }
 
       // purge entries FTS
-      printProgress(0*Array_length(&entryIds),2*Array_length(&entryIds));
+      initProgress(2*Array_length(&entryIds));
       n = 0L;
       switch (Database_getType(databaseHandle))
       {
@@ -7322,7 +7590,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                         DATABASE_UNLIMITED
                                        );
               }
-              printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+              printProgress(0*Array_length(&entryIds)+n);
             }
           }
           break;
@@ -7358,12 +7626,12 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                         DATABASE_UNLIMITED
                                        );
               }
-              printProgress(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+              printProgress(0*Array_length(&entryIds)+n);
             }
           }
           break;
       }
-      clearProgress();
+      doneProgress();
 
       // purge directory/link/special entries
       if (error == ERROR_NONE)
@@ -7470,7 +7738,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
       // purge entries
       if (error == ERROR_NONE)
       {
-        printProgress(1*Array_length(&entryIds),2*Array_length(&entryIds));
+        initProgress(2*Array_length(&entryIds));
         n = 0L;
         ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
         {
@@ -7498,9 +7766,9 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                     DATABASE_UNLIMITED
                                    );
           }
-          printProgress(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+          printProgress(1*Array_length(&entryIds)+n);
         }
-        clearProgress();
+        doneProgress();
       }
 
       if (error != ERROR_NONE)
@@ -8959,7 +9227,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                        (
                          "uuids"
                        ),
-                       DATABASE_FLAG_NONE,
+                       DATABASE_FLAG_FETCH_ALL,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY   ("id"),
@@ -9115,7 +9383,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          printf("    UUID id      : %"PRIi64"\n",uuidId);
 
                          i      = 0;
-                         prefix = "    Storage ids   : ";
+                         prefix = "    Storage ids  : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -9170,7 +9438,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                        (
                          "entities"
                        ),
-                       DATABASE_FLAG_NONE,
+                       DATABASE_FLAG_FETCH_ALL,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY     ("id"),
@@ -9254,7 +9522,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 #define INDEX_CONST_MODE_AUTO 1
 
   String     storageIdsString;
-  String     ftsName,ftsSubSelect;
+  String     ftsMatchString;
   ulong      i;
   DatabaseId storageId;
   Errors     error;
@@ -9267,29 +9535,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
     String_formatAppend(storageIdsString,"%"PRIi64,storageId);
   }
 
-  ftsName = getFTSString(String_new(),name);
-
-  ftsSubSelect = String_new();
-  switch (Database_getType(databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      String_format(ftsSubSelect,"SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S'",ftsName);
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
-        String_format(ftsSubSelect,"SELECT id FROM storages WHERE MATCH(name) AGAINST ('%S')",ftsName);
-      #else /* HAVE_MARIADB */
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-// TODO:
-//        String_format(ftsSubSelect,"xxxx",ftsName);
-//        textsearchable_index_col @@ to_tsquery('create & table')
-      #else /* HAVE_POSTGRESQL */
-      #endif /* HAVE_POSTGRESQL */
-      break;
-  }
+  ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_storages","name",name);
 
   printf("%s:\n",lostFlag ? "Lost storages" : "Storages");
   error = Database_get(databaseHandle,
@@ -9456,9 +9702,9 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                               ),
                                               stringFormat(filterString,sizeof(filterString),
                                                            "    storages.id=? \
-                                                            AND (? OR storages.id IN (%s)) \
+                                                            AND (? OR storages.id IN (SELECT storageId FROM FTS_storages WHERE %s)) \
                                                            ",
-                                                           !String_isEmpty(name) ? String_cString(ftsSubSelect) : "0"
+                                                           !String_isEmpty(ftsMatchString) ? String_cString(ftsMatchString) : "TRUE"
                                                           ),
                                               DATABASE_FILTERS
                                               (
@@ -9483,7 +9729,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        (
                          "storages"
                        ),
-                       DATABASE_FLAG_NONE,
+                       DATABASE_FLAG_FETCH_ALL,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY("id")
@@ -9516,8 +9762,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   }
 
   // free resources
-  String_delete(ftsSubSelect);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
   String_delete(storageIdsString);
 }
 
@@ -9539,7 +9784,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
   String     entityIdsString;
-  String     ftsName,ftsSubSelect;
+  String     ftsMatchString;
   ulong      i;
   DatabaseId entityId;
   Errors     error;
@@ -9552,29 +9797,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
     String_formatAppend(entityIdsString,"%"PRIi64,entityId);
   }
 
-  ftsName = getFTSString(String_new(),name);
-
-  ftsSubSelect = String_new();
-  switch (Database_getType(databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      String_format(ftsSubSelect,"SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S'",ftsName);
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
-        String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
-      #else /* HAVE_MARIADB */
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-// TODO:
-String_format(ftsSubSelect,"SELECT id FROM entries");
-//        textsearchable_index_col @@ to_tsquery('create & table')
-      #else /* HAVE_POSTGRESQL */
-      #endif /* HAVE_POSTGRESQL */
-      break;
-  }
+  ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_entries","name",name);
 
   printf("%s:\n",lostFlag ? "Lost entries" : "Entries");
   error = Database_get(databaseHandle,
@@ -9693,9 +9916,9 @@ String_format(ftsSubSelect,"SELECT id FROM entries");
                                               stringFormat(filterString,sizeof(filterString),
                                                            "    entries.entityId=? \
                                                             AND (? OR (type=?)) \
-                                                            AND (? OR entries.id IN (%s)) \
+                                                            AND (? OR entries.id IN (SELECT entryId FROM FTS_entries WHERE %s)) \
                                                            ",
-                                                           !String_isEmpty(name) ? String_cString(ftsSubSelect) : "0"
+                                                           !String_isEmpty(ftsMatchString) ? String_cString(ftsMatchString) : "TRUE"
                                                           ),
                                               DATABASE_FILTERS
                                               (
@@ -9755,8 +9978,7 @@ String_format(ftsSubSelect,"SELECT id FROM entries");
   }
 
   // free resources
-  String_delete(ftsSubSelect);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
   String_delete(entityIdsString);
 }
 
@@ -9933,6 +10155,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
+// TODO:
 fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,String_cString(values[1].string));
 n++;
 
@@ -9974,6 +10197,7 @@ fprintf(stdout,"%lu storages\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
+// TODO:
 fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,String_cString(values[2].string),values[3].dateTime);
 n++;
 
@@ -10031,6 +10255,7 @@ fprintf(stdout,"%lu newest entries\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
+// TODO:
 fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64" entriesNewestId=%"PRIi64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime,values[4].id);
 n++;
 
@@ -10075,6 +10300,7 @@ fprintf(stdout,"%lu entries\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
+// TODO:
 fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime);
 n++;
 
@@ -10121,6 +10347,7 @@ fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
+// TODO:
 fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,String_cString(values[1].string),values[2].dateTime);
 n++;
 
@@ -10166,6 +10393,7 @@ fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
+// TODO:
 fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,String_cString(values[1].string),values[2].dateTime);
 n++;
 
@@ -10421,7 +10649,10 @@ uint xxxShow=0;
         {
           Array_append(&entityIds,&databaseId);
         }
-        String_setCString(entryName,token);
+        else
+        {
+          String_setCString(entryName,token);
+        }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
@@ -10463,7 +10694,10 @@ uint xxxShow=0;
         {
           Array_append(&entityIds,&databaseId);
         }
-        String_setCString(entryName,token);
+        else
+        {
+          String_setCString(entryName,token);
+        }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
@@ -10483,7 +10717,10 @@ uint xxxShow=0;
         {
           Array_append(&storageIds,&databaseId);
         }
-        String_setCString(storageName,token);
+        else
+        {
+          String_setCString(storageName,token);
+        }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
@@ -10670,6 +10907,8 @@ uint xxxShow=0;
     else if (stringEquals(argv[i],"--create-aggregates"))
     {
       createAggregatesDirectoryContentFlag = TRUE;
+      createAggregatesEntitiesFlag         = TRUE;
+      createAggregatesStoragesFlag         = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--clean-orphaned"))
