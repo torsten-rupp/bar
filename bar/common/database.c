@@ -392,7 +392,7 @@ LOCAL DatabaseList databaseList;
       { \
         databaseHandle->databaseNode->lockedBy.threadId = Thread_getCurrentId(); \
         databaseHandle->databaseNode->lockedBy.fileName = __fileName__; \
-        databaseHandle->databaseNode->lockedBy.lineNb   = __lineNb__;
+        databaseHandle->databaseNode->lockedBy.lineNb   = __lineNb__; \
       } \
       while (0)
     #define DATABASE_HANDLE_LOCK_INFO_CLEAR(databaseHandle) \
@@ -400,7 +400,7 @@ LOCAL DatabaseList databaseList;
       { \
         databaseHandle->databaseNode->lockedBy.threadId = THREAD_ID_NONE; \
         databaseHandle->databaseNode->lockedBy.fileName = NULL; \
-        databaseHandle->databaseNode->lockedBy.lineNb   = 0;
+        databaseHandle->databaseNode->lockedBy.lineNb   = 0; \
       } \
       while (0)
   #else
@@ -417,6 +417,7 @@ LOCAL DatabaseList databaseList;
       } \
       while (0)
   #endif
+
   #define DATABASE_HANDLE_LOCK_INFO_SAVE(databaseHandle,_lockedBy) \
     do \
     { \
@@ -462,6 +463,7 @@ LOCAL DatabaseList databaseList;
       } \
       while (0)
   #endif
+
   #define DATABASE_HANDLE_LOCK_INFO_SAVE(databaseHandle,_lockedBy) \
     do \
     { \
@@ -1874,46 +1876,47 @@ LOCAL Errors sqlite3Execute(sqlite3    *handle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
-                                     sqlite3      *handle,
-                                     const char   *sqlString
+LOCAL Errors sqlite3StatementPrepare(DatabaseStatementHandle *databaseStatementHandle,
+                                     const char              *sqlString
                                     )
 {
   int    sqliteResult;
   Errors error;
 
-  assert(statementHandle != NULL);
-  assert(handle != NULL);
+  assert(databaseStatementHandle != NULL);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
+  assert(databaseStatementHandle->databaseHandle->sqlite.handle != NULL);
   assert(sqlString != NULL);
 
-  sqliteResult = sqlite3_prepare_v2(handle,
+  sqliteResult = sqlite3_prepare_v2(databaseStatementHandle->databaseHandle->sqlite.handle,
                                     sqlString,
                                     -1,
-                                    statementHandle,
+                                    &databaseStatementHandle->sqlite.statementHandle,
                                     NULL
                                    );
   if      (sqliteResult == SQLITE_MISUSE)
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
-                        sqliteResult,sqlite3_extended_errcode(handle),
+                        sqliteResult,sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
                         sqlString
                        );
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
     error = ERRORX_(INTERRUPTED,
-                    sqlite3_errcode(handle),
+                    sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
                     "%s: %s",
-                    sqlite3_errmsg(handle),
+                    sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),
                     sqlString
                    );
   }
   else if (sqliteResult != SQLITE_OK)
   {
     error = ERRORX_(DATABASE,
-                    sqlite3_errcode(handle),
+                    sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
                     "%s: %s",
-                    sqlite3_errmsg(handle),
+                    sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),
                     sqlString
                    );
   }
@@ -1921,8 +1924,45 @@ LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
   {
     error = ERROR_NONE;
   }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get value/result count
+  databaseStatementHandle->parameterCount = sqlite3_bind_parameter_count(databaseStatementHandle->sqlite.statementHandle);
+  databaseStatementHandle->resultCount    = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
+
+  // allocate bind data
+  databaseStatementHandle->sqlite.bind = (DatabaseValue**)calloc(databaseStatementHandle->parameterCount+databaseStatementHandle->resultCount,
+                                                                 sizeof(DatabaseValue*)
+                                                                );
+  if (databaseStatementHandle->sqlite.bind == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : sqlite3FinalizeStatement
+* Purpose: finalize SQLite3 statement
+* Input  : databaseStatementHandle - database statement handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sqlite3FinalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
+{
+  assert(databaseStatementHandle != NULL);
+
+  // finalize statement
+  sqlite3_finalize(databaseStatementHandle->sqlite.statementHandle);
+
+  // free bind data
+  if (databaseStatementHandle->sqlite.bind != NULL) free(databaseStatementHandle->sqlite.bind);
 }
 
 /***********************************************************************\
@@ -2048,49 +2088,119 @@ LOCAL Errors mariaDBExecute(MYSQL      *handle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mariaDBPrepareStatement(MYSQL_STMT *statementHandle,
-                                     const char *sqlString
+LOCAL Errors mariaDBPrepareStatement(DatabaseStatementHandle *databaseStatementHandle,
+                                     const char              *sqlString
                                     )
 {
   int    mysqlResult;
   Errors error;
 
-  assert(statementHandle != NULL);
+  assert(databaseStatementHandle != NULL);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(sqlString != NULL);
 
-  mysqlResult = mysql_stmt_prepare(statementHandle,
-                                   sqlString,
-                                   stringLength(sqlString)
-                                  );
-  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  // prepare SQL statement
+  DATABASE_DEBUG_TIME_START(databaseStatementHandle);
   {
-    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s: %s",
-                        mysqlResult,
-                        mysql_stmt_error(statementHandle),
-                        sqlString
-                       );
+    databaseStatementHandle->mariadb.statementHandle = mysql_stmt_init(databaseStatementHandle->databaseHandle->mariadb.handle);
+    #ifndef NDEBUG
+      if (databaseStatementHandle->mariadb.statementHandle == NULL)
+      {
+        HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s: %s",
+                            mysql_errno(databaseStatementHandle->databaseHandle->mariadb.handle),
+                            mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle),
+                            sqlString
+                           );
+      }
+    #endif /* not NDEBUG */
+
+    mysqlResult = mysql_stmt_prepare(databaseStatementHandle->mariadb.statementHandle,
+                                     sqlString,
+                                     stringLength(sqlString)
+                                    );
+    if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+    {
+      HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s: %s",
+                          mysqlResult,
+                          mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle),
+                          sqlString
+                         );
+    }
+    else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+    {
+      error = ERRORX_(DATABASE_CONNECTION_LOST,
+                      mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                      "%s: %s",
+                      mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle),
+                      sqlString
+                     );
+    }
+    else if (mysqlResult != 0)
+    {
+      error = ERRORX_(DATABASE,
+                      mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                      "%s: %s",
+                      mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle),
+                      sqlString
+                     );
+    }
+    else
+    {
+      error = ERROR_NONE;
+    }
   }
-  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  DATABASE_DEBUG_TIME_END(databaseStatementHandle);
+
+  if (error != ERROR_NONE)
   {
-    error = ERRORX_(DATABASE_CONNECTION_LOST,
-                    mysql_stmt_errno(statementHandle),
-                    "%s: %s",
-                    mysql_stmt_error(statementHandle),
-                    sqlString
-                   );
+    mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
+    #ifndef NDEBUG
+      String_delete(databaseStatementHandle->debug.sqlString);
+    #endif /* not NDEBUG */
+    return error;
   }
-  else if (mysqlResult != 0)
+
+  // get value/result count
+  databaseStatementHandle->parameterCount = mysql_stmt_param_count(databaseStatementHandle->mariadb.statementHandle);
+  databaseStatementHandle->resultCount    = mysql_stmt_field_count(databaseStatementHandle->mariadb.statementHandle);
+
+  // allocate bind data
+  databaseStatementHandle->mariadb.values.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->parameterCount,
+                                                                     sizeof(MYSQL_BIND)
+                                                                    );
+  if (databaseStatementHandle->mariadb.values.bind == NULL)
   {
-    error = ERRORX_(DATABASE,
-                    mysql_stmt_errno(statementHandle),
-                    "%s: %s",
-                    mysql_stmt_error(statementHandle),
-                    sqlString
-                   );
+    HALT_INSUFFICIENT_MEMORY();
   }
-  else
+  databaseStatementHandle->mariadb.values.time = (MYSQL_TIME*)calloc(databaseStatementHandle->parameterCount,
+                                                                     sizeof(MYSQL_TIME)
+                                                                    );
+  if (databaseStatementHandle->mariadb.values.time == NULL)
   {
-    error = ERROR_NONE;
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  databaseStatementHandle->mariadb.results.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->resultCount,
+                                                                      sizeof(MYSQL_BIND)
+                                                                     );
+  if (databaseStatementHandle->mariadb.results.bind == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  databaseStatementHandle->mariadb.results.time = (MYSQL_TIME*)calloc(databaseStatementHandle->resultCount,
+                                                                      sizeof(MYSQL_TIME)
+                                                                     );
+  if (databaseStatementHandle->mariadb.results.time == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  databaseStatementHandle->mariadb.results.lengths = (unsigned long*)calloc(databaseStatementHandle->resultCount,
+                                                                            sizeof(unsigned long)
+                                                                           );
+  if (databaseStatementHandle->mariadb.results.lengths == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
   }
 
   return error;
@@ -2146,6 +2256,73 @@ LOCAL Errors mariaDBExecutePreparedStatement(MYSQL_STMT *statementHandle)
   }
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : mariaDBFinalizeStatement
+* Purpose: finalize MariaDB statement
+* Input  : databaseStatementHandle - database statement handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void mariaDBFinalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
+{
+  uint i;
+
+  assert(databaseStatementHandle != NULL);
+
+  // finalize statement
+  mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
+
+  // free bind data
+  assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
+  for (i = 0; i < databaseStatementHandle->resultCount; i++)
+  {
+    switch (databaseStatementHandle->mariadb.results.bind[i].buffer_type)
+    {
+      case MYSQL_TYPE_TINY:
+      case MYSQL_TYPE_SHORT:
+      case MYSQL_TYPE_LONG:
+      case MYSQL_TYPE_INT24:
+      case MYSQL_TYPE_LONGLONG:
+      case MYSQL_TYPE_DECIMAL:
+      case MYSQL_TYPE_NEWDECIMAL:
+        break;
+      case MYSQL_TYPE_FLOAT:
+      case MYSQL_TYPE_DOUBLE:
+        break;
+      case MYSQL_TYPE_BIT:
+        break;
+      case MYSQL_TYPE_TIMESTAMP:
+      case MYSQL_TYPE_DATE:
+      case MYSQL_TYPE_TIME:
+      case MYSQL_TYPE_YEAR:
+      case MYSQL_TYPE_DATETIME:
+        break;
+      case MYSQL_TYPE_STRING:
+        free(databaseStatementHandle->mariadb.results.bind[i].buffer);
+        break;
+      case MYSQL_TYPE_VAR_STRING:
+        break;
+      case MYSQL_TYPE_BLOB:
+      case MYSQL_TYPE_SET:
+      case MYSQL_TYPE_GEOMETRY:
+      case MYSQL_TYPE_NULL:
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+  }
+  if (databaseStatementHandle->mariadb.results.lengths != NULL) free(databaseStatementHandle->mariadb.results.lengths);
+  if (databaseStatementHandle->mariadb.results.time != NULL) free(databaseStatementHandle->mariadb.results.time);
+  if (databaseStatementHandle->mariadb.results.bind != NULL) free(databaseStatementHandle->mariadb.results.bind);
+  if (databaseStatementHandle->mariadb.values.time != NULL) free(databaseStatementHandle->mariadb.values.time);
+  if (databaseStatementHandle->mariadb.values.bind != NULL) free(databaseStatementHandle->mariadb.values.bind);
 }
 
 /***********************************************************************\
@@ -3179,10 +3356,9 @@ LOCAL Errors postgresqlExecute(PGconn     *connection,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
-                                        DatabaseHandle       *databaseHandle,
-                                        const char           *sqlString,
-                                        uint                 parameterCount
+LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStatementHandle,
+                                        const char              *sqlString,
+                                        uint                    parameterCount
                                        )
 {
   uint           n;
@@ -3190,33 +3366,33 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
   Errors         error;
   ExecStatusType postgreSQLExecStatus;
 
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(statement != NULL);
+  assert(databaseStatementHandle != NULL);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(sqlString != NULL);
 
-  statement->result   = NULL;
-  statement->rowIndex = 0L;
-  statement->rowCount = 0L;
+  databaseStatementHandle->postgresql.result   = NULL;
+  databaseStatementHandle->postgresql.rowIndex = 0L;
+  databaseStatementHandle->postgresql.rowCount = 0L;
 
   // get prepared statement name (via hash table)
   n = stringLength(sqlString);
-  statement->hashTableEntry = HashTable_find(&databaseHandle->postgresql.sqlStringHashTable,
-                                             sqlString,
-                                             n
-                                            );
-  if (statement->hashTableEntry != NULL)
+  databaseStatementHandle->postgresql.hashTableEntry = HashTable_find(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
+                                                                      sqlString,
+                                                                      n
+                                                                     );
+  if (databaseStatementHandle->postgresql.hashTableEntry != NULL)
   {
     PostgresSQLUseInfo *useInfo;
 
-    useInfo = (PostgresSQLUseInfo*)statement->hashTableEntry->data;
-    assert(statement->hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+    useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
+    assert(databaseStatementHandle->postgresql.hashTableEntry->length == sizeof(PostgresSQLUseInfo));
     useInfo->count++;
     useInfo->timestamp = Misc_getTimestamp();
 
-    stringFormat(statement->name,sizeof(statement->name),
+    stringFormat(databaseStatementHandle->postgresql.name,sizeof(databaseStatementHandle->postgresql.name),
                  "s%016"PRIx64,
-                 (intptr_t)statement->hashTableEntry
+                 (intptr_t)databaseStatementHandle->postgresql.hashTableEntry
                 );
 
     error = ERROR_NONE;
@@ -3229,26 +3405,30 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
     useInfo.count     = 1;
     useInfo.timestamp = Misc_getTimestamp();
 
-    statement->hashTableEntry = HashTable_put(&databaseHandle->postgresql.sqlStringHashTable,
-                                              sqlString,
-                                              n,
-                                              &useInfo,
-                                              sizeof(useInfo)
-                                             );
-    assert(statement->hashTableEntry != NULL);
+    databaseStatementHandle->postgresql.hashTableEntry = HashTable_put(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
+                                                                       sqlString,
+                                                                       n,
+                                                                       &useInfo,
+                                                                       sizeof(useInfo)
+                                                                      );
+    assert(databaseStatementHandle->postgresql.hashTableEntry != NULL);
 
-    stringFormat(statement->name,sizeof(statement->name),
+    stringFormat(databaseStatementHandle->postgresql.name,sizeof(databaseStatementHandle->postgresql.name),
                  "s%016"PRIx64,
-                 (intptr_t)statement->hashTableEntry
+                 (intptr_t)databaseStatementHandle->postgresql.hashTableEntry
                 );
 
     // prepare statement
-    postgresqlResult = PQprepare(databaseHandle->postgresql.handle,
-                                 statement->name,
-                                 sqlString,
-                                 parameterCount,
-                                 NULL  // paramTypes
-                                );
+    DATABASE_DEBUG_TIME_START(databaseStatementHandle);
+    {
+      postgresqlResult = PQprepare(databaseStatementHandle->databaseHandle->postgresql.handle,
+                                   databaseStatementHandle->postgresql.name,
+                                   sqlString,
+                                   parameterCount,
+                                   NULL  // paramTypes
+                                  );
+    }
+    DATABASE_DEBUG_TIME_END(databaseStatementHandle);
     if (postgresqlResult != NULL)
     {
       postgreSQLExecStatus = PQresultStatus(postgresqlResult);
@@ -3260,7 +3440,7 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
       }
       else
       {
-        HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
+        HashTable_remove(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
                          sqlString,
                          n
                         );
@@ -3275,21 +3455,192 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
     }
     else
     {
-      HashTable_remove(&databaseHandle->postgresql.sqlStringHashTable,
+      HashTable_remove(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
                        sqlString,
                        n
                       );
       error = ERRORX_(DATABASE,
                       0,
                       "%s: %s",
-                      postgresqlErrorMessage(databaseHandle->postgresql.handle),
+                      postgresqlErrorMessage(databaseStatementHandle->databaseHandle->postgresql.handle),
                       sqlString
                      );
     }
   }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get value/result count
+  postgresqlResult = PQdescribePrepared(databaseStatementHandle->databaseHandle->postgresql.handle,
+                                        databaseStatementHandle->postgresql.name
+                                       );
+  if (PQresultStatus(postgresqlResult) != PGRES_COMMAND_OK)
+  {
+    #ifndef NDEBUG
+      String_delete(databaseStatementHandle->debug.sqlString);
+    #endif /* not NDEBUG */
+    return ERRORX_(DATABASE,
+                   PQresultStatus(postgresqlResult),
+                   "%s: %s",
+                   PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
+                   sqlString
+                 );
+  }
+  databaseStatementHandle->parameterCount = parameterCount;
+  databaseStatementHandle->resultCount    = PQnfields(postgresqlResult);
+  PQclear(postgresqlResult);
+
+  // allocate bind data
+  databaseStatementHandle->postgresql.bind = (PostgreSQLBind*)calloc(databaseStatementHandle->parameterCount,
+                                                                     sizeof(PostgreSQLBind)
+                                                                    );
+  if (databaseStatementHandle->postgresql.bind == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  databaseStatementHandle->postgresql.parameterValues = (const char**)calloc(databaseStatementHandle->parameterCount,
+                                                                             sizeof(char*)
+                                                                            );
+  if (databaseStatementHandle->postgresql.parameterValues == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  databaseStatementHandle->postgresql.parameterLengths = (int*)calloc(databaseStatementHandle->parameterCount,
+                                                                      sizeof(int)
+                                                                     );
+  if (databaseStatementHandle->postgresql.parameterLengths == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  databaseStatementHandle->postgresql.parameterFormats = (int*)calloc(databaseStatementHandle->parameterCount,
+                                                                      sizeof(int)
+                                                                     );
+  if (databaseStatementHandle->postgresql.parameterFormats == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  databaseStatementHandle->postgresql.result = NULL;
 
   return error;
 }
+
+#if 0
+/***********************************************************************\
+* Name   : postgresqlExecute
+* Purpose: execute PostgreSQL SQL string
+* Input  : statement      - prepared statement
+*          connection     - connection handle
+*          parameterCount - parameter count
+*          flags          - database flags; see DATABASE_FLAG_...
+* Output : changedRowCount - number of changed rows
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors postgresqlExecuteQuery(PostgresSQLStatement *statement,
+                                    PGconn               *connection,
+                                    uint                 parameterCount,
+                                    uint                 flags
+                                   )
+{
+  PGresult       *postgresqlResult;
+  ExecStatusType postgreSQLExecStatus;
+  Errors         error;
+
+  assert(statement != NULL);
+  assert(connection != NULL);
+
+  postgresqlResult = PQexecPrepared(statement->handle,
+                                    statement->name,
+                                    parameterCount,
+                                    statement->parameterValues,
+                                    statement->parameterLengths,
+                                    statement->parameterFormats,
+                                    0  /* resultFormat text;
+                                          Note: binary would be more efficient, but PostgreSQL lake any useful
+                                                documentation how to do that :-(
+                                                E. g. how to convert a PostgreSQL binary "numeric" into a uint64?
+                                                There is only a PGTYPESnumeric_to_long()
+                                       */
+                                   );
+  if (postgresqlResult != NULL)
+  {
+    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+       )
+    {
+      // get number of changes
+      if (changedRowCount != NULL)
+      {
+        stringToUInt64(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
+      }
+
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      postgreSQLExecStatus,
+                      "%s",
+                      PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
+                     );
+    }
+
+    PQclear(postgresqlResult);
+  }
+  postgresqlResult = PQexecParams(connection,
+                                  sqlString,
+                                  parameterCount,
+                                  parameterTypes,
+                                  parameterValues,
+                                  parameterLengths,
+                                  parameterFormats,
+                                  0  // resultFormat
+                                 );
+  if (postgresqlResult != NULL)
+  {
+    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+       )
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,
+                      postgreSQLExecStatus,
+                      "%s",
+                      PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
+                     );
+    }
+
+    if (changedRowCount != NULL)
+    {
+      stringToUInt64(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
+    }
+
+    PQclear(postgresqlResult);
+  }
+  else
+  {
+    error = ERRORX_(DATABASE,
+                    0,
+                    "%s",
+                    postgresqlErrorMessage(connection)
+                   );
+  }
+
+  return error;
+}
+#endif
 
 /***********************************************************************\
 * Name   : postgresqlExecutePreparedStatement
@@ -3297,6 +3648,7 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
 * Input  : statement      - prepared statement
 *          connection     - connection handle
 *          parameterCount - parameter count
+*          flags          - database flags; see DATABASE_FLAG_...
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3304,7 +3656,8 @@ LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
 
 LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
                                                 PGconn               *connection,
-                                                uint                 parameterCount
+                                                uint                 parameterCount,
+                                                uint                 flags
                                                )
 {
   Errors error;
@@ -3334,18 +3687,56 @@ for (int i =0; i < parameterCount; i++) {
                              */
                          ) == 1)
   {
-    if (PQsetSingleRowMode(connection) == 1)
+    if (IS_SET(flags,DATABASE_FLAG_FETCH_ALL))
     {
-      statement->result = NULL;
-      error = ERROR_NONE;
+      // cache all results
+      statement->result = PQgetResult(connection);
+
+      if (statement->result != NULL)
+      {
+        if (PQresultStatus(statement->result) == PGRES_TUPLES_OK)
+        {
+          statement->rowIndex = 0;
+          statement->rowCount = PQntuples(statement->result);
+
+          error = ERROR_NONE;
+        }
+        else
+        {
+          error = ERRORX_(DATABASE,
+                          0,
+                          "%s",
+                          postgresqlErrorMessage(connection)
+                         );
+        }
+      }
+      else
+      {
+        error = ERRORX_(DATABASE,
+                        0,
+                        "%s",
+                        postgresqlErrorMessage(connection)
+                       );
+      }
     }
     else
     {
-      error = ERRORX_(DATABASE,
-                      0,
-                      "%s",
-                      postgresqlErrorMessage(connection)
-                     );
+      // cache only single result: single-row-mode
+      if (PQsetSingleRowMode(connection) == 1)
+      {
+        statement->result   = NULL;
+        statement->rowIndex = 0;
+        statement->rowCount = 0;
+        error = ERROR_NONE;
+      }
+      else
+      {
+        error = ERRORX_(DATABASE,
+                        0,
+                        "%s",
+                        postgresqlErrorMessage(connection)
+                       );
+      }
     }
   }
   else
@@ -3358,6 +3749,89 @@ for (int i =0; i < parameterCount; i++) {
   }
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : postgresqlFinalizeStatement
+* Purpose: finalize PostgreSQL statement
+* Input  : databaseStatementHandle - database statement handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void postgresqlFinalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
+{
+  PostgresSQLUseInfo *useInfo;
+
+  assert(databaseStatementHandle != NULL);
+  assert(databaseStatementHandle->postgresql.hashTableEntry != NULL);
+  assert(databaseStatementHandle->postgresql.hashTableEntry->data != NULL);
+  assert(databaseStatementHandle->postgresql.hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+  assert(databaseStatementHandle->databaseHandle != NULL);
+
+  // finalize statement
+  if (databaseStatementHandle->postgresql.result != NULL)
+  {
+    PQclear(databaseStatementHandle->postgresql.result);
+  }
+  useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
+  assert(useInfo->count > 0);
+  useInfo->count--;
+
+  if (HashTable_count(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable) >= POSTGRESQL_HASHTABLE_CLEAN_SIZE)
+  {
+    // clean-up SQL string hashtable
+    HashTable_iterate(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
+                      CALLBACK_INLINE(bool,(const HashTableEntry *hashTableEntry, void *userData),
+                      {
+                        PostgresSQLUseInfo *useInfo;
+                        PGresult           *postgresqlResult;
+                        char               sqlString[256];
+                        ExecStatusType     postgreSQLExecStatus;
+
+                        assert(hashTableEntry != NULL);
+                        assert(hashTableEntry->keyData != NULL);
+                        assert(hashTableEntry->data != NULL);
+                        assert(hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+
+                        UNUSED_VARIABLE(userData);
+
+                        useInfo = (PostgresSQLUseInfo*)hashTableEntry->data;
+                        if (   (useInfo->count == 0)
+                            && (Misc_getTimestamp() >= (useInfo->timestamp+POSTGRESQL_HASHTABLE_CLEAN_TIME*US_PER_S))
+                           )
+                        {
+                          postgresqlResult = PQexec(databaseStatementHandle->databaseHandle->postgresql.handle,
+                                                    stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
+                                                   );
+                          if (postgresqlResult != NULL)
+                          {
+                            postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+                            if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+                                 || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+                               )
+                            {
+                              HashTable_remove(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
+                                               hashTableEntry->keyData,
+                                               hashTableEntry->keyLength
+                                              );
+                            }
+
+                            PQclear(postgresqlResult);
+                          }
+                        }
+
+                        return TRUE;
+                      },NULL)
+                     );
+  }
+
+  // free bind data
+  free(databaseStatementHandle->postgresql.parameterFormats);
+  free(databaseStatementHandle->postgresql.parameterLengths);
+  free(databaseStatementHandle->postgresql.parameterValues);
+  free(databaseStatementHandle->postgresql.bind);
 }
 
 /***********************************************************************\
@@ -5691,14 +6165,17 @@ LOCAL void formatParameters(String               sqlString,
 
   // initialize variables
   databaseStatementHandle->databaseHandle = databaseHandle;
+  databaseStatementHandle->parameterCount = 0;
+  databaseStatementHandle->parameterIndex = 0;
+  databaseStatementHandle->resultCount    = 0;
+  databaseStatementHandle->resultIndex    = 0;
+  databaseStatementHandle->valueMap       = NULL;
+  databaseStatementHandle->valueMapCount  = 0;
   #ifndef NDEBUG
     databaseStatementHandle->debug.sqlString = String_newCString(sqlString);
     databaseStatementHandle->debug.dt        = 0LL;
     BACKTRACE(databaseStatementHandle->debug.stackTrace,databaseStatementHandle->debug.stackTraceSize);
   #endif /* not NDEBUG */
-  databaseStatementHandle->parameterIndex = 0;
-  databaseStatementHandle->results        = NULL;
-  databaseStatementHandle->resultIndex    = 0;
 
   // prepare SQL command execution
 // TODO: use C string argument
@@ -5713,198 +6190,48 @@ LOCAL void formatParameters(String               sqlString,
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-        {
-          error = sqlite3StatementPrepare(&databaseStatementHandle->sqlite.statementHandle,
-                                          databaseHandle->sqlite.handle,
-                                          sqlString
-                                         );
-        }
-        DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-        if (error != ERROR_NONE)
-        {
-          #ifndef NDEBUG
-            String_delete(databaseStatementHandle->debug.sqlString);
-          #endif /* not NDEBUG */
-          return error;
-        }
-
-        // get value/result count
-        databaseStatementHandle->parameterCount = sqlite3_bind_parameter_count(databaseStatementHandle->sqlite.statementHandle);
-        databaseStatementHandle->resultCount    = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
-
-        // allocate bind data
-        databaseStatementHandle->sqlite.bind = (DatabaseValue**)calloc(databaseStatementHandle->parameterCount+databaseStatementHandle->resultCount,
-                                                                       sizeof(DatabaseValue*)
-                                                                      );
-        if (databaseStatementHandle->sqlite.bind == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
+        error = sqlite3StatementPrepare(databaseStatementHandle,
+                                        sqlString
+                                       );
       }
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        {
-          // prepare SQL statement
-          DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-          {
-            databaseStatementHandle->mariadb.statementHandle = mysql_stmt_init(databaseHandle->mariadb.handle);
-            #ifndef NDEBUG
-              if (databaseStatementHandle->mariadb.statementHandle == NULL)
-              {
-                HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s: %s",
-                                    mysql_errno(databaseHandle->mariadb.handle),
-                                    mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle),
-                                    sqlString
-                                   );
-              }
-            #endif /* not NDEBUG */
-
-            error = mariaDBPrepareStatement(databaseStatementHandle->mariadb.statementHandle,
-                                            sqlString
-                                           );
-          }
-          DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-          if (error != ERROR_NONE)
-          {
-            mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
-            #ifndef NDEBUG
-              String_delete(databaseStatementHandle->debug.sqlString);
-            #endif /* not NDEBUG */
-            return error;
-          }
-
-          // get value/result count
-          databaseStatementHandle->parameterCount = mysql_stmt_param_count(databaseStatementHandle->mariadb.statementHandle);
-          databaseStatementHandle->resultCount    = mysql_stmt_field_count(databaseStatementHandle->mariadb.statementHandle);
-
-          // allocate bind data
-          databaseStatementHandle->mariadb.values.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->parameterCount,
-                                                                             sizeof(MYSQL_BIND)
-                                                                            );
-          if (databaseStatementHandle->mariadb.values.bind == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          databaseStatementHandle->mariadb.values.time = (MYSQL_TIME*)calloc(databaseStatementHandle->parameterCount,
-                                                                             sizeof(MYSQL_TIME)
-                                                                            );
-          if (databaseStatementHandle->mariadb.values.time == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-
-          databaseStatementHandle->mariadb.results.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->resultCount,
-                                                                              sizeof(MYSQL_BIND)
-                                                                             );
-          if (databaseStatementHandle->mariadb.results.bind == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          databaseStatementHandle->mariadb.results.time = (MYSQL_TIME*)calloc(databaseStatementHandle->resultCount,
-                                                                              sizeof(MYSQL_TIME)
-                                                                             );
-          if (databaseStatementHandle->mariadb.results.time == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          databaseStatementHandle->mariadb.results.lengths = (unsigned long*)calloc(databaseStatementHandle->resultCount,
-                                                                                    sizeof(unsigned long)
-                                                                                   );
-          if (databaseStatementHandle->mariadb.results.lengths == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-        }
+        error = mariaDBPrepareStatement(databaseStatementHandle,
+                                        sqlString
+                                       );
       #else /* HAVE_MARIADB */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        {
-          PGresult *postgresqlResult;
-
-          // prepare SQL statement
-          DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-          {
-            error = postgresqlPrepareStatement(&databaseStatementHandle->postgresql,
-                                               databaseHandle,
-                                               sqlString,
-                                               parameterCount
-                                              );
-          }
-          DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-          if (error != ERROR_NONE)
-          {
-            #ifndef NDEBUG
-              String_delete(databaseStatementHandle->debug.sqlString);
-            #endif /* not NDEBUG */
-            return error;
-          }
-
-          // get value/result count
-          postgresqlResult = PQdescribePrepared(databaseHandle->postgresql.handle,
-                                                databaseStatementHandle->postgresql.name
-                                               );
-          if (PQresultStatus(postgresqlResult) != PGRES_COMMAND_OK)
-          {
-            #ifndef NDEBUG
-              String_delete(databaseStatementHandle->debug.sqlString);
-            #endif /* not NDEBUG */
-            return ERRORX_(DATABASE,
-                           PQresultStatus(postgresqlResult),
-                           "%s: %s",
-                           PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY),
-                           sqlString
-                         );
-          }
-          databaseStatementHandle->parameterCount = parameterCount;
-          databaseStatementHandle->resultCount    = PQnfields(postgresqlResult);
-          PQclear(postgresqlResult);
-
-          // allocate bind data
-          databaseStatementHandle->postgresql.bind = (PostgreSQLBind*)calloc(databaseStatementHandle->parameterCount,
-                                                                             sizeof(PostgreSQLBind)
-                                                                            );
-          if (databaseStatementHandle->postgresql.bind == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-
-          databaseStatementHandle->postgresql.parameterValues = (const char**)calloc(databaseStatementHandle->parameterCount,
-                                                                                     sizeof(char*)
-                                                                                    );
-          if (databaseStatementHandle->postgresql.parameterValues == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-
-          databaseStatementHandle->postgresql.parameterLengths = (int*)calloc(databaseStatementHandle->parameterCount,
-                                                                              sizeof(int)
-                                                                             );
-          if (databaseStatementHandle->postgresql.parameterLengths == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-
-          databaseStatementHandle->postgresql.parameterFormats = (int*)calloc(databaseStatementHandle->parameterCount,
-                                                                              sizeof(int)
-                                                                             );
-          if (databaseStatementHandle->postgresql.parameterFormats == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-
-          databaseStatementHandle->postgresql.result = NULL;
-        }
+        error = postgresqlPrepareStatement(databaseStatementHandle,
+                                           sqlString,
+                                           parameterCount
+                                          );
       #else /* HAVE_POSTGRESQL */
         UNUSED_VARIABLE(parameterCount);
 
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
+  }
+  if (error != ERROR_NONE)
+  {
+    #ifndef NDEBUG
+      String_delete(databaseStatementHandle->debug.sqlString);
+    #endif /* not NDEBUG */
+    return error;
+  }
+
+  // allocate results
+  databaseStatementHandle->results = (DatabaseValue*)calloc(databaseStatementHandle->resultCount,
+                                                            sizeof(DatabaseValue)
+                                                           );
+  if (databaseStatementHandle->results == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
   }
 
   #ifdef NDEBUG
@@ -5944,17 +6271,6 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
           databaseStatementHandle->resultCount
          );
 
-  // allocate results
-  databaseStatementHandle->results = (DatabaseValue*)calloc(databaseStatementHandle->resultCount,
-                                                            sizeof(DatabaseValue)
-                                                           );
-  if (databaseStatementHandle->results == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  databaseStatementHandle->resultIndex = 0;
-
-  // bind results
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -5963,6 +6279,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
         for (i = 0; i < columnsCount; i++)
         {
+          assert(databaseStatementHandle->resultIndex < databaseStatementHandle->resultCount);
+
           databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
           switch (columns[i].type)
           {
@@ -6019,6 +6337,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
           for (i = 0; i < columnsCount; i++)
           {
+            assert(databaseStatementHandle->resultIndex < databaseStatementHandle->resultCount);
+
             databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
             switch (columns[i].type)
             {
@@ -6130,6 +6450,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
           for (i = 0; i < columnsCount; i++)
           {
+            assert(databaseStatementHandle->resultIndex < databaseStatementHandle->resultCount);
+
             databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
             switch (columns[i].type)
             {
@@ -6188,237 +6510,254 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 }
 
 /***********************************************************************\
-* Name   : finalizeStatement
-* Purpose: finalize SQL statement
-* Input  : databaseStatementHandle - database query handle
+* Name   : executePreparedQuery
+* Purpose: execute prepared query (single insert, update, delete)
+* Input  : databaseHandle  - database handle
+*          changedRowCount - number of changed rows (can be NULL)
+*          timeout         - timeout [ms]
+*          values          - values; use macro DATABASE_VALUES()
+*          valueCount      - number of result columns
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
-  LOCAL void finalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
-#else /* not NDEBUG */
-  LOCAL void __finalizeStatement(const char              *__fileName__,
-                                 ulong                   __lineNb__,
-                                 DatabaseStatementHandle *databaseStatementHandle
-                                )
-#endif /* NDEBUG */
+LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHandle,
+                                  ulong                   *changedRowCount,
+                                  long                    timeout
+                                 )
 {
-  uint i;
+  #define MAX_SLEEP_TIME 500L  // [ms]
+
+  bool                          done;
+  Errors                        error;
+  TimeoutInfo                   timeoutInfo;
+  const DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(databaseStatementHandle->databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
-  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
+  assert(isReadLock(databaseStatementHandle->databaseHandle) || isReadWriteLock(databaseStatementHandle->databaseHandle));
 
-  #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(databaseStatementHandle,DatabaseStatementHandle);
-  #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseStatementHandle,DatabaseStatementHandle);
-  #endif /* NDEBUG */
-
-  // free result data
-  for (i = 0; i < databaseStatementHandle->resultCount; i++)
+  done          = FALSE;
+  error         = ERROR_NONE;
+  Misc_initTimeout(&timeoutInfo,timeout);
+  do
   {
-    switch (databaseStatementHandle->results[i].type)
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
+// TODO: reactivate when each thread has his own index handle
+#if 0
+    assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
+#endif
+
+    switch (Database_getType(databaseStatementHandle->databaseHandle))
     {
-      case DATABASE_DATATYPE_NONE:
-        break;
-      case DATABASE_DATATYPE:
-        break;
-      case DATABASE_DATATYPE_PRIMARY_KEY:
-      case DATABASE_DATATYPE_KEY:
-        break;
-      case DATABASE_DATATYPE_BOOL:
-        break;
-      case DATABASE_DATATYPE_INT:
-        break;
-      case DATABASE_DATATYPE_INT64:
-        break;
-      case DATABASE_DATATYPE_UINT:
-        break;
-      case DATABASE_DATATYPE_UINT64:
-        break;
-      case DATABASE_DATATYPE_DOUBLE:
-        break;
-      case DATABASE_DATATYPE_ENUM:
-        break;
-      case DATABASE_DATATYPE_DATETIME:
-        break;
-      case DATABASE_DATATYPE_STRING:
-        String_delete(databaseStatementHandle->results[i].string);
-        break;
-      case DATABASE_DATATYPE_CSTRING:
-        HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-        break;
-      case DATABASE_DATATYPE_BLOB:
-        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        break;
-      case DATABASE_DATATYPE_ARRAY:
-        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-
-  // free bind data
-  switch (Database_getType(databaseStatementHandle->databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      {
-        // finalize statement
-        sqlite3_finalize(databaseStatementHandle->sqlite.statementHandle);
-
-        // free bind data
-        if (databaseStatementHandle->sqlite.bind != NULL) free(databaseStatementHandle->sqlite.bind);
-      }
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
+      case DATABASE_TYPE_SQLITE3:
         {
-          // finalize statement
-          mysql_stmt_close(databaseStatementHandle->mariadb.statementHandle);
+          int sqliteResult;
 
-          // free bind data
-          for (i = 0; i < (databaseStatementHandle->resultCount); i++)
+          // do query
+          sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
+          if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
           {
-            switch (databaseStatementHandle->mariadb.results.bind[i].buffer_type)
+            error = ERROR_NONE;
+          }
+          else if (sqliteResult == SQLITE_MISUSE)
+          {
+            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                                sqliteResult,
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
+          else if ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
+          {
+            error = ERROR_DATABASE_BUSY;
+          }
+          else if (sqliteResult == SQLITE_INTERRUPT)
+          {
+            error = ERRORX_(INTERRUPTED,
+                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                            "%s",
+                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                           );
+          }
+          else
+          {
+            error = ERRORX_(DATABASE,
+                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                            "%s",
+                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                           );
+          }
+
+          if (error == ERROR_NONE)
+          {
+            // get number of changes
+            if (changedRowCount != NULL)
             {
-              case MYSQL_TYPE_TINY:
-              case MYSQL_TYPE_SHORT:
-              case MYSQL_TYPE_LONG:
-              case MYSQL_TYPE_INT24:
-              case MYSQL_TYPE_LONGLONG:
-              case MYSQL_TYPE_DECIMAL:
-              case MYSQL_TYPE_NEWDECIMAL:
-                break;
-              case MYSQL_TYPE_FLOAT:
-              case MYSQL_TYPE_DOUBLE:
-                break;
-              case MYSQL_TYPE_BIT:
-                break;
-              case MYSQL_TYPE_TIMESTAMP:
-              case MYSQL_TYPE_DATE:
-              case MYSQL_TYPE_TIME:
-              case MYSQL_TYPE_YEAR:
-              case MYSQL_TYPE_DATETIME:
-                break;
-              case MYSQL_TYPE_STRING:
-                free(databaseStatementHandle->mariadb.results.bind[i].buffer);
-                break;
-              case MYSQL_TYPE_VAR_STRING:
-                break;
-              case MYSQL_TYPE_BLOB:
-              case MYSQL_TYPE_SET:
-              case MYSQL_TYPE_GEOMETRY:
-              case MYSQL_TYPE_NULL:
-                break;
-              default:
-                #ifndef NDEBUG
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                #endif /* NDEBUG */
-                break;
+              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
             }
           }
-          if (databaseStatementHandle->mariadb.results.lengths != NULL) free(databaseStatementHandle->mariadb.results.lengths);
-          if (databaseStatementHandle->mariadb.results.time != NULL) free(databaseStatementHandle->mariadb.results.time);
-          if (databaseStatementHandle->mariadb.results.bind != NULL) free(databaseStatementHandle->mariadb.results.bind);
-          if (databaseStatementHandle->mariadb.values.time != NULL) free(databaseStatementHandle->mariadb.values.time);
-          if (databaseStatementHandle->mariadb.values.bind != NULL) free(databaseStatementHandle->mariadb.values.bind);
         }
-      #else /* HAVE_MARIADB */
-        return;
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-        {
-          PostgresSQLUseInfo *useInfo;
-
-          assert(databaseStatementHandle->postgresql.hashTableEntry != NULL);
-          assert(databaseStatementHandle->postgresql.hashTableEntry->data != NULL);
-          assert(databaseStatementHandle->postgresql.hashTableEntry->length == sizeof(PostgresSQLUseInfo));
-
-          // finalize statement
-          if (databaseStatementHandle->postgresql.result != NULL)
+        break;
+      case DATABASE_TYPE_MARIADB:
+        #if defined(HAVE_MARIADB)
           {
-            PQclear(databaseStatementHandle->postgresql.result);
+            // bind values
+            if (databaseStatementHandle->parameterCount > 0)
+            {
+              if (mysql_stmt_bind_param(databaseStatementHandle->mariadb.statementHandle,
+                                        databaseStatementHandle->mariadb.values.bind
+                                       ) != 0
+                 )
+              {
+                error = ERRORX_(DATABASE_BIND,
+                                mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                                "parameters: %s",
+                                mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
+                               );
+                break;
+              }
+            }
+// TODO: required? queries do not have an result
+            if (databaseStatementHandle->resultCount > 0)
+            {
+              if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
+                                         databaseStatementHandle->mariadb.results.bind
+                                        ) != 0
+                 )
+              {
+                error = ERRORX_(DATABASE_BIND,
+                                mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                                "results: %s",
+                                mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
+                               );
+                break;
+              }
+            }
+
+            // do query
+            error = mariaDBExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
+
+            // get number of changes
+            if (changedRowCount != NULL)
+            {
+              (*changedRowCount) += (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
+            }
           }
-          useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
-          assert(useInfo->count > 0);
-          useInfo->count--;
-
-          if (HashTable_count(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable) >= POSTGRESQL_HASHTABLE_CLEAN_SIZE)
+        #else /* HAVE_MARIADB */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MARIADB */
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        #if defined(HAVE_POSTGRESQL)
           {
-            // clean-up SQL string hashtable
-            HashTable_iterate(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
-                              CALLBACK_INLINE(bool,(const HashTableEntry *hashTableEntry, void *userData),
-                              {
-                                PostgresSQLUseInfo *useInfo;
-                                PGresult           *postgresqlResult;
-                                char               sqlString[256];
-                                ExecStatusType     postgreSQLExecStatus;
+            PGresult       *postgresqlResult;
+            ExecStatusType postgreSQLExecStatus;
 
-                                assert(hashTableEntry != NULL);
-                                assert(hashTableEntry->keyData != NULL);
-                                assert(hashTableEntry->data != NULL);
-                                assert(hashTableEntry->length == sizeof(PostgresSQLUseInfo));
+            // do query
+            postgresqlResult = PQexecPrepared(databaseStatementHandle->databaseHandle->postgresql.handle,
+                                              databaseStatementHandle->postgresql.name,
+                                              databaseStatementHandle->parameterCount,
+                                              databaseStatementHandle->postgresql.parameterValues,
+                                              databaseStatementHandle->postgresql.parameterLengths,
+                                              databaseStatementHandle->postgresql.parameterFormats,
+                                              0  /* resultFormat text;
+                                                    Note: binary would be more efficient, but PostgreSQL lake any useful
+                                                          documentation how to do that :-(
+                                                          E. g. how to convert a PostgreSQL binary "numeric" into a uint64?
+                                                          There is only a PGTYPESnumeric_to_long()
+                                                 */
+                                             );
+            if (postgresqlResult != NULL)
+            {
+              postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+              if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
+                   || (postgreSQLExecStatus == PGRES_TUPLES_OK)
+                 )
+              {
+                // get number of changes
+                if (changedRowCount != NULL)
+                {
+                  stringToUInt64(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
+                }
 
-                                UNUSED_VARIABLE(userData);
+                error = ERROR_NONE;
+              }
+              else
+              {
+                error = ERRORX_(DATABASE,
+                                postgreSQLExecStatus,
+                                "%s",
+                                PQresultErrorField(postgresqlResult,PG_DIAG_MESSAGE_PRIMARY)
+                               );
+              }
 
-                                useInfo = (PostgresSQLUseInfo*)hashTableEntry->data;
-                                if (   (useInfo->count == 0)
-                                    && (Misc_getTimestamp() >= (useInfo->timestamp+POSTGRESQL_HASHTABLE_CLEAN_TIME*US_PER_S))
-                                   )
-                                {
-                                  postgresqlResult = PQexec(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                            stringFormat(sqlString,sizeof(sqlString),"DEALLOCATE s%016"PRIx64,(intptr_t)hashTableEntry)
-                                                           );
-                                  if (postgresqlResult != NULL)
-                                  {
-                                    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
-                                    if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
-                                         || (postgreSQLExecStatus == PGRES_TUPLES_OK)
-                                       )
-                                    {
-                                      HashTable_remove(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
-                                                       hashTableEntry->keyData,
-                                                       hashTableEntry->keyLength
-                                                      );
-                                    }
-
-                                    PQclear(postgresqlResult);
-                                  }
-                                }
-
-                                return TRUE;
-                              },NULL)
+              PQclear(postgresqlResult);
+            }
+            else
+            {
+              error = ERRORX_(DATABASE,
+                              0,
+                              "%s",
+                              postgresqlErrorMessage(databaseStatementHandle->databaseHandle->postgresql.handle)
                              );
+            }
           }
+        #else /* HAVE_POSTGRESQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_POSTGRESQL */
+        break;
+    }
 
-          // free bind data
-          free(databaseStatementHandle->postgresql.parameterFormats);
-          free(databaseStatementHandle->postgresql.parameterLengths);
-          free(databaseStatementHandle->postgresql.parameterValues);
-          free(databaseStatementHandle->postgresql.bind);
-        }
-      #else /* HAVE_POSTGRESQL */
-        return;
-      #endif /* HAVE_POSTGRESQL */
-      break;
+    // check result
+    if      (error == ERROR_NONE)
+    {
+      done = TRUE;
+    }
+    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+    {
+      // call busy handlers
+      LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
+      {
+        assert(busyHandlerNode->function != NULL);
+        busyHandlerNode->function(busyHandlerNode->userData);
+      }
+
+      // wait a short time and try again
+      Misc_mdelay(Misc_getRestTimeout(&timeoutInfo,MAX_SLEEP_TIME));
+
+      error = ERROR_NONE;
+    }
   }
-  if (databaseStatementHandle->results != NULL) free(databaseStatementHandle->results);
+  while (   !done
+         && (error == ERROR_NONE)
+         && !Misc_isTimeout(&timeoutInfo)
+        );
 
-  // free resources
-  #ifndef NDEBUG
-    String_delete(databaseStatementHandle->debug.sqlString);
-  #endif /* not NDEBUG */
+  if      (error != ERROR_NONE)
+  {
+    return error;
+  }
+  else if (Misc_isTimeout(&timeoutInfo))
+  {
+    #ifndef NDEBUG
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+    #else
+      return ERROR_DATABASE_TIMEOUT;
+    #endif
+  }
+  else
+  {
+    return ERROR_NONE;
+  }
+
+  #undef SLEEP_TIME
 }
 
 /***********************************************************************\
@@ -6497,6 +6836,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 
         if (sqliteResult == SQLITE_ROW)
         {
+          assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
           for (i = 0; i < databaseStatementHandle->resultCount; i++)
           {
             // get name
@@ -6617,6 +6957,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 mysqlMetaData = NULL;
                 mysqlFields   = NULL;
               }
+              assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
               for (i = 0; i < databaseStatementHandle->resultCount; i++)
               {
                 // get name
@@ -6692,6 +7033,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           }
         }
       #else /* HAVE_MARIADB */
+        UNUSED_VARIABLE(flags);
+        UNUSED_VARIABLE(timeout);
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
@@ -6700,29 +7043,27 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           uint       i;
           const char *tail;
 
-          while (   (databaseStatementHandle->postgresql.result == NULL)
-                 || (databaseStatementHandle->postgresql.rowIndex >= databaseStatementHandle->postgresql.rowCount)
-                )
+          // get next row
+          if (   (databaseStatementHandle->postgresql.result == NULL)
+              || (databaseStatementHandle->postgresql.rowIndex >= databaseStatementHandle->postgresql.rowCount)
+             )
           {
-//fprintf(stderr,"%s:%d: result=%p\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.result);
             if (databaseStatementHandle->postgresql.result != NULL) PQclear(databaseStatementHandle->postgresql.result);
 //PQconsumeInput(databaseStatementHandle->databaseHandle->postgresql.handle);
-            databaseStatementHandle->postgresql.result = PQgetResult(databaseStatementHandle->databaseHandle->postgresql.handle);
-            if (databaseStatementHandle->postgresql.result == NULL)
-            {
-              break;
-            }
+            databaseStatementHandle->postgresql.result   = PQgetResult(databaseStatementHandle->databaseHandle->postgresql.handle);
             databaseStatementHandle->postgresql.rowIndex = 0;
 //            stringToUInt64(PQcmdTuples(databaseStatementHandle->postgresql.result),&databaseStatementHandle->postgresql.rowCount,NULL);
-            databaseStatementHandle->postgresql.rowCount = PQntuples(databaseStatementHandle->postgresql.result);
+            databaseStatementHandle->postgresql.rowCount = (PQresultStatus(databaseStatementHandle->postgresql.result) == PGRES_SINGLE_TUPLE) ? 1 : 0;//PQntuples(databaseStatementHandle->postgresql.result);
           }
 
+          // get results
           if (   (databaseStatementHandle->postgresql.result != NULL)
               && (databaseStatementHandle->postgresql.rowIndex < databaseStatementHandle->postgresql.rowCount)
              )
           {
 //fprintf(stderr,"%s:%d: result=%p rows=%d values=%d\n",__FILE__,__LINE__,databaseStatementHandle->postgresql.result,databaseStatementHandle->postgresql.rowCount,PQnfields(databaseStatementHandle->postgresql.result));
 //PQprint(stdout,databaseStatementHandle->postgresql.result,&p);
+            assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
             for (i = 0; i < databaseStatementHandle->resultCount; i++)
             {
               assert(PQfformat(databaseStatementHandle->postgresql.result,i) == 0);  // expect text format
@@ -6807,6 +7148,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           }
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(flags);
+        UNUSED_VARIABLE(timeout);
       #endif /* HAVE_POSTGRESQL */
       break;
   }
@@ -6856,29 +7199,26 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 }
 
 /***********************************************************************\
-* Name   : executeStatement
-* Purpose: execute single database statement with prepared statement or
-*          query
+* Name   : executePreparedStatement
+* Purpose: execute prepared statement (select)
 * Input  : databaseHandle      - database handle
+*          databaseRowFunction - row call-back function (can be NULL)
+*          databaseRowUserData - user data for row call-back
 *          changedRowCount     - number of changed rows (can be NULL)
+*          flags               - flags; see DATABASE_FLAGS_...
 *          timeout             - timeout [ms]
-*          flags               - database flags; see DATABASE_FLAG_...
-*          sqlString           - SQL command string
-*          parameters          - parameters
-*          parameterCount      - number of parameters
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
-                              ulong                   *changedRowCount,
-                              long                    timeout,
-                              uint                    flags,
-                              const char              *sqlString,
-                              const DatabaseParameter parameters[],
-                              uint                    parameterCount
-                             )
+LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatementHandle,
+                                      DatabaseRowFunction     databaseRowFunction,
+                                      void                    *databaseRowUserData,
+                                      ulong                   *changedRowCount,
+                                      uint                    flags,
+                                      long                    timeout
+                                     )
 {
   #define SLEEP_TIME 500L  // [ms]
 
@@ -6888,321 +7228,211 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   uint                          retryCount;
   const DatabaseBusyHandlerNode *busyHandlerNode;
 
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->databaseNode != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
-  assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
-  assert(databaseHandle->sqlite.handle != NULL);
-  assert(sqlString != NULL);
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
+  assert(databaseStatementHandle->databaseHandle->databaseNode != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle->databaseNode);
+  assert(isReadLock(databaseStatementHandle->databaseHandle) || isReadWriteLock(databaseStatementHandle->databaseHandle));
 
-  UNUSED_VARIABLE(flags);
+  // bind prepared values+results
+  error = ERROR_UNKNOWN;
+  switch (Database_getType(databaseStatementHandle->databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      // nothing to do
+      error = ERROR_NONE;
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        {
+          error = ERROR_NONE;
 
-// TODO: replace by prepare+execute prepared
+          if (databaseStatementHandle->parameterCount > 0)
+          {
+            if (mysql_stmt_bind_param(databaseStatementHandle->mariadb.statementHandle,
+                                      databaseStatementHandle->mariadb.values.bind
+                                     ) != 0
+               )
+            {
+              error = ERRORX_(DATABASE_BIND,
+                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                              "parameters: %s",
+                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
+                             );
+              break;
+            }
+          }
+          if (databaseStatementHandle->resultCount > 0)
+          {
+            if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
+                                       databaseStatementHandle->mariadb.results.bind
+                                      ) != 0
+               )
+            {
+              error = ERRORX_(DATABASE_BIND,
+                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                              "results: %s",
+                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
+                             );
+              break;
+            }
+          }
+        }
+      #else /* HAVE_MARIADB */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      // nothing to do
+      #if defined(HAVE_POSTGRESQL)
+        error = ERROR_NONE;
+      #else /* HAVE_POSTGRESQL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
   done          = FALSE;
   error         = ERROR_NONE;
   maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
   retryCount    = 0;
   do
   {
-    switch (Database_getType(databaseHandle))
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
+// TODO: reactivate when each thread has his own index handle
+#if 0
+    assert(Thread_isCurrentThread(databaseStatementHandle->databaseHandle->databaseNode->readWriteLockedBy));
+#endif
+
+    // step and process rows
+    switch (Database_getType(databaseStatementHandle->databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
         {
-          error = sqlite3Execute(databaseHandle->sqlite.handle,
-                                 sqlString
-                                );
-          if (error != ERROR_NONE)
+          if (databaseRowFunction != NULL)
           {
-            break;
+            // step
+            if (getNextRow(databaseStatementHandle,flags,timeout))
+            {
+              do
+              {
+                error = databaseRowFunction(databaseStatementHandle->results,
+                                            databaseStatementHandle->resultCount,
+                                            databaseRowUserData
+                                           );
+              }
+              while (   (error == ERROR_NONE)
+                     && getNextRow(databaseStatementHandle,flags,timeout)
+                    );
+            }
+            else
+            {
+              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+            }
+
+            // get number of changes
+            if (changedRowCount != NULL)
+            {
+              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
+            }
           }
         }
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            MYSQL_STMT *statementHandle;
-
-            // prepare SQL statement
-            statementHandle = mysql_stmt_init(databaseHandle->mariadb.handle);
-            assert(statementHandle != NULL);
-            error = mariaDBPrepareStatement(statementHandle,
-                                            sqlString
-                                           );
+            error = mariaDBExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
             if (error != ERROR_NONE)
             {
-              mysql_stmt_close(statementHandle);
               break;
             }
+            (void)mysql_stmt_store_result(databaseStatementHandle->mariadb.statementHandle);
 
-            // step and process rows
-            error = mariaDBExecutePreparedStatement(statementHandle);
-            if (error != ERROR_NONE)
+            if (databaseRowFunction != NULL)
             {
-              mysql_stmt_close(statementHandle);
-              break;
-            }
+              // step
+              if (getNextRow(databaseStatementHandle,flags,timeout))
+              {
+                do
+                {
+                  error = databaseRowFunction(databaseStatementHandle->results,
+                                              databaseStatementHandle->resultCount,
+                                              databaseRowUserData
+                                             );
+                }
+                while (   (error == ERROR_NONE)
+                       && getNextRow(databaseStatementHandle,flags,timeout)
+                      );
+              }
+              else
+              {
+                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+              }
 
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)mysql_stmt_affected_rows(statementHandle);
+              // get number of changes
+              if (changedRowCount != NULL)
+              {
+                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
+              }
             }
-
-            // done SQL statement
-            mysql_stmt_close(statementHandle);
           }
         #else /* HAVE_MARIADB */
-          UNUSED_VARIABLE(changedRowCount);
-          UNUSED_VARIABLE(parameters);
-          UNUSED_VARIABLE(parameterCount);
-
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
           {
-            PostgresSQLStatement statement;
-            Oid                  *parameterTypes;
-            uint                 i;
-
-            // allocate parameter data
-            statement.bind = (PostgreSQLBind*)malloc(parameterCount*sizeof(PostgreSQLBind));
-            if (statement.bind == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            parameterTypes = (Oid*)malloc(parameterCount*sizeof(Oid));
-            if (parameterTypes == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            statement.parameterValues = (const char**)malloc(parameterCount*sizeof(const char*));
-            if (statement.parameterValues == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            statement.parameterLengths = (int*)malloc(parameterCount*sizeof(int));
-            if (statement.parameterLengths == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            statement.parameterFormats = (int*)malloc(parameterCount*sizeof(int));
-            if (statement.parameterFormats == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-
-            // init parameter types
-            for (i = 0; i < parameterCount; i++)
-            {
-            }
-
-            // prepare SQL statement
-            error = postgresqlPrepareStatement(&statement,
-                                               databaseHandle,
-                                               sqlString,
-                                               parameterCount
-                                              );
+            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
+                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
+                                                       databaseStatementHandle->parameterCount,
+                                                       flags
+                                                      );
             if (error != ERROR_NONE)
             {
               break;
             }
 
-            // bind parameters
-            for (i = 0; i < parameterCount; i++)
+            if (databaseRowFunction != NULL)
             {
-              switch (parameters[i].type)
+              // step
+              if (getNextRow(databaseStatementHandle,flags,timeout))
               {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].u64 = htobe64(parameters[i].id);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,parameters[i].id);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.parameterValues[i]  = (const char*)&parameters[i].b;
-                    statement.parameterLengths[i] = sizeof(parameters[i].b);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%s",parameters[i].b ? "YES" : "NO");
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].i = htobe32(parameters[i].i);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].i;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].i);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%d",parameters[i].i);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].i64 = htobe64(parameters[i].i64);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].i64;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].i64);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,parameters[i].i64);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_UINT:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].u = htobe32(parameters[i].u);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].u);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    // Note: convert to a signed 32bit value, because PostgreSQL limit the range of an int to -2147483648 to +2147483647
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%d",(int)parameters[i].u);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_UINT64:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].u64 = htobe64(parameters[i].u64);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    // Note: convert to a signed 64bit value, because PostgreSQL limit the range of an int64 to -9223372036854775808 to +9223372036854775807
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,(int64)parameters[i].u64);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].d = htobe64(parameters[i].d);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].d;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].d);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%lf",parameters[i].d);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_ENUM:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].u = htobe32(parameters[i].u);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].u);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%u",parameters[i].u);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  #ifdef POSTGRESQL_BINARY_INTERFACE
-                    statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRESQL_BASE_TIMESTAMP)*US_PER_SECOND);
-                    statement.parameterValues[i]  = (const char*)&statement.bind[i].dateTime;
-                    statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
-                    statement.parameterFormats[i] = 1;
-                  #else
-                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
-                    statement.parameterValues[i]  = statement.bind[i].data;
-                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
-                    statement.parameterFormats[i] = 0;
-                  #endif
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                  statement.parameterValues[i]  = parameters[i].s;
-                  statement.parameterLengths[i] = stringLength(parameters[i].s);
-                  statement.parameterFormats[i] = 1;
-                  break;
-                case DATABASE_DATATYPE_CSTRING:
-                  statement.parameterValues[i]  = String_cString(parameters[i].string);
-                  statement.parameterLengths[i] = String_length(parameters[i].string);
-                  statement.parameterFormats[i] = 1;
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                case DATABASE_DATATYPE_ARRAY:
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break;
+                do
+                {
+                  error = databaseRowFunction(databaseStatementHandle->results,
+                                              databaseStatementHandle->resultCount,
+                                              databaseRowUserData
+                                             );
+                }
+                while (   (error == ERROR_NONE)
+                       && getNextRow(databaseStatementHandle,flags,timeout)
+                      );
+              }
+              else
+              {
+                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+              }
+
+              // get number of changes
+              if (changedRowCount != NULL)
+              {
+                (*changedRowCount) += databaseStatementHandle->postgresql.rowCount;
               }
             }
-
-            // execute SQL statement
-            error = postgresqlExecute(databaseHandle->postgresql.handle,
-                                      changedRowCount,
-                                      sqlString,
-                                      parameterTypes,
-                                      statement.parameterValues,
-                                      statement.parameterLengths,
-                                      statement.parameterFormats,
-                                      parameterCount
-                                     );
-            if (error != ERROR_NONE)
-            {
-              free(statement.parameterFormats);
-              free(statement.parameterLengths);
-              free(statement.parameterValues);
-              free(parameterTypes);
-              free(statement.bind);
-              break;
-            }
-
-            // free resources
-            free(statement.parameterFormats);
-            free(statement.parameterLengths);
-            free(statement.parameterValues);
-            free(parameterTypes);
-            free(statement.bind);
           }
         #else /* HAVE_POSTGRESQL */
-          UNUSED_VARIABLE(changedRowCount);
-          UNUSED_VARIABLE(parameters);
-          UNUSED_VARIABLE(parameterCount);
-
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
     }
-
-    #ifndef NDEBUG
-      // clear SQL command, backtrace
-      String_clear(databaseHandle->debug.current.sqlString);
-    #endif /* not NDEBUG */
 
     // check result
     if      (error == ERROR_NONE)
@@ -7215,7 +7445,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
 //Database_debugPrintLockInfo(databaseHandle);
       // execute registered busy handlers
 //TODO: lock list?
-      LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
+      LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
         busyHandlerNode->function(busyHandlerNode->userData);
@@ -7230,19 +7460,241 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
     }
     else if (Error_getCode(error) == ERROR_CODE_DATABASE_INTERRUPTED)
     {
+// TODO: error
       // report interrupt
-      error = ERRORX_(DATABASE,
-                      sqlite3_errcode(databaseHandle->sqlite.handle),
-                      "%s: %s",
-                      sqlite3_errmsg(databaseHandle->sqlite.handle),
-                      sqlString
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                      "%s",
+                      sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
                      );
     }
   }
   while (   !done
          && (error == ERROR_NONE)
-         && (retryCount <= maxRetryCount)
+         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
         );
+
+  if      (error != ERROR_NONE)
+  {
+    return error;
+  }
+  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
+  {
+    #ifndef NDEBUG
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+    #else
+      return ERROR_DATABASE_TIMEOUT;
+    #endif
+  }
+
+  #undef SLEEP_TIME
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : finalizeStatement
+* Purpose: finalize SQL statement
+* Input  : databaseStatementHandle - database query handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  LOCAL void finalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
+#else /* not NDEBUG */
+  LOCAL void __finalizeStatement(const char              *__fileName__,
+                                 ulong                   __lineNb__,
+                                 DatabaseStatementHandle *databaseStatementHandle
+                                )
+#endif /* NDEBUG */
+{
+  uint i;
+
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(databaseStatementHandle->databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
+  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(databaseStatementHandle,DatabaseStatementHandle);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseStatementHandle,DatabaseStatementHandle);
+  #endif /* NDEBUG */
+
+  // free result data
+  assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
+  for (i = 0; i < databaseStatementHandle->resultCount; i++)
+  {
+    switch (databaseStatementHandle->results[i].type)
+    {
+      case DATABASE_DATATYPE_NONE:
+        break;
+      case DATABASE_DATATYPE:
+        break;
+      case DATABASE_DATATYPE_PRIMARY_KEY:
+      case DATABASE_DATATYPE_KEY:
+        break;
+      case DATABASE_DATATYPE_BOOL:
+        break;
+      case DATABASE_DATATYPE_INT:
+        break;
+      case DATABASE_DATATYPE_INT64:
+        break;
+      case DATABASE_DATATYPE_UINT:
+        break;
+      case DATABASE_DATATYPE_UINT64:
+        break;
+      case DATABASE_DATATYPE_DOUBLE:
+        break;
+      case DATABASE_DATATYPE_ENUM:
+        break;
+      case DATABASE_DATATYPE_DATETIME:
+        break;
+      case DATABASE_DATATYPE_STRING:
+        String_delete(databaseStatementHandle->results[i].string);
+        break;
+      case DATABASE_DATATYPE_CSTRING:
+        HALT_INTERNAL_ERROR_NOT_SUPPORTED();
+        break;
+      case DATABASE_DATATYPE_BLOB:
+        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        break;
+      case DATABASE_DATATYPE_ARRAY:
+        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+  }
+
+  // free statement
+  switch (Database_getType(databaseStatementHandle->databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      sqlite3FinalizeStatement(databaseStatementHandle);
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        mariaDBFinalizeStatement(databaseStatementHandle);
+      #else /* HAVE_MARIADB */
+        return;
+      #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        postgresqlFinalizeStatement(databaseStatementHandle);
+      #else /* HAVE_POSTGRESQL */
+        return;
+      #endif /* HAVE_POSTGRESQL */
+      break;
+  }
+
+  // free resources
+  if (databaseStatementHandle->results != NULL) free(databaseStatementHandle->results);
+  #ifndef NDEBUG
+    String_delete(databaseStatementHandle->debug.sqlString);
+  #endif /* not NDEBUG */
+}
+
+/***********************************************************************\
+* Name   : executeQuery
+* Purpose: execute query with prepared statement
+* Input  : databaseHandle      - database handle
+*          changedRowCount     - number of changed rows (can be NULL)
+*          timeout             - timeout [ms]
+*          flags               - database flags; see DATABASE_FLAG_...
+*          sqlString           - SQL command string
+*          parameters          - parameters
+*          parameterCount      - number of parameters
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors executeQuery(DatabaseHandle          *databaseHandle,
+                          ulong                   *changedRowCount,
+                          long                    timeout,
+                          uint                    flags,
+                          const char              *sqlString,
+                          const DatabaseParameter parameters[],
+                          uint                    parameterCount
+                         )
+{
+  #define SLEEP_TIME 500L  // [ms]
+
+  TimeoutInfo                   timeoutInfo;
+  DatabaseStatementHandle       databaseStatementHandle;
+  bool                          done;
+  Errors                        error;
+  uint                          maxRetryCount;
+  uint                          retryCount;
+  const DatabaseBusyHandlerNode *busyHandlerNode;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
+  assert(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle));
+  assert(sqlString != NULL);
+
+  UNUSED_VARIABLE(flags);
+
+  Misc_initTimeout(&timeoutInfo,timeout);
+  error = prepareStatement(&databaseStatementHandle,
+                           databaseHandle,
+                           sqlString,
+                           parameterCount
+                          );
+  if (error == ERROR_NONE)
+  {
+    done          = FALSE;
+    error         = ERROR_NONE;
+    maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+    retryCount    = 0;
+    do
+    {
+      // execute query
+      error = executePreparedQuery(&databaseStatementHandle,
+                                   changedRowCount,
+                                   Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
+                                  );
+
+      // check result
+      if      (error == ERROR_NONE)
+      {
+        done = TRUE;
+      }
+      else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+      {
+        // execute registered busy handlers
+//TODO: lock list?
+        LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
+        {
+          assert(busyHandlerNode->function != NULL);
+          busyHandlerNode->function(busyHandlerNode->userData);
+        }
+
+        Misc_mdelay(SLEEP_TIME);
+
+        // next retry
+        retryCount++;
+
+        error = ERROR_NONE;
+      }
+    }
+    while (   !done
+           && (error == ERROR_NONE)
+           && (retryCount <= maxRetryCount)
+          );
+
+    finalizeStatement(&databaseStatementHandle);
+  }
+  Misc_doneTimeout(&timeoutInfo);
 
   return error;
 }
@@ -8592,679 +9044,6 @@ LOCAL void resetFilters(DatabaseStatementHandle *databaseStatementHandle)
   }
 
   databaseStatementHandle->parameterIndex = 0;
-}
-
-/***********************************************************************\
-* Name   : executeQuery
-* Purpose: execute query (insert, update, delete) with prepared
-*          statement
-* Input  : databaseHandle  - database handle
-*          changedRowCount - number of changed rows (can be NULL)
-*          timeout         - timeout [ms]
-*          values          - values; use macro DATABASE_VALUES()
-*          valueCount      - number of result columns
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
-                          ulong          *changedRowCount,
-                          long           timeout,
-                          const char     *sqlString
-                         )
-{
-  #define SLEEP_TIME 500L  // [ms]
-
-  bool                          done;
-  Errors                        error;
-  uint                          maxRetryCount;
-  uint                          retryCount;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->databaseNode != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
-  assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
-  assert(databaseHandle->sqlite.handle != NULL);
-  assert(sqlString != NULL);
-
-  done          = FALSE;
-  error         = ERROR_NONE;
-  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  retryCount    = 0;
-  do
-  {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlString);
-// TODO: reactivate when each thread has his own index handle
-#if 0
-    assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
-#endif
-
-    #ifndef NDEBUG
-      String_setCString(databaseHandle->debug.current.sqlString,sqlString);
-    #endif /* not NDEBUG */
-
-    switch (Database_getType(databaseHandle))
-    {
-      case DATABASE_TYPE_SQLITE3:
-        error = sqlite3Execute(databaseHandle->sqlite.handle,
-                               sqlString
-                              );
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-
-        // get number of changes
-        if (changedRowCount != NULL)
-        {
-          (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->sqlite.handle);
-        }
-        break;
-      case DATABASE_TYPE_MARIADB:
-        #if defined(HAVE_MARIADB)
-          {
-            MYSQL_RES *result;
-
-            error = mariaDBExecute(databaseHandle->mariadb.handle,sqlString);
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mariadb.handle);
-            }
-
-            // get and discard results
-            result = mysql_use_result(databaseHandle->mariadb.handle);
-            mysql_free_result(result);
-          }
-        #else /* HAVE_MARIADB */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MARIADB */
-        break;
-      case DATABASE_TYPE_POSTGRESQL:
-        #if defined(HAVE_POSTGRESQL)
-          {
-            error = postgresqlExecute(databaseHandle->postgresql.handle,
-                                      changedRowCount,
-                                      sqlString,
-                                      NULL,  // parameterTypes,
-                                      NULL,  // parameterValues,
-                                      NULL,  // parameterLengths,
-                                      NULL,  // parameterFormats,
-                                      0  // parameterCount
-                                     );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-          }
-        #else /* HAVE_POSTGRESQL */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_POSTGRESQL */
-        break;
-    }
-
-    #ifndef NDEBUG
-      // clear SQL command, backtrace
-      String_clear(databaseHandle->debug.current.sqlString);
-    #endif /* not NDEBUG */
-
-    // check result
-    if      (error == ERROR_NONE)
-    {
-      done = TRUE;
-    }
-    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
-    {
-//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
-//Database_debugPrintLockInfo(databaseHandle);
-      // execute registered busy handlers
-//TODO: lock list?
-      LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
-      {
-        assert(busyHandlerNode->function != NULL);
-        busyHandlerNode->function(busyHandlerNode->userData);
-      }
-
-      Misc_mdelay(SLEEP_TIME);
-
-      // next retry
-      retryCount++;
-
-      error = ERROR_NONE;
-    }
-  }
-  while (   !done
-         && (error == ERROR_NONE)
-         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
-        );
-
-  if      (error != ERROR_NONE)
-  {
-    return error;
-  }
-  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
-  {
-    #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),sqlString);
-    #else
-      return ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString);
-    #endif
-  }
-  else
-  {
-    return ERROR_NONE;
-  }
-
-  #undef SLEEP_TIME
-}
-
-/***********************************************************************\
-* Name   : executePreparedQuery
-* Purpose: execute prepared query (single insert, update, delete)
-* Input  : databaseHandle  - database handle
-*          changedRowCount - number of changed rows (can be NULL)
-*          timeout         - timeout [ms]
-*          values          - values; use macro DATABASE_VALUES()
-*          valueCount      - number of result columns
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHandle,
-                                  ulong                   *changedRowCount,
-                                  long                    timeout
-                                 )
-{
-  #define MAX_SLEEP_TIME 500L  // [ms]
-
-  bool                          done;
-  Errors                        error;
-  TimeoutInfo                   timeoutInfo;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
-  assert(databaseStatementHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
-  assert(databaseStatementHandle->databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
-  assert(isReadWriteLock(databaseStatementHandle->databaseHandle));
-
-  done          = FALSE;
-  error         = ERROR_NONE;
-  Misc_initTimeout(&timeoutInfo,timeout);
-  do
-  {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
-// TODO: reactivate when each thread has his own index handle
-#if 0
-    assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
-#endif
-
-    switch (Database_getType(databaseStatementHandle->databaseHandle))
-    {
-      case DATABASE_TYPE_SQLITE3:
-        {
-          int sqliteResult;
-
-          // do query
-          sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
-          if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
-          {
-            error = ERROR_NONE;
-          }
-          else if (sqliteResult == SQLITE_MISUSE)
-          {
-            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                                sqliteResult,
-                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
-                               );
-          }
-          else if ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-          {
-            error = ERROR_DATABASE_BUSY;
-          }
-          else if (sqliteResult == SQLITE_INTERRUPT)
-          {
-            error = ERRORX_(INTERRUPTED,
-                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                            "%s",
-                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                           );
-          }
-          else
-          {
-            error = ERRORX_(DATABASE,
-                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                            "%s",
-                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                           );
-          }
-
-          if (error == ERROR_NONE)
-          {
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
-            }
-          }
-        }
-        break;
-      case DATABASE_TYPE_MARIADB:
-        #if defined(HAVE_MARIADB)
-          {
-            // bind values
-            if (databaseStatementHandle->parameterCount > 0)
-            {
-              if (mysql_stmt_bind_param(databaseStatementHandle->mariadb.statementHandle,
-                                        databaseStatementHandle->mariadb.values.bind
-                                       ) != 0
-                 )
-              {
-                error = ERRORX_(DATABASE_BIND,
-                                mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
-                                "parameters: %s",
-                                mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
-                               );
-                break;
-              }
-            }
-// TODO: required? queries do not have an result
-            if (databaseStatementHandle->resultCount > 0)
-            {
-              if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
-                                         databaseStatementHandle->mariadb.results.bind
-                                        ) != 0
-                 )
-              {
-                error = ERRORX_(DATABASE_BIND,
-                                mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
-                                "results: %s",
-                                mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
-                               );
-                break;
-              }
-            }
-
-            // do query
-            error = mariaDBExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
-            }
-          }
-        #else /* HAVE_MARIADB */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MARIADB */
-        break;
-      case DATABASE_TYPE_POSTGRESQL:
-        #if defined(HAVE_POSTGRESQL)
-          {
-            // do query
-            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
-                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                       databaseStatementHandle->parameterCount
-                                                      );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += databaseStatementHandle->postgresql.rowCount;
-            }
-          }
-        #else /* HAVE_POSTGRESQL */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_POSTGRESQL */
-        break;
-    }
-
-    // check result
-    if      (error == ERROR_NONE)
-    {
-      done = TRUE;
-    }
-    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
-    {
-      // call busy handlers
-      LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
-      {
-        assert(busyHandlerNode->function != NULL);
-        busyHandlerNode->function(busyHandlerNode->userData);
-      }
-
-      // wait a short time and try again
-      Misc_mdelay(Misc_getRestTimeout(&timeoutInfo,MAX_SLEEP_TIME));
-
-      error = ERROR_NONE;
-    }
-  }
-  while (   !done
-         && (error == ERROR_NONE)
-         && !Misc_isTimeout(&timeoutInfo)
-        );
-
-  if      (error != ERROR_NONE)
-  {
-    return error;
-  }
-  else if (Misc_isTimeout(&timeoutInfo))
-  {
-    #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
-    #else
-      return ERROR_DATABASE_TIMEOUT;
-    #endif
-  }
-  else
-  {
-    return ERROR_NONE;
-  }
-
-  #undef SLEEP_TIME
-}
-
-/***********************************************************************\
-* Name   : executePreparedStatement
-* Purpose: execute prepared statement (select)
-* Input  : databaseHandle      - database handle
-*          databaseRowFunction - row call-back function (can be NULL)
-*          databaseRowUserData - user data for row call-back
-*          changedRowCount     - number of changed rows (can be NULL)
-*          flags               - flags; see DATABASE_FLAGS_...
-*          timeout             - timeout [ms]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatementHandle,
-                                      DatabaseRowFunction     databaseRowFunction,
-                                      void                    *databaseRowUserData,
-                                      ulong                   *changedRowCount,
-                                      uint                    flags,
-                                      long                    timeout
-                                     )
-{
-  #define SLEEP_TIME 500L  // [ms]
-
-  bool                          done;
-  Errors                        error;
-  uint                          maxRetryCount;
-  uint                          retryCount;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
-  assert(databaseStatementHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
-  assert(databaseStatementHandle->databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
-  assert(databaseStatementHandle->databaseHandle->databaseNode != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle->databaseNode);
-  assert(isReadLock(databaseStatementHandle->databaseHandle) || isReadWriteLock(databaseStatementHandle->databaseHandle));
-
-  // bind prepared values+results
-  error = ERROR_UNKNOWN;
-  switch (Database_getType(databaseStatementHandle->databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      // nothing to do
-      error = ERROR_NONE;
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
-        {
-          error = ERROR_NONE;
-
-          if (databaseStatementHandle->parameterCount > 0)
-          {
-            if (mysql_stmt_bind_param(databaseStatementHandle->mariadb.statementHandle,
-                                      databaseStatementHandle->mariadb.values.bind
-                                     ) != 0
-               )
-            {
-              error = ERRORX_(DATABASE_BIND,
-                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
-                              "parameters: %s",
-                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
-                             );
-              break;
-            }
-          }
-          if (databaseStatementHandle->resultCount > 0)
-          {
-            if (mysql_stmt_bind_result(databaseStatementHandle->mariadb.statementHandle,
-                                       databaseStatementHandle->mariadb.results.bind
-                                      ) != 0
-               )
-            {
-              error = ERRORX_(DATABASE_BIND,
-                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
-                              "results: %s",
-                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
-                             );
-              break;
-            }
-          }
-        }
-      #else /* HAVE_MARIADB */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      // nothing to do
-      #if defined(HAVE_POSTGRESQL)
-        error = ERROR_NONE;
-      #else /* HAVE_POSTGRESQL */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_POSTGRESQL */
-      break;
-  }
-  assert(error != ERROR_UNKNOWN);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  done          = FALSE;
-  error         = ERROR_NONE;
-  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  retryCount    = 0;
-  do
-  {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
-// TODO: reactivate when each thread has his own index handle
-#if 0
-    assert(Thread_isCurrentThread(databaseStatementHandle->databaseHandle->databaseNode->readWriteLockedBy));
-#endif
-
-    // step and process rows
-    switch (Database_getType(databaseStatementHandle->databaseHandle))
-    {
-      case DATABASE_TYPE_SQLITE3:
-        {
-          if (databaseRowFunction != NULL)
-          {
-            // step
-            if (getNextRow(databaseStatementHandle,flags,timeout))
-            {
-              do
-              {
-                error = databaseRowFunction(databaseStatementHandle->results,
-                                            databaseStatementHandle->resultCount,
-                                            databaseRowUserData
-                                           );
-              }
-              while (getNextRow(databaseStatementHandle,flags,timeout));
-            }
-            else
-            {
-              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
-            }
-
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
-            }
-          }
-        }
-        break;
-      case DATABASE_TYPE_MARIADB:
-        #if defined(HAVE_MARIADB)
-          {
-            error = mariaDBExecutePreparedStatement(databaseStatementHandle->mariadb.statementHandle);
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-            (void)mysql_stmt_store_result(databaseStatementHandle->mariadb.statementHandle);
-
-            if (databaseRowFunction != NULL)
-            {
-              // step
-              if (getNextRow(databaseStatementHandle,flags,timeout))
-              {
-                do
-                {
-                  error = databaseRowFunction(databaseStatementHandle->results,
-                                              databaseStatementHandle->resultCount,
-                                              databaseRowUserData
-                                             );
-                }
-                while (getNextRow(databaseStatementHandle,flags,timeout));
-              }
-              else
-              {
-                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
-              }
-
-              // get number of changes
-              if (changedRowCount != NULL)
-              {
-                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
-              }
-            }
-          }
-        #else /* HAVE_MARIADB */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MARIADB */
-        break;
-      case DATABASE_TYPE_POSTGRESQL:
-        #if defined(HAVE_POSTGRESQL)
-          {
-            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
-                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                       databaseStatementHandle->parameterCount
-                                                      );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            if (databaseRowFunction != NULL)
-            {
-              // step
-              if (getNextRow(databaseStatementHandle,flags,timeout))
-              {
-                do
-                {
-                  error = databaseRowFunction(databaseStatementHandle->results,
-                                              databaseStatementHandle->resultCount,
-                                              databaseRowUserData
-                                             );
-                }
-                while (getNextRow(databaseStatementHandle,flags,timeout));
-              }
-              else
-              {
-                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
-              }
-
-              // get number of changes
-              if (changedRowCount != NULL)
-              {
-                (*changedRowCount) += databaseStatementHandle->postgresql.rowCount;
-              }
-            }
-          }
-        #else /* HAVE_POSTGRESQL */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_POSTGRESQL */
-        break;
-    }
-
-    // check result
-    if      (error == ERROR_NONE)
-    {
-      done = TRUE;
-    }
-    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
-    {
-//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
-//Database_debugPrintLockInfo(databaseHandle);
-      // execute registered busy handlers
-//TODO: lock list?
-      LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
-      {
-        assert(busyHandlerNode->function != NULL);
-        busyHandlerNode->function(busyHandlerNode->userData);
-      }
-
-      Misc_mdelay(SLEEP_TIME);
-
-      // next retry
-      retryCount++;
-
-      error = ERROR_NONE;
-    }
-    else if (Error_getCode(error) == ERROR_CODE_DATABASE_INTERRUPTED)
-    {
-// TODO: error
-      // report interrupt
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                      "%s",
-                      sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                     );
-    }
-  }
-  while (   !done
-         && (error == ERROR_NONE)
-         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
-        );
-
-  if      (error != ERROR_NONE)
-  {
-    return error;
-  }
-  else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
-  {
-    #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
-    #else
-      return ERROR_DATABASE_TIMEOUT;
-    #endif
-  }
-
-  #undef SLEEP_TIME
-
-  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -14294,7 +14073,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       return executeQuery(databaseHandle,
                           NULL,  // changedRowCount
                           databaseHandle->timeout,
-                          String_cString(sqlString)
+                          DATABASE_FLAG_NONE,
+                          String_cString(sqlString),
+                          DATABASE_PARAMETERS_NONE
                          );
     });
     if (error != ERROR_NONE)
@@ -14547,7 +14328,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     error = executeQuery(databaseHandle,
                          NULL,  // changedRowCount
                          databaseHandle->timeout,
-                         String_cString(sqlString)
+                         DATABASE_FLAG_NONE,
+                         String_cString(sqlString),
+                         DATABASE_PARAMETERS_NONE
                         );
     if (error != ERROR_NONE)
     {
@@ -14686,7 +14469,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     error = executeQuery(databaseHandle,
                          NULL,  // changedRowCount
                          databaseHandle->timeout,
-                         String_cString(sqlString)
+                         DATABASE_FLAG_NONE,
+                         String_cString(sqlString),
+                         DATABASE_PARAMETERS_NONE
                         );
     if (error != ERROR_NONE)
     {
@@ -14821,7 +14606,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     error = executeQuery(databaseHandle,
                          NULL,  // changedRowCount
                          databaseHandle->timeout,
-                         String_cString(sqlString)
+                         DATABASE_FLAG_NONE,
+                         String_cString(sqlString),
+                         DATABASE_PARAMETERS_NONE
                         );
     if (error != ERROR_NONE)
     {
@@ -15114,14 +14901,14 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return executeStatement(databaseHandle,
-                            changedRowCount,
-                            databaseHandle->timeout,
-                            flags,
-                            sqlString,
-                            parameters,
-                            parameterCount
-                           );
+    return executeQuery(databaseHandle,
+                        changedRowCount,
+                        databaseHandle->timeout,
+                        flags,
+                        sqlString,
+                        parameters,
+                        parameterCount
+                       );
   });
 
   return error;
@@ -16296,6 +16083,8 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
   if (getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT))
   {
+    assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
+
     va_start(arguments,databaseStatementHandle);
     for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
     {
@@ -17441,21 +17230,27 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
             return executeQuery(databaseHandle,
                                 NULL,  // changedRowCount
                                 databaseHandle->timeout,
-                                "PRAGMA quick_check"
+                                DATABASE_FLAG_NONE,
+                                "PRAGMA quick_check",
+                                DATABASE_PARAMETERS_NONE
                                );
             break;
           case DATABASE_CHECK_KEYS:
             return executeQuery(databaseHandle,
                                 NULL,  // changedRowCount
                                 databaseHandle->timeout,
-                                "PRAGMA foreign_key_check"
+                                DATABASE_FLAG_NONE,
+                                "PRAGMA foreign_key_check",
+                                DATABASE_PARAMETERS_NONE
                                );
             break;
           case DATABASE_CHECK_FULL:
             return executeQuery(databaseHandle,
                                 NULL,  // changedRowCount
                                 databaseHandle->timeout,
-                                "PRAGMA integrity_check"
+                                DATABASE_FLAG_NONE,
+                                "PRAGMA integrity_check",
+                                DATABASE_PARAMETERS_NONE
                                );
             break;
         }
@@ -17492,10 +17287,12 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                   error = executeQuery(databaseHandle,
                                        NULL,  // changedRowCount
                                        databaseHandle->timeout,
+                                       DATABASE_FLAG_NONE,
                                        stringFormat(sqlString,sizeof(sqlString),
                                                     "CHECK TABLE %s",
                                                     String_cString(tableName)
-                                                   )
+                                                   ),
+                                       DATABASE_PARAMETERS_NONE
                                       );
                 }
 
@@ -17541,12 +17338,14 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
+        error = ERROR_NONE;
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
+        error = ERROR_NONE;
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -18057,7 +17856,11 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
   pthread_mutex_unlock(&debugDatabaseLock);
 }
 
-void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, const DatabaseStatementHandle *databaseStatementHandle)
+#ifdef NDEBUG
+  void Database_debugPrintQueryInfo(const DatabaseStatementHandle *databaseStatementHandle)
+#else /* not NDEBUG */
+  void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, const DatabaseStatementHandle *databaseStatementHandle)
+#endif /* NDEBUG */
 {
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);

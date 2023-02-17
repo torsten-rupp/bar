@@ -16974,7 +16974,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPENONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPE_NONE))
   {
     indexTypeAny = FALSE;
   }
@@ -17408,7 +17408,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPENONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPE_NONE))
   {
     indexTypeAny = FALSE;
   }
@@ -17695,15 +17695,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   StringMap_getString(argumentMap,"name",name,NULL);
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
-    entryType = INDEX_TYPEANY;
+    entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPEANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_ANY))
   {
     // ok
   }
   else
   {
-    entryType = INDEX_TYPEANY;
+    entryType = INDEX_TYPE_ANY;
   }
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
@@ -18055,15 +18055,15 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
-    entryType = INDEX_TYPEANY;
+    entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPEANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPE_ANY))
   {
     // ok
   }
   else
   {
-    entryType = INDEX_TYPEANY;
+    entryType = INDEX_TYPE_ANY;
   }
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
@@ -20228,7 +20228,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     0, // indexIdCount
                                     Array_cArray(&clientInfo->entryIdArray),
                                     Array_length(&clientInfo->entryIdArray),
-                                    INDEX_TYPEANY,
+                                    INDEX_TYPE_ANY,
                                     NULL, // name
                                     FALSE,  // newestOnly,
                                     FALSE,  //fragments

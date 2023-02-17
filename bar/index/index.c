@@ -78,8 +78,8 @@ const char *DATABASE_SAVE_PATTERNS[] =
   ".*\\_old\\d\\d\\d$"
 };
 
-const IndexId INDEX_ID_NONE = {.type = INDEX_TYPENONE,.value = DATABASE_ID_NONE};
-const IndexId INDEX_ID_ANY  = {.type = INDEX_TYPENONE,.value = DATABASE_ID_ANY };
+const IndexId INDEX_ID_NONE = {.type = INDEX_TYPE_NONE,.value = DATABASE_ID_NONE};
+const IndexId INDEX_ID_ANY  = {.type = INDEX_TYPE_NONE,.value = DATABASE_ID_ANY };
 
 // index open mask
 #define INDEX_OPEN_MASK_MODE  0x0000000F
@@ -2156,7 +2156,6 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
 
                              UNUSED_VARIABLE(userData);
                              UNUSED_VARIABLE(valueCount);
-
 
                              return ERROR_NONE;
                            },NULL),
