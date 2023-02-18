@@ -8424,10 +8424,10 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     tree.setHeaderVisible(true);
     tree.setData(new HashMap<TreeItem,TreeEditor>());
 
+/*
     final Color backgroundColor = tree.getBackground();
     final Color selectedColor   = composite.getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION);
 
-/*
 TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     Listener paintListener = new Listener()
     {

@@ -486,7 +486,7 @@ typedef struct
   DatabaseDataTypes type;
 } DatabaseColumn;
 
-// database parameter
+// database parameter (value without name)
 typedef struct
 {
   DatabaseDataTypes type;
@@ -524,7 +524,7 @@ typedef struct
   };
 } DatabaseParameter;
 
-// database value
+// database value with name
 typedef struct
 {
   const char        *name;   // column name
@@ -760,7 +760,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_PLAIN(sqlString) \
   (const char*[]){sqlString}, \
   1, \
-  DATABASE_FLAG_PLAIN
+  DATABASE_FLAG_PLAIN|DATABASE_FLAG_FETCH_ALL
 
 #define DATABASE_TABLES(...) \
   (const char*[]){__VA_ARGS__}, \
