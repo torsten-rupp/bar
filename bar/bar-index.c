@@ -849,9 +849,7 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
                              indexDefinition,
-                             DATABASE_PARAMETERS
-                             (
-                             )
+                             DATABASE_PARAMETERS_NONE
                             );
   }
   if (error != ERROR_NONE)
@@ -2053,9 +2051,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                                 "ANALYZE %s",
                                                 String_cString(name)
                                                ),
-                                   DATABASE_PARAMETERS
-                                   (
-                                   )
+                                   DATABASE_PARAMETERS_NONE
                                   );
         }
         break;
@@ -2111,9 +2107,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                                 "ANALYZE %s",
                                                 String_cString(name)
                                                ),
-                                   DATABASE_PARAMETERS
-                                   (
-                                   )
+                                   DATABASE_PARAMETERS_NONE
                                   );
         }
         break;
@@ -2375,9 +2369,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
                              triggerDefinition,
-                             DATABASE_PARAMETERS
-                             (
-                             )
+                             DATABASE_PARAMETERS_NONE
                             );
   }
   if (error != ERROR_NONE)
@@ -2553,9 +2545,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
                                      indexDefinition,
-                                     DATABASE_PARAMETERS
-                                     (
-                                     )
+                                     DATABASE_PARAMETERS_NONE
                                     );
           }
         }
@@ -2655,9 +2645,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
                                      indexDefinition,
-                                     DATABASE_PARAMETERS
-                                     (
-                                     )
+                                     DATABASE_PARAMETERS_NONE
                                     );
           }
         }
@@ -7862,9 +7850,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  "VACUUM",
-                                 DATABASE_PARAMETERS
-                                 (
-                                 )
+                                 DATABASE_PARAMETERS_NONE
                                 );
         if (error != ERROR_NONE)
         {
@@ -7888,9 +7874,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
                                                 "OPTIMIZE TABLE %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
                                                ),
-                                   DATABASE_PARAMETERS
-                                   (
-                                   )
+                                   DATABASE_PARAMETERS_NONE
                                   );
           if (error != ERROR_NONE)
           {
@@ -7915,9 +7899,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
                                                 "VACUUM %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_POSTGRESQL[i]
                                                ),
-                                   DATABASE_PARAMETERS
-                                   (
-                                   )
+                                   DATABASE_PARAMETERS_NONE
                                   );
           if (error != ERROR_NONE)
           {
@@ -9945,7 +9927,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                        (
                          "entities"
                        ),
-                       DATABASE_FLAG_NONE,
+                       DATABASE_FLAG_FETCH_ALL,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY("id"),

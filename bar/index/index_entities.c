@@ -124,69 +124,69 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                           // find matching entity/create default entity
                           error = Database_get(&indexHandle->databaseHandle,
                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                              {
-                                                assert(values != NULL);
-                                                assert(valueCount == 2);
+                                               {
+                                                 assert(values != NULL);
+                                                 assert(valueCount == 2);
 
-                                                UNUSED_VARIABLE(userData);
-                                                UNUSED_VARIABLE(valueCount);
+                                                 UNUSED_VARIABLE(userData);
+                                                 UNUSED_VARIABLE(valueCount);
 
-                                                storageId = values[0].id;
-                                                String_setBuffer(name2,values[1].text.data,values[0].text.length);
+                                                 storageId = values[0].id;
+                                                 String_setBuffer(name2,values[1].text.data,values[0].text.length);
 
-                                                // compare names (equals except digits)
-                                                equalsFlag = String_length(name1) == String_length(name2);
-                                                i = STRING_BEGIN;
-                                                while (equalsFlag
-                                                       && (i < String_length(name1))
-                                                       && (   isdigit(String_index(name1,i))
-                                                           || (String_index(name1,i) == String_index(name2,i))
-                                                          )
-                                                      )
-                                                {
-                                                  i++;
-                                                }
-                                                if (equalsFlag)
-                                                {
-                                                  // assign entity id
-                                                  (void)Database_update(&indexHandle->databaseHandle,
-                                                                        NULL,  // changedRowCount
-                                                                        "storages",
-                                                                        DATABASE_FLAG_NONE,
-                                                                        DATABASE_VALUES
-                                                                        (
-                                                                          DATABASE_VALUE_KEY("entityId", entityId),
-                                                                        ),
-                                                                        "id=?",
-                                                                        DATABASE_FILTERS
-                                                                        (
-                                                                          DATABASE_FILTER_KEY(storageId)
-                                                                        )
-                                                                      );
-                                                }
+                                                 // compare names (equals except digits)
+                                                 equalsFlag = String_length(name1) == String_length(name2);
+                                                 i = STRING_BEGIN;
+                                                 while (equalsFlag
+                                                        && (i < String_length(name1))
+                                                        && (   isdigit(String_index(name1,i))
+                                                            || (String_index(name1,i) == String_index(name2,i))
+                                                           )
+                                                       )
+                                                 {
+                                                   i++;
+                                                 }
+                                                 if (equalsFlag)
+                                                 {
+                                                   // assign entity id
+                                                   (void)Database_update(&indexHandle->databaseHandle,
+                                                                         NULL,  // changedRowCount
+                                                                         "storages",
+                                                                         DATABASE_FLAG_NONE,
+                                                                         DATABASE_VALUES
+                                                                         (
+                                                                           DATABASE_VALUE_KEY("entityId", entityId),
+                                                                         ),
+                                                                         "id=?",
+                                                                         DATABASE_FILTERS
+                                                                         (
+                                                                           DATABASE_FILTER_KEY(storageId)
+                                                                         )
+                                                                       );
+                                                 }
 
-                                                return ERROR_NONE;
-                                              },NULL),
-                                              NULL,  // changedRowCount
-                                              DATABASE_TABLES
-                                              (
-                                                "storages"
-                                              ),
-                                              DATABASE_FLAG_NONE,
-                                              DATABASE_COLUMNS
-                                              (
-                                                DATABASE_COLUMN_KEY   ("id"),
-                                                DATABASE_COLUMN_STRING("name")
-                                              ),
-                                              "uuid=?",
-                                              DATABASE_FILTERS
-                                              (
-                                                DATABASE_FILTER_STRING(uuid)
-                                              ),
-                                              NULL,  // orderGroup
-                                              0LL,
-                                              1LL
-                                             );
+                                                 return ERROR_NONE;
+                                               },NULL),
+                                               NULL,  // changedRowCount
+                                               DATABASE_TABLES
+                                               (
+                                                 "storages"
+                                               ),
+                                               DATABASE_FLAG_FETCH_ALL,
+                                               DATABASE_COLUMNS
+                                               (
+                                                 DATABASE_COLUMN_KEY   ("id"),
+                                                 DATABASE_COLUMN_STRING("name")
+                                               ),
+                                               "uuid=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_STRING(uuid)
+                                               ),
+                                               NULL,  // orderGroup
+                                               0LL,
+                                               1LL
+                                              );
 
                           if (error -= ERROR_NONE)
                           {
@@ -259,7 +259,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                  (
                                                    "storages"
                                                  ),
-                                                 DATABASE_FLAG_NONE,
+                                                 DATABASE_FLAG_FETCH_ALL,
                                                  DATABASE_COLUMNS
                                                  (
                                                    DATABASE_COLUMN_KEY   ("id"),
@@ -283,7 +283,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                         (
                           "storages"
                         ),
-                        DATABASE_FLAG_NONE,
+                        DATABASE_FLAG_FETCH_ALL,
                         DATABASE_COLUMNS
                         (
                           DATABASE_COLUMN_STRING  ("uuid"),

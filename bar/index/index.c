@@ -2152,10 +2152,13 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                            {
                              assert(values != NULL);
-                             assert(valueCount == 3);
+                             assert(valueCount == 2);
 
                              UNUSED_VARIABLE(userData);
                              UNUSED_VARIABLE(valueCount);
+
+                             newestEntryId         = values[0].id;
+                             newestTimeLastChanged = values[1].dateTime;
 
                              return ERROR_NONE;
                            },NULL),

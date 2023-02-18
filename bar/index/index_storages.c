@@ -440,7 +440,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                              (
                                                "storages"
                                              ),
-                                             DATABASE_FLAG_NONE,
+                                             DATABASE_FLAG_FETCH_ALL,
                                              DATABASE_COLUMNS
                                              (
                                                DATABASE_COLUMN_KEY   ("id"),
@@ -526,7 +526,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                (
                                                  "storages"
                                                ),
-                                               DATABASE_FLAG_NONE,
+                                               DATABASE_FLAG_FETCH_ALL,
                                                DATABASE_COLUMNS
                                                (
                                                  DATABASE_COLUMN_KEY   ("id"),
@@ -550,7 +550,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                       (
                         "storages"
                       ),
-                      DATABASE_FLAG_NONE,
+                      DATABASE_FLAG_FETCH_ALL,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY     ("id"),
@@ -793,7 +793,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                                (
                                                  "storages"
                                                ),
-                                               DATABASE_FLAG_NONE,
+                                               DATABASE_FLAG_FETCH_ALL,
                                                DATABASE_COLUMNS
                                                (
                                                  DATABASE_COLUMN_KEY   ("id"),
@@ -834,7 +834,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                         (
                           "storages"
                         ),
-                        DATABASE_FLAG_NONE,
+                        DATABASE_FLAG_FETCH_ALL,
                         DATABASE_COLUMNS
                         (
                           DATABASE_COLUMN_KEY     ("id"),

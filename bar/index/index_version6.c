@@ -421,7 +421,7 @@ LOCAL Errors upgradeFromVersion6_importFileEntry(DatabaseHandle *oldDatabaseHand
                          (
                            "fileEntries"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_UINT64("size"),
@@ -497,7 +497,7 @@ LOCAL Errors upgradeFromVersion6_importFileEntry(DatabaseHandle *oldDatabaseHand
                          (
                            "entryFragments"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("storageId"),
@@ -592,7 +592,7 @@ LOCAL Errors upgradeFromVersion6_importImageEntry(DatabaseHandle *oldDatabaseHan
                          (
                            "imageEntries"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_UINT64("size"),
@@ -666,7 +666,7 @@ LOCAL Errors upgradeFromVersion6_importImageEntry(DatabaseHandle *oldDatabaseHan
                          (
                            "entryFragments"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("storageId"),
@@ -761,7 +761,7 @@ LOCAL Errors upgradeFromVersion6_importHardlinkEntry(DatabaseHandle *oldDatabase
                          (
                            "hardlinkEntries"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_UINT64("size"),
@@ -835,7 +835,7 @@ LOCAL Errors upgradeFromVersion6_importHardlinkEntry(DatabaseHandle *oldDatabase
                          (
                            "entryFragments"
                          ),
-                         DATABASE_FLAG_NONE,
+                         DATABASE_FLAG_FETCH_ALL,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("storageId"),
