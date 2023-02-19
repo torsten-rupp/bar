@@ -923,7 +923,7 @@ class Units
     else if (n >= K      ) result = DECIMAL_FORMAT.format(n/K);
     else                   result = String.format("%d",(long)n);
 
-    return result;
+    return StringUtils.trimEnd(result,"0.");
   }
 
   /** get size short unit
@@ -6020,7 +6020,7 @@ if (false) {
           try
           {
             final ArrayList<Long> storageIds = new ArrayList<Long>();
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld",
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld sortMode=NAME ordering=ASCENDING",
                                                          "*",
                                                          "*",
                                                          "*",
