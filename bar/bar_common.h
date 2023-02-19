@@ -997,37 +997,37 @@ typedef struct
   struct
   {
     ulong     count;                                          // number of entries processed
-    uint64    size;                                           // number of bytes processed
+    uint64    size;                                           // size processed [bytes]
   } done;
   struct
   {
     ulong     count;                                          // total number of entries
     uint64    size;                                           // total size of entries [bytes]
   } total;
-  bool   collectTotalSumDone;                                 // TRUE iff all file sums are collected
+  bool   collectTotalSumDone;                                 // TRUE iff all entries are collected
   struct
   {
     ulong     count;                                          // number of skipped entries
-    uint64    size;                                           // sum of skipped bytes
+    uint64    size;                                           // size sum skipped [bytes]
   } skipped;
   struct
   {
     ulong     count;                                          // number of entries with errors
-    uint64    size;                                           // sum of bytes of entries with errors
+    uint64    size;                                           // size sum of entries with errors [bytes]
   } error;
-  uint64 archiveSize;                                         // number of bytes stored in archive
+  uint64 archiveSize;                                         // number stored in archive [bytes]
   double compressionRatio;                                    // compression ratio
   struct
   {
     String    name;                                           // current entry name
-    uint64    doneSize;                                       // number of bytes processed of current entry
-    uint64    totalSize;                                      // total number of bytes of current entry
+    uint64    doneSize;                                       // size processed of current entry [bytes]
+    uint64    totalSize;                                      // total size of current entry [bytes]
   } entry;
   struct
   {
     String    name;                                           // current storage name
-    uint64    doneSize;                                       // number of bytes processed of current archive
-    uint64    totalSize;                                      // total bytes of current archive
+    uint64    doneSize;                                       // size processed of current archive [bytes]
+    uint64    totalSize;                                      // total size of current archive [bytes]
   } storage;
   struct
   {

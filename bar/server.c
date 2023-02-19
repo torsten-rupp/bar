@@ -17713,7 +17713,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseEntrySortMode,NULL),INDEX_ENTRY_SORT_MODE_NAME);
   StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
-  // check if index database is available, check if index database is ready
+  // check if index database is available+ready
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
@@ -17904,7 +17904,7 @@ LOCAL void serverCommand_indexEntryListAdd(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  // check if index database is available, check if index database is ready
+  // check if index database is available+ready
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
@@ -17974,7 +17974,7 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
     return;
   }
 
-  // check if index database is available, check if index database is ready
+  // check if index database is available+ready
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
@@ -18068,7 +18068,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
 
-  // check if index database is available, check if index database is ready
+  // check if index database is available+ready
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
@@ -18153,7 +18153,7 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
-  // check if index database is available, check if index database is ready
+  // check if index database is available+ready
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
@@ -19897,6 +19897,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         restoreCommandInfo->id,
                         FALSE,
                         ERROR_NONE,
+// TODO: rename totalEntryCount -> totalCount
+// TODO: rename totalEntrySize -> totalSize
                         "state=RUNNING doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
                         statusInfo->done.count,
                         statusInfo->done.size,

@@ -158,7 +158,7 @@ rest time
 - single thread: collector sum+collector
 - test after create: chunk-read, test, compare
 - connector: SSL
-- sd_notify()
+- sd_notify() for system service startup
 - scheduler to test archives with report
 - BARControl: test archives function
 - option to local cache of archive before parallel test/compare/diff
@@ -195,6 +195,14 @@ rest time
 - use libmount
 - reload configuration on SIGHUB
 - backup set info file
+- multiple job execution
+- remove constraint from storages table
+- program icon
+- storage: remove running info
+- bar-index: command line parser
+- send email with log on maser for jobs executed on slave
+- restore: skip leaing directory
+- barcontrol: graphical job history
 - use always UTF-8 name encoding
 - purge backup archives on exhausted free disk space
 - code formater
@@ -204,6 +212,18 @@ rest time
 - support continuous jobs for slave
 - assign-to progress update
 - test+compare in job dialog
+- library unistring
+- option to skip missed jobs
+- verify signatures+list archive does not work with webdav
+- continous jobs for slaves
+- barcontrol: show installed slave versions
+- readlod config on SIGHUB
+- purge backup archives on exhausted free disk space
+- win32: postresql client library
+- error correction codes
+- run pre/post command in standard mode (not only server)
+- libmount
+
 
 
 
