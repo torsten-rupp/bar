@@ -3024,7 +3024,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(entryId))
                            ),
                            NULL,  // groupBy
-                           "entryFragments.offset ASC",
+                           "storages.name,entryFragments.offset ASC",
                            offset,
                            limit
                           );

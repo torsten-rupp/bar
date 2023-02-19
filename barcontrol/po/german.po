@@ -5983,11 +5983,11 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:9717 src/TabRestore.java:10316
+#: src/TabRestore.java:9717 src/TabRestore.java:10327
 msgid "Restore archives"
 msgstr "Archive wiederherstellen"
 
-#: src/TabRestore.java:9718 src/TabRestore.java:10317
+#: src/TabRestore.java:9718 src/TabRestore.java:10328
 msgid "Restore entries"
 msgstr "Einträge wiederherstellen"
 
@@ -6015,7 +6015,7 @@ msgstr "mit Verzeichnisinhalt"
 msgid "Restore content of selected directories, too."
 msgstr "Inhalt von Verzeichnissen wiederherstellen."
 
-#: src/TabRestore.java:9880 src/TabRestore.java:10009 src/TabRestore.java:10083
+#: src/TabRestore.java:9880 src/TabRestore.java:10014 src/TabRestore.java:10094
 #, java-format
 msgid ""
 "{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} "
@@ -6063,12 +6063,12 @@ msgstr "existierende überspringen"
 msgid "Start restore"
 msgstr "Wiederherstellen"
 
-#: src/TabRestore.java:10316
+#: src/TabRestore.java:10327
 #, java-format
 msgid "Restore archives to: {0}"
 msgstr "Archive wiederherstellen in: {0}"
 
-#: src/TabRestore.java:10317
+#: src/TabRestore.java:10328
 #, java-format
 msgid "Restore entries to: {0}"
 msgstr "Einträge wiederherstellen in: {0}"
@@ -6077,15 +6077,15 @@ msgstr "Einträge wiederherstellen in: {0}"
 msgid "Storages"
 msgstr "Sicherungen"
 
-#: src/TabRestore.java:10328
+#: src/TabRestore.java:10339
 msgid "Failed entries"
 msgstr "Fehlgeschlagene Einträge"
 
-#: src/TabRestore.java:10442
+#: src/TabRestore.java:10458
 msgid "Aborting"
 msgstr "Wird abgebrochen"
 
-#: src/TabRestore.java:10462 src/TabRestore.java:10476
+#: src/TabRestore.java:10478 src/TabRestore.java:10492
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -6096,7 +6096,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:10491
+#: src/TabRestore.java:10507
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -6107,7 +6107,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:10503
+#: src/TabRestore.java:10519
 #, java-format
 msgid ""
 "Connection error while restoring\n"
@@ -6514,6 +6514,10 @@ msgstr "Anzahl"
 #: src/TabStatus.java:3637
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#, fuzzy
+#~ msgid "FragmentsXXX"
+#~ msgstr "Fragmente"
 
 #, fuzzy
 #~ msgid "3Connection to host ''{0}:{1}'' refused"
