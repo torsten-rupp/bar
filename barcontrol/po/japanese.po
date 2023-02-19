@@ -6364,12 +6364,12 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9717 src/TabRestore.java:10316
+#: src/TabRestore.java:9717 src/TabRestore.java:10327
 #, fuzzy
 msgid "Restore archives"
 msgstr "復元作業"
 
-#: src/TabRestore.java:9718 src/TabRestore.java:10317
+#: src/TabRestore.java:9718 src/TabRestore.java:10328
 #, fuzzy
 msgid "Restore entries"
 msgstr "復元作業"
@@ -6399,7 +6399,7 @@ msgstr "復元作業"
 msgid "Restore content of selected directories, too."
 msgstr ""
 
-#: src/TabRestore.java:9880 src/TabRestore.java:10009 src/TabRestore.java:10083
+#: src/TabRestore.java:9880 src/TabRestore.java:10014 src/TabRestore.java:10094
 #, fuzzy, java-format
 msgid ""
 "{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} "
@@ -6447,12 +6447,12 @@ msgstr ""
 msgid "Start restore"
 msgstr "復元"
 
-#: src/TabRestore.java:10316
+#: src/TabRestore.java:10327
 #, fuzzy, java-format
 msgid "Restore archives to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:10317
+#: src/TabRestore.java:10328
 #, fuzzy, java-format
 msgid "Restore entries to: {0}"
 msgstr "最新エントリー限定"
@@ -6462,17 +6462,17 @@ msgstr "最新エントリー限定"
 msgid "Storages"
 msgstr "保存"
 
-#: src/TabRestore.java:10328
+#: src/TabRestore.java:10339
 #, fuzzy
 msgid "Failed entries"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:10442
+#: src/TabRestore.java:10458
 #, fuzzy
 msgid "Aborting"
 msgstr "中止"
 
-#: src/TabRestore.java:10462 src/TabRestore.java:10476
+#: src/TabRestore.java:10478 src/TabRestore.java:10492
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -6485,7 +6485,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:10491
+#: src/TabRestore.java:10507
 #, fuzzy, java-format
 msgid ""
 "Error while restoring:\n"
@@ -6496,7 +6496,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:10503
+#: src/TabRestore.java:10519
 #, fuzzy, java-format
 msgid ""
 "Connection error while restoring\n"
@@ -6912,6 +6912,10 @@ msgstr ""
 #, fuzzy
 msgid "Average time"
 msgstr "現存エントリの上書き"
+
+#, fuzzy
+#~ msgid "FragmentsXXX"
+#~ msgstr "パートサイズ"
 
 #, fuzzy
 #~ msgid "connection to host ''{0}:{1}'' refused"

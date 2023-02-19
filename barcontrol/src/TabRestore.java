@@ -4996,7 +4996,7 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.fragmentCount > 0) ? String.format("%d",entryIndexData.fragmentCount) : "-");
+      label = Widgets.newLabel(widgetEntryTableToolTip,(fragmentDataList.size() > 0) ? String.format("%d",fragmentDataList.size()) : "-");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -5006,7 +5006,7 @@ Dprintf.dprintf("");
       table.setForeground(COLOR_FOREGROUND);
       table.setBackground(COLOR_BACKGROUND);
       table.setHeaderVisible(false);
-      Widgets.layout(table,row,1,TableLayoutData.NSWE,0,0,0,0,400,SWT.DEFAULT);
+      Widgets.layout(table,row,1,TableLayoutData.NSWE,0,0,0,0,400,200);
       Widgets.addTableColumn(table,0,SWT.RIGHT,80, true);
       Widgets.addTableColumn(table,1,SWT.RIGHT,80, true);
       Widgets.addTableColumn(table,2,SWT.LEFT, 800,true);
@@ -9978,7 +9978,6 @@ Dprintf.dprintf("");
         }
         try
         {
-          ValueMap valueMap = new ValueMap();
           switch (restoreType)
           {
             case ARCHIVES:
@@ -9987,13 +9986,19 @@ Dprintf.dprintf("");
                 // get total number entries, size to restore
                 BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_INFO"),
                                          2,  // debugLevel
-                                         valueMap
+                                         new Command.ResultHandler()
+                                         {
+                                           @Override
+                                           public void handle(int i, ValueMap valueMap)
+                                           {
+                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
+                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
+                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
+                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
+                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                                           }
+                                         }
                                         );
-                data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
-                data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
-                data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
-                data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
-                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
                 assert(data.totalStorageCount >= 0);
                 assert(data.totalStorageSize >= 0);
                 assert(data.totalEntryCount >= 0);
@@ -10018,7 +10023,7 @@ Dprintf.dprintf("");
                 });
 
                 // get storages to restore
-                BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST"),
+                BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST sortMode=NAME ordering=ASCENDING"),
                                          1,  // debugLevel
                                          new Command.ResultHandler()
                                          {
@@ -10061,13 +10066,19 @@ Dprintf.dprintf("");
                 // get total number of entries, total entry size, total content size to restore
                 BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' entryType=* newestOnly=no selectedOnly=yes"),
                                          1,  // debugLevel
-                                         valueMap
+                                         new Command.ResultHandler()
+                                         {
+                                           @Override
+                                           public void handle(int i, ValueMap valueMap)
+                                           {
+                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
+                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
+                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount");
+                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize");
+                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                                           }
+                                         }
                                         );
-                data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
-                data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
-                data.totalEntryCount       = valueMap.getLong("totalEntryCount");
-                data.totalEntrySize        = valueMap.getLong("totalEntrySize");
-                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
                 assert(data.totalStorageCount >= 0);
                 assert(data.totalStorageSize >= 0);
                 assert(data.totalEntryCount >= 0);
@@ -10396,7 +10407,7 @@ Dprintf.dprintf("");
                                              );
                 break;
             }
-            final int storageCount[] = new int[]{0};
+//            final int storageCount[] = new int[]{0};
             BARServer.executeCommand(command,
                                      0,  // debugLevel
                                      new Command.ResultHandler()
@@ -10405,6 +10416,11 @@ Dprintf.dprintf("");
                                        public void handle(int i, ValueMap valueMap)
                                        {
                                          RestoreStates  state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                         long           doneCount        = valueMap.getLong  ("doneCount",0L);
+                                         long           doneSize         = valueMap.getLong  ("doneSize",0L);
+// TODO: use
+//                                         long           totalCount       = valueMap.getLong  ("totalCount",0L);
+//                                         long           totalSize        = valueMap.getLong  ("totalSize",0L);
                                          String         storageName      = valueMap.getString("storageName","");
                                          long           storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
                                          long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
@@ -10412,20 +10428,20 @@ Dprintf.dprintf("");
                                          long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
                                          long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
 
-                                         storageCount[0]++;
+//                                         storageCount[0]++;
                                          switch (state)
                                          {
                                            case NONE:
                                              break;
                                            case RUNNING:
-                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)storageCount[0]*100.0)/(double)data.totalStorageCount : 0.0);
+                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)doneCount*100.0)/(double)data.totalStorageCount : 0.0);
                                              busyDialog.updateText(1,"%s",storageName);
                                              busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
                                              busyDialog.updateText(2,"%s",entryName);
                                              busyDialog.updateProgressBar(2,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                              break;
                                            case RESTORED:
-                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)storageCount[0]*100.0)/(double)data.totalStorageCount : 0.0);
+                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)doneCount*100.0)/(double)data.totalStorageCount : 0.0);
                                              busyDialog.updateText(1,"%s",storageName);
                                              busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
                                              busyDialog.updateText(2,"%s",entryName);

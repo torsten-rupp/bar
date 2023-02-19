@@ -3729,6 +3729,13 @@ Errors Command_restore(const StringList                *storageNameList,
                   logHandle
                  );
 
+  // restore
+  SEMAPHORE_LOCKED_DO(&restoreInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    restoreInfo.statusInfo.done.count = 0L;
+    restoreInfo.statusInfo.done.size  = 0LL;
+    updateStatusInfo(&restoreInfo,TRUE);
+  }
   error            = ERROR_NONE;
   abortFlag        = FALSE;
   someStorageFound = FALSE;
@@ -3756,9 +3763,9 @@ Errors Command_restore(const StringList                *storageNameList,
     {
       // restore archive content
       error = restoreArchive(&restoreInfo,
-                                    &storageSpecifier,
-                                    NULL  // archiveName
-                                   );
+                             &storageSpecifier,
+                             NULL  // archiveName
+                            );
       if (error != ERROR_NONE)
       {
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
@@ -3797,9 +3804,9 @@ Errors Command_restore(const StringList                *storageNameList,
 
           // restore archive content
           error = restoreArchive(&restoreInfo,
-                                        &storageSpecifier,
-                                        fileName
-                                       );
+                                 &storageSpecifier,
+                                 fileName
+                                );
           if (error != ERROR_NONE)
           {
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
@@ -3818,6 +3825,15 @@ Errors Command_restore(const StringList                *storageNameList,
        )
     {
       break;
+    }
+
+    // update statuss
+    SEMAPHORE_LOCKED_DO(&restoreInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      restoreInfo.statusInfo.done.count++;
+//TODO: done size?
+//      restoreInfo.statusInfo.done.size;
+      updateStatusInfo(&restoreInfo,TRUE);
     }
   }
   if ((restoreInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
@@ -3931,6 +3947,12 @@ Errors Command_restore(const StringList                *storageNameList,
         }
       }
     }
+  }
+
+  // final update status
+  SEMAPHORE_LOCKED_DO(&restoreInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    updateStatusInfo(&restoreInfo,TRUE);
   }
 
   // get error

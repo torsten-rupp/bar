@@ -1,9 +1,10 @@
 2023-02-15 0.22f
   * fixed error message: no space left on device
   * improved find storage files: skip unreadable directories
-  * bar-index: fixed remove duplicate storges
+  * bar-index: fixed remove duplicate storages
   * BARControl: fixed edit serve maintenance time (locale)
   * BARControl: fixed update file lists
+  * BARControl: fixed update restore dialog
 
 2023-01-15 0.22e
   * fixed PostgreSQL memory consumption: use single

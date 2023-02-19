@@ -8,7 +8,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
+<<<<<<< Updated upstream
 "POT-Creation-Date: 2023-01-21 17:00+0100\n"
+=======
+"POT-Creation-Date: 2023-02-18 13:44+0100\n"
+>>>>>>> Stashed changes
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -31,7 +35,7 @@ msgstr ""
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_restore.c:3955
+#: /home/torsten/projects/bar/bar/commands_restore.c:3977
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""

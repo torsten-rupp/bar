@@ -911,19 +911,26 @@ class Units
 
     String result;
 
-    if      ((n % P) == 0) result = String.format("%d",(long)n/P);
-    else if (n >= P      ) result = DECIMAL_FORMAT.format(n/P);
-    else if ((n % T) == 0) result = String.format("%d",(long)n/T);
-    else if (n >= T      ) result = DECIMAL_FORMAT.format(n/T);
-    else if ((n % G) == 0) result = String.format("%d",(long)n/G);
-    else if (n >= G      ) result = DECIMAL_FORMAT.format(n/G);
-    else if ((n % M) == 0) result = String.format("%d",(long)n/M);
-    else if (n >= M      ) result = DECIMAL_FORMAT.format(n/M);
-    else if ((n % K) == 0) result = String.format("%d",(long)n/K);
-    else if (n >= K      ) result = DECIMAL_FORMAT.format(n/K);
-    else                   result = String.format("%d",(long)n);
+    if (n > 0)
+    {
+      if      ((n % P) == 0) result = String.format("%d",(long)n/P);
+      else if (n >= P      ) result = DECIMAL_FORMAT.format(n/P);
+      else if ((n % T) == 0) result = String.format("%d",(long)n/T);
+      else if (n >= T      ) result = DECIMAL_FORMAT.format(n/T);
+      else if ((n % G) == 0) result = String.format("%d",(long)n/G);
+      else if (n >= G      ) result = DECIMAL_FORMAT.format(n/G);
+      else if ((n % M) == 0) result = String.format("%d",(long)n/M);
+      else if (n >= M      ) result = DECIMAL_FORMAT.format(n/M);
+      else if ((n % K) == 0) result = String.format("%d",(long)n/K);
+      else if (n >= K      ) result = DECIMAL_FORMAT.format(n/K);
+      else                   result = String.format("%d",(long)n);
 
-    return result;
+      return StringUtils.trimEnd(result,"0.");
+    }
+    else
+    {
+      return "0";
+    }
   }
 
   /** get size short unit
@@ -6020,7 +6027,7 @@ if (false) {
           try
           {
             final ArrayList<Long> storageIds = new ArrayList<Long>();
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld",
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld sortMode=NAME ordering=ASCENDING",
                                                          "*",
                                                          "*",
                                                          "*",
