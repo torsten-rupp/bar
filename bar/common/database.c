@@ -6186,6 +6186,7 @@ LOCAL void formatParameters(String               sqlString,
     String_setCString(databaseHandle->debug.current.sqlString,sqlString);
   #endif /* not NDEBUG */
 
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -6217,6 +6218,7 @@ LOCAL void formatParameters(String               sqlString,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     #ifndef NDEBUG
