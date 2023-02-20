@@ -8173,6 +8173,11 @@ Errors Command_create(ServerIO                     *masterIO,
   ThreadPool_joinSet(&createThreadSet);
   AUTOFREE_REMOVE(&autoFreeList,&createThreadSet);
   ThreadPool_doneSet(&createThreadSet);
+  if (createInfo.failError != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return createInfo.failError;
+  }
 
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
