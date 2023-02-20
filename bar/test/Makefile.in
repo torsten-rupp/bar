@@ -1480,7 +1480,7 @@ test5 test_signatures: \
           ;
 	# wrong signature key, no signature key
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE)) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --skip-unreadable --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE)) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS)    $(INTERMEDIATE_DIR)/test.bar --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --info )) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) -t $(INTERMEDIATE_DIR)/test.bar --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --info )) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) -d $(INTERMEDIATE_DIR)/test.bar --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --info )) $(LOG)
