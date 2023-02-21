@@ -6560,7 +6560,11 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
           int sqliteResult;
 
           // do query
-          sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
+          do
+          {
+            sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
+          }
+          while (sqliteResult == SQLITE_ROW);
           if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
           {
             error = ERROR_NONE;
