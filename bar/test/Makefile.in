@@ -1570,7 +1570,7 @@ test7 test_convert: \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 --skip-unreadable $(OPTIONS)" \
           test_convert_operations \
           ;
 	@$(call functionInfoEnd,OK)
