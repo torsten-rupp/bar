@@ -87,14 +87,11 @@ UPDATE entities SET id=${DEFAULT_ENTITY_DATABASE_ID} WHERE id=1;
 ALTER TABLE entities AUTO_INCREMENT=1;
 
 // insert/delete/update triggeres
-/*
 CREATE TRIGGER AFTER INSERT ON entities
   FOR EACH ROW
-  BEGIN
     INSERT IGNORE INTO uuids
       (jobUUID) VALUES (NEW.jobUUID);
-  END;
-*/
+END;
 
 // --- storages --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storages(
@@ -235,39 +232,6 @@ CREATE VIEW FTS_entries(
          name
   FROM entries
 );
-
-/*
-CREATE TRIGGER AFTER UPDATE ON entries
-  FOR EACH ROW
-  BEGIN
-    // update newest entries
-    UPDATE entriesNewest
-      SET uuidId=NEW.uuidId
-      WHERE entryId=OLD.id;
-
-    // update newest entries
-    UPDATE entriesNewest
-      SET entityId=NEW.entityId
-      WHERE entryId=OLD.id;
-
-// insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
-    // update if entry is newer
-    UPDATE entriesNewest
-      SET entryId        =NEW.id,
-          uuidId         =NEW.uuidId,
-          entityId       =NEW.entityId,
-          type           =NEW.type,
-          timeLastChanged=NEW.timeLastChanged,
-          userId         =NEW.userId,
-          groupId        =NEW.groupId,
-          permission     =NEW.permission,
-          size           =NEW.size
-      WHERE     entryId!=NEW.id
-            AND name=NEW.name
-            AND type=NEW.type
-            AND NEW.timeLastChanged>timeLastChanged;
-  END;
-*/
 
 //TODO
 // --- skipped entries -------------------------------------------------

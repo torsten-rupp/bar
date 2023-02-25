@@ -856,8 +856,7 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
     error = Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             indexDefinition,
-                             DATABASE_PARAMETERS_NONE
+                             indexDefinition
                             );
   }
   if (error != ERROR_NONE)
@@ -2070,8 +2069,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "ANALYZE %s",
                                                 String_cString(name)
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
+                                               )
                                   );
         }
         break;
@@ -2126,8 +2124,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "ANALYZE %s",
                                                 String_cString(name)
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
+                                               )
                                   );
         }
         break;
@@ -2388,8 +2385,7 @@ LOCAL Errors createTriggers(DatabaseHandle *databaseHandle)
     error = Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             triggerDefinition,
-                             DATABASE_PARAMETERS_NONE
+                             triggerDefinition
                             );
   }
   if (error != ERROR_NONE)
@@ -2570,8 +2566,7 @@ LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     indexDefinition,
-                                     DATABASE_PARAMETERS_NONE
+                                     indexDefinition
                                     );
           }
         }
@@ -2674,8 +2669,7 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     indexDefinition,
-                                     DATABASE_PARAMETERS_NONE
+                                     indexDefinition
                                     );
           }
         }
@@ -7889,8 +7883,10 @@ LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),"VACUUM INTO '%s'",toFileName),
-                                 DATABASE_PARAMETERS_NONE
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "VACUUM INTO '%s'",
+                                              toFileName
+                                             )
                                 );
         if (error != ERROR_NONE)
         {
@@ -7905,8 +7901,7 @@ LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 "VACUUM",
-                                 DATABASE_PARAMETERS_NONE
+                                 "VACUUM"
                                 );
         if (error != ERROR_NONE)
         {
@@ -7929,8 +7924,7 @@ LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "OPTIMIZE TABLE %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
+                                               )
                                   );
           if (error != ERROR_NONE)
           {
@@ -7954,8 +7948,7 @@ LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "VACUUM %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_POSTGRESQL[i]
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
+                                               )
                                   );
           if (error != ERROR_NONE)
           {

@@ -2236,21 +2236,17 @@ char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
 * Purpose: execute SQL statement
 * Input  : databaseHandle  - database handle
 *          changedRowCount - number of changd rows (can be NULL)
-*          flagsflags      - execute flags; see DATABASE_FLAG_...
+*          flags           - execute flags; see DATABASE_FLAG_...
 *          sqlCommand      - SQL command string
-*          values          - values for SQL command string
-*          valueCount      - value count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_execute(DatabaseHandle          *databaseHandle,
-                        ulong                   *changedRowCount,
-                        uint                    flags,
-                        const char              *sqlCommand,
-                        const DatabaseParameter parameters[],
-                        uint                    parameterCount
+Errors Database_execute(DatabaseHandle *databaseHandle,
+                        ulong          *changedRowCount,
+                        uint           flags,
+                        const char     *sqlCommand
                        );
 
 /***********************************************************************\
