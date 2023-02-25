@@ -12995,6 +12995,7 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
     case DATABASE_TYPE_SQLITE3:
       {
         char sqlString[256];
+
         if (error == ERROR_NONE)
         {
           error = Database_execute(databaseHandle,
@@ -13141,15 +13142,19 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               "PRAGMA temp_store_directory=?",
-                               DATABASE_PARAMETERS
-                               (
-                                 DATABASE_PARAMETER_STRING(directoryName)
-                               )
-                              );
+      {
+        char sqlString[256];
+
+        error = Database_execute(databaseHandle,
+                                 NULL,  // changedRowCount
+                                 DATABASE_FLAG_NONE,
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "PRAGMA temp_store_directory='%s'",
+                                              directoryName
+                                             ),
+                                 DATABASE_PARAMETERS_NONE
+                                );
+      }
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
