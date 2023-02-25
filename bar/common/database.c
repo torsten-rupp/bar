@@ -3027,7 +3027,7 @@ LOCAL Errors mariaDBDropDatabase(const char     *serverName,
 * Purpose: get table list
 * Input  : tableList      - table list variable
 *          databaseHandle - database handle
-*          databaseName   - database name
+*          databaseName   - database name (can be NULL)
 * Output : -
 * Return : tableList - table list
 * Notes  : -
@@ -3082,7 +3082,7 @@ LOCAL Errors mariaDBGetTableList(StringList     *tableList,
 * Purpose: get view list
 * Input  : viewList       - view list variable
 *          databaseHandle - database handle
-*          databaseName   - database name
+*          databaseName   - database name (can be NULL)
 * Output : -
 * Return : viewList - view list
 * Notes  : -
@@ -3114,7 +3114,9 @@ LOCAL Errors mariaDBGetViewList(StringList     *viewList,
                      NULL,  // changedRowCount
                      DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
                                                  "SHOW FULL TABLES FROM %s WHERE TABLE_TYPE LIKE 'VIEW'",
-                                                 databaseName
+                                                 (databaseName != NULL)
+                                                   ? databaseName
+                                                   : String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.databaseName)
                                                 )
                                    ),
                      DATABASE_COLUMNS
@@ -3152,17 +3154,27 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
 
   if (tableName != NULL)
   {
-// TODO: correct columns return?
     error = databaseGet(databaseHandle,
                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                         {
+                          String indexName;
+
                           assert(values != NULL);
-                          assert(valueCount >= 3);
+                          assert(valueCount == 13);
 
                           UNUSED_VARIABLE(valueCount);
                           UNUSED_VARIABLE(userData);
 
-                          StringList_append(indexList,values[2].string);
+                          indexName = String_format(String_new(),
+                                                    "%S:%S",
+                                                    values[0].s,
+                                                    values[4].s
+                                                   );
+                          if (!StringList_contains(indexList,indexName))
+                          {
+                            StringList_append(indexList,indexName);
+                          }
+                          String_delete(indexName);
 
                           return ERROR_NONE;
                         },NULL),
@@ -3175,8 +3187,10 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
                         DATABASE_COLUMNS
                         (
                           DATABASE_COLUMN_STRING("table"),
-                          DATABASE_COLUMN_STRING("non_unique"),
+                          DATABASE_COLUMN_BOOL  ("non_unique"),
                           DATABASE_COLUMN_STRING("key_name"),
+                          DATABASE_COLUMN_UINT  ("seq_in_index"),
+                          DATABASE_COLUMN_STRING("column_name"),
                         ),
                         DATABASE_FILTERS_NONE,
                         NULL,  // groupBy
@@ -3196,58 +3210,68 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
                           UNUSED_VARIABLE(valueCount);
                           UNUSED_VARIABLE(userData);
 
-                          return databaseGet(databaseHandle,
-                                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                             {
-                                               String indexName;
+                          error = databaseGet(databaseHandle,
+                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                              {
+                                                String indexName;
 
-                                               assert(values != NULL);
-                                               assert(valueCount == 13);
+                                                assert(values != NULL);
+                                                assert(valueCount == 13);
 
-                                               UNUSED_VARIABLE(valueCount);
-                                               UNUSED_VARIABLE(userData);
+                                                UNUSED_VARIABLE(valueCount);
+                                                UNUSED_VARIABLE(userData);
 
-                                               indexName = String_format(String_new(),
-                                                                         "%s:%s",
-                                                                         values[0].s,
-                                                                         values[2].s
-                                                                        );
-                                               if (!StringList_contains(indexList,indexName))
-                                               {
-                                                 StringList_append(indexList,indexName);
-                                               }
-                                               String_delete(indexName);
+                                                indexName = String_format(String_new(),
+                                                                          "%S:%S",
+                                                                          values[0].s,
+                                                                          values[4].s
+                                                                         );
+                                                if (!StringList_contains(indexList,indexName))
+                                                {
+                                                  StringList_append(indexList,indexName);
+                                                }
+                                                String_delete(indexName);
 
-                                               return ERROR_NONE;
-                                             },NULL),
-                                             NULL,  // changedRowCount
-                                             DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
-                                                                         "SHOW INDEXES FROM %s",
-                                                                         String_cString(values[0].string)
-                                                                        )
-                                                           ),
-                                             DATABASE_COLUMNS
-                                             (
-                                             ),
-                                             DATABASE_FILTERS_NONE,
-                                             NULL,  // groupBy
-                                             NULL,  // orderBy
-                                             0LL,
-                                             DATABASE_UNLIMITED
-                                            );
-                        },NULL),
-                        NULL,  // changedRowCount
-                        DATABASE_PLAIN("SHOW TABLES"),
-                        DATABASE_COLUMNS
-                        (
-                        ),
-                        DATABASE_FILTERS_NONE,
-                        NULL,  // groupBy
-                        NULL,  // orderBy
-                        0LL,
-                        DATABASE_UNLIMITED
-                       );
+                                                return ERROR_NONE;
+                                              },NULL),
+                                              NULL,  // changedRowCount
+                                              DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
+                                                                          "SHOW INDEXES FROM %s",
+                                                                          String_cString(values[0].string)
+                                                                         )
+                                                            ),
+                                              DATABASE_COLUMNS
+                                              (
+                                                DATABASE_COLUMN_STRING("table"),
+                                                DATABASE_COLUMN_BOOL  ("non_unique"),
+                                                DATABASE_COLUMN_STRING("key_name"),
+                                                DATABASE_COLUMN_UINT  ("seq_in_index"),
+                                                DATABASE_COLUMN_STRING("column_name"),
+                                              ),
+                                              DATABASE_FILTERS_NONE,
+                                              NULL,  // groupBy
+                                              NULL,  // orderBy
+                                              0LL,
+                                              DATABASE_UNLIMITED
+                                             );
+                           if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+
+                           return error;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_PLAIN("SHOW TABLES"),
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_STRING("tableName")
+                         ),
+                         DATABASE_FILTERS_NONE,
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
   }
+  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   return error;
 }
@@ -3257,6 +3281,7 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
 * Purpose: get trigger list
 * Input  : triggerList    - trigger list variable
 *          databaseHandle - database handle
+*          databaseName   - database name (can be NULL)
 * Output : -
 * Return : triggerList - trigger list
 * Notes  : -
@@ -3267,6 +3292,8 @@ LOCAL Errors mariaDBGetTriggerList(StringList     *triggerList,
                                    const char     *databaseName
                                   )
 {
+  char sqlString[256];
+
   assert(triggerList != NULL);
   assert(databaseHandle != NULL);
 
@@ -3275,7 +3302,7 @@ LOCAL Errors mariaDBGetTriggerList(StringList     *triggerList,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
                        assert(values != NULL);
-                       assert(valueCount == 1);
+                       assert(valueCount == 11);
 
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
@@ -3285,14 +3312,16 @@ LOCAL Errors mariaDBGetTriggerList(StringList     *triggerList,
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     DATABASE_TABLES
-                     (
-                       "sqlite_master"
-                     ),
-                     DATABASE_FLAG_NONE,
+                     DATABASE_PLAIN(stringFormat(sqlString,sizeof(sqlString),
+                                                 "SHOW TRIGGERS FROM %s",
+                                                 (databaseName != NULL)
+                                                   ? databaseName
+                                                   : String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.databaseName)
+                                                )
+                                   ),
                      DATABASE_COLUMNS
                      (
-                       DATABASE_COLUMN_STRING("name")
+                       DATABASE_COLUMN_STRING("trigger")
                      ),
                      "type='trigger'",
                      DATABASE_FILTERS
@@ -10645,7 +10674,6 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
-  assert(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle));
   assert(sqlString != NULL);
 
   UNUSED_VARIABLE(flags);
@@ -12085,7 +12113,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 
           // rename tables
           StringList_init(&tableNameList);
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,databaseName);
           error = mariaDBGetTableList(&tableNameList,&databaseHandle,databaseName);
           if (error != ERROR_NONE)
           {
@@ -12461,13 +12488,12 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
 
 // TODO: remove
 #if 0
-  (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "COMMIT",
-                           DATABASE_PARAMETERS_NONE
-                          );
+  (void)executeQuery(databaseHandle,
+                     NULL,  // changedRowCount
+                     databaseHandle->timeout,
+                     DATABASE_FLAG_NONE,
+                     "COMMIT"
+                    );
 #endif
 
   #ifdef NDEBUG
@@ -13003,27 +13029,27 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
 
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "PRAGMA synchronous=%d",
-                                                enabled ? 1 : 0
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "PRAGMA synchronous=%d",
+                                            enabled ? 1 : 0
+                                           )
+                              );
         }
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "PRAGMA journal_mode=%d",
-                                                enabled ? 1 : 0
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "PRAGMA journal_mode=%d",
+                                            enabled ? 1 : 0
+                                           )
+                              );
         }
       }
       break;
@@ -13064,15 +13090,15 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
       {
         char sqlString[256];
 
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "PRAGMA foreign_keys=%d",
-                                              enabled ? 1 : 0
-                                             ),
-                                 DATABASE_PARAMETERS_NONE
-                                );
+        error = executeQuery(databaseHandle,
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_FLAG_NONE,
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "PRAGMA foreign_keys=%d",
+                                          enabled ? 1 : 0
+                                         )
+                            );
       }
       break;
     case DATABASE_TYPE_MARIADB:
@@ -13080,15 +13106,15 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
         {
           char sqlString[256];
 
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "SET FOREIGN_KEY_CHECKS=%s",
-                                                enabled ? "ON" : "OFF"
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "SET FOREIGN_KEY_CHECKS=%s",
+                                            enabled ? "ON" : "OFF"
+                                           )
+                              );
         }
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -13108,16 +13134,16 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
         {
           char sqlString[256];
 
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "ALTER TABLE %s %s ALL",
-                                                String_cString(tableName),
-                                                enabled ? "ENABLE" : "DISABLE"
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "ALTER TABLE %s %s ALL",
+                                            String_cString(tableName),
+                                            enabled ? "ENABLE" : "DISABLE"
+                                           )
+                              );
         }
 
         StringList_done(&tableNameList);
@@ -13150,15 +13176,15 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
       {
         char sqlString[256];
 
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "PRAGMA temp_store_directory='%s'",
-                                              directoryName
-                                             ),
-                                 DATABASE_PARAMETERS_NONE
-                                );
+        error = executeQuery(databaseHandle,
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_FLAG_NONE,
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "PRAGMA temp_store_directory='%s'",
+                                          directoryName
+                                         )
+                            );
       }
       break;
     case DATABASE_TYPE_MARIADB:
@@ -13197,15 +13223,15 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
       {
         char sqlString[256];
 
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP TABLE IF EXISTS %s",
-                                              tableName
-                                             ),
-                                 DATABASE_PARAMETERS_NONE
-                                );
+        error = executeQuery(databaseHandle,
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_FLAG_NONE,
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "DROP TABLE IF EXISTS %s",
+                                          tableName
+                                         )
+                            );
       }
       break;
     case DATABASE_TYPE_MARIADB:
@@ -13213,15 +13239,15 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
         {
           char sqlString[256];
 
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "DROP TABLE %s",
-                                                tableName
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "DROP TABLE %s",
+                                            tableName
+                                           )
+                              );
         }
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -13232,15 +13258,15 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
         {
           char sqlString[256];
 
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "DROP TABLE %s CASCADE",
-                                                tableName
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "DROP TABLE %s CASCADE",
+                                            tableName
+                                           )
+                              );
         }
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -13287,41 +13313,45 @@ Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
                                      const char                *definition
                                     )
 {
+  char sqlString[256];
+
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  return Database_execute(databaseHandle,
-                          NULL,  // changedRowCount
-                          DATABASE_FLAG_NONE,
-                          "CREATE TABLE ?.? \
-                           ( \
-                             id INT PRIMARY KEY, \
-                             ? \
-                           ) \
-                          ",
-                          DATABASE_PARAMETERS
-                          (
-                            DATABASE_PARAMETER_STRING(DATABASE_AUX),
-                            DATABASE_PARAMETER_STRING(TEMPORARY_TABLE_NAMES[id]),
-                            DATABASE_PARAMETER_STRING(definition)
-                          )
-                         );
+  return executeQuery(databaseHandle,
+                      NULL,  // changedRowCount
+                      databaseHandle->timeout,
+                      DATABASE_FLAG_NONE,
+                      stringFormat(sqlString,sizeof(sqlString),
+                                   "CREATE TABLE %s.%s \
+                                    ( \
+                                      id INT PRIMARY KEY, \
+                                      %s \
+                                    ) \
+                                   ",
+                                   DATABASE_AUX,
+                                   TEMPORARY_TABLE_NAMES[id],
+                                   definition
+                                  )
+                     );
 }
 
 Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
                                    DatabaseTemporaryTableIds id
                                   )
 {
-  return Database_execute(databaseHandle,
-                          NULL,  // changedRowCount
-                          DATABASE_FLAG_NONE,
-                          "DROP TABLE ?.?",
-                          DATABASE_PARAMETERS
-                          (
-                            DATABASE_PARAMETER_STRING(DATABASE_AUX),
-                            DATABASE_PARAMETER_STRING(TEMPORARY_TABLE_NAMES[id])
-                          )
-                         );
+  char sqlString[256];
+
+  return executeQuery(databaseHandle,
+                      NULL,  // changedRowCount
+                      databaseHandle->timeout,
+                      DATABASE_FLAG_NONE,
+                      stringFormat(sqlString,sizeof(sqlString),
+                                   "DROP TABLE %s.%s",
+                                   DATABASE_AUX,
+                                   TEMPORARY_TABLE_NAMES[id]
+                                  )
+                     );
 }
 
 Errors Database_dropView(DatabaseHandle *databaseHandle,
@@ -13339,42 +13369,42 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               stringFormat(sqlString,sizeof(sqlString),
-                                            "DROP VIEW %s",
-                                            viewName
-                                           ),
-                               DATABASE_PARAMETERS_NONE
-                              );
+      error = executeQuery(databaseHandle,
+                           NULL,  // changedRowCount
+                           databaseHandle->timeout,
+                           DATABASE_FLAG_NONE,
+                           stringFormat(sqlString,sizeof(sqlString),
+                                        "DROP VIEW %s",
+                                        viewName
+                                       )
+                          );
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP VIEW %s",
-                                              viewName
-                                             ),
-                                 DATABASE_PARAMETERS_NONE
-                                );
+        error = executeQuery(databaseHandle,
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_FLAG_NONE,
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "DROP VIEW %s",
+                                          viewName
+                                         )
+                            );
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP VIEW %s CASCADE",
-                                              viewName
-                                             ),
-                                 DATABASE_PARAMETERS_NONE
-                                );
+        error = executeQuery(databaseHandle,
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_FLAG_NONE,
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "DROP VIEW %s CASCADE",
+                                          viewName
+                                         )
+                            );
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -13422,15 +13452,15 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
       {
         char sqlString[256];
 
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP INDEX IF EXISTS %s",
-                                              indexName
-                                             ),
-                                 DATABASE_PARAMETERS_NONE
-                                );
+        error = executeQuery(databaseHandle,
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_FLAG_NONE,
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "DROP INDEX IF EXISTS %s",
+                                          indexName
+                                         )
+                            );
       }
       break;
     case DATABASE_TYPE_MARIADB:
@@ -13439,21 +13469,22 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
           StringList         tableNameList;
           StringListIterator iteratorTableName;
           String             tableName;
+          char               sqlString[256];
 
           StringList_init(&tableNameList);
           error = Database_getTableList(&tableNameList,databaseHandle,NULL);
           STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error == ERROR_NONE)
           {
-            error = Database_execute(databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     "DROP INDEXES IF EXISTS ? FROM ?",
-                                     DATABASE_PARAMETERS
-                                     (
-                                       DATABASE_PARAMETER_STRING(indexName),
-                                       DATABASE_PARAMETER_STRING(String_cString(tableName))
-                                     )
-                                    );
+            error = executeQuery(databaseHandle,
+                                 NULL,  // changedRowCount
+                                 databaseHandle->timeout,
+                                 DATABASE_FLAG_NONE,
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "DROP INDEXES IF EXISTS %s FROM %s",
+                                              indexName,
+                                              String_cString(tableName)
+                                             )
+                                );
           }
           StringList_done(&tableNameList);
         }
@@ -13466,15 +13497,15 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
         {
           char sqlString[256];
 
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "DROP INDEX \"%s\"",
-                                                indexName
-                                               ),
-                                   DATABASE_PARAMETERS_NONE
-                                  );
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "DROP INDEX \"%s\"",
+                                            indexName
+                                           )
+                              );
         }
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -13537,15 +13568,15 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(triggerName != NULL);
 
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           stringFormat(sqlString,sizeof(sqlString),
-                                        "DROP TRIGGER IF EXISTS %s",
-                                        triggerName
-                                       ),
-                           DATABASE_PARAMETERS_NONE
-                          );
+  error = executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       stringFormat(sqlString,sizeof(sqlString),
+                                    "DROP TRIGGER IF EXISTS %s",
+                                    triggerName
+                                   )
+                      );
 
   return error;
 }
@@ -14966,6 +14997,7 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
 {
   const char *columnTypeString;
   Errors     error;
+  char       sqlString[256];
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -15024,17 +15056,17 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
   }
 
   // execute SQL command
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "ALTER TABLE ? ADD COLUMN ? ?",
-                           DATABASE_PARAMETERS
-                           (
-                             DATABASE_PARAMETER_STRING(tableName),
-                             DATABASE_PARAMETER_STRING(columnName),
-                             DATABASE_PARAMETER_STRING(columnTypeString)
-                           )
-                          );
+  error = executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       stringFormat(sqlString,sizeof(sqlString),
+                                    "ALTER TABLE %s ADD COLUMN %s %s",
+                                    tableName,
+                                    columnName,
+                                    columnTypeString
+                                   )
+                      );
 
   return error;
 }
@@ -15044,10 +15076,10 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              const char     *columnName
                             )
 {
+  String         sqlString,value;
   Errors         error;
   DatabaseColumn columns[DATABASE_MAX_TABLE_COLUMNS];
   uint           columnCount;
-  String         sqlString,value;
   uint           n;
 
   assert(databaseHandle != NULL);
@@ -15058,15 +15090,19 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+  // init variables
+  sqlString = String_new();
+  value     = String_new();
+
   // get table columns
   error = getTableColumns(columns,&columnCount,DATABASE_MAX_TABLE_COLUMNS,databaseHandle,tableName);
   if (error != ERROR_NONE)
   {
+    String_delete(value);
+    String_delete(sqlString);
     return error;
   }
 
-  sqlString = String_new();
-  value     = String_new();
   BLOCK_DOX(error,
             begin(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
             end(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
@@ -15106,6 +15142,8 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     });
     if (error != ERROR_NONE)
     {
+      String_delete(value);
+      String_delete(sqlString);
       return error;
     }
 
@@ -15128,80 +15166,91 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                               );
     if (error != ERROR_NONE)
     {
-      (void)Database_execute(databaseHandle,
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             "DROP TABLE __new__",
-                             DATABASE_PARAMETERS_NONE
-                            );
+      (void)executeQuery(databaseHandle,
+                         NULL,  // changedRowCount
+                         databaseHandle->timeout,
+                         DATABASE_FLAG_NONE,
+                         "DROP TABLE __new__"
+                        );
       return error;
     }
 
     return ERROR_NONE;
   });
-  String_delete(value);
-  String_delete(sqlString);
 
   // free resources
 
   // rename tables
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "ALTER TABLE %s RENAME TO __old__",
-                           DATABASE_PARAMETERS
-                           (
-                             DATABASE_PARAMETER_STRING(tableName)
-                           )
-                          );
+  error = executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       String_cString(String_format(sqlString,
+                                                    "ALTER TABLE %s RENAME TO __old__",
+                                                    tableName
+                                                   )
+                                     )
+                      );
   if (error != ERROR_NONE)
   {
-    (void)Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "DROP TABLE __new__",
-                           DATABASE_PARAMETERS_NONE
-                          );
+    (void)executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       "DROP TABLE __new__"
+                      );
+    String_delete(value);
+    String_delete(sqlString);
     return error;
   }
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "ALTER TABLE __new__ RENAME TO ?",
-                           DATABASE_PARAMETERS
-                           (
-                             DATABASE_PARAMETER_STRING(tableName)
-                           )
-                          );
+  error = executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       String_cString(String_format(sqlString,
+                                                    "ALTER TABLE __new__ RENAME TO %s",
+                                                    tableName
+                                                   )
+                                     )
+                      );
   if (error != ERROR_NONE)
   {
-    (void)Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "ALTER TABLE __old__ RENAME TO ?",
-                           DATABASE_PARAMETERS
-                           (
-                             DATABASE_PARAMETER_STRING(tableName)
-                           )
-                          );
-    (void)Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "DROP TABLE __new__",
-                           DATABASE_PARAMETERS_NONE
-                          );
+    (void)executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       String_cString(String_format(sqlString,
+                                                    "ALTER TABLE __old__ RENAME TO %s",
+                                                    tableName
+                                                   )
+                                     )
+                      );
+    (void)executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       "DROP TABLE __new__"
+                      );
+    String_delete(value);
+    String_delete(sqlString);
     return error;
   }
-  error = Database_execute(databaseHandle,
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           "DROP TABLE __old__",
-                           DATABASE_PARAMETERS_NONE
-                          );
+  error = executeQuery(databaseHandle,
+                       NULL,  // changedRowCount
+                       databaseHandle->timeout,
+                       DATABASE_FLAG_NONE,
+                       "DROP TABLE __old__"
+                      );
   if (error != ERROR_NONE)
   {
+    String_delete(value);
+    String_delete(sqlString);
     return error;
   }
+
+  // free resources
+  String_delete(value);
+  String_delete(sqlString);
 
   return ERROR_NONE;
 }
@@ -15919,18 +15968,15 @@ char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
   return NULL;
 }
 
-Errors Database_execute(DatabaseHandle          *databaseHandle,
-                        ulong                   *changedRowCount,
-                        uint                    flags,
-                        const char              *sqlString,
-                        const DatabaseParameter parameters[],
-                        uint                    parameterCount
+Errors Database_execute(DatabaseHandle *databaseHandle,
+                        ulong          *changedRowCount,
+                        uint           flags,
+                        const char     *sqlString
                        )
 {
   #define SLEEP_TIME 500L  // [ms]
 
   TimeoutInfo                   timeoutInfo;
-  DatabaseStatementHandle       databaseStatementHandle;
   bool                          done;
   Errors                        error;
   uint                          maxRetryCount;
@@ -15956,28 +16002,6 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    // prepare statement
-    error = prepareStatement(&databaseStatementHandle,
-                             databaseHandle,
-                             sqlString,
-                             parameterCount
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // bind parameters
-    error = bindParameters(&databaseStatementHandle,
-                           parameters,
-                           parameterCount
-                          );
-    if (error != ERROR_NONE)
-    {
-      finalizeStatement(&databaseStatementHandle);
-      return error;
-    }
-
     // execute query with retry
     done          = FALSE;
     error         = ERROR_NONE;
@@ -15986,10 +16010,12 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
     do
     {
       // execute query
-      error = executePreparedQuery(&databaseStatementHandle,
-                                   changedRowCount,
-                                   Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
-                                  );
+      error = executeQuery(databaseHandle,
+                           changedRowCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG),
+                           DATABASE_FLAG_NONE,
+                           sqlString
+                          );
 
       // check result
       if      (error == ERROR_NONE)
@@ -16018,9 +16044,6 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
            && (error == ERROR_NONE)
            && (retryCount <= maxRetryCount)
           );
-
-    // free resources
-    finalizeStatement(&databaseStatementHandle);
 
     return error;
   });
@@ -18476,12 +18499,12 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               "REINDEX",
-                               DATABASE_PARAMETERS_NONE
-                              );
+      error = executeQuery(databaseHandle,
+                           NULL,  // changedRowCount
+                           databaseHandle->timeout,
+                           DATABASE_FLAG_NONE,
+                           "REINDEX"
+                          );
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)

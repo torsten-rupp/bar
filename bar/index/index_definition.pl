@@ -339,7 +339,7 @@ sub processFile($$)
       elsif ($line =~ /^\s*END;\s*$/)
       {
         # end trigger
-        $definition = append($definition,"END");
+#        $definition = append($definition,"END");
 
         if    ($type eq $TYPE_TABLE)
         {
@@ -370,7 +370,9 @@ sub processFile($$)
               print CFILE_HANDLE " OF $triggerOperationOf";
             }
             print CFILE_HANDLE " ON $tableName \\\n";
+            print CFILE_HANDLE "BEGIN\\\n";
             print CFILE_HANDLE $definition."\\\n";
+            print CFILE_HANDLE "END;\\\n";
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)." = INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)."_;\n";
           }

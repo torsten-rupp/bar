@@ -76,10 +76,9 @@ INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUU
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON entities
-  BEGIN
-    INSERT OR IGNORE INTO uuids
-      (jobUUID) VALUES (NEW.jobUUID);
-  END;
+  INSERT OR IGNORE INTO uuids
+    (jobUUID) VALUES (NEW.jobUUID);
+END;
 
 // --- storages --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storages(
@@ -214,51 +213,6 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS5(
 //  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
   tokenize=unicode61
 );
-
-/*
-CREATE TRIGGER AFTER UPDATE OF uuidId ON entries
-  BEGIN
-    // update newest entries
-    UPDATE entriesNewest
-      SET uuidId=NEW.uuidId
-      WHERE entryId=OLD.id;
-  END;
-
-CREATE TRIGGER AFTER UPDATE OF entityId ON entries
-  BEGIN
-    // update newest entries
-    UPDATE entriesNewest
-      SET entityId=NEW.entityId
-      WHERE entryId=OLD.id;
-  END;
-
-CREATE TRIGGER AFTER UPDATE OF name ON entries
-  BEGIN
-    // update FTS
-    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
-    INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
-  END;
-
-CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
-  BEGIN
-// insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
-    // update if entry is newer
-    UPDATE entriesNewest
-      SET entryId        =NEW.id,
-          uuidId         =NEW.uuidId,
-          entityId       =NEW.entityId,
-          type           =NEW.type,
-          timeLastChanged=NEW.timeLastChanged,
-          userId         =NEW.userId,
-          groupId        =NEW.groupId,
-          permission     =NEW.permission,
-          size           =NEW.size
-      WHERE     entryId!=NEW.id
-            AND name=NEW.name
-            AND type=NEW.type
-            AND NEW.timeLastChanged>timeLastChanged;
-  END;
-*/
 
 //TODO
 // --- skipped entries -------------------------------------------------
