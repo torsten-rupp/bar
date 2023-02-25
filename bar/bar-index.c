@@ -686,11 +686,11 @@ LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
 * Input  : databaseHandle - database handle
 *          quietFlag      - TRUE to suppress output
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void dropTables(DatabaseHandle *databaseHandle, bool quietFlag)
+LOCAL Errors dropTables(DatabaseHandle *databaseHandle, bool quietFlag)
 {
   Errors error;
 
@@ -705,6 +705,8 @@ LOCAL void dropTables(DatabaseHandle *databaseHandle, bool quietFlag)
     if (!quietFlag) printInfo("FAIL (error: %s)\n",Error_getText(error));
   }
   (void)Database_flush(databaseHandle);
+
+  return error;
 }
 
 /***********************************************************************\
@@ -713,11 +715,11 @@ LOCAL void dropTables(DatabaseHandle *databaseHandle, bool quietFlag)
 * Input  : databaseHandle - database handle
 *          quietFlag      - TRUE to suppress output
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void dropViews(DatabaseHandle *databaseHandle, bool quietFlag)
+LOCAL Errors dropViews(DatabaseHandle *databaseHandle, bool quietFlag)
 {
   Errors error;
 
@@ -732,6 +734,8 @@ LOCAL void dropViews(DatabaseHandle *databaseHandle, bool quietFlag)
     if (!quietFlag) printInfo("FAIL (error: %s)\n",Error_getText(error));
   }
   (void)Database_flush(databaseHandle);
+
+  return error;
 }
 
 /***********************************************************************\
@@ -740,11 +744,11 @@ LOCAL void dropViews(DatabaseHandle *databaseHandle, bool quietFlag)
 * Input  : databaseHandle - database handle
 *          quietFlag      - TRUE to suppress output
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
+LOCAL Errors dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
 {
   Errors error;
 
@@ -786,6 +790,8 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
     if (!quietFlag) printInfo("FAIL (error: %s)!\n",Error_getText(error));
   }
   (void)Database_flush(databaseHandle);
+
+  return error;
 }
 
 /***********************************************************************\
@@ -794,11 +800,11 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
 * Input  : databaseHandle - database handle
 *          quietFlag      - TRUE to suppress output
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void dropTriggers(DatabaseHandle *databaseHandle, bool quietFlag)
+LOCAL Errors dropTriggers(DatabaseHandle *databaseHandle, bool quietFlag)
 {
   Errors error;
 
@@ -813,6 +819,8 @@ LOCAL void dropTriggers(DatabaseHandle *databaseHandle, bool quietFlag)
     if (!quietFlag) printInfo("FAIL (error: %s)\n",Error_getText(error));
   }
   (void)Database_flush(databaseHandle);
+
+  return error;
 }
 
 /***********************************************************************\
@@ -1355,7 +1363,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   if (error != ERROR_NONE)
   {
     printError("import database fail: %s!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   // free resources
@@ -2026,7 +2034,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
 
   printInfo("  Tables...");
   StringList_init(&tableNameList);
-  error = Database_getTableList(&tableNameList,databaseHandle);
+  error = Database_getTableList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -2335,11 +2343,11 @@ LOCAL String getFTSMatchString(String         string,
 * Purpose: create triggers
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createTriggers(DatabaseHandle *databaseHandle)
+LOCAL Errors createTriggers(DatabaseHandle *databaseHandle)
 {
   Errors     error;
   const char *triggerName;
@@ -2359,7 +2367,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL\n");
     printError("create triggers fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   // create new triggeres
@@ -2376,10 +2384,12 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL\n");
     printError("create triggers fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   printInfo("OK\n");
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2399,12 +2409,12 @@ LOCAL void printTableNames(DatabaseHandle *databaseHandle)
   ConstString        tableName;
 
   StringList_init(&tableNameList);
-  error = Database_getTableList(&tableNameList,databaseHandle);
+  error = Database_getTableList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
   {
-    printError("cannot get table names (error: %s)!",Error_getText(error));
     StringList_done(&tableNameList);
-    exit(EXITCODE_FAIL);
+    printError("cannot get table names (error: %s)!",Error_getText(error));
+    return;
   }
   STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName)
   {
@@ -2429,11 +2439,13 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
   StringListIterator stringListIterator;
   ConstString        indexName;
 
+  StringList_init(&indexNameList);
   error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
   {
+    StringList_done(&indexNameList);
     printError("cannot get index names (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   STRINGLIST_ITERATE(&indexNameList,stringListIterator,indexName)
   {
@@ -2459,12 +2471,12 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
   ConstString        triggerName;
 
   StringList_init(&triggerNameList);
-  error = Database_getTriggerList(&triggerNameList,databaseHandle);
+  error = Database_getTriggerList(&triggerNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
   {
     StringList_done(&triggerNameList);
     printError("cannot get trigger names (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   STRINGLIST_ITERATE(&triggerNameList,stringListIterator,triggerName)
   {
@@ -2478,11 +2490,11 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
 * Purpose: create all indizes
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createIndizes(DatabaseHandle *databaseHandle)
+LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
@@ -2493,7 +2505,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 
   printInfo("Create indizes:\n");
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop all existing indizes
@@ -2519,9 +2531,11 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         // nothing to do
+        error = ERROR_NONE;
         break;
       case DATABASE_TYPE_POSTGRESQL:
         // nothing to do
+        error = ERROR_NONE;
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -2552,12 +2566,14 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
+          error = ERROR_NONE;
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
+          error = ERROR_NONE;
         #else /* HAVE_POSTGRESQL */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
@@ -2570,12 +2586,15 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
       break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     printError("create indizes fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2583,11 +2602,11 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 * Purpose: create FTS indizes
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
+LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
 {
   Errors       error;
   uint         maxSteps;
@@ -2596,8 +2615,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
   printInfo("Create FTS indizes:\n");
 
-  error = ERROR_NONE;
-
+  error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop FTS indizes
@@ -2652,9 +2670,11 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         // nothing to do
+        error = ERROR_NONE;
         break;
       case DATABASE_TYPE_POSTGRESQL:
         // nothing to do
+        error = ERROR_NONE;
         break;
     }
     if (error != ERROR_NONE)
@@ -2670,13 +2690,13 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
     {
       case DATABASE_TYPE_SQLITE3:
         maxSteps += 2;
+        error = ERROR_NONE;
         break;
       case DATABASE_TYPE_MARIADB:
         maxSteps += 0;
+        error = ERROR_NONE;
         break;
       case DATABASE_TYPE_POSTGRESQL:
-        error = ERROR_NONE;
-
         if (error == ERROR_NONE)
         {
           error = Database_getUInt64(databaseHandle,
@@ -2706,6 +2726,12 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
           maxSteps += n;
         }
         break;
+    }
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
     }
 
     // fill FTS tables
@@ -2781,6 +2807,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         // nothing to do
+        error = ERROR_NONE;
         break;
       case DATABASE_TYPE_POSTGRESQL:
         {
@@ -2919,12 +2946,15 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
     }
     printInfo("OK\n");
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     printError("create FTS indizes fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2932,11 +2962,11 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 * Purpose: re-create existing indizes
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_CODE or error none
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void reindex(DatabaseHandle *databaseHandle)
+LOCAL Errors reindex(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
@@ -2947,10 +2977,12 @@ LOCAL void reindex(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL\n");
     printError("reindex fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   printInfo("OK\n");
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -3673,11 +3705,11 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
 * Input  : databaseHandle - database handle
 *          storageIds     - database storage id array
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
+LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 {
   Errors        error;
   uint          totalEntriesNewestCount;
@@ -3709,7 +3741,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       doneProgress();
       printInfo("FAIL\n");
       printError("collect newest fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return error;
     }
     printProgress(1);
 
@@ -3726,7 +3758,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       doneProgress();
       printInfo("FAIL\n");
       printError("collect newest fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return error;
     }
     printProgress(2);
 
@@ -3759,7 +3791,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     {
       printInfo("FAIL\n");
       printError("create newest fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return error;
     }
     (void)Database_flush(databaseHandle);
     printInfo("OK\n");
@@ -3779,7 +3811,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     {
       printInfo("FAIL\n");
       printError("create newest fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return error;
     }
     (void)Database_flush(databaseHandle);
     printInfo("OK\n");
@@ -3809,12 +3841,14 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     {
       printInfo("FAIL\n");
       printError("create newest fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return error;
     }
     (void)Database_flush(databaseHandle);
   }
 
   // free resources
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -3823,11 +3857,11 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 * Input  : databaseHandle - database handle
 *          entityIds      - database entity id array (still not used!)
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, const Array entityIds)
+LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   Errors error;
   uint   fileEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
@@ -4022,7 +4056,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   if (error != ERROR_NONE)
   {
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   totalCount =  1
                +fileEntryCount     +fileEntryNewestCount
@@ -4058,7 +4092,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -4240,7 +4274,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -4410,7 +4444,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -4581,7 +4615,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -4765,7 +4799,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     doneProgress();
     printInfo("FAIL!\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -4935,13 +4969,15 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     doneProgress();
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
   doneProgress();
 
   printInfo("OK  \n");
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -4950,11 +4986,11 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 * Input  : databaseHandle - database handle
 *          entityIds      - database entity id array
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array entityIds)
+LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   String     entityIdsString;
   ulong      i;
@@ -4995,7 +5031,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   {
     String_delete(entityIdsString);
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   initProgress(totalCount);
@@ -5458,7 +5494,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     String_delete(entityIdsString);
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -5468,6 +5504,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
 
   // free resources
   String_delete(entityIdsString);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -5476,11 +5514,11 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
 * Input  : databaseHandle - database handle
 *          storageIds     - database storage id array
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIds)
+LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIds)
 {
   String     storageIdsString;
   uint       i;
@@ -5520,7 +5558,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   {
     String_delete(storageIdsString);
     printError("create aggregates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   initProgress(totalCount);
@@ -6193,7 +6231,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     String_delete(storageIdsString);
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
@@ -6203,6 +6241,8 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
   // free resources
   String_delete(storageIdsString);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -6214,7 +6254,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
+LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
   const uint INCREMENT_SIZE = 4096;
 
@@ -7302,6 +7342,8 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   // free resources
   Array_done(&ids);
   String_delete(storageName);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -7309,11 +7351,11 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 * Purpose: purge duplicate entries
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanDuplicateEntries(DatabaseHandle *databaseHandle)
+LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 {
   Array         ids;
   String        name;
@@ -7413,6 +7455,8 @@ LOCAL void cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 
   // free resources
   String_delete(name);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -7420,11 +7464,11 @@ LOCAL void cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 * Purpose: purge deleted storages
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
+LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
 {
   Array         storageIds;
   Array         entryIds;
@@ -7458,7 +7502,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
     printError("purge deleted fail (error: %s)!",Error_getText(error));
     Array_done(&entryIds);
     Array_done(&storageIds);
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   ARRAY_ITERATEX(&storageIds,storageArrayIterator,storageId,error == ERROR_NONE)
@@ -7775,13 +7819,15 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
     printError("purge deleted fail (error: %s)!",Error_getText(error));
     Array_done(&entryIds);
     Array_done(&storageIds);
-    exit(EXITCODE_FAIL);
+    return error;
   }
   (void)Database_flush(databaseHandle);
 
   // free resources
   Array_done(&entryIds);
   Array_done(&storageIds);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -7789,11 +7835,11 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 * Purpose: vacuum database
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
+LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 {
   Errors     error;
   FileHandle handle;
@@ -7810,7 +7856,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         {
           printInfo("FAIL!\n");
           printError("vacuum fail: file '%s' already exists!",toFileName);
-          exit(EXITCODE_FAIL);
+          return ERROR_FILE_EXISTS_;
         }
 
         // create empty file
@@ -7823,7 +7869,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         {
           printInfo("FAIL!\n");
           printError("vacuum fail (error: %s)!",Error_getText(error));
-          exit(EXITCODE_FAIL);
+          return error;
         }
 
         // vacuum into file
@@ -7832,15 +7878,13 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  stringFormat(sqlString,sizeof(sqlString),"VACUUM INTO '%s'",toFileName),
-                                 DATABASE_PARAMETERS
-                                 (
-                                 )
+                                 DATABASE_PARAMETERS_NONE
                                 );
         if (error != ERROR_NONE)
         {
           printInfo("FAIL!\n");
           printError("vacuum fail (error: %s)!",Error_getText(error));
-          exit(EXITCODE_FAIL);
+          return error;
         }
       }
       else
@@ -7856,7 +7900,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         {
           printInfo("FAIL!\n");
           printError("vacuum fail (error: %s)!",Error_getText(error));
-          exit(EXITCODE_FAIL);
+          return error;
         }
       }
       break;
@@ -7880,7 +7924,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
           {
             printInfo("FAIL!\n");
             printError("vacuum fail (error: %s)!",Error_getText(error));
-            exit(EXITCODE_FAIL);
+            return error;
           }
         }
       }
@@ -7905,13 +7949,15 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
           {
             printInfo("FAIL!\n");
             printError("vacuum fail (error: %s)!",Error_getText(error));
-            exit(EXITCODE_FAIL);
+            return error;
           }
         }
       }
       break;
   }
   printInfo("OK\n");
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -8156,7 +8202,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get meta data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   printf("Entities:");
@@ -8176,7 +8222,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     if (error != ERROR_NONE)
     {
       printError("get entities data fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return;
     }
     printf(" %u",n);
   }
@@ -8196,7 +8242,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Normal          : %u\n",n);
 
@@ -8214,7 +8260,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Full            : %u\n",n);
 
@@ -8232,7 +8278,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Differential    : %u\n",n);
 
@@ -8250,7 +8296,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Incremental     : %u\n",n);
 
@@ -8268,7 +8314,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error!= ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Continuous      : %u\n",n);
 
@@ -8285,7 +8331,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Locked          : %u\n",n);
 
@@ -8306,7 +8352,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return;
     }
     printf(" %u",n);
   }
@@ -8326,7 +8372,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  OK              : %u\n",n);
 
@@ -8344,7 +8390,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Update requested: %u\n",n);
 
@@ -8362,7 +8408,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Error           : %u\n",n);
 
@@ -8379,7 +8425,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
   printf("  Deleted         : %u\n",n);
 
@@ -8397,7 +8443,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return;
     }
     printf(" %u",n);
   }
@@ -8445,7 +8491,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8490,7 +8536,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8535,7 +8581,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8574,7 +8620,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8613,7 +8659,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8658,7 +8704,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8697,7 +8743,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   printf("Newest entries:");
@@ -8714,7 +8760,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
+      return;
     }
     printf(" %u",n);
   }
@@ -8762,7 +8808,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8807,7 +8853,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8852,7 +8898,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8891,7 +8937,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8930,7 +8976,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -8975,7 +9021,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   error = Database_get(databaseHandle,
@@ -9014,7 +9060,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 }
 
@@ -9262,7 +9308,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
   if (error != ERROR_NONE)
   {
     printError("get UUID data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   // free resources
@@ -9476,7 +9522,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   if (error != ERROR_NONE)
   {
     printError("get entity data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   // free resources
@@ -9740,7 +9786,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   // free resources
@@ -9956,7 +10002,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   if (error != ERROR_NONE)
   {
     printError("get entity data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return;
   }
 
   // free resources
@@ -9985,11 +10031,11 @@ LOCAL bool inputAvailable(void)
 * Purpose: initialize
 * Input  : -
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initAll(void)
+LOCAL Errors initAll(void)
 {
   Errors error;
 
@@ -9998,22 +10044,27 @@ LOCAL void initAll(void)
   if (error != ERROR_NONE)
   {
     printError("%s",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   error = Thread_initAll();
   if (error != ERROR_NONE)
   {
+    Common_doneAll();
     printError("%s",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
 
   error = Database_initAll();
   if (error != ERROR_NONE)
   {
+    Thread_doneAll();
+    Common_doneAll();
     printError("%s",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    return error;
   }
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -11142,6 +11193,14 @@ else if (stringEquals(argv[i],"--xxx"))
                  changeToDirectory,
                  Error_getText(error)
                 );
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuIds);
+      Array_done(&uuidIds);
+      String_delete(command);
+      String_delete(storageName);
+      String_delete(entryName);
+      exit(EXITCODE_FAIL);
     }
   }
 
@@ -11177,19 +11236,19 @@ else if (stringEquals(argv[i],"--xxx"))
   if (!String_isEmpty(tmpDirectory))
   {
     error = Database_setTmpDirectory(&databaseHandle,String_cString(tmpDirectory));
-  }
-  if (error != ERROR_NONE)
-  {
-    printError("%s",Error_getText(error));
-    closeDatabase(&databaseHandle);
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuIds);
-    Array_done(&uuidIds);
-    String_delete(command);
-    String_delete(storageName);
-    String_delete(entryName);
-    exit(EXITCODE_FAIL);
+    if (error != ERROR_NONE)
+    {
+      printError("%s",Error_getText(error));
+      closeDatabase(&databaseHandle);
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuIds);
+      Array_done(&uuidIds);
+      String_delete(command);
+      String_delete(storageName);
+      String_delete(entryName);
+      exit(EXITCODE_FAIL);
+    }
   }
 
   // output info
@@ -11281,32 +11340,32 @@ else if (stringEquals(argv[i],"--xxx"))
   // drop tables/views
   if (dropTablesFlag)
   {
-    dropTables(&databaseHandle,FALSE);
-    dropViews(&databaseHandle,FALSE);
+    if (error == ERROR_NONE) error = dropTables(&databaseHandle,FALSE);
+    if (error == ERROR_NONE) error = dropViews(&databaseHandle,FALSE);
   }
 
   // drop triggeres
   if (dropTriggersFlag)
   {
-    dropTriggers(&databaseHandle,FALSE);
+    if (error == ERROR_NONE) error = dropTriggers(&databaseHandle,FALSE);
   }
 
   // drop indizes
   if (dropIndizesFlag)
   {
-    dropIndices(&databaseHandle,FALSE);
+    if (error == ERROR_NONE) error = dropIndices(&databaseHandle,FALSE);
   }
 
   // create tables/views/indices/triggers
   if (createFlag)
   {
-    error = createTablesViewsIndicesTriggers(&databaseHandle);
+    if (error == ERROR_NONE) error = createTablesViewsIndicesTriggers(&databaseHandle);
   }
 
   // import
   if (importFileName != NULL)
   {
-    importIntoDatabase(&databaseHandle,importFileName);
+    if (error == ERROR_NONE) error = importIntoDatabase(&databaseHandle,importFileName);
   }
 
   // check
@@ -11338,65 +11397,65 @@ else if (stringEquals(argv[i],"--xxx"))
   // recreate triggeres
   if (createTriggersFlag)
   {
-    createTriggers(&databaseHandle);
+    if (error == ERROR_NONE) error = createTriggers(&databaseHandle);
   }
 
   // recreate indizes
   if (createIndizesFlag)
   {
-    createIndizes(&databaseHandle);
+    if (error == ERROR_NONE) error = createIndizes(&databaseHandle);
   }
   if (createFTSIndizesFlag)
   {
-    createFTSIndizes(&databaseHandle);
+    if (error == ERROR_NONE) error = createFTSIndizes(&databaseHandle);
   }
 
   // clean
   if (cleanOrphanedFlag)
   {
-    cleanOrphanedEntries(&databaseHandle);
+    error = cleanOrphanedEntries(&databaseHandle);
   }
   if (cleanDuplicateEntriesFlag)
   {
-    cleanDuplicateEntries(&databaseHandle);
+    if (error == ERROR_NONE) error = cleanDuplicateEntries(&databaseHandle);
   }
 
   // recreate newest data
   if (createNewestFlag)
   {
-    createNewest(&databaseHandle,storageIds);
+    if (error == ERROR_NONE) error = createNewest(&databaseHandle,storageIds);
   }
 
   // calculate aggregates data
   if (createAggregatesDirectoryContentFlag)
   {
-    createAggregatesDirectoryContent(&databaseHandle,entityIds);
+    if (error == ERROR_NONE) error = createAggregatesDirectoryContent(&databaseHandle,entityIds);
   }
   if (createAggregatesStoragesFlag)
   {
-    createAggregatesStorages(&databaseHandle,storageIds);
+    if (error == ERROR_NONE) error = createAggregatesStorages(&databaseHandle,storageIds);
   }
   if (createAggregatesEntitiesFlag)
   {
-    createAggregatesEntities(&databaseHandle,entityIds);
+    if (error == ERROR_NONE) error = createAggregatesEntities(&databaseHandle,entityIds);
   }
 
   // purge deleted storages
   if (purgeDeletedFlag)
   {
-    purgeDeletedStorages(&databaseHandle);
+    error = purgeDeletedStorages(&databaseHandle);
   }
 
   // vacuum
   if (vacuumFlag)
   {
-    vacuum(&databaseHandle,toFileName);
+    if (error == ERROR_NONE) error = vacuum(&databaseHandle,toFileName);
   }
 
   // re-create existing indizes
   if (reindexFlag)
   {
-    reindex(&databaseHandle);
+    if (error == ERROR_NONE) error = reindex(&databaseHandle);
   }
 
   // optimize
@@ -11949,7 +12008,8 @@ if (xxxId != DATABASE_ID_NONE)
 
   doneAll();
 
-  return    (!checkIntegrityFlag  || integrityFlag)
+  return    (error == ERROR_NONE)
+         && (!checkIntegrityFlag  || integrityFlag)
          && (!checkOrphanedFlag   || (orphanedEntriesCount == 0L))
          && (!checkDuplicatesFlag || (duplicatesCount == 0L))
            ? EXITCODE_OK
