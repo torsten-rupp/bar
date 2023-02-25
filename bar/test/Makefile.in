@@ -5643,6 +5643,9 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -H "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --names "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -n "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --table-names $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --index-names $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --trigger-names $(LOG)
 	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# check options
@@ -5715,6 +5718,11 @@ test_index_operations_tool: \
         )
 	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId=1 AND    (name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 1
 	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId=2 AND NOT(name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 2
+	@#
+	# drop options
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --drop-tables $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --drop-triggers $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --drop-indizes $(LOG)
 	@#
 	# miscellanous options
 	$(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "wrong sql command") $(LOG)
