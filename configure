@@ -656,6 +656,7 @@ CXX
 BUILD_LD
 BUILD_CC
 HEAPVIEW_DIR
+HAVE_USER_TEST
 HAVE_SUDO_COMMAND_CHATTR_A
 HAVE_SUDO_COMMAND_CHATTR_I
 HAVE_SUDO_COMMAND_DIFF
@@ -2702,6 +2703,8 @@ HAVE_SUDO_COMMANDS=1
 
 HAVE_SUDO_COMMAND_CHATTR_I=1
        HAVE_SUDO_COMMAND_CHATTR_A=1
+
+HAVE_USER_TEST=1
 
 
 
@@ -8512,6 +8515,34 @@ elif :; then :
 fi
 
 
+# test user
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if user 'test' exists" >&5
+$as_echo_n "checking if user 'test' exists... " >&6; }
+if ${ac_cv_user_test+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+    if { ac_try='id test 1>/dev/null'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+      ac_result=yes
+    else
+      ac_result=no
+    fi
+    if test "$ac_result" != no; then :
+  HAVE_USER_TEST=1
+elif :; then :
+  HAVE_USER_TEST=0
+fi
+    ac_cv_user_test=$ac_result
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_user_test" >&5
+$as_echo "$ac_cv_user_test" >&6; }
 
 case $host_os in
   linux-*)
