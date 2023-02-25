@@ -957,6 +957,8 @@ AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)           dnl sudo command diff -r test/dev0 
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)       dnl sudo command chattr +-i
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)       dnl sudo command chattr +-a
 
+AC_SUBST(HAVE_USER_TEST,1)                   dnl user test exists
+
 AC_SUBST(HEAPVIEW_DIR)                       dnl heapview directory
 
 dnl ----------------------- initialize variables -----------------------
@@ -1621,6 +1623,21 @@ AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp 
 AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,[HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0])
+
+# test user
+AC_CACHE_CHECK(
+  [if user 'test' exists],
+  ac_cv_user_test,
+  [
+    if AC_TRY_COMMAND(id test 1>/dev/null); then
+      ac_result=yes
+    else
+      ac_result=no
+    fi
+    AS_IF([test "$ac_result" != no],[HAVE_USER_TEST=1],:,[HAVE_USER_TEST=0])
+    AS_VAR_SET(ac_cv_user_test,$ac_result)
+  ]
+)dnl
 
 dnl -------- mandatory headers/functions/definitions/libraries ---------
 

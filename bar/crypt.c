@@ -1759,7 +1759,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         gcryptError = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
-fprintf(stderr,"%s:%d: dataLength=%d\n",__FILE__,__LINE__,dataLength);
           gcryptError = gcry_kdf_derive(plainPassword,
                                         (size_t)Password_length(password),
                                         KEY_DERIVE_ALGORITHM,

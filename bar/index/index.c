@@ -3152,6 +3152,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
           break;
       }
 
+      Database_drop(&indexDatabaseSpecifierReference,NULL);
       error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,INDEX_TIMEOUT);
       if (error == ERROR_NONE)
       {
@@ -3168,7 +3169,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
         }
         closeIndex(&indexHandleReference);
       }
-
       Database_drop(&indexDatabaseSpecifierReference,NULL);
 
       Database_doneSpecifier(&indexDatabaseSpecifierReference);
@@ -3179,6 +3179,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
         uint   n;
         String saveDatabaseName;
 
+        createFlag = TRUE;
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
@@ -3210,8 +3211,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
         }
 
         String_delete(saveDatabaseName);
-
-        createFlag = TRUE;
       }
     }
   }

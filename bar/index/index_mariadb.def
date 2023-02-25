@@ -79,10 +79,12 @@ CREATE TABLE IF NOT EXISTS entities(
   INDEX(deletedFlag)
 );
 
-// insert default entity (Note: requires an update, because MySQL does not allow to insert with id=0)
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (1,'','',0,0,0,0);
+// insert default entity (Note: requires an update, because MariaDB does not allow to insert with id=0)
+DELETE FROM entities WHERE id=0;
+DELETE FROM entities WHERE id=1;
+INSERT INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (1,'','',0,0,0,0);
 UPDATE entities SET id=${DEFAULT_ENTITY_DATABASE_ID} WHERE id=1;
-ALTER TABLE entities AUTO_INCREMENT = 1;
+ALTER TABLE entities AUTO_INCREMENT=1;
 
 // insert/delete/update triggeres
 /*
@@ -214,7 +216,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   size            BIGINT DEFAULT 0,       // file/image/hardlink size
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
-  FOREIGN KEY(entityId) REFERENCES entities(id),
+  FOREIGN KEY(entityId) REFERENCES entities(id) ON DELETE CASCADE,
 
   CONSTRAINT entriesNewest UNIQUE (name),
 
@@ -277,7 +279,7 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
 
   deletedFlag INT DEFAULT 0,
 
-  FOREIGN KEY(entityId) REFERENCES entities(id),
+  FOREIGN KEY(entityId) REFERENCES entities(id) ON DELETE CASCADE,
 
   INDEX(entityId,type,name),
   INDEX(name),

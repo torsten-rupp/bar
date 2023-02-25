@@ -1132,6 +1132,7 @@ LOCAL_INLINE DatabaseFilterArray __DatabaseFilterArray(void *data, ulong length,
   #define Database_beginTransaction(...)    __Database_beginTransaction   (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_endTransaction(...)      __Database_endTransaction     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_rollbackTransaction(...) __Database_rollbackTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_select(...)              __Database_select             (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_finalize(...)            __Database_finalize           (__FILE__,__LINE__, ## __VA_ARGS__)
 
   #define Database_debugPrintQueryInfo(...) __Database_debugPrintQueryInfo(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -1504,13 +1505,15 @@ void Database_interrupt(DatabaseHandle *databaseHandle);
 * Purpose: get table list
 * Input  : tableList      - table list variable
 *          databaseHandle - database handle
+*          databaseName   - database name
 * Output : tableList - table list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getTableList(StringList     *tableList,
-                             DatabaseHandle *databaseHandle
+                             DatabaseHandle *databaseHandle,
+                             const char     *databaseName
                             );
 
 /***********************************************************************\
@@ -1518,13 +1521,15 @@ Errors Database_getTableList(StringList     *tableList,
 * Purpose: get view list
 * Input  : viewList       - view list variable
 *          databaseHandle - database handle
+*          databaseName   - database name
 * Output : viewList - view list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getViewList(StringList     *viewList,
-                            DatabaseHandle *databaseHandle
+                            DatabaseHandle *databaseHandle,
+                             const char     *databaseName
                            );
 
 /***********************************************************************\
@@ -1548,13 +1553,15 @@ Errors Database_getIndexList(StringList     *indexList,
 * Purpose: get trigger list
 * Input  : triggerList    - trigger list variable
 *          databaseHandle - database handle
+*          databaseName   - database name
 * Output : triggerList - trigger list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getTriggerList(StringList     *triggerList,
-                               DatabaseHandle *databaseHandle
+                               DatabaseHandle *databaseHandle,
+                               const char     *databaseName
                               );
 
 //TODO: remove
@@ -2451,20 +2458,41 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 * Notes  : Database is locked until Database_finalize() is called
 \***********************************************************************/
 
-Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
-                       DatabaseHandle          *databaseHandle,
-                       const char              *tableName,
-                       uint                    flags,
-                       DatabaseColumn          columns[],
-                       uint                    columnCount,
-                       const char              *filter,
-                       const DatabaseFilter    filters[],
-                       uint                    filterCount,
-                       const char              *groupBy,
-                       const char              *orderBy,
-                       uint64                  offset,
-                       uint64                  limit
-                      );
+#ifdef NDEBUG
+  Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
+                         DatabaseHandle          *databaseHandle,
+// TODO: use DatabaseTable
+                         const char              *tableName,
+                         uint                    flags,
+                         DatabaseColumn          columns[],
+                         uint                    columnCount,
+                         const char              *filter,
+                         const DatabaseFilter    filters[],
+                         uint                    filterCount,
+                         const char              *groupBy,
+                         const char              *orderBy,
+                         uint64                  offset,
+                         uint64                  limit
+                        );
+#else /* not NDEBUG */
+  Errors __Database_select(const char              *__fileName__,
+                           ulong                   __lineNb__,
+                           DatabaseStatementHandle *databaseStatementHandle,
+                           DatabaseHandle          *databaseHandle,
+// TODO: use DatabaseTable
+                           const char              *tableName,
+                           uint                    flags,
+                           DatabaseColumn          columns[],
+                           uint                    columnCount,
+                           const char              *filter,
+                           const DatabaseFilter    filters[],
+                           uint                    filterCount,
+                           const char              *groupBy,
+                           const char              *orderBy,
+                           uint64                  offset,
+                           uint64                  limit
+                          );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_getNextRow
