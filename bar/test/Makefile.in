@@ -296,126 +296,126 @@ EXT_BLOCK_SIZES ?= default 1024 2048 4096
 INTERMEDIATE_DIR := $(abspath $(addprefix $(if $(TEST_BASE_DIR),$(TEST_BASE_DIR)/),intermediate))
 
 # test settings
-TEST_CONFIG                      = $(INTERMEDIATE_DIR)/bar.cfg
-TEST_CONFIG_SUB                  = $(INTERMEDIATE_DIR)/bar-sub.cfg
-TEST_JOBS_DIRECTORY              = $(INTERMEDIATE_DIR)/jobs
-TEST_KEY_CRYPT                   = $(INTERMEDIATE_DIR)/key-crypt
-TEST_KEY_CRYPT_PUBLIC            = $(INTERMEDIATE_DIR)/key-crypt.public
-TEST_KEY_CRYPT_PRIVATE           = $(INTERMEDIATE_DIR)/key-crypt.private
-TEST_KEY_CRYPT_OTHER_PUBLIC      = $(INTERMEDIATE_DIR)/key-crypt-other.public
-TEST_KEY_CRYPT_OTHER_PRIVATE     = $(INTERMEDIATE_DIR)/key-crypt-other.private
-TEST_KEY_SIGNATURE               = $(INTERMEDIATE_DIR)/key-signature
-TEST_KEY_SIGNATURE_PUBLIC        = $(INTERMEDIATE_DIR)/key-signature.public
-TEST_KEY_SIGNATURE_PRIVATE       = $(INTERMEDIATE_DIR)/key-signature.private
-TEST_KEY_SIGNATURE_OTHER_PUBLIC  = $(INTERMEDIATE_DIR)/key-signature-other.public
-TEST_KEY_SIGNATURE_OTHER_PRIVATE = $(INTERMEDIATE_DIR)/key-signature-other.private
+TEST_CONFIG                          = $(INTERMEDIATE_DIR)/bar.cfg
+TEST_CONFIG_SUB                      = $(INTERMEDIATE_DIR)/bar-sub.cfg
+TEST_JOBS_DIRECTORY                  = $(INTERMEDIATE_DIR)/jobs
+TEST_KEY_CRYPT                       = $(INTERMEDIATE_DIR)/key-crypt
+TEST_KEY_CRYPT_PUBLIC                = $(INTERMEDIATE_DIR)/key-crypt.public
+TEST_KEY_CRYPT_PRIVATE               = $(INTERMEDIATE_DIR)/key-crypt.private
+TEST_KEY_CRYPT_OTHER_PUBLIC          = $(INTERMEDIATE_DIR)/key-crypt-other.public
+TEST_KEY_CRYPT_OTHER_PRIVATE         = $(INTERMEDIATE_DIR)/key-crypt-other.private
+TEST_KEY_SIGNATURE                   = $(INTERMEDIATE_DIR)/key-signature
+TEST_KEY_SIGNATURE_PUBLIC            = $(INTERMEDIATE_DIR)/key-signature.public
+TEST_KEY_SIGNATURE_PRIVATE           = $(INTERMEDIATE_DIR)/key-signature.private
+TEST_KEY_SIGNATURE_OTHER_PUBLIC      = $(INTERMEDIATE_DIR)/key-signature-other.public
+TEST_KEY_SIGNATURE_OTHER_PRIVATE     = $(INTERMEDIATE_DIR)/key-signature-other.private
 
-TEST_SERVER_PORT                 = 39909
-TEST_SERVER_SSL_PORT             = 39910
-TEST_SERVER_DIRECTORY            = $(INTERMEDIATE_DIR)/master
-TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
-TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/bar.pid
-TEST_SERVER_JOBS_DIRECTORY       = $(TEST_SERVER_DIRECTORY)/jobs
-TEST_SERVER_INDEX_DATABASE       = $(TEST_SERVER_DIRECTORY)/index.db
-TEST_SERVER_CONTINUOUS_DATABASE  = $(TEST_SERVER_DIRECTORY)/continuous.db
-TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
+TEST_SERVER_PORT                     = 39909
+TEST_SERVER_SSL_PORT                 = 39910
+TEST_SERVER_DIRECTORY                = $(INTERMEDIATE_DIR)/master
+TEST_SERVER_CONFIG                   = $(TEST_SERVER_DIRECTORY)/bar.cfg
+TEST_SERVER_PID_FILE                 = $(TEST_SERVER_DIRECTORY)/bar.pid
+TEST_SERVER_JOBS_DIRECTORY           = $(TEST_SERVER_DIRECTORY)/jobs
+TEST_SERVER_INDEX_DATABASE           = $(TEST_SERVER_DIRECTORY)/index.db
+TEST_SERVER_CONTINUOUS_DATABASE      = $(TEST_SERVER_DIRECTORY)/continuous.db
+TEST_SERVER_LOG_FILE                 = $(TEST_SERVER_DIRECTORY)/bar.log
 
+TEST_MASTER_PORT                     = 39909
+TEST_MASTER_SSL_PORT                 = 39910
+TEST_MASTER_DIRECTORY                = $(INTERMEDIATE_DIR)/master
+TEST_MASTER_CONFIG                   = $(TEST_MASTER_DIRECTORY)/bar.cfg
+TEST_MASTER_PID_FILE                 = $(TEST_MASTER_DIRECTORY)/bar.pid
+TEST_MASTER_JOBS_DIRECTORY           = $(TEST_MASTER_DIRECTORY)/jobs
+TEST_MASTER_INDEX_DATABASE           = $(TEST_MASTER_DIRECTORY)/index.db
+TEST_MASTER_LOG_FILE                 = $(TEST_MASTER_DIRECTORY)/bar.log
 
-TEST_MASTER_PORT                 = 39909
-TEST_MASTER_SSL_PORT             = 39910
-TEST_MASTER_DIRECTORY            = $(INTERMEDIATE_DIR)/master
-TEST_MASTER_CONFIG               = $(TEST_MASTER_DIRECTORY)/bar.cfg
-TEST_MASTER_PID_FILE             = $(TEST_MASTER_DIRECTORY)/bar.pid
-TEST_MASTER_JOBS_DIRECTORY       = $(TEST_MASTER_DIRECTORY)/jobs
-TEST_MASTER_INDEX_DATABASE       = $(TEST_MASTER_DIRECTORY)/index.db
-TEST_MASTER_LOG_FILE             = $(TEST_MASTER_DIRECTORY)/bar.log
+TEST_SLAVE_HOST                      =
+TEST_SLAVE_PORT                      = 39911
+TEST_SLAVE_USERNAME                  ?= test
+TEST_SLAVE_PASSWORD                  ?= test
+TEST_SLAVE_DIRECTORY                 = $(INTERMEDIATE_DIR)/slave
+TEST_SLAVE_CONFIG                    = $(TEST_SLAVE_DIRECTORY)/bar.cfg
+TEST_SLAVE_PID_FILE                  = $(TEST_SLAVE_DIRECTORY)/bar.pid
+TEST_SLAVE_JOBS_DIRECTORY            = $(TEST_SLAVE_DIRECTORY)/jobs
+TEST_SLAVE_INDEX_DATABASE            = $(TEST_SLAVE_DIRECTORY)/index.db
+TEST_SLAVE_LOG_FILE                  = $(TEST_SLAVE_DIRECTORY)/bar.log
 
-TEST_SLAVE_HOST                  =
-TEST_SLAVE_PORT                  = 39911
-TEST_SLAVE_USERNAME              ?= test
-TEST_SLAVE_PASSWORD              ?= test
-TEST_SLAVE_DIRECTORY             = $(INTERMEDIATE_DIR)/slave
-TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
-TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.pid
-TEST_SLAVE_JOBS_DIRECTORY        = $(TEST_SLAVE_DIRECTORY)/jobs
-TEST_SLAVE_INDEX_DATABASE        = $(TEST_SLAVE_DIRECTORY)/index.db
-TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
-
-TEST_CONFIGS                     = $(TEST_CONFIG) \
-                                   $(TEST_CONFIG_SUB) \
-                                   $(TEST_SERVER_CONFIG) \
-                                   $(TEST_MASTER_CONFIG) \
-                                   $(TEST_SLAVE_CONFIG)
+TEST_CONFIGS                         = $(TEST_CONFIG) \
+                                       $(TEST_CONFIG_SUB) \
+                                       $(TEST_SERVER_CONFIG) \
+                                       $(TEST_MASTER_CONFIG) \
+                                       $(TEST_SLAVE_CONFIG)
 
 # hosts, ports, passwords, keys for tests
-TEST_HOST                        ?= localhost
-TEST_LOGIN_NAME                  ?= $(LOGNAME)
-TEST_PASSWORD                    ?= test
-TEST_EMULATION                   =
+TEST_HOST                            ?= localhost
+TEST_LOGIN_NAME                      ?= $(LOGNAME)
+TEST_PASSWORD                        ?= test
+TEST_EMULATION                       =
 
-TEST_HOST_FTP                    ?= $(TEST_HOST)
-TEST_LOGIN_NAME_FTP              ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_FTP                ?= $(TEST_PASSWORD)
+TEST_HOST_FTP                        ?= $(TEST_HOST)
+TEST_LOGIN_NAME_FTP                  ?= $(TEST_LOGIN_NAME)
+TEST_PASSWORD_FTP                    ?= $(TEST_PASSWORD)
 
-TEST_HOST_SSH                    ?= $(TEST_HOST)
-TEST_PORT_SSH                    ?= 22
-TEST_LOGIN_NAME_SSH              ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_SSH                ?= $(TEST_PASSWORD)
-TEST_PUBLIC_KEY_SSH              ?= $(HOME)/.ssh/id_rsa.pub
-TEST_PRIVATE_KEY_SSH             ?= $(HOME)/.ssh/id_rsa
+TEST_HOST_SSH                        ?= $(TEST_HOST)
+TEST_PORT_SSH                        ?= 22
+TEST_LOGIN_NAME_SSH                  ?= $(TEST_LOGIN_NAME)
+TEST_PASSWORD_SSH                    ?= $(TEST_PASSWORD)
+TEST_PUBLIC_KEY_SSH                  ?= $(HOME)/.ssh/id_rsa.pub
+TEST_PRIVATE_KEY_SSH                 ?= $(HOME)/.ssh/id_rsa
 
-TEST_HOST_SCP                    ?= $(TEST_HOST)
-TEST_PORT_SCP                    ?= 22
-TEST_LOGIN_NAME_SCP              ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_SCP                ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SCP              ?= $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SCP             ?= $(TEST_PRIVATE_KEY_SSH)
+TEST_HOST_SCP                        ?= $(TEST_HOST)
+TEST_PORT_SCP                        ?= 22
+TEST_LOGIN_NAME_SCP                  ?= $(TEST_LOGIN_NAME)
+TEST_PASSWORD_SCP                    ?= $(TEST_PASSWORD_SSH)
+TEST_PUBLIC_KEY_SCP                  ?= $(TEST_PUBLIC_KEY_SSH)
+TEST_PRIVATE_KEY_SCP                 ?= $(TEST_PRIVATE_KEY_SSH)
 
-TEST_HOST_SFTP                   ?= $(TEST_HOST)
-TEST_PORT_SFTP                   ?= 22
-TEST_LOGIN_NAME_SFTP             ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_SFTP               ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SFTP             ?= $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SFTP            ?= $(TEST_PRIVATE_KEY_SSH)
+TEST_HOST_SFTP                       ?= $(TEST_HOST)
+TEST_PORT_SFTP                       ?= 22
+TEST_LOGIN_NAME_SFTP                 ?= $(TEST_LOGIN_NAME)
+TEST_PASSWORD_SFTP                   ?= $(TEST_PASSWORD_SSH)
+TEST_PUBLIC_KEY_SFTP                 ?= $(TEST_PUBLIC_KEY_SSH)
+TEST_PRIVATE_KEY_SFTP                ?= $(TEST_PRIVATE_KEY_SSH)
 
-TEST_HOST_WEBDAV                 ?= $(TEST_HOST)
-TEST_LOGIN_NAME_WEBDAV           ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
+TEST_HOST_WEBDAV                     ?= $(TEST_HOST)
+TEST_LOGIN_NAME_WEBDAV               ?= $(TEST_LOGIN_NAME)
+TEST_PASSWORD_WEBDAV                 ?= $(TEST_PASSWORD)
 
-TEST_OPTICAL_EMULATION           ?= $(TEST_EMULATION)
-TEST_OPTICAL_SLEEP_TIME          ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
+TEST_OPTICAL_EMULATION               ?= $(TEST_EMULATION)
+TEST_OPTICAL_SLEEP_TIME              ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
 
-TEST_DEVICE_EMULATION            ?= $(TEST_EMULATION)
-TEST_DEVICE_SLEEP_TIME           ?= $(if $(TEST_DEVICE_EMULATION),5,30)
+TEST_DEVICE_EMULATION                ?= $(TEST_EMULATION)
+TEST_DEVICE_SLEEP_TIME               ?= $(if $(TEST_DEVICE_EMULATION),5,30)
 
-TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
-TEST_PASSWORD_CRYPT_OTHER        =  Heinrich_Böll:Ansichten_eines_Clown
+TEST_PASSWORD_CRYPT                  =  Franz_Kafka:Die_Verwandlung
+TEST_PASSWORD_CRYPT_OTHER            =  Heinrich_Böll:Ansichten_eines_Clown
 
-TEST_JOB_NAME1                   =  __test1__
-TEST_JOB_NAME2                   =  __test2__
-TEST_JOB_UUID                    =  00000000-0000-0000-0000-000000000000
-TEST_SCHEDULE_UUID               =  00000000-0000-0000-0000-000000000000
+TEST_JOB_NAME1                       =  __test1__
+TEST_JOB_NAME2                       =  __test2__
+TEST_JOB_UUID                        =  00000000-0000-0000-0000-000000000000
+TEST_SCHEDULE_UUID                   =  00000000-0000-0000-0000-000000000000
 
 # MariaDB test database
-TEST_MARIADB_SERVER              = localhost
-TEST_MARIADB_USER                = test
-TEST_MARIADB_PASSWORD            = test
+TEST_MARIADB_SERVER                  = localhost
+TEST_MARIADB_USER                    = test
+TEST_MARIADB_PASSWORD                = test
 
 # PostgreSQL test database
-TEST_POSTGRESQL_SERVER           = localhost
-TEST_POSTGRESQL_USER             = test
-TEST_POSTGRESQL_PASSWORD         = test
+TEST_POSTGRESQL_SERVER               = localhost
+TEST_POSTGRESQL_USER                 = test
+TEST_POSTGRESQL_PASSWORD             = test
 
 # databases
-TEST_INDEX_DATABASE_SQLITE       =  sqlite:$(INTERMEDIATE_DIR)/index.db
-TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
-TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
-TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
+TEST_INDEX_DATABASE_SQLITE_FILE_NAME =  sqlite:$(INTERMEDIATE_DIR)/index.db
+TEST_INDEX_DATABASE_SQLITE           =  sqlite:$(TEST_INDEX_DATABASE_SQLITE_FILE_NAME)
+TEST_INDEX_DATABASE_MARIADB          =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
+TEST_INDEX_DATABASE_POSTGRESQL       =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
+TEST_INDEX_DATABASE                  =  $(TEST_INDEX_DATABASE_SQLITE)
 
 # supported databases
-MIN_TEST_INDEX_DATABASES         ?= $(TEST_INDEX_DATABASE_SQLITE)
-SMOKE_TEST_INDEX_DATABASES       ?= $(TEST_INDEX_DATABASE_SQLITE)
-TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MARIADB) $(TEST_INDEX_DATABASE_POSTGRESQL)
+MIN_TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE)
+SMOKE_TEST_INDEX_DATABASES           ?= $(TEST_INDEX_DATABASE_SQLITE)
+TEST_INDEX_DATABASES                 ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MARIADB) $(TEST_INDEX_DATABASE_POSTGRESQL)
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -2481,6 +2481,7 @@ endif
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --skip-unreadable $(TEST_FILES) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore -# data/zero128.dat -# data/sub_dir -# data/sub_dir.ext -# data/link.dat -# 'data/hardlink*.dat' -# data/fifo -# data/fifo.ext --owner=test:test --no-stop-on-attribute-error $(LOG))
+ifeq (@HAVE_USER_TEST@,1)
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/sub_dir.ext` = test
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/link.dat` = test
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink.dat` = test
@@ -2491,6 +2492,7 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=:test $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=test: $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=test $(LOG))
+endif
 	@#
 	# permissions
 	@$(call functionCleanTestFiles)
@@ -5581,14 +5583,16 @@ test_index_operations_tool: \
 	$(TOUCH) data/random128.dat data/zero128.dat
 	$(call functionExec,$(TEST_BAR_DEBUG)) -c $(BAR_STORAGE)/test1.bar $(TEST_FILES_SIMPLE) --debug-index-uuid=00000001-0000-0000-0000-000000000000 --skip-unreadable >/dev/null
 	$(SQLITE3) $(BAR_STORAGE)/import.db < $(TEST_INDEX_DATABASE_IMPORT)
+	$(INSTALL) -d $(INTERMEDIATE_DIR)/tmp
 	@#
-	# options
+	# common options
 	$(TEST_BAR_INDEX) -h 1>/dev/null $(LOG)
 	$(TEST_BAR_INDEX) --help 1>/dev/null $(LOG)
 	$(TEST_BAR_INDEX) --xhelp 1>/dev/null $(LOG)
 	$(TEST_BAR_INDEX) --version 1>/dev/null $(LOG)
 	@#
 	# operations with empty database
+	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-triggers $(LOG)
@@ -5600,6 +5604,10 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(INTERMEDIATE_DIR)/test.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --reindex $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --tmp-directory $(INTERMEDIATE_DIR)/tmp $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
 	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# operations with non-empty database
@@ -5608,12 +5616,11 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-newest $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-indizes $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-aggregates $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --check $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(INTERMEDIATE_DIR)/test.db $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --reindex $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-jobs $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-jobs=$(TEST_JOB_UUID) $(LOG)
@@ -5636,9 +5643,48 @@ test_index_operations_tool: \
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -H "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --names "SELECT * FROM storages" $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q -n "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
 	$(RMF) $(INTERMEDIATE_DIR)/test.db
+	@#
+	# check options
+	if test -n "`$(ECHO) $(TEST_INDEX_DATABASE) | $(GREP) sqlite`"; then \
+    $(DD) if=$(DEVICE_ZERO) of=$(TEST_INDEX_DATABASE_SQLITE_FILE_NAME) bs=1k count=1 2>/dev/null; \
+    $(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-integrity) $(LOG); \
+  fi
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-integrity) $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-orphaned) $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-duplicates) $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check) $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM entryFragments"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM fileEntries WHERE id<=1"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM imageEntries WHERE id<=1"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM directoryEntries WHERE id<=1"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM linkEntries WHERE id<=1"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM hardlinkEntries WHERE id<=1"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM specialEntries WHERE id<=1"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "UPDATE storages SET name=''"
+	$(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-orphaned) $(LOG)
+	$(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-duplicates) $(LOG)
+	$(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check) $(LOG)
+	@#
+	# clean options
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --clean-orphaned $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-orphaned) $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --clean-duplicates $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-duplicates) $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --clean $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-orphaned) $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-duplicates) $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check) $(LOG)
+	@#
+	# purge options
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --purge $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "UPDATE storages SET deletedFlag=TRUE"
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --purge $(LOG)
 	@#
 	# newest entries in index
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
@@ -5669,6 +5715,9 @@ test_index_operations_tool: \
         )
 	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId=1 AND    (name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 1
 	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId=2 AND NOT(name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 2
+	@#
+	# miscellanous options
+	$(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "wrong sql command") $(LOG)
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
