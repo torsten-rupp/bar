@@ -41,7 +41,7 @@
 #include "archive_format_const.h"
 
 /****************** Conditional compilation switches *******************/
-#define INDEX_DEBUG_IMPORT_DATABASE
+#define _INDEX_DEBUG_IMPORT_DATABASE
 
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
@@ -250,7 +250,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          -f|--no-foreign-keys                         - disable foreign key constraints\n");
   printf("          --force                                      - force operation\n");
   printf("          --pipe|-                                     - read data from stdin and pipe into database\n");
-  printf("          --tmp-directory                              - temporary files directory\n");
+  printf("          --tmp-directory [<path>]                     - temporary files directory\n");
   printf("          -v|--verbose                                 - verbose output (default: ON; deprecated)\n");
   printf("          -q|--quiet                                   - no output\n");
   printf("          -t|--time                                    - print execution time\n");
@@ -1047,22 +1047,25 @@ LOCAL void formatSubProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-  if (estimatedRestTime < (999*60*60))
+  if (verboseFlag)
   {
-    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%6.1f%% %2dh:%02dmin:%02ds",
-                 (float)progress/10.0,
-                 estimatedRestTime/(60*60),
-                 estimatedRestTime%(60*60)/60,
-                 estimatedRestTime%60
-                );
-  }
-  else
-  {
-    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%6.1f%% ---h:--min:--s",
-                 (float)progress/10.0
-                );
+    if (estimatedRestTime < (999*60*60))
+    {
+      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                   "%6.1f%% %2dh:%02dmin:%02ds",
+                   (float)progress/10.0,
+                   estimatedRestTime/(60*60),
+                   estimatedRestTime%(60*60)/60,
+                   estimatedRestTime%60
+                  );
+    }
+    else
+    {
+      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                   "%6.1f%% ---h:--min:--s",
+                   (float)progress/10.0
+                  );
+    }
   }
 }
 
@@ -1085,8 +1088,11 @@ LOCAL void outputProgressInit(const char *text,
   UNUSED_VARIABLE(maxSteps);
   UNUSED_VARIABLE(userData);
 
-  UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
-  fflush(stdout);
+  if (verboseFlag)
+  {
+    UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
+    fflush(stdout);
+  }
 }
 
 /***********************************************************************\
@@ -1113,35 +1119,38 @@ LOCAL void outputProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-  if (estimatedRestTime < (99999*60*60))
+  if (verboseFlag)
   {
-    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%7.1f%% %5uh:%02umin:%02us %c",
-                 (float)progress/10.0,
-                 estimatedRestTime/(60*60),
-                 estimatedRestTime%(60*60)/60,
-                 estimatedRestTime%60,
-                 WHEEL[wheelIndex]
-                );
+    if (estimatedRestTime < (99999*60*60))
+    {
+      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                   "%7.1f%% %5uh:%02umin:%02us %c",
+                   (float)progress/10.0,
+                   estimatedRestTime/(60*60),
+                   estimatedRestTime%(60*60)/60,
+                   estimatedRestTime%60,
+                   WHEEL[wheelIndex]
+                  );
+    }
+    else
+    {
+      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                   "%7.1f%% -----h:--min:--s %c",
+                   (float)progress/10.0,
+                   WHEEL[wheelIndex]
+                  );
+    }
+    outputProgressBufferLength = stringLength(outputProgressBuffer);
+
+    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+    stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+    fflush(stdout);
+
+    wheelIndex = (wheelIndex+1) % 4;
   }
-  else
-  {
-    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%7.1f%% -----h:--min:--s %c",
-                 (float)progress/10.0,
-                 WHEEL[wheelIndex]
-                );
-  }
-  outputProgressBufferLength = stringLength(outputProgressBuffer);
-
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-  fflush(stdout);
-
-  wheelIndex = (wheelIndex+1) % 4;
 }
 
 /***********************************************************************\
@@ -1160,22 +1169,25 @@ LOCAL void outputProgressDone(ulong totalTime,
 {
   UNUSED_VARIABLE(userData);
 
-  stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-               "%2dh:%02dmin:%02ds",
-               totalTime/(60*60),
-               totalTime%(60*60)/60,
-               totalTime%60
-              );
-  stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
+  if (verboseFlag)
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%2dh:%02dmin:%02ds",
+                 totalTime/(60*60),
+                 totalTime%(60*60)/60,
+                 totalTime%60
+                );
+    stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
 
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
 
-  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+    stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
 
-  UNUSED_RESULT(fwrite("\n",1,1,stdout));
+    UNUSED_RESULT(fwrite("\n",1,1,stdout));
 
-  fflush(stdout);
+    fflush(stdout);
+  }
 }
 
 /***********************************************************************\
