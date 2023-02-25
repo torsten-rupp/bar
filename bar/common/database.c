@@ -11401,33 +11401,38 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
           MYSQL_FIELD *mysqlFields;
 
           mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mariadb.statementHandle);
-          assert(mysqlMetaData != NULL);
-
-          (*columnCount) = mysql_num_fields(mysqlMetaData);
-
-          mysqlFields = mysql_fetch_fields(mysqlMetaData);
-          assert(mysqlFields != NULL);
-          for (i = 0; i < (*columnCount); i++)
+          if (mysqlMetaData != NULL)
           {
-            if (i < maxColumnCount)
+            (*columnCount) = mysql_num_fields(mysqlMetaData);
+
+            mysqlFields = mysql_fetch_fields(mysqlMetaData);
+            assert(mysqlFields != NULL);
+            for (i = 0; i < (*columnCount); i++)
             {
-              columns[i].name  = mysqlFields[i].name;
-              columns[i].alias = NULL;
-              switch (mysqlFields[i].type)
+              if (i < maxColumnCount)
               {
-                case MYSQL_TYPE_TINY:
-                case MYSQL_TYPE_SHORT:    columns[i].type = DATABASE_DATATYPE_INT;    break;
-                case MYSQL_TYPE_LONG:
-                case MYSQL_TYPE_LONGLONG: columns[i].type = DATABASE_DATATYPE_INT64;  break;
-                case MYSQL_TYPE_FLOAT:
-                case MYSQL_TYPE_DOUBLE:   columns[i].type = DATABASE_DATATYPE_DOUBLE; break;
-                case MYSQL_TYPE_DATETIME: columns[i].type = DATABASE_DATATYPE_DOUBLE; break;
-                default:                  columns[i].type = DATABASE_DATATYPE_STRING; break;
+                columns[i].name  = mysqlFields[i].name;
+                columns[i].alias = NULL;
+                switch (mysqlFields[i].type)
+                {
+                  case MYSQL_TYPE_TINY:
+                  case MYSQL_TYPE_SHORT:    columns[i].type = DATABASE_DATATYPE_INT;    break;
+                  case MYSQL_TYPE_LONG:
+                  case MYSQL_TYPE_LONGLONG: columns[i].type = DATABASE_DATATYPE_INT64;  break;
+                  case MYSQL_TYPE_FLOAT:
+                  case MYSQL_TYPE_DOUBLE:   columns[i].type = DATABASE_DATATYPE_DOUBLE; break;
+                  case MYSQL_TYPE_DATETIME: columns[i].type = DATABASE_DATATYPE_DOUBLE; break;
+                  default:                  columns[i].type = DATABASE_DATATYPE_STRING; break;
+                }
               }
             }
-          }
 
-          mysql_free_result(mysqlMetaData);
+            mysql_free_result(mysqlMetaData);
+          }
+          else
+          {
+            (*columnCount) = 0;
+          }
         }
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
