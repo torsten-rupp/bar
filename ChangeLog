@@ -2,6 +2,8 @@
   * fixed error message: no space left on device
   * improved find storage files: skip unreadable directories
   * bar-index: fixed remove duplicate storages
+  * bar-index: fixed option --tmp-directory
+  * bar-index: improved tests
   * BARControl: fixed edit serve maintenance time (locale)
   * BARControl: fixed update file lists
   * BARControl: fixed update restore dialog
