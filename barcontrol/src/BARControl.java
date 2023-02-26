@@ -913,19 +913,19 @@ class Units
 
     if (n > 0)
     {
-      if      ((n % P) == 0) result = String.format("%d",(long)n/P);
+      if      ((n % P) == 0) result = String.format("%d.0",(long)n/P);
       else if (n >= P      ) result = DECIMAL_FORMAT.format(n/P);
-      else if ((n % T) == 0) result = String.format("%d",(long)n/T);
+      else if ((n % T) == 0) result = String.format("%d.0",(long)n/T);
       else if (n >= T      ) result = DECIMAL_FORMAT.format(n/T);
-      else if ((n % G) == 0) result = String.format("%d",(long)n/G);
+      else if ((n % G) == 0) result = String.format("%d.0",(long)n/G);
       else if (n >= G      ) result = DECIMAL_FORMAT.format(n/G);
-      else if ((n % M) == 0) result = String.format("%d",(long)n/M);
+      else if ((n % M) == 0) result = String.format("%d.0",(long)n/M);
       else if (n >= M      ) result = DECIMAL_FORMAT.format(n/M);
-      else if ((n % K) == 0) result = String.format("%d",(long)n/K);
+      else if ((n % K) == 0) result = String.format("%d.0",(long)n/K);
       else if (n >= K      ) result = DECIMAL_FORMAT.format(n/K);
       else                   result = String.format("%d",(long)n);
 
-      return StringUtils.trimEnd(result,"0.");
+      return result;
     }
     else
     {
