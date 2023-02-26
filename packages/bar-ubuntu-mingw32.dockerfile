@@ -88,6 +88,11 @@ RUN cd /root; tar cjf /wine.tar.bz2 .wine
 #RUN find /root -type f -print0 | xargs -0 chmod a+rw
 #RUN install -d /home/build; cp -r /root/.wine /home/build; chown -R build:build /home/build/.wine
 
+# add external third-party packages
+COPY download-third-party-packages.sh /root
+RUN /root/download-third-party-packages.sh --destination-directory /media/extern
+RUN rm -f /root/download-third-party-packages.sh
+
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home
 VOLUME [ "/media/home" ]

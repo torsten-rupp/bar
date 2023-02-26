@@ -114,3 +114,8 @@ COPY test-apache2.conf /etc/apache2/sites-enabled/test.conf
 RUN sed 's|export APACHE_RUN_USER=.*|export APACHE_RUN_USER=test|g' -i /etc/apache2/envvars
 RUN sed 's|export APACHE_RUN_GROUP=.*|export APACHE_RUN_GROUP=test|g' -i /etc/apache2/envvars
 RUN (cd /var/www; rm -rf html; ln -s /home/test html)
+
+# add external third-party packages
+COPY download-third-party-packages.sh /root
+RUN /root/download-third-party-packages.sh --destination-directory /media/extern
+RUN rm -f /root/download-third-party-packages.sh

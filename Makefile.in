@@ -129,6 +129,14 @@ functionPrintResult = \
     $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
    )
 
+# build docker image
+# $(call functionDockerBuild,dockerfile,title,files...)
+functionDockerBuild = \
+  tmpDirectory=$(shell mktemp -d); \
+  install -t $$tmpDirectory $1 $3; \
+  (cd $$tmpDirectory; $(DOCKER) build -f $(notdir $1) -t $2 .); \
+  $(RMRF) $$tmpDirectory
+
 #---------------------------------- rules ------------------------------------
 
 # convert images
@@ -815,11 +823,26 @@ docker_update update_docker:
 	$(DOCKER) pull ubuntu:20.04
 	#
 	# base images
-#	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile         -t bar-centos:6            .)
-	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile -t bar-centos-x86_64:6     .)
-#	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile         -t bar-debian:8            .)
-	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile -t bar-debian-x86_64:8     .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32             .)
+#	$(call functionDockerBuild,packages/bar-centos6.dockerfile, \
+#                             bar-centos:6, \
+#                             download-third-party-packages.sh \
+#   )
+	$(call functionDockerBuild,packages/bar-centos6-x86_64.dockerfile, \
+                             bar-centos-x86_64:6, \
+                             download-third-party-packages.sh \
+   )
+#	$(call functionDockerBuild,packages/bar-debian8.dockerfile, \
+#                             bar-debian:8, \
+#                             download-third-party-packages.sh \
+#   )
+	$(call functionDockerBuild,packages/bar-debian8-x86_64.dockerfile, \
+                             bar-debian-x86_64:8, \
+                             download-third-party-packages.sh \
+   )
+	$(call functionDockerBuild,packages/bar-ubuntu-mingw32.dockerfile, \
+                             bar-mingw32, \
+                             download-third-party-packages.sh \
+   )
 	#
 	# test images
 	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
@@ -831,7 +854,11 @@ docker_update update_docker:
 	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
 	#
 	# build image
-	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build .)
+#	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build .)
+	$(call functionDockerBuild,packages/build.dockerfile, \
+                             bar:build, \
+                             download-third-party-packages.sh \
+   )
 
 .PHONY: docker_purge purge_docker
 docker_purge purge_docker:
@@ -863,7 +890,7 @@ docker_run build_docker:
           --name=bar-build \
           bar:build \
           /bin/bash -c "echo export PS1=\'$(DOCKER_PROMPT)\' >> ~/.bashrc && /bin/bash"
-          
+
 .PHONY: docker_rpm docker_rpm-x86_64 docker_den docker_den-x86_64 docker_win32 docker_win32-x86_64
 .PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
 docker_rpm rpm_docker:

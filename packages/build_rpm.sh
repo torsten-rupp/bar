@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 # constants
 BUILD_DIR=$PWD
 
@@ -104,6 +106,7 @@ if test $helpFlag -eq 1; then
   echo "          -h|--help   print help"
   exit 0
 fi
+ls -la $distributionFileName
 
 # enable traciing
 if test $debugFlag -eq 1; then
