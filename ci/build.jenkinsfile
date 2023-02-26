@@ -117,6 +117,7 @@ def build()
 }
 
 // main
+/*
 properties([gitLabConnection('GitLab-DMZ'),
             [$class: 'BuildDiscarderProperty',
              strategy: [$class: 'LogRotator',
@@ -128,6 +129,7 @@ properties([gitLabConnection('GitLab-DMZ'),
             ]
            ]
           )
+*/
 
 try
 {

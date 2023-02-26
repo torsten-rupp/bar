@@ -121,7 +121,7 @@ def tests()
                   sh "sudo /etc/init.d/rsyslog stop || true"
                 }
                 break;
-              case "FULL":               
+              case "FULL":
                 docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
                 {
                   // start services
@@ -265,6 +265,7 @@ sh "ls -la /var/log"
 }
 
 // main
+/*
 properties([gitLabConnection('GitLab'),
             [$class: 'BuildDiscarderProperty',
              strategy: [$class: 'LogRotator',
@@ -276,6 +277,7 @@ properties([gitLabConnection('GitLab'),
             ]
            ]
           )
+*/
 
 try
 {
