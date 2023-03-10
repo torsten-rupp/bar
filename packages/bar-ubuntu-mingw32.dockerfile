@@ -80,13 +80,18 @@ RUN wineboot --update
 RUN DISPLAY=:0.0 xvfb-run -n 0 -s "-screen 0 1024x768x16" wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
 RUN wineboot --end-session
 RUN rm -rf /tmp/wine*
-RUN rm -f /tmp/innosetup-5.6.1.exe
+RUN rm /tmp/innosetup-5.6.1.exe
 
 # create wine setup archive
 RUN cd /root; tar cjf /wine.tar.bz2 .wine
 #RUN find /root -type d -print0 | xargs -0 chmod a+rwx
 #RUN find /root -type f -print0 | xargs -0 chmod a+rw
 #RUN install -d /home/build; cp -r /root/.wine /home/build; chown -R build:build /home/build/.wine
+
+# add external third-party packages
+COPY download-third-party-packages.sh /root
+RUN /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern
+RUN rm /root/download-third-party-packages.sh
 
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home

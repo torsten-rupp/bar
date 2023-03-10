@@ -68,6 +68,11 @@ RUN yum -y install \
   devtoolset-7 \
   ;
 
+# add external third-party packages
+COPY download-third-party-packages.sh /root
+RUN /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern
+RUN rm -f /root/download-third-party-packages.sh
+
 # mounts
 RUN install -d /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]

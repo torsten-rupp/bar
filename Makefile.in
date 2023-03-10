@@ -699,7 +699,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    packages/debian/source/format
 	#
 	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
-	$(RMRF) tmp/$(DISTRIBUTION_NAME)
+	$(RMRF) tmp
 	#
 ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
