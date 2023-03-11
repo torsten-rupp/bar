@@ -41,20 +41,6 @@
 #include "index/index.h"
 
 /****************** Conditional compilation switches *******************/
-// switch off for debugging only!
-#define INDEX_INTIIAL_CLEANUP
-#define INDEX_IMPORT_OLD_DATABASE
-#define INDEX_SUPPORT_DELETE
-
-#ifndef INDEX_IMPORT_OLD_DATABASE
-  #warning Index import old databases disabled!
-#endif
-#ifndef INDEX_INTIIAL_CLEANUP
-  #warning Index initial cleanup disabled!
-#endif
-#ifndef INDEX_SUPPORT_DELETE
-  #warning Index delete storages disabled!
-#endif
 
 /***************************** Constants *******************************/
 #define DEFAULT_DATABASE_NAME "bar"

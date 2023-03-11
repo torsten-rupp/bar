@@ -7482,6 +7482,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
   Errors        error;
   DatabaseId    storageId;
   ArrayIterator storageArrayIterator,entryArrayIterator;
+  DatabaseId    entityId;
   DatabaseId    entryId;
 
   // init variables
@@ -7516,6 +7517,22 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printInfo("  %10"PRIi64"...",storageId);
+
+      // get entity id
+      entityId = DATABASE_ID_NONE;
+      if (error == ERROR_NONE)
+      {
+        error = Database_getId(databaseHandle,
+                               &entityId,
+                               "storages",
+                               "entityId",
+                               "id=?",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY(storageId)
+                               )
+                              );
+      }
 
       // collect file/image/hardlink entries to purge
       Array_clear(&entryIds);
@@ -7578,7 +7595,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                 );
       }
 
-      // purge fragments
+      // delete fragments
       if (error == ERROR_NONE)
       {
         error = Database_delete(databaseHandle,
@@ -7671,7 +7688,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
       }
       doneProgress();
 
-      // purge directory/link/special entries
+      // delete directory/link/special entries
       if (error == ERROR_NONE)
       {
         error = Database_delete(databaseHandle,
@@ -7715,7 +7732,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                );
       }
 
-      // purge storage FTS
+      // delete storage FTS
       switch (Database_getType(databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
@@ -7757,7 +7774,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
           break;
       }
 
-      // purge storage
+      // delete storage
       if (error == ERROR_NONE)
       {
         error = Database_delete(databaseHandle,
@@ -7807,6 +7824,47 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
           printProgress(1*Array_length(&entryIds)+n);
         }
         doneProgress();
+      }
+
+      // prune entity
+      if (error == ERROR_NONE)
+      {
+        if (    (entityId != DATABASE_ID_NONE)
+             && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+             && !Database_existsValue(databaseHandle,
+                                      "entries",
+                                      DATABASE_FLAG_NONE,
+                                      "id",
+                                      "entityId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(entityId)
+                                      )
+                                     )
+             && !Database_existsValue(databaseHandle,
+                                      "entriesNewest",
+                                      DATABASE_FLAG_NONE,
+                                      "id",
+                                      "entityId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(entityId)
+                                      )
+                                     )
+          )
+        {
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "entities",
+                                  DATABASE_FLAG_NONE,
+                                  "id=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(entityId)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+        }
       }
 
       if (error != ERROR_NONE)
