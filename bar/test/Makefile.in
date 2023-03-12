@@ -406,8 +406,7 @@ TEST_POSTGRESQL_USER                 = test
 TEST_POSTGRESQL_PASSWORD             = test
 
 # databases
-TEST_INDEX_DATABASE_SQLITE_FILE_NAME =  sqlite:$(INTERMEDIATE_DIR)/index.db
-TEST_INDEX_DATABASE_SQLITE           =  sqlite:$(TEST_INDEX_DATABASE_SQLITE_FILE_NAME)
+TEST_INDEX_DATABASE_SQLITE           =  sqlite:intermediate/index.db
 TEST_INDEX_DATABASE_MARIADB          =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
 TEST_INDEX_DATABASE_POSTGRESQL       =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
 TEST_INDEX_DATABASE                  =  $(TEST_INDEX_DATABASE_SQLITE)
@@ -5649,8 +5648,8 @@ test_index_operations_tool: \
 	$(RMF) $(INTERMEDIATE_DIR)/test.db
 	@#
 	# check options
-	if test -n "`$(ECHO) $(TEST_INDEX_DATABASE) | $(GREP) sqlite`"; then \
-    $(DD) if=$(DEVICE_ZERO) of=$(TEST_INDEX_DATABASE_SQLITE_FILE_NAME) bs=1k count=1 2>/dev/null; \
+	if test -n "`$(ECHO) $(TEST_INDEX_DATABASE) | $(GREP) sqlite:`"; then \
+    $(DD) if=$(DEVICE_ZERO) of=$(shell $(ECHO) $(TEST_INDEX_DATABASE)|$(SED) 's|sqlite:||g') bs=1k count=1 2>/dev/null; \
     $(call functionTestCheckExitcode,1,1,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-integrity) $(LOG); \
   fi
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
