@@ -156,7 +156,6 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
         {
           BITSET_SET(fatHandle->clusterBitmap,index);
         }
-else { fprintf(stderr,"%s, %d: not BITSET_SET %d\n",__FILE__,__LINE__,index); }
       }
       break;
     case FILE_SYSTEM_TYPE_FAT16:
