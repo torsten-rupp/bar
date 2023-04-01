@@ -592,9 +592,22 @@ void* const *StringMap_valueArray(const StringMap stringMap);
 bool StringMap_parseEnumNumber(const char *name, uint *value);
 
 #ifndef NDEBUG
+
 /***********************************************************************\
-* Name   : StringMap_debugDump, StringMap_debugPrint
-* Purpose: string map debug function: print content
+* Name   : StringMap_debugToString
+* Purpose: convert string map into string
+* Input  : string    - string variable
+*          stringMap - string map
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String StringMap_debugToString(String string, const StringMap stringMap);
+
+/***********************************************************************\
+* Name   : StringMap_debugDump
+* Purpose: dump content
 * Input  : handle    - output channel
 *          indent    - indent
 *          stringMap - string map
@@ -604,7 +617,19 @@ bool StringMap_parseEnumNumber(const char *name, uint *value);
 \***********************************************************************/
 
 void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap);
+
+/***********************************************************************\
+* Name   : StringMap_debugPrint
+* Purpose: print content
+* Input  : indent    - indent
+*          stringMap - string map
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void StringMap_debugPrint(uint indent, const StringMap stringMap);
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

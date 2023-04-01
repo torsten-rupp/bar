@@ -8795,6 +8795,16 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
                                            "DEVICE_LIST"
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get device list fail");
+        Job_listUnlock();
+        return;
       }
     }
     else
@@ -8805,7 +8815,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       error = Device_openDeviceList(&deviceListHandle);
       if (error != ERROR_NONE)
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open device list fail");
         Job_listUnlock();
         return;
       }
@@ -8818,7 +8828,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
         error = Device_readDeviceList(&deviceListHandle,deviceName);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list");
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read device list fail");
           Device_closeDeviceList(&deviceListHandle);
           String_delete(deviceName);
           Job_listUnlock();
@@ -8829,7 +8839,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
         error = Device_getInfo(&deviceInfo,deviceName,FALSE);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info");
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read device info fail");
           Device_closeDeviceList(&deviceListHandle);
           String_delete(deviceName);
           Job_listUnlock();
@@ -8938,6 +8948,16 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
                                            allMountsFlag
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get root list fail");
+        Job_listUnlock();
+        return;
       }
     }
     else
@@ -8949,12 +8969,13 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open root list fail");
+        Job_listUnlock();
         return;
       }
 
       // read root list entries
       name = String_new();
-      while (!File_endOfRootList(&rootListHandle))
+      while (!File_endOfRootList(&rootListHandle) && (error == ERROR_NONE))
       {
         error = File_readRootList(&rootListHandle,name);
         if (error == ERROR_NONE)
@@ -8975,15 +8996,18 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
                               size
                              );
         }
-        else
-        {
-          ServerIO_sendResult(&clientInfo->io,id,FALSE,error,"open root list fail");
-        }
       }
       String_delete(name);
 
       // close root list
       File_closeRootList(&rootListHandle);
+
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read root list fail");
+        Job_listUnlock();
+        return;
+      }
     }
   }
 
@@ -9082,6 +9106,17 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                            name
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
+        Job_listUnlock();
+        String_delete(name);
+        return;
       }
     }
     else
@@ -9295,6 +9330,17 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                            directory
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open directory '%S' fail",directory);
+        Job_listUnlock();
+        String_delete(directory);
+        return;
       }
     }
     else
@@ -9315,7 +9361,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 
       // read directory entries
       name = String_new();
-      while (!File_endOfDirectoryList(&directoryListHandle))
+      while (!File_endOfDirectoryList(&directoryListHandle) && (error == ERROR_NONE))
       {
         error = File_readDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
@@ -9421,26 +9467,20 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
             }
           }
-          else
-          {
-            ServerIO_sendResult(&clientInfo->io,id,FALSE,error,
-                                "get file info fail for '%S'",
-                                name
-                               );
-          }
-        }
-        else
-        {
-          ServerIO_sendResult(&clientInfo->io,id,FALSE,error,
-                              "read directory entry fail for '%S'",
-                              name
-                             );
         }
       }
       String_delete(name);
 
       // close directory
       File_closeDirectoryList(&directoryListHandle);
+
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read directory '%S' fail",directory);
+        Job_listUnlock();
+        String_delete(directory);
+        return;
+      }
     }
   }
 
@@ -9473,6 +9513,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   String         name;
   String         attribute;
   const JobNode  *jobNode;
+  Errors         error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9524,22 +9565,34 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       {
         if (Connector_isConnected(connectorInfo))
         {
-          Connector_executeCommand(connectorInfo,
-                                   1,
-                                   10*MS_PER_SECOND,
-                                   CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
-                                   {
-                                     assert(resultMap != NULL);
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
 
-                                     UNUSED_VARIABLE(userData);
+                                             UNUSED_VARIABLE(userData);
 
-                                     return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
-                                   },NULL),
-                                   "FILE_ATTRIBUTE_GET name=%'S attribute=%S",
-                                   name,
-                                   attribute
-                                  );
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_ATTRIBUTE_GET name=%'S attribute=%S",
+                                           name,
+                                           attribute
+                                          );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attribute fail");
+        Job_listUnlock();
+        String_delete(attribute);
+        String_delete(name);
+        return;
       }
     }
     else
@@ -9667,6 +9720,19 @@ UNUSED_VARIABLE(value);
                                            value
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set file attribute fail");
+        Job_listUnlock();
+        String_delete(value);
+        String_delete(attribute);
+        String_delete(name);
+        return;
       }
     }
     else
@@ -9826,6 +9892,18 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
                                            attribute
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"clear file attribute fail");
+        Job_listUnlock();
+        String_delete(attribute);
+        String_delete(name);
+        return;
       }
     }
     else
@@ -9973,6 +10051,17 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
                                            name
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attribute fail");
+        Job_listUnlock();
+        String_delete(name);
+        return;
       }
     }
     else
@@ -10078,6 +10167,10 @@ LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHa
                                            name
                                           );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
       }
     }
     else
@@ -10122,6 +10215,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   String            name;
   int64             timeout;
   const JobNode     *jobNode;
+  Errors            error;
   DirectoryInfoNode *directoryInfoNode;
   uint64            fileCount;
   uint64            fileSize;
@@ -10174,22 +10268,33 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
       {
         if (Connector_isConnected(connectorInfo))
         {
-          Connector_executeCommand(connectorInfo,
-                                   1,
-                                   10*MS_PER_SECOND,
-                                   CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
-                                   {
-                                     assert(resultMap != NULL);
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
 
-                                     UNUSED_VARIABLE(userData);
+                                             UNUSED_VARIABLE(userData);
 
-                                     return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
-                                   },NULL),
-                                   "DIRECTORY_INFO name=%'S timeout=%"PRIi64"",
-                                   name,
-                                   timeout
-                                  );
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "DIRECTORY_INFO name=%'S timeout=%"PRIi64"",
+                                           name,
+                                           timeout
+                                          );
         }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get directory info fail");
+        Job_listUnlock();
+        String_delete(name);
+        return;
       }
     }
     else
@@ -10329,6 +10434,14 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
         {
           error = ERROR_DISCONNECTED;
         }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"test script fail");
+        Job_listUnlock();
+        String_delete(script);
+        String_delete(name);
+        return;
       }
     }
     else
@@ -10775,6 +10888,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   const JobNode *jobNode;
+  Errors        error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10799,28 +10913,65 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
       return;
     }
 
-    // format and send result
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
-                        jobNode->runningInfo.lastExecutedDateTime,
-                        jobNode->runningInfo.lastErrorCode,
-                        jobNode->runningInfo.lastErrorData,
-                        jobNode->executionCount.normal,
-                        jobNode->executionCount.full,
-                        jobNode->executionCount.incremental,
-                        jobNode->executionCount.differential,
-                        jobNode->executionCount.continuous,
-                        jobNode->averageDuration.normal,
-                        jobNode->averageDuration.full,
-                        jobNode->averageDuration.incremental,
-                        jobNode->averageDuration.differential,
-                        jobNode->averageDuration.continuous,
-                        jobNode->totalEntityCount,
-                        jobNode->totalStorageCount,
-                        jobNode->totalStorageSize,
-                        jobNode->totalEntryCount,
-                        jobNode->totalEntrySize
-                       );
+    if (Job_isRemote(jobNode) && Job_isRunning(jobNode->jobState))
+    {
+      // remote job state
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "JOB_INFO jobUUID=%S",
+                                           jobUUID
+                                          );
+        }
+        else
+        {
+          error = ERROR_DISCONNECTED;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get job status fail");
+        Job_listUnlock();
+        return;
+      }
+    }
+    else
+    {
+      // local job: format and send result
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                          "lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
+                          jobNode->runningInfo.lastExecutedDateTime,
+                          jobNode->runningInfo.lastErrorCode,
+                          jobNode->runningInfo.lastErrorData,
+                          jobNode->executionCount.normal,
+                          jobNode->executionCount.full,
+                          jobNode->executionCount.incremental,
+                          jobNode->executionCount.differential,
+                          jobNode->executionCount.continuous,
+                          jobNode->averageDuration.normal,
+                          jobNode->averageDuration.full,
+                          jobNode->averageDuration.incremental,
+                          jobNode->averageDuration.differential,
+                          jobNode->averageDuration.continuous,
+                          jobNode->totalEntityCount,
+                          jobNode->totalStorageCount,
+                          jobNode->totalStorageSize,
+                          jobNode->totalEntryCount,
+                          jobNode->totalEntrySize
+                         );
+    }
   }
 }
 
@@ -11559,6 +11710,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 // TODO:fprintf(stderr,"%s:%d: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,jobNode->statusInfo.entry.doneSize,jobNode->statusInfo.entry.totalSize);
 
     // format and send result
+    // Note: remote jobs status is updated in jobThreadRun->Connector_create()
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "state=%s errorCode=%u errorNumber=%u errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
@@ -22400,7 +22552,11 @@ Errors Server_socket(void)
                     #ifndef NDEBUG
                       if (globalOptions.debug.serverLevel >= 1)
                       {
-                        fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+                        String string;
+
+                        string = StringMap_debugToString(String_new(),argumentMap);
+                        fprintf(stderr,"DEBUG: received command #%u %s: %s\n",id,String_cString(name),String_cString(string));
+                        String_delete(string);
                       }
                     #endif /* not DEBUG */
                     processCommand(&clientNode->clientInfo,id,name,argumentMap);
@@ -22873,7 +23029,11 @@ Errors Server_batch(int inputDescriptor,
       #ifndef NDEBUG
         if (globalOptions.debug.serverLevel >= 1)
         {
-          fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+          String string;
+
+          string = StringMap_debugToString(String_new(),argumentMap);
+          fprintf(stderr,"DEBUG: received command #%u %s: %s\n",id,String_cString(name),String_cString(string));
+          String_delete(string);
         }
       #endif /* not DEBUG */
       processCommand(&clientInfo,id,name,argumentMap);

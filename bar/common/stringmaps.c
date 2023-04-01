@@ -1762,6 +1762,33 @@ bool StringMap_parseEnumNumber(const char *name, uint *value)
 }
 
 #ifndef NDEBUG
+String StringMap_debugToString(String string, const StringMap stringMap)
+{
+  uint i;
+
+  assert(string != NULL);
+  assert(stringMap != NULL);
+  assert(stringMap->entries != NULL);
+
+  String_clear(string);
+  for (i = 0; i < stringMap->size; i++)
+  {
+    if (stringMap->entries[i].name != NULL)
+    {
+      assert(stringMap->entries[i].type < SIZE_OF_ARRAY(STRING_MAP_TYPE_NAMES));
+
+      if (!String_isEmpty(string)) String_appendChar(string,' ');
+      String_formatAppend(string,
+                          "%s='%s'",
+                          stringMap->entries[i].name,
+                          String_cString(stringMap->entries[i].value.text)
+                         );
+    }
+  }
+
+  return string;
+}
+
 void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap)
 {
   uint i,j;
