@@ -2710,107 +2710,109 @@ UNUSED_VARIABLE(progressInfo);
     Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
     Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
-    // get storage ids to purge, enities/UUIDs to prune
-    if (storageSpecifier != NULL)
+    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      error = Index_initListStorages(&indexQueryHandle,
-                                     indexHandle,
-                                     INDEX_ID_ANY, // uuidId
-                                     INDEX_ID_ANY, // entityId
-                                     NULL,  // jobUUID,
-                                     NULL,  // scheduleUUID,
-                                     NULL,  // indexIds
-                                     0,  // indexIdCount
-                                     INDEX_TYPESET_ALL,
-                                     INDEX_STATE_SET_ALL,
-                                     INDEX_MODE_SET_ALL,
-                                     NULL,  // hostName
-                                     NULL,  // userName
-                                     archiveName,
-                                     INDEX_STORAGE_SORT_MODE_NONE,
-                                     DATABASE_ORDERING_NONE,
-                                     0LL,  // offset
-                                     INDEX_UNLIMITED
-                                    );
-      if (error != ERROR_NONE)
+      // get storage ids to purge, enities/UUIDs to prune
+      if (storageSpecifier != NULL)
       {
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuidIds);
-        Storage_doneSpecifier(&oldStorageSpecifier);
-        String_delete(oldStorageName);
-        return error;
-      }
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &oldUUIDId,
-                                  NULL,  // job UUID
-                                  &oldEntityId,
-                                  NULL,  // schedule UUID
-                                  NULL,  // hostName
-                                  NULL,  // userName
-                                  NULL,  // comment
-                                  NULL,  // createdDateTime
-                                  NULL,  // archiveType
-                                  &oldStorageId,
-                                  oldStorageName,
-                                  NULL,  // createdDateTime
-                                  NULL,  // size
-                                  NULL,  // indexState
-                                  NULL,  // indexMode
-                                  NULL,  // lastCheckedDateTime
-                                  NULL,  // errorMessage
-                                  NULL,  // totalEntryCount
-                                  NULL  // totalEntrySize
-                                 )
-            )
-      {
-        if (   !INDEX_ID_EQUALS(oldStorageId,keepStorageId)
-            && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
-            && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
-           )
+        error = Index_initListStorages(&indexQueryHandle,
+                                       indexHandle,
+                                       INDEX_ID_ANY, // uuidId
+                                       INDEX_ID_ANY, // entityId
+                                       NULL,  // jobUUID,
+                                       NULL,  // scheduleUUID,
+                                       NULL,  // indexIds
+                                       0,  // indexIdCount
+                                       INDEX_TYPESET_ALL,
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
+                                       NULL,  // hostName
+                                       NULL,  // userName
+                                       archiveName,
+                                       INDEX_STORAGE_SORT_MODE_NONE,
+                                       DATABASE_ORDERING_NONE,
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error != ERROR_NONE)
         {
-          if (!INDEX_ID_IS_NONE(oldUUIDId)) Array_append(&uuidIds,&oldUUIDId);
-          if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
-          if (!INDEX_ID_IS_NONE(oldStorageId)) Array_append(&storageIds,&oldStorageId);
+          Array_done(&storageIds);
+          Array_done(&entityIds);
+          Array_done(&uuidIds);
+          Storage_doneSpecifier(&oldStorageSpecifier);
+          String_delete(oldStorageName);
+          return error;
+        }
+        while (Index_getNextStorage(&indexQueryHandle,
+                                    &oldUUIDId,
+                                    NULL,  // job UUID
+                                    &oldEntityId,
+                                    NULL,  // schedule UUID
+                                    NULL,  // hostName
+                                    NULL,  // userName
+                                    NULL,  // comment
+                                    NULL,  // createdDateTime
+                                    NULL,  // archiveType
+                                    &oldStorageId,
+                                    oldStorageName,
+                                    NULL,  // createdDateTime
+                                    NULL,  // size
+                                    NULL,  // indexState
+                                    NULL,  // indexMode
+                                    NULL,  // lastCheckedDateTime
+                                    NULL,  // errorMessage
+                                    NULL,  // totalEntryCount
+                                    NULL  // totalEntrySize
+                                   )
+              )
+        {
+          if (   !INDEX_ID_EQUALS(oldStorageId,keepStorageId)
+              && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
+              && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
+             )
+          {
+            if (!INDEX_ID_IS_NONE(oldUUIDId)) Array_append(&uuidIds,&oldUUIDId);
+            if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
+            if (!INDEX_ID_IS_NONE(oldStorageId)) Array_append(&storageIds,&oldStorageId);
+          }
+        }
+        Index_doneList(&indexQueryHandle);
+        if (error != ERROR_NONE)
+        {
+          Array_done(&storageIds);
+          Array_done(&entityIds);
+          Array_done(&uuidIds);
+          Storage_doneSpecifier(&oldStorageSpecifier);
+          String_delete(oldStorageName);
+          return error;
         }
       }
-      Index_doneList(&indexQueryHandle);
-      if (error != ERROR_NONE)
+
+      // delete old indizes for same storage file
+      ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
       {
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuidIds);
-        Storage_doneSpecifier(&oldStorageSpecifier);
-        String_delete(oldStorageName);
-        return error;
+        // purge storage
+        error = IndexStorage_purge(indexHandle,
+                                   storageId,
+                                   NULL  // progressInfo
+                                  );
+        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); }
+      }
+
+      // prune entity index
+      ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+      {
+        error = IndexEntity_prune(indexHandle,NULL,NULL,entityId);
+        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+      }
+
+      // prune uuid index
+      ARRAY_ITERATEX(&uuidIds,arrayIterator,entityId,error == ERROR_NONE)
+      {
+        error = IndexUUID_prune(indexHandle,NULL,NULL,entityId);
+        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
       }
     }
-
-    // delete old indizes for same storage file
-    ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
-    {
-      // purge storage
-      error = IndexStorage_purge(indexHandle,
-                                 storageId,
-                                 NULL  // progressInfo
-                                );
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); }
-    }
-
-    // prune entity index
-    ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
-    {
-      error = IndexEntity_prune(indexHandle,NULL,NULL,entityId);
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-    }
-
-    // prune uuid index
-    ARRAY_ITERATEX(&uuidIds,arrayIterator,entityId,error == ERROR_NONE)
-    {
-      error = IndexUUID_prune(indexHandle,NULL,NULL,entityId);
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-    }
-
     if (error != ERROR_NONE)
     {
       Array_done(&storageIds);
@@ -6221,15 +6223,12 @@ Errors Index_purgeAllStoragesByName(IndexHandle            *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      error = IndexStorage_purgeAllByName(indexHandle,
-                                          storageSpecifier,
-                                          archiveName,
-                                          keepIndexId,
-                                          NULL  // progressInfo
-                                         );
-    }
+    error = IndexStorage_purgeAllByName(indexHandle,
+                                        storageSpecifier,
+                                        archiveName,
+                                        keepIndexId,
+                                        NULL  // progressInfo
+                                       );
 
     return error;
   });
