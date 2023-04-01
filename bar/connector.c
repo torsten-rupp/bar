@@ -4110,19 +4110,20 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
 
     UNUSED_VARIABLE(userData);
 
-    if      (stringEqualsIgnoreCase(jobStateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
-    else if (stringEqualsIgnoreCase(jobStateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
-    else if (stringEqualsIgnoreCase(jobStateText,"dry-run"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(jobStateText,"running"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(jobStateText,"request FTP password"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request SSH password"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request webDAV password")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request crypt password" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-    else if (stringEqualsIgnoreCase(jobStateText,"request volume"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
-    else if (stringEqualsIgnoreCase(jobStateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
-    else if (stringEqualsIgnoreCase(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
-    else if (stringEqualsIgnoreCase(jobStateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
-    else                                                                     (*jobState) = JOB_STATE_ERROR;
+    if      (stringEquals(jobStateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
+    else if (stringEquals(jobStateText,"WAITING"                )) (*jobState) = JOB_STATE_WAITING;
+    else if (stringEquals(jobStateText,"DRY_RUNNING"            )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEquals(jobStateText,"RUNNING"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEquals(jobStateText,"REQUEST_FTP_PASSWORD"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
+    else if (stringEquals(jobStateText,"REQUEST_SSH_PASSWORD"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
+    else if (stringEquals(jobStateText,"REQUEST_WEBDAV_PASSWORD")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
+    else if (stringEquals(jobStateText,"REQUEST_CRYPT_PASSWORD" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
+    else if (stringEquals(jobStateText,"REQUEST_VOLUME"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
+    else if (stringEquals(jobStateText,"DONE"                   )) (*jobState) = JOB_STATE_DONE;
+    else if (stringEquals(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
+    else if (stringEquals(jobStateText,"ABORTED"                )) (*jobState) = JOB_STATE_ABORTED;
+    else if (stringEquals(jobStateText,"DISCONNECTED"           )) (*jobState) = JOB_STATE_DISCONNECTED;
+    else                                                           (*jobState) = JOB_STATE_ERROR;
 
     return TRUE;
   }
@@ -4209,6 +4210,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
   }
 
   // wait until job terminated
+  state = JOB_STATE_RUNNING;
   do
   {
     // get slave job status
