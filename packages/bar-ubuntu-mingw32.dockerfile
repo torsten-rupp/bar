@@ -35,6 +35,7 @@ RUN apt-get -y install --fix-missing \
   postgresql \
   psmisc \
   rsync \
+  socat \
   sqlite3 \
   subversion \
   sudo \
