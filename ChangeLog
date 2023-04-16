@@ -1,3 +1,9 @@
+2023-04-16 0.22g
+  * BARControl: fixed update job sate in dry-mode (issue #2,
+    thanks to ChrisTG742)
+  * fixed error handling WebDAV access
+  * fixed test run on Jenkins
+
 2023-03-11 0.22f
   * fixed error message: no space left on device
   * improved find storage files: skip unreadable directories
