@@ -854,11 +854,11 @@ docker_update update_docker:
 	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
 	#
 	# build image
-#	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build .)
-	$(call functionDockerBuild,packages/build.dockerfile, \
-                             bar:build, \
-                             download-third-party-packages.sh \
-   )
+	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+#	$(call functionDockerBuild,ci/build.dockerfile, \
+#                             bar:build, \
+#                             download-third-party-packages.sh \
+#   )
 
 .PHONY: docker_purge purge_docker
 docker_purge purge_docker:

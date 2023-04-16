@@ -1,3 +1,5 @@
 ALL ALL = (ALL) NOPASSWD: /etc/init.d/apache2
 ALL ALL = (ALL) NOPASSWD: /etc/init.d/ssh
 ALL ALL = (ALL) NOPASSWD: /etc/init.d/vsftpd
+
+ALL ALL = (ALL) NOPASSWD: /bin/rm -rf /var/www/intermediate

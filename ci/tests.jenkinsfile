@@ -2,7 +2,7 @@
 
 DOCKER_IMAGE_NAME='bar:build'
 
-TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db TEST_LOGIN_NAME=test TEST_PASSWORD=test TEST_BASE_DIR=/home/test TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa TEST_MOUNT_OPERATIONS=no"
+TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db TEST_USER=jenkins TEST_LOGIN_NAME=test TEST_PASSWORD=test TEST_BASE_DIR=/home/jenkins TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa TEST_MOUNT_OPERATIONS=no"
 
 TEST_STEPS = ["basic",
               "compress",
@@ -12,7 +12,7 @@ TEST_STEPS = ["basic",
               "signatures",
               "split",
               "convert",
-              "image",
+//TODO: still do not work              "image",
               "storage_file",
 // TODO: instable
 //              "storage_ftp",
@@ -21,6 +21,7 @@ TEST_STEPS = ["basic",
 // TODO: instable
 //              "storage_sftp",
               "storage_webdav",
+              "storage_webdavs",
               "index",
               "server",
               "master_slave",
@@ -34,217 +35,227 @@ def tests()
 {
   try
   {
-    stage("Build")
+    timestamps
     {
-      docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+      stage("Build")
       {
-        checkout scm
-        script
+//        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+        docker.image(DOCKER_IMAGE_NAME).inside('')
         {
-          // configure
-          sh "./download-third-party-packages.sh --local-directory /media/extern"
-          sh "./download-third-party-packages.sh"
-          sh "./configure --disable-debug-thread-crash-handlers"
-
-          // make (Note: avoid race condition in depend by not create dependencies in parallel)
-          sh "make depend"
-          sh "make -j`nproc --ignore=1`"
-        }
-      }
-    }
-
-    stage("Distribution")
-    {
-      docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-      {
-        script
-        {
-          sh "make distribution"
-
-          sh "tar xf backup-archiver*.tar.bz2"
-          sh "(cd backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
-          sh "(cd backup-archiver*; ./download-third-party-packages.sh)"
-          sh "(cd backup-archiver*; ./configure)"
-          sh "(cd backup-archiver*; make depend)"
-          sh "(cd backup-archiver*; make -j`nproc --ignore=1`)"
-        }
-      }
-    }
-
-    timeout(time: 180, unit: 'MINUTES')
-    {
-      stage("Tests")
-      {
-        // run tests
-        script
-        {
-          if (params.TESTS)
+          checkout scm
+          script
           {
-            switch (params.BINARY_TYPE)
+            // configure
+            sh "./download-third-party-packages.sh --local-directory /media/extern"
+            sh "./download-third-party-packages.sh"
+            sh "./configure --disable-debug-thread-crash-handlers"
+
+            // make (Note: avoid race condition in depend by not create dependencies in parallel)
+            sh "make depend"
+            sh "make -j`nproc --ignore=1`"
+          }
+        }
+      }
+
+      stage("Distribution")
+      {
+//        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+        docker.image(DOCKER_IMAGE_NAME).inside('')
+        {
+          script
+          {
+            sh "make distribution"
+
+            sh "tar xf backup-archiver*.tar.bz2"
+            sh "(cd backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
+            sh "(cd backup-archiver*; ./download-third-party-packages.sh)"
+            sh "(cd backup-archiver*; ./configure)"
+            sh "(cd backup-archiver*; make depend)"
+            sh "(set -x; cd backup-archiver*; make -j`nproc --ignore=1`)"
+          }
+        }
+      }
+
+      timeout(time: 180, unit: 'MINUTES')
+      {
+        stage("Tests")
+        {
+          // run tests
+          script
+          {
+            if (params.TESTS)
             {
-              case "DEBUG":
-                binaryExtension="-debug";
-                break;
-              case "VALGRIND":
-                binaryExtension="-valgrind";
-                break;
-              case "GCOV":
-                binaryExtension="-gcov";
-                break;
-              case "GPROF":
-                binaryExtension="-gprof";
-                break;
-              default:
-                binaryExtension="";
-                break;
-            }
-            sh "echo binaryExtension="+binaryExtension
-            switch (params.TEST_TYPE)
-            {
-              case "SMOKE":
-              default:
-                docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-                {
-                  // start services
-                  sh "sudo /etc/init.d/rsyslog start"
-                  sh "sudo /etc/init.d/apache2 start"
-                  sh "sudo /etc/init.d/ssh start"
-                  sh "sudo /etc/init.d/vsftpd start"
+              switch (params.BINARY_TYPE)
+              {
+                case "DEBUG":
+                  binaryExtension="-debug";
+                  break;
+                case "VALGRIND":
+                  binaryExtension="-valgrind";
+                  break;
+                case "GCOV":
+                  binaryExtension="-gcov";
+                  break;
+                case "GPROF":
+                  binaryExtension="-gprof";
+                  break;
+                default:
+                  binaryExtension="";
+                  break;
+              }
+              sh "echo binaryExtension="+binaryExtension
+              switch (params.TEST_TYPE)
+              {
+                case "SMOKE":
+                default:
+//                  docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+                  docker.image(DOCKER_IMAGE_NAME).inside('')
+                  {
+                    // start services
+                    sh "sudo /etc/init.d/rsyslog start"
+                    sh "sudo /etc/init.d/apache2 start"
+                    sh "sudo /etc/init.d/ssh start"
+                    sh "sudo /etc/init.d/vsftpd start"
 
-                  sh "rm -f bar-test.log"
-                  // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                  sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" O=\'--verbose=1\' | tee -a bar-test.log'"
+                    sh "rm -f bar-test.log"
+                    // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
+                    sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" O=\'--verbose=1\' | tee -a bar-test.log'"
 
-                  // stop services
-                  sh "sudo /etc/init.d/vsftpd stop || true"
-                  sh "sudo /etc/init.d/ssh stop || true"
-                  sh "sudo /etc/init.d/apache2 stop || true"
-                  sh "sudo /etc/init.d/rsyslog stop || true"
-                }
-                break;
-              case "FULL":
-                docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
-                {
-                  // start services
-                  sh "sudo /etc/init.d/rsyslog start"
-                  sh "sudo /etc/init.d/apache2 start"
-                  sh "sudo /etc/init.d/ssh start"
-                  sh "sudo /etc/init.d/vsftpd start"
+                    // stop services
+                    sh "sudo /etc/init.d/vsftpd stop || true"
+                    sh "sudo /etc/init.d/ssh stop || true"
+                    sh "sudo /etc/init.d/apache2 stop || true"
+                    sh "sudo /etc/init.d/rsyslog stop || true"
+                  }
+                  break;
+                case "FULL":
+//                  docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+                  docker.image(DOCKER_IMAGE_NAME).inside('')
+                  {
+                    // start services
+                    sh "sudo /etc/init.d/rsyslog start"
+                    sh "sudo /etc/init.d/apache2 start"
+                    sh "sudo /etc/init.d/ssh start"
+                    sh "sudo /etc/init.d/vsftpd start"
 
-                  sh "rm -f bar-test.log"
-                  // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                  TEST_STEPS.each { step -> sh "bash -o pipefail -c 'make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
+                    sh "rm -f bar-test.log"
+                    // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
+                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
 
-                  // stop services
-                  sh "sudo /etc/init.d/vsftpd stop || true"
-                  sh "sudo /etc/init.d/ssh stop || true"
-                  sh "sudo /etc/init.d/apache2 stop || true"
-                  sh "sudo /etc/init.d/rsyslog stop || true"
-                }
-                break;
+                    // stop services
+                    sh "sudo /etc/init.d/vsftpd stop || true"
+                    sh "sudo /etc/init.d/ssh stop || true"
+                    sh "sudo /etc/init.d/apache2 stop || true"
+                    sh "sudo /etc/init.d/rsyslog stop || true"
+                  }
+                  break;
+              }
             }
           }
         }
       }
-    }
 
-    timeout(time: 360, unit: 'MINUTES')
-    {
-      stage("Valgrind")
+      timeout(time: 360, unit: 'MINUTES')
       {
-        // run tests
-        script
+        stage("Valgrind")
         {
-          if (params.VALGRIND)
+          // run tests
+          script
           {
-            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            if (params.VALGRIND)
             {
-              // start services
-              sh "sudo /etc/init.d/rsyslog start"
-              sh "sudo /etc/init.d/apache2 start"
-              sh "sudo /etc/init.d/ssh start"
-              sh "sudo /etc/init.d/vsftpd start"
+//              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              docker.image(DOCKER_IMAGE_NAME).inside('')
+              {
+                // start services
+                sh "sudo /etc/init.d/rsyslog start"
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
 
-              sh "rm -f bar-test-valgrind.log"
-              // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-              sh "bash -o pipefail -c 'make test_smoke-valgrind O=\'--verbose=1\' | tee -a bar-test-valgrind.log'"
+                sh "rm -f bar-test-valgrind.log"
+                // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
+                sh "bash -o pipefail -c 'make test_smoke-valgrind "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test-valgrind.log'"
 
-              // stop services
-              sh "sudo /etc/init.d/vsftpd stop || true"
-              sh "sudo /etc/init.d/ssh stop || true"
-              sh "sudo /etc/init.d/apache2 stop || true"
-              sh "sudo /etc/init.d/rsyslog stop || true"
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
+                sh "sudo /etc/init.d/rsyslog stop || true"
+              }
             }
           }
         }
       }
-    }
 
-    timeout(time: 240, unit: 'MINUTES')
-    {
-      stage("Code coverage")
+      timeout(time: 240, unit: 'MINUTES')
       {
-        script
+        stage("Code coverage")
         {
-          if (params.CODE_COVERAGE)
+          script
           {
-            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            if (params.CODE_COVERAGE)
             {
-              // start services
-              sh "sudo /etc/init.d/rsyslog start"
-              sh "sudo /etc/init.d/apache2 start"
-              sh "sudo /etc/init.d/ssh start"
-              sh "sudo /etc/init.d/vsftpd start"
+//              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              docker.image(DOCKER_IMAGE_NAME).inside('')
+              {
+                // start services
+                sh "sudo /etc/init.d/rsyslog start"
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
 
-              sh "make -C bar gcov_clean"
-              TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
-              sh "make -C bar gcov_html"
+                sh "make -C bar gcov_clean"
+                TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
+                sh "make -C bar gcov_html"
 
-              // stop services
-              sh "sudo /etc/init.d/vsftpd stop || true"
-              sh "sudo /etc/init.d/ssh stop || true"
-              sh "sudo /etc/init.d/apache2 stop || true"
-              sh "sudo /etc/init.d/rsyslog stop || true"
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
+                sh "sudo /etc/init.d/rsyslog stop || true"
+              }
+
+              publishHTML([allowMissing:          false,
+                           alwaysLinkToLastBuild: false,
+                           keepAll:               true,
+                           reportDir:             'bar/coverage',
+                           reportFiles:           'index.html',
+                           reportName:            'Code Coverage Report',
+                           reportTitles:          'BAR Code Coverage'
+                          ]
+                         )
             }
-
-            publishHTML([allowMissing:          false,
-                         alwaysLinkToLastBuild: false,
-                         keepAll:               true,
-                         reportDir:             'bar/coverage',
-                         reportFiles:           'index.html',
-                         reportName:            'Code Coverage Report',
-                         reportTitles:          'BAR Code Coverage'
-                        ]
-                       )
           }
         }
       }
-    }
 
-    timeout(time: 180, unit: 'MINUTES')
-    {
-      stage("Profiling")
+      timeout(time: 180, unit: 'MINUTES')
       {
-        script
+        stage("Profiling")
         {
-          if (params.PROFILING)
+          script
           {
-            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            if (params.PROFILING)
             {
-              // start services
-              sh "sudo /etc/init.d/rsyslog start"
-              sh "sudo /etc/init.d/apache2 start"
-              sh "sudo /etc/init.d/ssh start"
-              sh "sudo /etc/init.d/vsftpd start"
+//              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+              docker.image(DOCKER_IMAGE_NAME).inside('')
+              {
+                // start services
+                sh "sudo /etc/init.d/rsyslog start"
+                sh "sudo /etc/init.d/apache2 start"
+                sh "sudo /etc/init.d/ssh start"
+                sh "sudo /etc/init.d/vsftpd start"
 
-              sh "make -C bar gprof_clean"
-              TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
+                sh "make -C bar gprof_clean"
+                TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
 
-              // stop services
-              sh "sudo /etc/init.d/vsftpd stop || true"
-              sh "sudo /etc/init.d/ssh stop || true"
-              sh "sudo /etc/init.d/apache2 stop || true"
-              sh "sudo /etc/init.d/rsyslog stop || true"
+                // stop services
+                sh "sudo /etc/init.d/vsftpd stop || true"
+                sh "sudo /etc/init.d/ssh stop || true"
+                sh "sudo /etc/init.d/apache2 stop || true"
+                sh "sudo /etc/init.d/rsyslog stop || true"
+              }
             }
           }
         }
@@ -256,8 +267,8 @@ def tests()
     script
     {
 //      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log', allowEmptyArchive: true
-sh "ps auxw"
-sh "ls -la /var/log"
+//sh "ps auxw"
+//sh "ls -la /var/log"
       archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
     }
 

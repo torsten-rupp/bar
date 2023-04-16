@@ -1,5 +1,8 @@
 FROM ubuntu:18.04
 
+ARG uid=0
+ARG gid=0
+
 # set marker in environment for running inside a docker
 ENV CONTAINER=docker
 
@@ -27,7 +30,6 @@ RUN apt-get -y install \
   lua5.3 \
   m4 \
   mariadb-client \
-  netcat \
   ncurses-bin \
   patch \
   pkg-config \
@@ -36,6 +38,7 @@ RUN apt-get -y install \
   reiserfsprogs \
   rsync \
   rsyslog \
+  socat \
   sqlite3 \
   subversion \
   sudo \
@@ -78,12 +81,15 @@ RUN apt-get -y install \
 
 RUN mkdir /.cache;
 
-# add test user
+# add users
+RUN groupadd -g $gid jenkins
+RUN useradd -m jenkins -u $uid -g $gid -p `openssl passwd -crypt jenkins`;
 RUN useradd -m test -p `openssl passwd -crypt test`;
 
-# enable sudo for test user
-RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/test
-COPY test-sudoers /etc/suduers.d/test
+# enable sudo for users
+RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
+COPY sudoers /etc/sudoers.d/bar
+RUN usermod -aG sudo jenkins
 RUN usermod -aG sudo test
 
 # enable ftp: fix race-condition in vsftpd start script, enable write
@@ -110,12 +116,14 @@ RUN a2enmod dav_fs
 RUN a2ensite 000-default
 RUN a2ensite default-ssl
 RUN echo ServerName test >> /etc/apache2/apache2.conf
-COPY test-apache2.conf /etc/apache2/sites-enabled/test.conf
+COPY apache2-test.conf /etc/apache2/sites-enabled/test.conf
+RUN sed 's|DocumentRoot /var/www/.*|DocumentRoot /var/www|g' -i /etc/apache2/sites-available/000-default.conf
+RUN sed 's|DocumentRoot /var/www/.*|DocumentRoot /var/www|g' -i /etc/apache2/sites-available/default-ssl.conf
 RUN sed 's|export APACHE_RUN_USER=.*|export APACHE_RUN_USER=test|g' -i /etc/apache2/envvars
 RUN sed 's|export APACHE_RUN_GROUP=.*|export APACHE_RUN_GROUP=test|g' -i /etc/apache2/envvars
-RUN (cd /var/www; rm -rf html; ln -s /home/test html)
+RUN chown -R test:test /var/www
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root
-RUN /root/download-third-party-packages.sh --destination-directory /media/extern
+RUN /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern
 RUN rm -f /root/download-third-party-packages.sh
