@@ -59,21 +59,6 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
-// HTTP codes
-#define HTTP_CODE_OK                     200
-#define HTTP_CODE_CREATED                201
-#define HTTP_CODE_ACCEPTED               202
-#define HTTP_CODE_BAD_REQUEST            400
-#define HTTP_CODE_UNAUTHORIZED           401
-#define HTTP_CODE_FORBITTEN              403
-#define HTTP_CODE_NOT_FOUND              404
-#define HTTP_CODE_BAD_METHOD             405
-#define HTTP_CODE_NOT_ACCEPTABLE         406
-#define HTTP_CODE_RESOURCE_TIMEOUT       408
-#define HTTP_CODE_RESOURCE_NOT_AVAILABLE 410
-#define HTTP_CODE_ENTITY_TOO_LARGE       413
-#define HTTP_CODE_EXPECTATIONFAILED      417
-
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -506,57 +491,6 @@ LOCAL bool deleteFileDirectory(CURL *curlHandle, ConstString url)
 }
 
 /***********************************************************************\
-* Name   : getResponseError
-* Purpose: get HTTP response error
-* Input  : curlHandle - CURL handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors getResponseError(CURL *curlHandle)
-{
-  CURLcode curlCode;
-  long     responseCode;
-  Errors   error;
-
-  assert(curlHandle != NULL);
-
-  curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
-  if (curlCode == CURLE_OK)
-  {
-    switch (responseCode)
-    {
-      case HTTP_CODE_OK:
-      case HTTP_CODE_CREATED:
-      case HTTP_CODE_ACCEPTED:
-        error = ERROR_NONE;
-        break;
-      case HTTP_CODE_BAD_REQUEST:
-      case HTTP_CODE_BAD_METHOD:
-        error = ERROR_WEBDAV_BAD_REQUEST;
-        break;
-      case HTTP_CODE_UNAUTHORIZED:
-      case HTTP_CODE_FORBITTEN:
-        error = ERROR_FILE_ACCESS_DENIED;
-        break;
-      case HTTP_CODE_NOT_FOUND:
-        error = ERROR_FILE_NOT_FOUND_;
-        break;
-      default:
-        error = ERRORX_(WEBDAV,responseCode,"unhandled HTTP response",responseCode);
-        break;
-    }
-  }
-  else
-  {
-    error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
-  }
-
-  return error;
-}
-
-/***********************************************************************\
 * Name   : curlWebDAVReadDataCallback
 * Purpose: curl WebDAV read data callback: read data from buffer and
 *          send to remote
@@ -692,6 +626,7 @@ LOCAL Errors initDownload(StorageHandle *storageHandle,
   CURLcode  curlCode;
   CURLMcode curlMCode;
   int       runningHandles;
+  Errors    error;
 
   assert(storageHandle != NULL);
   assert(url != NULL);
@@ -720,7 +655,7 @@ LOCAL Errors initDownload(StorageHandle *storageHandle,
   }
   if (curlCode != CURLE_OK)
   {
-    return getResponseError(storageHandle->webdav.curlHandle);
+    return getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
   }
 
 #if 0
@@ -738,7 +673,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   curlMCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
   if (curlMCode != CURLM_OK)
   {
-    return getResponseError(storageHandle->webdav.curlMultiHandle);
+    return getCurlHTTPResponseError(storageHandle->webdav.curlMultiHandle);
   }
 
   // start WebDAV download
@@ -751,10 +686,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         );
   if (curlMCode != CURLM_OK)
   {
-    return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
+    error = ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
+  }
+  else
+  {
+    error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 /***********************************************************************\
@@ -774,6 +713,7 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   CURLcode  curlCode;
   CURLMcode curlMCode;
   int       runningHandles;
+  Errors    error;
 
   assert(storageHandle != NULL);
   assert(url != NULL);
@@ -810,11 +750,12 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   }
   if (curlCode != CURLE_OK)
   {
-    return getResponseError(storageHandle->webdav.curlHandle);
+    return getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
   }
 
 #if 0
   // check response code
+  int responseCode;
   curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
 fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
   if ((curlCode != CURLM_OK) || (responseCode >= 400))
@@ -828,7 +769,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   curlMCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
   if (curlMCode != CURLM_OK)
   {
-    return getResponseError(storageHandle->webdav.curlMultiHandle);
+    return getCurlHTTPResponseError(storageHandle->webdav.curlMultiHandle);
   }
 
   // start WebDAV upload
@@ -839,12 +780,16 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
          && (runningHandles > 0)
         );
-  if (curlMCode != CURLM_OK)
+  if (curlMCode == CURLM_OK)
   {
-    return getResponseError(storageHandle->webdav.curlHandle);
+    error = ERROR_NONE;
+  }
+  else
+  {
+    error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 /***********************************************************************\
@@ -1691,7 +1636,7 @@ UNUSED_VARIABLE(forceFlag);
       File_doneSplitFileName(&nameTokenizer);
       if (curlCode != CURLE_OK)
       {
-        error = getResponseError(storageHandle->webdav.curlHandle);
+        error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
         String_delete(baseName);
         String_delete(directoryName);
         String_delete(baseURL);
@@ -1749,10 +1694,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     }
 
     // init WebDAV upload
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(storageHandle->webdav.url));
     error = initUpload(storageHandle,storageHandle->webdav.url);
     if (error != ERROR_NONE)
     {
-      error = getResponseError(storageHandle->webdav.curlHandle);
+      error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
       String_delete(baseName);
       String_delete(directoryName);
       String_delete(baseURL);
@@ -2101,6 +2047,10 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
           {
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
+          else
+          {
+            error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
+          }
         }
         if      (error != ERROR_NONE)
         {
@@ -2185,6 +2135,8 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
     uint64    startTimestamp,endTimestamp;
     CURLMcode curlmCode;
     int       runningHandles;
+    CURLcode  curlCode;
+    long      responseCode;
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
@@ -2254,6 +2206,10 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
         if (curlmCode != CURLM_OK)
         {
           error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
+        }
+        else
+        {
+          error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
         }
       }
       if      (error != ERROR_NONE)
@@ -2463,6 +2419,10 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
             if (curlmCode != CURLM_OK)
             {
               error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+            }
+            else
+            {
+              error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle);
             }
           }
           if      (error != ERROR_NONE)
@@ -3129,7 +3089,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     curl_slist_free_all(curlSList);
     if (curlCode != CURLE_OK)
     {
-      error = getResponseError(curlHandle);
+      error = getCurlHTTPResponseError(curlHandle);
       String_delete(directoryData);
       String_delete(url);
       (void)curl_easy_cleanup(curlHandle);
