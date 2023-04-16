@@ -1066,10 +1066,12 @@ LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], ch
 #ifdef HAVE_SIGQUIT
 LOCAL void debugDatabaseSignalHandler(int signalNumber)
 {
-  if ((signalNumber == SIGQUIT) && Thread_isCurrentThread(debugDatabaseThreadId))
-  {
-    Database_debugPrintInfo();
-  }
+  #ifdef STACKTRACE_ON_SIGNAL
+    if ((signalNumber == SIGQUIT) && Thread_isCurrentThread(debugDatabaseThreadId))
+    {
+      Database_debugPrintInfo();
+    }
+  #endif
 
   if (debugSignalQuitPrevHandler != NULL)
   {
