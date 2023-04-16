@@ -119,7 +119,7 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" O=\'--verbose=1\' | tee -a bar-test.log'"
+                    sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'"
 
                     // stop services
                     sh "sudo /etc/init.d/vsftpd stop || true"
