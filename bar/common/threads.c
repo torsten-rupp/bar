@@ -35,6 +35,7 @@
 #include "threads.h"
 
 /****************** Conditional compilation switches *******************/
+#define _STACKTRACE_ON_SIGNAL
 
 /***************************** Constants *******************************/
 const uint THREAD_LOCAL_STORAGE_HASHTABLE_SIZE      = 15;
@@ -453,12 +454,12 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                 }
                 else
                 {
-                  HALT_INTERNAL_ERROR("Process signal QUIT for thread %s == %s failed (error %d: %s)",
-                                      Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),
-                                      Thread_getCurrentIdString(),
-                                      errno,
-                                      strerror(errno)
-                                     );
+                  fprintf(stderr,
+                          "Warning: process signal QUIT by thread %s failed (error %d: %s)",
+                          Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),
+                          errno,
+                          strerror(errno)
+                         );
                 }
               }
               else
@@ -541,13 +542,15 @@ LOCAL void debugThreadSignalSegVHandler(int signalNumber)
 {
   if (signalNumber == SIGSEGV)
   {
-    #ifdef HAVE_SIGQUIT
-      pthread_mutex_lock(&debugThreadSignalLock);
-      {
-        debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** CRASHED ***");
-      }
-      pthread_mutex_unlock(&debugThreadSignalLock);
-    #endif /* HAVE_BACKTRACE */
+    #ifdef STACKTRACE_ON_SIGNAL
+      #ifdef HAVE_SIGQUIT
+        pthread_mutex_lock(&debugThreadSignalLock);
+        {
+          debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** CRASHED ***");
+        }
+        pthread_mutex_unlock(&debugThreadSignalLock);
+      #endif /* HAVE_SIGQUIT */
+    #endif
   }
 
   #ifdef HAVE_SIGACTION
@@ -578,16 +581,18 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber)
 {
   if (signalNumber == SIGABRT)
   {
-    pthread_mutex_lock(&debugThreadSignalLock);
-    {
-      #ifndef NDEBUG
-        // Note: in debug mode only dump current stack trace
-        debugThreadDumpStackTrace(pthread_self(),DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** ABORTED ***");
-      #else /* not NDEBUG */
-        debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL," *** ABORTED ***");
-      #endif /* NDEBUG */
-    }
-    pthread_mutex_unlock(&debugThreadSignalLock);
+    #ifdef STACKTRACE_ON_SIGNAL
+      pthread_mutex_lock(&debugThreadSignalLock);
+      {
+        #ifndef NDEBUG
+          // Note: in debug mode only dump current stack trace
+          debugThreadDumpStackTrace(pthread_self(),DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** ABORTED ***");
+        #else /* not NDEBUG */
+          debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL," *** ABORTED ***");
+        #endif /* NDEBUG */
+      }
+      pthread_mutex_unlock(&debugThreadSignalLock);
+    #endif
   }
 
   #ifdef HAVE_SIGACTION
@@ -622,8 +627,10 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber)
 
   if (signalNumber == SIGQUIT)
   {
-    // Note: do not lock; signal handler is called for every thread
-    debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1,NULL);
+    #ifdef STACKTRACE_ON_SIGNAL
+      // Note: do not lock; signal handler is called for every thread
+      debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1,NULL);
+    #endif
   }
 
   #ifdef HAVE_SIGACTION
@@ -830,7 +837,7 @@ bool __Thread_init(const char *__fileName__,
   result = sem_init(&startInfo.started,0,0);
   if (result != 0)
   {
-    HALT_INTERNAL_ERROR("cannot initialise start lock");
+    HALT_INTERNAL_ERROR("cannot initialise thread start lock");
   }
 
   // init thread attributes
@@ -877,7 +884,7 @@ bool __Thread_init(const char *__fileName__,
   while ((result != 0) && (errno == EINTR));
   if (result != 0)
   {
-    HALT_INTERNAL_ERROR("wait for start lock failed");
+    HALT_INTERNAL_ERROR("wait for thread start lock failed");
   }
 
   // free resources
