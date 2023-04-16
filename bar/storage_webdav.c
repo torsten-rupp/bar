@@ -316,6 +316,7 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
   CURL     *curlHandle;
   String   url;
   CURLcode curlCode;
+  Errors   error;
 
   assert(   (type == STORAGE_TYPE_WEBDAV)
          || (type == STORAGE_TYPE_WEBDAVS)
@@ -374,7 +375,12 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
   {
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
-    return ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode));
+    switch (curlCode)
+    {
+      case CURLE_COULDNT_CONNECT: error = ERRORX_(CONNECT_FAIL,0,"%s",curl_easy_strerror(curlCode)); break;
+      default:                    error = ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode)); break;
+    }
+    return error;
   }
 
   // free resources
