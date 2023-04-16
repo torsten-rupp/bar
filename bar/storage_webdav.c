@@ -2236,7 +2236,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
             )
       {
         // wait for socket
-        waitCurlSocketWrite(storageHandle->webdav.curlMultiHandle);
+        error = waitCurlSocketWrite(storageHandle->webdav.curlMultiHandle);
         if (error != ERROR_NONE)
         {
           break;
@@ -2841,7 +2841,6 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
     File_doneSplitFileName(&nameTokenizer);
     String_append(url,baseName);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // init WebDAV login
     curlCode = setWebDAVLogin(curlHandle,
                               storageInfo->storageSpecifier.loginName,
