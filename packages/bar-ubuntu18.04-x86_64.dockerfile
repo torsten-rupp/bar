@@ -39,6 +39,7 @@ RUN apt-get -y install \
   pkg-config \
   postgresql \
   rsync \
+  socat \
   sqlite3 \
   subversion \
   sudo \
