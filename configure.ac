@@ -931,6 +931,8 @@ AC_SUBST(MKFS_MSDOS)                         dnl mksfs.msdos command
 AC_SUBST(MKFS_REISERFS)                      dnl mksfs.reiserfs command
 AC_SUBST(MKFS_REISER4)                       dnl mksfs.reiser4 command
 
+AC_SUBST(SOCAT)                              dnl socat command
+
 AC_SUBST(XGETTEXT)                           dnl xgettext command
 AC_SUBST(MSGMERGE)                           dnl msgmerge command
 AC_SUBST(MSGFMT)                             dnl msgfmt command
@@ -1489,14 +1491,16 @@ AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
+AC_PATH_PROGS(SOCAT,socat)
+
 AC_PATH_PROGS(DOCKER,docker)
 # required for tests
 AC_PATH_PROGS(KILLALL,killall)
 if test -z "$KILLALL"; then
   AC_MSG_ERROR([Cannot find a 'killall' in PATH. Please check your PATH environment variable.])
 fi
-AC_PATH_PROGS(WINE, wine)
-AC_PATH_PROGS(WINEPATH, winepath)
+AC_PATH_PROGS(WINE,wine)
+AC_PATH_PROGS(WINEPATH,winepath)
 AC_PROVIDE(AC_PROG_WINEPATH)
 if test -n "$WINE" -a -n "$WINEPATH"; then
   AC_WINE_C_DRIVE(WINE_C_DRIVE)
