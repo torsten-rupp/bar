@@ -2348,14 +2348,16 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
           );
     if (curlMCode != CURLM_OK)
     {
-      return ERRORX_(IO,0,"%s",curl_easy_strerror(curlCode));
+      error = ERRORX_(IO,0,"%s",curl_easy_strerror(curlCode));
+    }
+    else
+    {
+      error = getCurlHTTPResponseError(storageHandle->ftp.curlHandle);
     }
 
     storageHandle->ftp.index = offset;
     storageHandle->ftp.readAheadBuffer.offset = offset;
     storageHandle->ftp.readAheadBuffer.length = 0;
-
-    error = ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);

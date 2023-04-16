@@ -81,6 +81,22 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
+// HTTP codes
+#define HTTP_CODE_CONTINUE               100
+#define HTTP_CODE_OK                     200
+#define HTTP_CODE_CREATED                201
+#define HTTP_CODE_ACCEPTED               202
+#define HTTP_CODE_BAD_REQUEST            400
+#define HTTP_CODE_UNAUTHORIZED           401
+#define HTTP_CODE_FORBITTEN              403
+#define HTTP_CODE_NOT_FOUND              404
+#define HTTP_CODE_BAD_METHOD             405
+#define HTTP_CODE_NOT_ACCEPTABLE         406
+#define HTTP_CODE_RESOURCE_TIMEOUT       408
+#define HTTP_CODE_RESOURCE_NOT_AVAILABLE 410
+#define HTTP_CODE_ENTITY_TOO_LARGE       413
+#define HTTP_CODE_EXPECTATIONFAILED      417
+
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -244,7 +260,6 @@ LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
 
   // get a suitable timeout
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
-//fprintf(stderr,"%s, %d: curlTimeout=%ld \n",__FILE__,__LINE__,curlTimeout);
 
   // wait
   fdCount=0;
@@ -264,6 +279,59 @@ LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
       // error
       error = ERROR_NETWORK_RECEIVE;
       break;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : getCurlHTTPResponseError
+* Purpose: get curl HTTP response error
+* Input  : curlHandle - CURL handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle)
+{
+  CURLcode curlCode;
+  long     responseCode;
+  Errors   error;
+
+  assert(curlHandle != NULL);
+
+  curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
+  if (curlCode == CURLE_OK)
+  {
+    switch (responseCode)
+    {
+      case 0:
+      case HTTP_CODE_CONTINUE:
+      case HTTP_CODE_OK:
+      case HTTP_CODE_CREATED:
+      case HTTP_CODE_ACCEPTED:
+        error = ERROR_NONE;
+        break;
+      case HTTP_CODE_BAD_REQUEST:
+      case HTTP_CODE_BAD_METHOD:
+        error = ERROR_WEBDAV_BAD_REQUEST;
+        break;
+      case HTTP_CODE_UNAUTHORIZED:
+      case HTTP_CODE_FORBITTEN:
+        error = ERROR_FILE_ACCESS_DENIED;
+        break;
+      case HTTP_CODE_NOT_FOUND:
+        error = ERROR_FILE_NOT_FOUND_;
+        break;
+      default:
+        error = ERRORX_(WEBDAV,responseCode,"unhandled HTTP response");
+        break;
+    }
+  }
+  else
+  {
+    error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
   }
 
   return error;
