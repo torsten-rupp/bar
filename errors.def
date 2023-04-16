@@ -236,7 +236,13 @@ ERROR NO_WEBDAV_PASSWORD
   }
 
 ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
-ERROR WEBDAV_AUTHENTICATION            TR("invalid WebDAV user/password")
+ERROR WEBDAV_AUTHENTICATION
+  stringSet(errorText,sizeof(errorText),TR("invalid WebDAV user/password"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR WEBDAV_BAD_REQUEST               TR("WebDAV bad request")
 ERROR WEBDAV_GET_SIZE
   stringSet(errorText,sizeof(errorText),TR("get WebDAV file size"));
