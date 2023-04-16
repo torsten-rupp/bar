@@ -34,68 +34,73 @@ def build()
 {
   try
   {
-    timeout(time: 120, unit: 'MINUTES')
+    timestamps
     {
-      stage("Build")
+      timeout(time: 120, unit: 'MINUTES')
       {
-        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+        stage("Build")
         {
-          checkout scm
-          script
+//          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          docker.image(DOCKER_IMAGE_NAME).inside('')
           {
-            // configure
-            sh "./download-third-party-packages.sh --local-directory /media/extern"
-            sh "./download-third-party-packages.sh"
-            sh "./configure"
+            checkout scm
+            script
+            {
+              // configure
+              sh "./download-third-party-packages.sh --local-directory /media/extern"
+              sh "./download-third-party-packages.sh"
+              sh "./configure"
 
-            // make (Note: avoid race condition by not creating dependencies in parallel)
-            sh "make depend"
-            sh "make -j`nproc --ignore=1`"
-            if (params.CODE_COVERAGE)
-            {
-              sh "make -C bar bar-gcov"
+              // make (Note: avoid race condition by not creating dependencies in parallel)
+              sh "make depend"
+              sh "make -j`nproc --ignore=1`"
+              if (params.CODE_COVERAGE)
+              {
+                sh "make -C bar bar-gcov"
+              }
+              if (params.PROFILING)
+              {
+                sh "make -C bar bar-gprof"
+              }
+              sh "make dist"
             }
-            if (params.PROFILING)
-            {
-              sh "make -C bar bar-gprof"
-            }
-            sh "make dist"
           }
         }
       }
-    }
 
-    switch (params.BINARY_TYPE)
-    {
-      case "":
-        binaryExtension="";
-        break;
-      case "DEBUG":
-        binaryExtension="-debug";
-        break;
-      case "VALGRIND":
-        binaryExtension="-valgrind";
-        break;
-      case "GCOV":
-        binaryExtension="-gcov";
-        break;
-      case "GPROF":
-        binaryExtension="-gprof";
-        break;
-      default:
-        binaryExtension="-debug";
-        break;
-    }
-    timeout(time: 60, unit: 'MINUTES')
-    {
-      stage("Smoke tests")
+      switch (params.BINARY_TYPE)
       {
-        // run tests
-        script
+        case "":
+          binaryExtension="";
+          break;
+        case "DEBUG":
+          binaryExtension="-debug";
+          break;
+        case "VALGRIND":
+          binaryExtension="-valgrind";
+          break;
+        case "GCOV":
+          binaryExtension="-gcov";
+          break;
+        case "GPROF":
+          binaryExtension="-gprof";
+          break;
+        default:
+          binaryExtension="-debug";
+          break;
+      }
+      timeout(time: 60, unit: 'MINUTES')
+      {
+        stage("Smoke tests")
         {
-          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+          // run tests
+          script
           {
-            sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
+//            docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
+            docker.image(DOCKER_IMAGE_NAME).inside('')
+            {
+              sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
+            }
           }
         }
       }

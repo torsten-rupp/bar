@@ -113,7 +113,6 @@ MKDIR          = mkdir
 MKFIFO         = mkfifo
 MKTEMP         = mktemp
 MYSQL          = @MYSQL@
-NETCAT         = netcat
 PERL           = @PERL@
 PGREP          = pgrep
 PSQL           = @PSQL@
@@ -128,6 +127,7 @@ SETFATTR       = @SETFATTR@
 SLEEP          = sleep
 SSH            = ssh
 SSHPASS        = sshpass
+SOCAT          = @SOCAT@
 SORT           = sort
 SQLITE3        = sqlite3
 STAT           = stat
@@ -347,39 +347,46 @@ TEST_CONFIGS                         = $(TEST_CONFIG) \
                                        $(TEST_SLAVE_CONFIG)
 
 # hosts, ports, passwords, keys for tests
+TEST_USER                            ?= $(USER)
 TEST_HOST                            ?= localhost
 TEST_LOGIN_NAME                      ?= $(LOGNAME)
 TEST_PASSWORD                        ?= test
+TEST_FILE_PATH                       =
 TEST_EMULATION                       =
 
-TEST_HOST_FTP                        ?= $(TEST_HOST)
-TEST_LOGIN_NAME_FTP                  ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_FTP                    ?= $(TEST_PASSWORD)
+TEST_FTP_HOST                        ?= $(TEST_HOST)
+TEST_FTP_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
+TEST_FTP_PASSWORD                    ?= $(TEST_PASSWORD)
+TEST_FTP_FILE_PATH                   ?= /var/www/intermediate
 
-TEST_HOST_SSH                        ?= $(TEST_HOST)
-TEST_PORT_SSH                        ?= 22
-TEST_LOGIN_NAME_SSH                  ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_SSH                    ?= $(TEST_PASSWORD)
-TEST_PUBLIC_KEY_SSH                  ?= $(HOME)/.ssh/id_rsa.pub
-TEST_PRIVATE_KEY_SSH                 ?= $(HOME)/.ssh/id_rsa
+TEST_SSH_HOST                        ?= $(TEST_HOST)
+TEST_SSH_PORT                        ?= 22
+TEST_SSH_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
+TEST_SSH_PASSWORD                    ?= $(TEST_PASSWORD)
+TEST_SSH_PUBLIC_KEY                  ?= $(HOME)/.ssh/id_rsa.pub
+TEST_SSH_PRIVATE_KEY                 ?= $(HOME)/.ssh/id_rsa
+TEST_SSH_FILE_PATH                   ?= /var/www/intermediate
 
-TEST_HOST_SCP                        ?= $(TEST_HOST)
-TEST_PORT_SCP                        ?= 22
-TEST_LOGIN_NAME_SCP                  ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_SCP                    ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SCP                  ?= $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SCP                 ?= $(TEST_PRIVATE_KEY_SSH)
+TEST_SCP_HOST                        ?= $(TEST_HOST)
+TEST_SCP_PORT                        ?= 22
+TEST_SCP_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
+TEST_SCP_PASSWORD                    ?= $(TEST_SSH_PASSWORD)
+TEST_SCP_PUBLIC_KEY                  ?= $(TEST_SSH_PUBLIC_KEY)
+TEST_SCP_PRIVATE_KEY                 ?= $(TEST_SSH_PRIVATE_KEY)
+TEST_SCP_FILE_PATH                   ?= /var/www/intermediate
 
-TEST_HOST_SFTP                       ?= $(TEST_HOST)
-TEST_PORT_SFTP                       ?= 22
-TEST_LOGIN_NAME_SFTP                 ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_SFTP                   ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SFTP                 ?= $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SFTP                ?= $(TEST_PRIVATE_KEY_SSH)
+TEST_SFTP_HOST                       ?= $(TEST_HOST)
+TEST_SFTP_PORT                       ?= 22
+TEST_SFTP_LOGIN_NAME                 ?= $(TEST_LOGIN_NAME)
+TEST_SFTP_PASSWORD                   ?= $(TEST_SSH_PASSWORD)
+TEST_SFTP_PUBLIC_KEY                 ?= $(TEST_SSH_PUBLIC_KEY)
+TEST_SFTP_PRIVATE_KEY                ?= $(TEST_SSH_PRIVATE_KEY)
+TEST_SFTP_FILE_PATH                  ?= /var/www/intermediate
 
-TEST_HOST_WEBDAV                     ?= $(TEST_HOST)
-TEST_LOGIN_NAME_WEBDAV               ?= $(TEST_LOGIN_NAME)
-TEST_PASSWORD_WEBDAV                 ?= $(TEST_PASSWORD)
+TEST_WEBDAV_HOST                     ?= $(TEST_HOST)
+TEST_WEBDAV_LOGIN_NAME               ?= $(TEST_LOGIN_NAME)
+TEST_WEBDAV_PASSWORD                 ?= $(TEST_PASSWORD)
+TEST_WEBDAV_FILE_PATH                ?= /var/www/intermediate
 
 TEST_OPTICAL_EMULATION               ?= $(TEST_EMULATION)
 TEST_OPTICAL_SLEEP_TIME              ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
@@ -706,6 +713,12 @@ functionExec = \
 # helper function for test files
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
+  $(if $(TEST_FILE_PATH),$(SUDO) $(RMRF) $(TEST_FILE_PATH);) \
+  $(if $(TEST_FTP_FILE_PATH),$(SUDO) $(RMRF) $(TEST_FTP_FILE_PATH);) \
+  $(if $(TEST_SSH_FILE_PATH),$(SUDO) $(RMRF) $(TEST_SSH_FILE_PATH);) \
+  $(if $(TEST_SCP_FILE_PATH),$(SUDO) $(RMRF) $(TEST_SCP_FILE_PATH);) \
+  $(if $(TEST_SFTP_FILE_PATH),$(SUDO) $(RMRF) $(TEST_SFTP_FILE_PATH);) \
+  $(if $(TEST_WEBDAV_FILE_PATH),$(SUDO) $(RMRF) $(TEST_WEBDAV_FILE_PATH);) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases
@@ -1686,29 +1699,29 @@ test_storage_file-valgrind:
 
 test_storage_ftp: \
   $(TEST_BAR)
-	@$(ECHO) Info : TEST_HOST_FTP=$(TEST_HOST_FTP)
-	@$(call functionVerifyParameter,TEST_HOST_FTP,parameter TEST_HOST_FTP nor TEST_HOST set)
-	@$(call functionVerifyParameter,TEST_LOGIN_NAME_FTP,parameter TEST_LOGIN_NAME_FTP nor TEST_LOGIN_NAME set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
+	@$(ECHO) Info : TEST_FTP_HOST=$(TEST_FTP_HOST)
+	@$(call functionVerifyParameter,TEST_FTP_HOST,parameter TEST_FTP_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_FTP_LOGIN_NAME,parameter TEST_FTP_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_FTP_PASSWORD,parameter TEST_FTP_PASSWORD nor TEST_PASSWORD set)
 	$(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/intermediate" \
+          BAR_STORAGE="ftp://$(TEST_FTP_HOST)/intermediate" \
           BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_LOGIN_NAME_FTP)' --ftp-password='$(TEST_PASSWORD_FTP)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	echo $(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/intermediate" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_LOGIN_NAME_FTP)' --ftp-password='$(TEST_PASSWORD_FTP)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_FTP_LOGIN_NAME)' --ftp-password='$(TEST_FTP_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/intermediate" \
+          BAR_STORAGE="ftp://$(TEST_FTP_HOST)/intermediate" \
           BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --ftp-login-name='$(TEST_LOGIN_NAME_FTP)' --ftp-password='$(TEST_PASSWORD_FTP)' $(OPTIONS)" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_FTP_LOGIN_NAME)' --ftp-password='$(TEST_FTP_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          test_file_operations_base \
+          ;
+	$(MAKE) \
+          BAR_STORAGE="ftp://$(TEST_FTP_HOST)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ftp-login-name='$(TEST_FTP_LOGIN_NAME)' --ftp-password='$(TEST_FTP_PASSWORD)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -1726,40 +1739,40 @@ test_storage_ftp-valgrind:
 
 test_storage_scp: \
   $(TEST_BAR)
-	@$(ECHO) Info : TEST_HOST_SCP=$(TEST_HOST_SCP)
-	@$(call functionVerifyParameter,TEST_HOST_SCP,parameter TEST_HOST_SCP nor TEST_HOST set)
-	@$(call functionVerifyParameter,TEST_LOGIN_NAME_SCP,parameter TEST_LOGIN_NAME_SCP nor TEST_LOGIN_NAME set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SCP,parameter TEST_PASSWORD_SCP nor TEST_PASSWORD set)
-	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SCP,parameter TEST_PUBLIC_KEY_SCP nor TEST_PUBLIC_KEY_SSH set)
-	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SCP,parameter TEST_PRIVATE_KEY_SCP nor TEST_PRIVATE_KEY_SSH set)
+	@$(ECHO) Info : TEST_SCP_HOST=$(TEST_SCP_HOST)
+	@$(call functionVerifyParameter,TEST_SCP_HOST,parameter TEST_SCP_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_SCP_LOGIN_NAME,parameter TEST_SCP_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_SCP_PASSWORD,parameter TEST_SCP_PASSWORD nor TEST_PASSWORD set)
+	@$(call functionVerifyParameter,TEST_SCP_PUBLIC_KEY,parameter TEST_SCP_PUBLIC_KEY nor TEST_SSH_PUBLIC_KEY set)
+	@$(call functionVerifyParameter,TEST_SCP_PRIVATE_KEY,parameter TEST_SCP_PRIVATE_KEY nor TEST_SSH_PRIVATE_KEY set)
 	# Note: with scp protocol directory cannot be created. Create it in advance
 	install -d $(INTERMEDIATE_DIR)
 	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
+          BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
+          BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
+          BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-public-key=$(TEST_SCP_PUBLIC_KEY) --ssh-private-key=$(TEST_SCP_PRIVATE_KEY) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST_SCP)/intermediate" \
+          BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-login-name='$(TEST_LOGIN_NAME_SCP)' --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-public-key=$(TEST_SCP_PUBLIC_KEY) --ssh-private-key=$(TEST_SCP_PRIVATE_KEY) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -1777,54 +1790,54 @@ test_storage_scp-valgrind:
 
 test_storage_sftp: \
   $(TEST_BAR)
-	@$(ECHO) Info : TEST_HOST_SFTP=$(TEST_HOST_SFTP)
-	@$(call functionVerifyParameter,TEST_HOST_SFTP,parameter TEST_HOST_SFTP nor TEST_HOST set)
-	@$(call functionVerifyParameter,TEST_LOGIN_NAME_SFTP,parameter TEST_LOGIN_NAME_SFTP nor TEST_LOGIN_NAME set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP,parameter TEST_PASSWORD_SFTP nor TEST_PASSWORD set)
-	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SFTP,parameter TEST_PUBLIC_KEY_SFTP nor TEST_PUBLIC_KEY_SSH set)
-	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SFTP,parameter TEST_PRIVATE_KEY_SFTP nor TEST_PRIVATE_KEY_SSH set)
+	@$(ECHO) Info : TEST_SFTP_HOST=$(TEST_SFTP_HOST)
+	@$(call functionVerifyParameter,TEST_SFTP_HOST,parameter TEST_SFTP_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_SFTP_LOGIN_NAME,parameter TEST_SFTP_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_SFTP_PASSWORD,parameter TEST_SFTP_PASSWORD nor TEST_PASSWORD set)
+	@$(call functionVerifyParameter,TEST_SFTP_PUBLIC_KEY,parameter TEST_SFTP_PUBLIC_KEY nor TEST_SSH_PUBLIC_KEY set)
+	@$(call functionVerifyParameter,TEST_SFTP_PRIVATE_KEY,parameter TEST_SFTP_PRIVATE_KEY nor TEST_SSH_PRIVATE_KEY set)
 	@# with password
 	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
+          BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-unreadable --skip-verify-signatures --max-threads=1 --verbose=4 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 --verbose=4 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	echo $(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
+          BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
+          BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_PORT_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_SFTP_PORT) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' $(OPTIONS)" \
           test_directory_operations \
           ;
 	@# with keys
 	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
+          BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-public-key=$(TEST_SFTP_PUBLIC_KEY) --ssh-private-key=$(TEST_SFTP_PRIVATE_KEY) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	echo $(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
+          BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-public-key=$(TEST_SFTP_PUBLIC_KEY) --ssh-private-key=$(TEST_SFTP_PRIVATE_KEY) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/intermediate" \
+          BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-login-name='$(TEST_LOGIN_NAME_SFTP)' --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_SFTP_PORT) --ssh-public-key=$(TEST_SFTP_PUBLIC_KEY) --ssh-private-key=$(TEST_SFTP_PRIVATE_KEY) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -1842,29 +1855,29 @@ test_storage_sftp-valgrind:
 
 test_storage_webdav: \
   $(TEST_BAR)
-	@$(ECHO) Info : TEST_HOST_WEBDAV=$(TEST_HOST_WEBDAV)
-	@$(call functionVerifyParameter,TEST_HOST_WEBDAV,parameter TEST_HOST_WEBDAV nor TEST_HOST set)
-	@$(call functionVerifyParameter,TEST_LOGIN_NAME_WEBDAV,parameter TEST_LOGIN_NAME_WEBDAV nor TEST_LOGIN_NAME set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
+	@$(ECHO) Info : TEST_WEBDAV_HOST=$(TEST_WEBDAV_HOST)
+	@$(call functionVerifyParameter,TEST_WEBDAV_HOST,parameter TEST_WEBDAV_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_WEBDAV_LOGIN_NAME,parameter TEST_WEBDAV_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_WEBDAV_PASSWORD,parameter TEST_WEBDAV_PASSWORD nor TEST_PASSWORD set)
 	$(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_STORAGE="webdav://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	echo $(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_STORAGE="webdav://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_STORAGE="webdav://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -1882,29 +1895,29 @@ test_storage_webdav-valgrind:
 
 test_storage_webdavs: \
   $(TEST_BAR)
-	@$(ECHO) Info : TEST_HOST_WEBDAV=$(TEST_HOST_WEBDAV)
-	@$(call functionVerifyParameter,TEST_HOST_WEBDAV,parameter TEST_HOST_WEBDAV nor TEST_HOST set)
-	@$(call functionVerifyParameter,TEST_LOGIN_NAME_WEBDAV,parameter TEST_LOGIN_NAME_WEBDAV nor TEST_LOGIN_NAME set)
-	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
+	@$(ECHO) Info : TEST_WEBDAV_HOST=$(TEST_WEBDAV_HOST)
+	@$(call functionVerifyParameter,TEST_WEBDAV_HOST,parameter TEST_WEBDAV_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_WEBDAV_LOGIN_NAME,parameter TEST_WEBDAV_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_WEBDAV_PASSWORD,parameter TEST_WEBDAV_PASSWORD nor TEST_PASSWORD set)
 	$(MAKE) \
-          BAR_STORAGE="webdavs://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_STORAGE="webdavs://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	echo $(MAKE) \
-          BAR_STORAGE="webdavs://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_STORAGE="webdavs://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdavs://$(TEST_HOST_WEBDAV)/intermediate" \
+          BAR_STORAGE="webdavs://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_LOGIN_NAME_WEBDAV)' --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -2228,11 +2241,11 @@ test_arguments: \
 	# destinations (ignore errors)
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) test.bar 2>/dev/null $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --ftp-password=$(TEST_PASSWORD_FTP) ftp://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --scp-password=$(TEST_PASSWORD_SCP) scp://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --sftp-password=$(TEST_PASSWORD_SFTP) sftp://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_PASSWORD_WEBDAV) webdav://test:test@test/test.bar 2>/dev/null  $(LOG))
-	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_PASSWORD_WEBDAV) webdavs://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --ftp-password=$(TEST_FTP_PASSWORD) ftp://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --scp-password=$(TEST_SCP_PASSWORD) scp://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --sftp-password=$(TEST_SFTP_PASSWORD) sftp://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_WEBDAV_PASSWORD) webdav://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_WEBDAV_PASSWORD) webdavs://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) cd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) dvd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) bd://test/test.bar 2>/dev/null  $(LOG))
@@ -2479,18 +2492,18 @@ endif
 	# owner
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --skip-unreadable $(TEST_FILES) $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore -# data/zero128.dat -# data/sub_dir -# data/sub_dir.ext -# data/link.dat -# 'data/hardlink*.dat' -# data/fifo -# data/fifo.ext --owner=test:test --no-stop-on-attribute-error $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore -# data/zero128.dat -# data/sub_dir -# data/sub_dir.ext -# data/link.dat -# 'data/hardlink*.dat' -# data/fifo -# data/fifo.ext --owner=$(TEST_USER):$(TEST_USER) --no-stop-on-attribute-error $(LOG))
 ifeq (@HAVE_USER_TEST@,1)
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/sub_dir.ext` = test
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/link.dat` = test
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink.dat` = test
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink1.dat` = test
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink2.dat` = test
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/fifo` = test
-	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/fifo.ext` = test
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=:test $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=test: $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=test $(LOG))
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/sub_dir.ext` = $(TEST_USER)
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/link.dat` = $(TEST_USER)
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink.dat` = $(TEST_USER)
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink1.dat` = $(TEST_USER)
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink2.dat` = $(TEST_USER)
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/fifo` = $(TEST_USER)
+	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/fifo.ext` = $(TEST_USER)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=:$(TEST_USER) $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=$(TEST_USER): $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=$(TEST_USER) $(LOG))
 endif
 	@#
 	# permissions
@@ -3095,18 +3108,22 @@ memcheck8: \
             --server-tls-port=$(SERVER_SSL_PORT) \
             --debug-server &
 	$(SLEEP) 30
-	$(ECHO) '1 VERSION' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 JOB_LIST' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) 'UNKNOWN' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 UNKNOWN' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
-	$(ECHO) '1 QUIT' | $(NETCAT) $(TEST_HOST) $(SERVER_PORT)
+ifneq ($(SOCAT),)
+	$(ECHO) '1 VERSION' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 JOB_LIST' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 DEVICE_LIST' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 PASSWORDS_CLEAR' | $(SOCAT)- TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) 'UNKNOWN' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 UNKNOWN' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+	$(ECHO) '1 QUIT' | $(SOCAT) STDIO TCP:$(TEST_HOST):$(SERVER_PORT)
+else
+	@$(ECHO) Command 'socat' not available. Cannot execute server tests.
+endif
 
 # ----------------------------------------------------------------------------
 
@@ -6007,21 +6024,21 @@ test_index_operations-valgrind: \
   $(TEST_BAR_INDEX_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index_operations
 
-# send command to server via socket: <host name+port>,<command>
+# send command to server via socket: <host>,<port>,<command>
 functionServerCommandSocket = \
   id=$$(($$id+1)); \
-  $(ECHO) $1: $$id $2; \
-  ($(ECHO) $$id $2|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
+  $(ECHO) $1:$2: $$id $3; \
+  ($(ECHO) $$id $3|$(SOCAT) -t60 STDIO TCP:$1:$2|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
   test $$?
 # send command to batch server: <command>
 functionServerCommandBatch = \
   id=$$(($$id+1)); \
   $(ECHO) $$id $1
-# send command to slave via socket: <host name+port>,<command>
+# send command to slave via socket: <host>,<port>,<command>
 functionSlaveCommandSocket = \
   id=$$(($$id+1)); \
-  $(ECHO) $1: $$id $2; \
-  ($(ECHO) $$id $2|$(NETCAT) -w1 $1|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
+  $(ECHO) $1:$2 $$id $3; \
+  ($(ECHO) $$id $3|$(SOCAT) -t60 STDIO TCP:$1:$2|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
   test $$?
 
 .PHONY: test_server_operations test_server_operations_batch test_server_operations_socket test_master_slave_operations
@@ -6358,12 +6375,13 @@ test_server_operations_socket_client: \
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
+ifneq ($(SOCAT),)
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
           ( \
             : wait for server; \
             (for i in `$(SEQ) 1 6`; do \
-               $(NETCAT) -z localhost $(TEST_SERVER_PORT); \
+               $(SOCAT) -u -T1 STDIO TCP:localhost:$(TEST_SERVER_PORT) 2>/dev/null; \
                if test $$? -eq 0; then \
                  exit 0; \
                fi; \
@@ -6372,190 +6390,193 @@ test_server_operations_socket_client: \
             ); \
             \
             : run client commands; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ABORT commandId=1000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),VERSION); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),STATUS); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),ABORT commandId=1000); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ROOT_LIST allMounts=yes); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FILE_INFO name=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FILE_LIST directory=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FILE_ATTRIBUTE_GET name=data attribute=NOBACKUP); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DIRECTORY_INFO name=data timeouot=10); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),TEST_SCRIPT name=test script=date); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DEVICE_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),ROOT_LIST allMounts=yes); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),FILE_INFO name=data); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),FILE_LIST directory=data); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),FILE_ATTRIBUTE_GET name=data attribute=NOBACKUP); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DIRECTORY_INFO name=data timeouot=10); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),TEST_SCRIPT name=test script=date); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MASTER_GET); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MASTER_CLEAR); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MASTER_PAIRING_START); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MASTER_PAIRING_STOP pair=yes); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MASTER_PAIRING_STATUS); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MASTER_GET); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MASTER_CLEAR); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MASTER_PAIRING_START); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MASTER_PAIRING_STOP pair=yes); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MASTER_PAIRING_STATUS); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST_ADD date=*-*-* weekDays=* beginTime=07:00 endTime=10:00); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST_UPDATE id=1 date=*-*-* weekDays=* beginTime=08:00 endTime=11:00); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MAINTENANCE_LIST_REMOVE id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MAINTENANCE_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MAINTENANCE_LIST_ADD date=*-*-* weekDays=* beginTime=07:00 endTime=10:00); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MAINTENANCE_LIST_UPDATE id=1 date=*-*-* weekDays=* beginTime=08:00 endTime=11:00); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MAINTENANCE_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MAINTENANCE_LIST_REMOVE id=1); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo1' serverType=FILE port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=FILE port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo2' serverType=FTP port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=FTP port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo3' serverType=SSH port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=SSH port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo4' serverType=WEBDAV port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=WEBDAV port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo1' serverType=FILE port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=FILE port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo2' serverType=FTP port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=FTP port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo3' serverType=SSH port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=SSH port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_ADD name='foo4' serverType=WEBDAV port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_UPDATE id=1 name='foo' serverType=WEBDAV port=0 loginName='test' password='test' publicKey='foo' privateKey='foo' maxConnectionCount=1 maxStorageSize=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SERVER_LIST_REMOVE id=1); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST) ; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_LIST) ; \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=$(BAR_STORAGE)/not_existing); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=yes); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=$(BAR_STORAGE)/not_existing); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=yes); \
             $(SLEEP) 10; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
             $(SLEEP) 10; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MAINTENANCE time=600); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=create); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=CREATE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=STORAGE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=RESTORE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=INDEX_UPDATE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=INDEX_MAINTENANCE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=ALL); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND modeMask=CREATE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND modeMask=STORAGE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND modeMask=RESTORE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND modeMask=INDEX_UPDATE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND modeMask=INDEX_MAINTENANCE); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SUSPEND modeMask=ALL); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),MAINTENANCE time=600); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=create); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=CREATE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=STORAGE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=RESTORE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=INDEX_UPDATE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=INDEX_MAINTENANCE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PAUSE time=300 modeMask=ALL); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND modeMask=CREATE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND modeMask=STORAGE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND modeMask=RESTORE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND modeMask=INDEX_UPDATE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND modeMask=INDEX_MAINTENANCE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SUSPEND modeMask=ALL); \
             $(SLEEP) 2; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CONTINUE); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),CONTINUE); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=74657374); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=74657374); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST_ADD storageIds=1$(COMMA)2$(COMMA)3); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST_CLEAR); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST_ADD entryIds=1$(COMMA)2$(COMMA)3); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST_CLEAR); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_ADD storageIds=1$(COMMA)2$(COMMA)3); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_CLEAR); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_ADD entryIds=1$(COMMA)2$(COMMA)3); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_CLEAR); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)/$(BAR_FILE).bar); \
             $(SLEEP) 2; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_INFO); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_INFO); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='*' indexStateSet='*' indexModeSet='*'); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='*' indexStateSet='*' indexModeSet='*'); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='*' indexType='*' newestOnly=yes); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=yes); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='*' indexType='*' newestOnly=yes); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=yes); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_HISTORY_LIST); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_HISTORY_LIST); \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) archive-type=continous); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEVICE_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ROOT_LIST jobUUID=$(TEST_JOB_UUID) allMounts=yes); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FILE_INFO jobUUID=$(TEST_JOB_UUID) name=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) archive-type=continous); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_FLUSH); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DEVICE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),ROOT_LIST jobUUID=$(TEST_JOB_UUID) allMounts=yes); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),FILE_INFO jobUUID=$(TEST_JOB_UUID) name=data); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
             (for i in `$(SEQ) 1 12`; do \
-               $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+               $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
                $(SLEEP) 10; \
              done; \
             ); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
             (for i in `$(SEQ) 1 6`; do \
-               $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+               $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
                $(SLEEP) 10; \
              done; \
             ); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
             $(SLEEP) 2; \
             \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
             \
             : done; \
-            $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),QUIT); \
           ) $(LOG); \
         else \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
+else
+	@$(ECHO) Command 'socat' not available. Cannot execute server tests.
+endif
 
 test_server_operations_socket: \
   $(TEST_BAR) \
@@ -6712,12 +6733,13 @@ test_master_slave_operations_create: \
 	@#
 	@$(call functionCleanTestFiles)
 	@#
+ifneq ($(SOCAT),)
 	$(TEST_BAR) --debug-server 1>/dev/null 2>/dev/null; \
           if test $$? -eq 0; then \
           ( \
             : wait for master; \
             (for i in `$(SEQ) 1 6`; do \
-               $(NETCAT) -z localhost $(TEST_MASTER_PORT); \
+               $(SOCAT) -u -T1 STDIO TCP:localhost:$(TEST_MASTER_PORT) 2>/dev/null; \
                if test $$? -eq 0; then \
                  exit 0; \
                fi; \
@@ -6726,18 +6748,18 @@ test_master_slave_operations_create: \
             ); \
             \
             : create slave job; \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME2) jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=localhost); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_FLUSH); \
             \
             : wait for pairing; \
             (for i in `$(SEQ) 1 18`; do \
-               if test -n "`$(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_LIST)|$(GREP) slaveState='PAIRED'`"; then \
+               if test -n "`$(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_LIST)|$(GREP) slaveState='PAIRED'`"; then \
                  exit 0; \
                fi; \
                $(SLEEP) 10; \
@@ -6745,27 +6767,30 @@ test_master_slave_operations_create: \
             ); \
             \
             : run slave job; \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=normal); \
             (for i in `$(SEQ) 1 12`; do \
-               $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+               $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
                $(SLEEP) 10; \
              done; \
             ); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
             (for i in `$(SEQ) 1 6`; do \
-               $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+               $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
                $(SLEEP) 10; \
              done; \
             ); \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
             \
             : done; \
-            $(call functionServerCommandSocket,localhost $(TEST_MASTER_PORT),QUIT) || true; \
-            $(call functionSlaveCommandSocket, localhost $(TEST_SLAVE_PORT), QUIT) || true; \
+            $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),QUIT) || true; \
+            $(call functionSlaveCommandSocket,localhost,$(TEST_SLAVE_PORT), QUIT) || true; \
           ) $(LOG); \
         else \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
+else
+	@$(ECHO) Command 'socat' not available. Cannot execute server tests.
+endif
 	@#
 	@$(call functionDoneTestFiles)
 
