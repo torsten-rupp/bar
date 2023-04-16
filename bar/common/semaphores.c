@@ -42,6 +42,7 @@
 #define _USE_ATOMIC_INCREMENT
 #define _CHECK_FOR_DEADLOCK
 #define _DEBUG_SHOW_LAST_INFO
+#define _STACKTRACE_ON_SIGNAL
 
 /***************************** Constants *******************************/
 
@@ -568,7 +569,6 @@ LOCAL void debugSemaphoreInit(void)
       HALT_INTERNAL_ERROR("Cannot initialize semaphore debug lock!");
     }
   #elif defined(PLATFORM_WINDOWS)
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     debugSemaphoreLock = CreateMutex(NULL,FALSE,NULL);
     if (debugSemaphoreLock == NULL)
     {
@@ -598,7 +598,9 @@ LOCAL void debugSemaphoreSignalHandler(int signalNumber)
 {
   if ((signalNumber == SIGQUIT) && Thread_isCurrentThread(debugSemaphoreThreadId))
   {
-    Semaphore_debugPrintInfo();
+    #ifdef STACKTRACE_ON_SIGNAL
+      Semaphore_debugPrintInfo();
+    #endif
   }
 
   if (debugSignalQuitPrevHandler != NULL)
