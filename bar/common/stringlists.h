@@ -69,6 +69,7 @@ typedef const StringNode* StringListIterator;
   #define StringList_appendCString(...) __StringList_appendCString(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_appendChar(...)    __StringList_appendChar(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_appendBuffer(...)  __StringList_appendBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_appendVFormat(...) __StringList_appendVFormat(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_appendFormat(...)  __StringList_appendFormat(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_remove(...)        __StringList_remove(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_removeFirst(...)   __StringList_removeFirst(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -360,12 +361,14 @@ StringNode *StringList_append(StringList *stringList, ConstString string);
 StringNode *StringList_appendCString(StringList *stringList, const char *s);
 StringNode *StringList_appendChar(StringList *stringList, char ch);
 StringNode *StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength);
+StringNode *StringList_appendVFormat(StringList *stringList, const char *format, va_list arguments);
 StringNode *StringList_appendFormat(StringList *stringList, const char *format, ...);
 #else /* not NDEBUG */
 StringNode *__StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string);
 StringNode *__StringList_appendCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s);
 StringNode *__StringList_appendChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch);
 StringNode *__StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength);
+StringNode *__StringList_appendVFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, va_list arguments);
 StringNode *__StringList_appendFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, ...);
 #endif /* NDEBUG */
 

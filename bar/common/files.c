@@ -1790,7 +1790,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
         return getLastError(ERROR_CODE_IO,name);
       }
       n = rand();
-      stringFormatAppend(name,sizeof(name),"%s-%06d",prefix,n);
+      stringAppendFormat(name,sizeof(name),"%s-%06d",prefix,n);
     }
     while (LSTAT(name,&fileStat) == 0);
 

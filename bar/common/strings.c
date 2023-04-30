@@ -3204,43 +3204,6 @@ String String_vformat(String string, const char *format, va_list arguments)
   return string;
 }
 
-//TODO: remove, use String_appendFormat
-String String_formatAppend(String string, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(string != NULL);
-  assert(format != NULL);
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    va_start(arguments,format);
-    formatString(string,format,arguments);
-    va_end(arguments);
-  }
-
-  return string;
-}
-
-String String_vformatAppend(String string, const char *format, va_list arguments)
-{
-  assert(string != NULL);
-  assert(format != NULL);
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    formatString(string,format,arguments);
-  }
-
-  return string;
-}
-
 String String_append(String string, ConstString appendString)
 {
   ulong n;
@@ -3372,6 +3335,22 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
   return string;
 }
 
+String String_appendVFormat(String string, const char *format, va_list arguments)
+{
+  assert(string != NULL);
+  assert(format != NULL);
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    formatString(string,format,arguments);
+  }
+
+  return string;
+}
+
 String String_appendFormat(String string, const char *format, ...)
 {
   va_list arguments;
@@ -3387,22 +3366,6 @@ String String_appendFormat(String string, const char *format, ...)
     va_start(arguments,format);
     formatString(string,format,arguments);
     va_end(arguments);
-  }
-
-  return string;
-}
-
-String String_appendVFormat(String string, const char *format, va_list arguments)
-{
-  assert(string != NULL);
-  assert(format != NULL);
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    formatString(string,format,arguments);
   }
 
   return string;

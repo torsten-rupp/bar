@@ -2748,7 +2748,7 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
 
         if (configFileNode != NULL)
         {
-          String_formatAppend(line,"%S",configFileNode->fileName);
+          String_appendFormat(line,"%S",configFileNode->fileName);
 
           (*formatUserData) = configFileNode->next;
 

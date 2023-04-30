@@ -697,17 +697,17 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               if      (longLongFlag)
               {
                 value.ll = va_arg(arguments,int64);
-                stringFormatAppend(string,n,\"%\"PRIi64,value.ll);
+                stringAppendFormat(string,n,\"%\"PRIi64,value.ll);
               }
               else if (longFlag)
               {
                 value.l = va_arg(arguments,int64);
-                stringFormatAppend(string,n,\"%ld\",value.l);
+                stringAppendFormat(string,n,\"%ld\",value.l);
               }
               else
               {
                 value.i = va_arg(arguments,int);
-                stringFormatAppend(string,n,\"%d\",value.i);
+                stringAppendFormat(string,n,\"%d\",value.i);
               }
               break;
             case 'u':
@@ -717,17 +717,17 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               if      (longLongFlag)
               {
                 value.ull = va_arg(arguments,uint64);
-                stringFormatAppend(string,n,\"%\"PRIu64,value.ull);
+                stringAppendFormat(string,n,\"%\"PRIu64,value.ull);
               }
               else if (longFlag)
               {
                 value.ul = va_arg(arguments,ulong);
-                stringFormatAppend(string,n,\"%lu\",value.ul);
+                stringAppendFormat(string,n,\"%lu\",value.ul);
               }
               else
               {
                 value.ui = va_arg(arguments,uint);
-                stringFormatAppend(string,n,\"%u\",value.ui);
+                stringAppendFormat(string,n,\"%u\",value.ui);
               }
               break;
             case 'f':
@@ -737,12 +737,12 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               if (longFlag)
               {
                 value.d = va_arg(arguments,double);
-                stringFormatAppend(string,n,\"%lf\",value.d);
+                stringAppendFormat(string,n,\"%lf\",value.d);
               }
               else
               {
                 value.f = (float)va_arg(arguments,double);
-                stringFormatAppend(string,n,\"%lf\",value.f);
+                stringAppendFormat(string,n,\"%lf\",value.f);
               }
               break;
             case 'c':
@@ -790,7 +790,7 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               format++;
 
               value.p = va_arg(arguments,void*);
-              stringFormatAppend(string,n,\"%p\",value.p);
+              stringAppendFormat(string,n,\"%p\",value.p);
               break;
             case 'E':
               // errno text
@@ -1268,7 +1268,7 @@ class $javaClassName extends Exception
     buffer.append(String.format(format,arguments));
   }
 
-  private static void stringFormatAppend(StringBuilder buffer, int size, String format, Object... arguments)
+  private static void stringAppendFormat(StringBuilder buffer, int size, String format, Object... arguments)
   {
     buffer.append(String.format(format,arguments));
   }

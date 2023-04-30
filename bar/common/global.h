@@ -14,6 +14,9 @@
 #if (defined DEBUG)
  #warning DEBUG option set - no LOCAL and no -O2 (optimizer) will be used!
 #endif
+#ifndef _GNU_SOURCE
+  #define _GNU_SOURCE
+#endif
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -2908,52 +2911,6 @@ static inline char* stringFormat(char *string, ulong stringSize, const char *for
 }
 
 /***********************************************************************\
-* Name   : stringVFormatAppend, stringFormatAppend
-* Purpose: format string and append
-* Input  : string     - string
-*          stringSize - size of destination string (including terminating
-*                       NUL)
-*          format     - format string
-*          ...        - optional arguments
-*          arguments  - arguments
-* Output : -
-* Return : destination string
-* Notes  : string is always NULL or NUL-terminated
-\***********************************************************************/
-
-static inline char* stringVFormatAppend(char *string, ulong stringSize, const char *format, va_list arguments)
-{
-  ulong n;
-
-  assert(string != NULL);
-  assert(stringSize > 0);
-  assert(format != NULL);
-
-  n = strlen(string);
-  if (n < stringSize)
-  {
-    vsnprintf(&string[n],stringSize-n,format,arguments);
-  }
-
-  return string;
-}
-
-static inline char* stringFormatAppend(char *string, ulong stringSize, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(string != NULL);
-  assert(stringSize > 0);
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  stringVFormatAppend(string,stringSize,format,arguments);
-  va_end(arguments);
-
-  return string;
-}
-
-/***********************************************************************\
 * Name   : stringVFormatLength, stringFormatLength
 * Purpose: get length of formated string
 * Input  : format    - format string
@@ -3054,6 +3011,52 @@ static inline char* stringAppendChar(char *string, ulong stringSize, char ch)
       string[n+1] = NUL;
     }
   }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringAppendVFormat, stringAppendFormat
+* Purpose: format string and append
+* Input  : string     - string
+*          stringSize - size of destination string (including terminating
+*                       NUL)
+*          format     - format string
+*          ...        - optional arguments
+*          arguments  - arguments
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringAppendVFormat(char *string, ulong stringSize, const char *format, va_list arguments)
+{
+  ulong n;
+
+  assert(string != NULL);
+  assert(stringSize > 0);
+  assert(format != NULL);
+
+  n = strlen(string);
+  if (n < stringSize)
+  {
+    vsnprintf(&string[n],stringSize-n,format,arguments);
+  }
+
+  return string;
+}
+
+static inline char* stringAppendFormat(char *string, ulong stringSize, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(stringSize > 0);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  stringAppendVFormat(string,stringSize,format,arguments);
+  va_end(arguments);
 
   return string;
 }

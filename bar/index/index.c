@@ -932,7 +932,7 @@ LOCAL void outputProgressInfo(uint  progress,
 
   if (estimatedRestTime < (99999*60*60))
   {
-    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+    stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
                        " / %7.1f%% %5uh:%02umin:%02us %c",
                        (float)progress/10.0,
                        estimatedRestTime/(60*60),
@@ -943,7 +943,7 @@ LOCAL void outputProgressInfo(uint  progress,
   }
   else
   {
-    stringFormatAppend(outputProgressBuffer,sizeof(outputProgressBuffer),
+    stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
                        " / %7.1f%% -----h:--min:--s %c",
                        (float)progress/10.0,
                        WHEEL[wheelIndex]
@@ -1976,7 +1976,7 @@ UNUSED_VARIABLE(indexHandle);
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
+          String_appendFormat(entryIdsString,"%"PRIi64,entryId);
         }
 
         do

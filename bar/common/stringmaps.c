@@ -1778,7 +1778,7 @@ String StringMap_debugToString(String string, const StringMap stringMap)
       assert(stringMap->entries[i].type < SIZE_OF_ARRAY(STRING_MAP_TYPE_NAMES));
 
       if (!String_isEmpty(string)) String_appendChar(string,' ');
-      String_formatAppend(string,
+      String_appendFormat(string,
                           "%s='%s'",
                           stringMap->entries[i].name,
                           String_cString(stringMap->entries[i].value.text)

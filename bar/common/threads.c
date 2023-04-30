@@ -1020,7 +1020,7 @@ const char *Thread_getIdString(const ThreadId threadId)
   stringSet(idStrings[i%16],sizeof(idStrings[i%16]),"0x");
   for (j = (int)sizeof(ThreadId)-1; j >= 0; j--)
   {
-    stringFormatAppend(idStrings[i%16],sizeof(idStrings[i%16]),"%02x",p[j]);
+    stringAppendFormat(idStrings[i%16],sizeof(idStrings[i%16]),"%02x",p[j]);
   }
 
   return idStrings[i%16];

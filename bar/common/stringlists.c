@@ -293,25 +293,36 @@ StringNode *__StringList_appendBuffer(const char *__fileName__, ulong __lineNb__
 }
 
 #ifdef NDEBUG
-StringNode *StringList_appendFormat(StringList *stringList, const char *format, ...)
+StringNode *StringList_appendVFormat(StringList *stringList, const char *format, va_list arguments)
 #else /* not NDEBUG */
-StringNode *__StringList_appendFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, ...)
+StringNode *__StringList_appendVFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, va_list arguments)
 #endif /* NDEBUG */
 {
-  String  string;
-  va_list arguments;
+  String string;
 
-  string = String_new();
-
-  va_start(arguments,format);
-  String_vformat(string,format,arguments);
-  va_end(arguments);
+  string = String_vformat(String_new(),format,arguments);
 
   #ifdef NDEBUG
     return insertString(stringList,string,NULL);
   #else /* not NDEBUG */
     return insertString(__fileName__,__lineNb__,stringList,string,NULL);
   #endif /* NDEBUG */
+}
+
+#ifdef NDEBUG
+StringNode *StringList_appendFormat(StringList *stringList, const char *format, ...)
+#else /* not NDEBUG */
+StringNode *__StringList_appendFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, ...)
+#endif /* NDEBUG */
+{
+  StringNode *stringNode;
+  va_list    arguments;
+
+  va_start(arguments,format);
+  stringNode = String_appendVFormat(String_new(),format,arguments);
+  va_end(arguments);
+  
+  return stringNode;
 }
 
 #ifdef NDEBUG

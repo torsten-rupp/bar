@@ -120,7 +120,7 @@ const char *IndexCommon_getIndexInUseInfo(void)
     ARRAY_ITERATE(&indexUsedBy,arrayIterator,threadInfo)
     {
       if (!stringIsEmpty(buffer)) stringAppendChar(buffer,sizeof(buffer),' ');
-      stringFormatAppend(buffer,sizeof(buffer),"%s",Thread_getIdString(threadInfo.threadId));
+      stringAppendFormat(buffer,sizeof(buffer),"%s",Thread_getIdString(threadInfo.threadId));
     }
   }
 
@@ -242,7 +242,7 @@ String IndexCommon_getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_formatAppend(string,"%s MATCH '",tableName);
+        String_appendFormat(string,"%s MATCH '",tableName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,
@@ -284,10 +284,10 @@ String IndexCommon_getFTSMatchString(String         string,
         }
         String_doneTokenizer(&stringTokenizer);
 
-        String_formatAppend(string,"'");
+        String_appendFormat(string,"'");
         break;
       case DATABASE_TYPE_MARIADB:
-        String_formatAppend(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
+        String_appendFormat(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,
@@ -329,13 +329,13 @@ String IndexCommon_getFTSMatchString(String         string,
         }
         String_doneTokenizer(&stringTokenizer);
 
-        String_formatAppend(string,"' IN BOOLEAN MODE)");
+        String_appendFormat(string,"' IN BOOLEAN MODE)");
         break;
       case DATABASE_TYPE_POSTGRESQL:
         {
           bool firstTokenFlag;
 
-          String_formatAppend(string,"%s.%s @@ to_tsquery('",tableName,columnName);
+          String_appendFormat(string,"%s.%s @@ to_tsquery('",tableName,columnName);
 
           String_initTokenizer(&stringTokenizer,
                                patternText,
@@ -385,7 +385,7 @@ String IndexCommon_getFTSMatchString(String         string,
           }
           String_doneTokenizer(&stringTokenizer);
 
-          String_formatAppend(string,"')");
+          String_appendFormat(string,"')");
         }
         break;
     }

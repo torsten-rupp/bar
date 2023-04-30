@@ -1610,7 +1610,7 @@ fprintf(stderr,"%s:%d: %lu\n",__FILE__,__LINE__,Array_length(entryIds));
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
+          String_appendFormat(entryIdsString,"%"PRIi64,entryId);
         }
 
         do

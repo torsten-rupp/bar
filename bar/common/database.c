@@ -1313,7 +1313,7 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
       {
         index = stringFindReverseChar(databaseHandle->databaseNode->debug.readWrites[i].fileName,FILE_PATH_SEPARATOR_CHAR);
 
-        stringFormatAppend(buffer,sizeof(buffer),
+        stringAppendFormat(buffer,sizeof(buffer),
                            " '%s':%s:%s:%u",
                            Thread_getName(databaseHandle->databaseNode->debug.readWrites[i].threadId),
                            Thread_getIdString(databaseHandle->databaseNode->debug.readWrites[i].threadId),
@@ -1329,7 +1329,7 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
       {
         index = stringFindReverseChar(databaseHandle->databaseNode->debug.reads[i].fileName,FILE_PATH_SEPARATOR_CHAR);
 
-        stringFormatAppend(buffer,sizeof(buffer),
+        stringAppendFormat(buffer,sizeof(buffer),
                            " '%s':%s:%s:%u",
                            Thread_getName(databaseHandle->databaseNode->debug.reads[i].threadId),
                            Thread_getIdString(databaseHandle->databaseNode->debug.reads[i].threadId),

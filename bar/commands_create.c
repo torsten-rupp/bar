@@ -6021,7 +6021,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     {
       d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.00;
       stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
-      stringFormatAppend(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
+      stringAppendFormat(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // ratio info
@@ -6481,7 +6481,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     {
       d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
       stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
-      stringFormatAppend(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
+      stringAppendFormat(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // get ratio info
@@ -7322,7 +7322,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
       stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
-      stringFormatAppend(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
+      stringAppendFormat(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // get ratio info

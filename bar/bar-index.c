@@ -2195,7 +2195,7 @@ LOCAL String getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_formatAppend(string,"%s MATCH '",tableName);
+        String_appendFormat(string,"%s MATCH '",tableName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,
@@ -2237,10 +2237,10 @@ LOCAL String getFTSMatchString(String         string,
         }
         String_doneTokenizer(&stringTokenizer);
 
-        String_formatAppend(string,"'");
+        String_appendFormat(string,"'");
         break;
       case DATABASE_TYPE_MARIADB:
-        String_formatAppend(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
+        String_appendFormat(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
 
         String_initTokenizer(&stringTokenizer,
                              patternText,
@@ -2282,13 +2282,13 @@ LOCAL String getFTSMatchString(String         string,
         }
         String_doneTokenizer(&stringTokenizer);
 
-        String_formatAppend(string,"' IN BOOLEAN MODE)");
+        String_appendFormat(string,"' IN BOOLEAN MODE)");
         break;
       case DATABASE_TYPE_POSTGRESQL:
         {
           bool firstTokenFlag;
 
-          String_formatAppend(string,"%s.%s @@ to_tsquery('",tableName,columnName);
+          String_appendFormat(string,"%s.%s @@ to_tsquery('",tableName,columnName);
 
           String_initTokenizer(&stringTokenizer,
                                patternText,
@@ -2338,7 +2338,7 @@ LOCAL String getFTSMatchString(String         string,
           }
           String_doneTokenizer(&stringTokenizer);
 
-          String_formatAppend(string,"')");
+          String_appendFormat(string,"')");
         }
         break;
     }
@@ -5011,7 +5011,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_formatAppend(entityIdsString,"%"PRIi64,entityId);
+    String_appendFormat(entityIdsString,"%"PRIi64,entityId);
   }
 
   printInfo("Create aggregates for entities...");
@@ -5538,7 +5538,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
   ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-    String_formatAppend(storageIdsString,"%"PRIi64,storageId);
+    String_appendFormat(storageIdsString,"%"PRIi64,storageId);
   }
 
   printInfo("Create aggregates for storages...");
@@ -9153,13 +9153,13 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
   ARRAY_ITERATE(&uuidIds,i,uuidId)
   {
     if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-    String_formatAppend(uuidIdsString,"%"PRIi64,uuidId);
+    String_appendFormat(uuidIdsString,"%"PRIi64,uuidId);
   }
   ARRAY_ITERATE(&uuids,i,s)
   {
     String_setBuffer(uuid,s,MISC_UUID_STRING_LENGTH);
     if (!String_isEmpty(uuidsString)) String_appendChar(uuidsString,',');
-    String_formatAppend(uuidsString,"'%S'",uuid);
+    String_appendFormat(uuidsString,"'%S'",uuid);
   }
 
   printf("UUIDs:\n");
@@ -9403,7 +9403,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_formatAppend(entityIdsString,"%"PRIi64,entityId);
+    String_appendFormat(entityIdsString,"%"PRIi64,entityId);
   }
 
   printf("Entities:\n");
@@ -9623,7 +9623,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-    String_formatAppend(storageIdsString,"%"PRIi64,storageId);
+    String_appendFormat(storageIdsString,"%"PRIi64,storageId);
   }
 
   ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_storages","name",name);
@@ -9885,7 +9885,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_formatAppend(entityIdsString,"%"PRIi64,entityId);
+    String_appendFormat(entityIdsString,"%"PRIi64,entityId);
   }
 
   ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_entries","name",name);

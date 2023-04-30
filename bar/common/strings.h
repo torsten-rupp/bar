@@ -487,8 +487,7 @@ String String_setChar(String string, char ch);
 String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_format, String String_vformat, String_formatAppend,
-*          String_vformatAppend
+* Name   : String_format, String String_vformat
 * Purpose: format string/format string and append
 * Input  : string - string
 *          format - printf-like format string
@@ -507,9 +506,6 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 String String_format(String string, const char *format, ...);
 String String_vformat(String string, const char *format, va_list arguments);
-//TODO: remove, use String_appendFormat
-String String_formatAppend(String string, const char *format, ...);
-String String_vformatAppend(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_append, String_appendSub, String_appendCString,
@@ -556,7 +552,7 @@ String String_appendCharUTF8(String string, Codepoint codepoint);
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_appendFormat, String String_appendVformat
+* Name   : String_appendVFormat, String String_appendformat
 * Purpose: format string and append
 * Input  : string - string
 *          format - printf-like format string
@@ -570,8 +566,8 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
 *           %y   bool value
 \***********************************************************************/
 
-String String_appendFormat(String string, const char *format, ...);
 String String_appendVFormat(String string, const char *format, va_list arguments);
+String String_appendFormat(String string, const char *format, ...);
 
 /***********************************************************************\
 * Name   : String_insert, String_insertSub, String_insertCString,

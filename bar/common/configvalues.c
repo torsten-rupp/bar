@@ -632,7 +632,7 @@ LOCAL bool getIntegerValue(int                   *value,
         stringClear(buffer);
         ITERATE_UNITS(unit,units)
         {
-          stringFormatAppend(buffer,sizeof(buffer)," %s",unit->name);
+          stringAppendFormat(buffer,sizeof(buffer)," %s",unit->name);
         }
         reportMessage(errorReportFunction,
                       errorReportUserData,
@@ -725,7 +725,7 @@ LOCAL bool getInteger64Value(int64                 *value,
         stringClear(buffer);
         ITERATE_UNITS(unit,units)
         {
-          stringFormatAppend(buffer,sizeof(buffer)," %s",unit->name);
+          stringAppendFormat(buffer,sizeof(buffer)," %s",unit->name);
         }
         reportMessage(errorReportFunction,
                       errorReportUserData,
@@ -943,7 +943,7 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
               stringClear(buffer);
               ITERATE_UNITS(unit,configValue->doubleValue.units)
               {
-                stringFormatAppend(buffer,sizeof(buffer)," %s",unit->name);
+                stringAppendFormat(buffer,sizeof(buffer)," %s",unit->name);
               }
               reportMessage(errorReportFunction,
                             errorReportUserData,
