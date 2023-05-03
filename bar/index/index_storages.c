@@ -2710,6 +2710,7 @@ UNUSED_VARIABLE(progressInfo);
     Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
     Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
+    error = ERROR_UNKNOWN;
     DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // get storage ids to purge, enities/UUIDs to prune
@@ -2813,6 +2814,7 @@ UNUSED_VARIABLE(progressInfo);
         DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
       }
     }
+    assert(error != ERROR_UNKNOWN);
     if (error != ERROR_NONE)
     {
       Array_done(&storageIds);

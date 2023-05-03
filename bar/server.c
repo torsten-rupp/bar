@@ -8777,6 +8777,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote device list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -8800,6 +8801,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get device list fail");
@@ -8929,6 +8931,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote root list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -8953,6 +8956,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get root list fail");
@@ -9087,6 +9091,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file info
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -9111,6 +9116,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
@@ -9311,6 +9317,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -9335,6 +9342,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open directory '%S' fail",directory);
@@ -9561,6 +9569,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -9586,6 +9595,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attribute fail");
@@ -9699,6 +9709,7 @@ UNUSED_VARIABLE(value);
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -9725,6 +9736,7 @@ UNUSED_VARIABLE(value);
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set file attribute fail");
@@ -9872,6 +9884,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -9897,6 +9910,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"clear file attribute fail");
@@ -10032,6 +10046,7 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote create directory
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -10056,6 +10071,7 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attribute fail");
@@ -10264,6 +10280,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file list
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -10289,6 +10306,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get directory info fail");
@@ -10916,6 +10934,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     if (Job_isRemote(jobNode) && Job_isRunning(jobNode->jobState))
     {
       // remote job state
+      error = ERROR_UNKNOWN;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))
@@ -10940,6 +10959,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
           error = ERROR_DISCONNECTED;
         }
       }
+      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get job status fail");
