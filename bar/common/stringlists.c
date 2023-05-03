@@ -319,7 +319,7 @@ StringNode *__StringList_appendFormat(const char *__fileName__, ulong __lineNb__
   va_list    arguments;
 
   va_start(arguments,format);
-  stringNode = String_appendVFormat(String_new(),format,arguments);
+  stringNode = StringList_appendVFormat(stringList,format,arguments);
   va_end(arguments);
   
   return stringNode;
