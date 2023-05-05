@@ -17,7 +17,7 @@ TEST_STEPS = ["basic",
               "convert",
               "storage_file",
 // TODO: instable
-//              "storage_ftp",
+              "storage_ftp",
               "storage_scp",
               "storage_sftp",
               "storage_webdav",
