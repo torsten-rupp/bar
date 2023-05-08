@@ -319,9 +319,13 @@ StringNode *__StringList_appendFormat(const char *__fileName__, ulong __lineNb__
   va_list    arguments;
 
   va_start(arguments,format);
-  stringNode = StringList_appendVFormat(stringList,format,arguments);
+  #ifdef NDEBUG
+    stringNode = StringList_appendVFormat(stringList,format,arguments);
+  #else /* not NDEBUG */
+    stringNode = __StringList_appendVFormat(__fileName__,__lineNb__,stringList,format,arguments);
+  #endif /* NDEBUG */
   va_end(arguments);
-  
+
   return stringNode;
 }
 
