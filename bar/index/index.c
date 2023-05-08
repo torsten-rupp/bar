@@ -3255,6 +3255,9 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                );
   }
 
+// TODO:
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+#if 0
   // initial clean-up
   error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
@@ -3285,6 +3288,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
               "INDEX",
               "Done initial clean-up index database"
              );
+#endif
 
   #ifdef INDEX_INTIIAL_CLEANUP
     // start clean-up thread

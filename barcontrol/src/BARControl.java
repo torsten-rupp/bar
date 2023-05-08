@@ -1989,6 +1989,7 @@ public class BARControl
     new Option("--suspend",                      "-s",Options.Types.BOOLEAN,    "suspendFlag"),
     new Option("--continue",                     "-c",Options.Types.BOOLEAN,    "continueFlag"),
     new Option("--list",                         "-l",Options.Types.BOOLEAN,    "listFlag"),
+    new Option("--info",                         null,Options.Types.STRING,     "infoJobName"),
 
     new Option("--index-database-info",          null,Options.Types.BOOLEAN,    "indexDatabaseInfo"),
     new Option("--index-database-add",           null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
@@ -5096,6 +5097,7 @@ if (false) {
           || Settings.suspendFlag
           || Settings.continueFlag
           || Settings.listFlag
+          || (Settings.infoJobName != null)
           || Settings.indexDatabaseInfo
           || (Settings.indexDatabaseAddStorageName != null)
           || (Settings.indexDatabaseRemoveStorageName != null)
@@ -5342,7 +5344,6 @@ if (false) {
 
         if (Settings.listFlag)
         {
-
           // get server state
           final BARServer.States serverState[] = {BARServer.States.RUNNING};
           try
@@ -5476,6 +5477,57 @@ if (false) {
           catch (Exception exception)
           {
             printError(BARControl.tr("cannot get job list (error: {0})",exception.getMessage()));
+            BARServer.disconnect();
+            System.exit(ExitCodes.FAIL);
+          }
+        }
+
+        if (Settings.infoJobName != null)
+        {
+          // get job UUID
+          String jobUUID = getJobUUID(Settings.infoJobName);
+          if (jobUUID == null)
+          {
+            printError(BARControl.tr("job ''{0}'' not found",Settings.infoJobName));
+            BARServer.disconnect();
+            System.exit(ExitCodes.FAIL);
+          }
+
+          // get job info
+          try
+          {
+            BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",
+                                                         jobUUID,
+                                                         Settings.archiveType.toString()
+                                                        ),
+                                     1,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                       {
+                                         int    errorCode = valueMap.getInt   ("errorCode");
+                                         String errorData = valueMap.getString("errorData");
+
+                                         System.out.println(String.format("Job '%s':",Settings.infoJobName));
+                                         System.out.println(String.format("  Total entries      : %d / %s",valueMap.getInt("totalEntryCount"),Units.formatByteSize(valueMap.getLong("totalEntrySize"))));
+                                         System.out.println(String.format("  Skipped entries    : %d / %s",valueMap.getInt("skippedEntryCount"),Units.formatByteSize(valueMap.getLong("skippedEntrySize"))));
+                                         System.out.println(String.format("  Error entries      : %d / %s",valueMap.getInt("errorEntryCount"),Units.formatByteSize(valueMap.getLong("errorEntrySize"))));
+                                         System.out.println(String.format("  Compression ratio  : %.1f%%",valueMap.getDouble("compressionRatio")));
+                                         System.out.println(String.format("  Entries/s          : %.1f",valueMap.getDouble("entriesPerSecond")));
+                                         System.out.println(String.format("  Bytes/s            : %.1f",valueMap.getDouble("bytesPerSecond")));
+                                         System.out.println(String.format("  Storage done       : %s",Units.formatByteSize(valueMap.getLong("storageTotalSize"))));
+                                         System.out.println(String.format("          total      : %s",Units.formatByteSize(valueMap.getLong("storageTotalSize"))));
+                                         System.out.println(String.format("          bytes/s    : %.1f",valueMap.getDouble("storageBytesPerSecond")));
+                                         System.out.println(String.format("  Estimated rest time: %ds",valueMap.getLong("estimatedRestTime")));
+                                         System.out.println(String.format("  Last error         : %s",(errorCode != 0) ? BARException.getText(errorCode,0,errorData) : "none"));
+                                       }
+                                     }
+                                    );
+          }
+          catch (Exception exception)
+          {
+            printError(BARControl.tr("cannot get job info ''{0}'' (error: {1})",Settings.infoJobName,exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }

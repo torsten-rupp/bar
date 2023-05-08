@@ -87,7 +87,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - delete job/schedule entry in barcontrol when file is deleted
 - barcontrol: show for each directory total size+included size
 - tape library support
-- spare files
 - NDMP
 - Reed Solomo Codes for file protection and recovery
 - restore with stripping some/all directories
@@ -157,7 +156,6 @@ rest time
 - hierchical jobs
 - single thread: collector sum+collector
 - test after create: chunk-read, test, compare
-- connector: SSL
 - sd_notify() for system service startup
 - scheduler to test archives with report
 - BARControl: test archives function
@@ -220,7 +218,6 @@ rest time
 - readlod config on SIGHUB
 - purge backup archives on exhausted free disk space
 - win32: postresql client library
-- error correction codes
 - run pre/post command in standard mode (not only server)
 - libmount
 

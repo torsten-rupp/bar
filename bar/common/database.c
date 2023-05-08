@@ -1852,6 +1852,16 @@ LOCAL Errors sqlite3Execute(sqlite3    *handle,
                         sqlite3_extended_errcode(handle)
                        );
   }
+  else if (sqliteResult == SQLITE_LOCKED)
+  {
+//    sqlite3WaitUnlockNotify(databaseStatementHandle->databaseHandle->sqlite.handle);
+    error = ERRORX_(DATABASE_LOCKED,
+                    sqlite3_errcode(handle),
+                    "%s: %s",
+                    sqlite3_errmsg(handle),
+                    sqlString
+                   );
+  }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
     error = ERRORX_(INTERRUPTED,
@@ -8405,6 +8415,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             }
             else
             {
+debugPrintStackTrace();
               error = ERROR_DATABASE_ENTRY_NOT_FOUND;
             }
 
