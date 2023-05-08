@@ -85,7 +85,9 @@ typedef struct
 
   LOCAL pthread_once_t       debugThreadInitFlag                = PTHREAD_ONCE_INIT;
 
-  LOCAL pthread_mutex_t      debugThreadSignalLock              = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #ifdef STACKTRACE_ON_SIGNAL
+    LOCAL pthread_mutex_t      debugThreadSignalLock              = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #endif
 
   LOCAL pthread_mutex_t      debugThreadStackTraceThreadLock    = PTHREAD_MUTEX_INITIALIZER;
   LOCAL StackTraceThreadInfo debugThreadStackTraceThreads[256];
@@ -334,6 +336,7 @@ int __wrap_pthread_create(pthread_t *thread,
 * Notes  : -
 \***********************************************************************/
 
+#if STACKTRACE_ON_SIGNAL
 LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
                                      DebugDumpStackTraceOutputTypes type,
                                      uint                           skipFrameCount,
@@ -362,6 +365,7 @@ LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
   }
   pthread_mutex_unlock(&debugConsoleLock);
 }
+#endif // STACKTRACE_ON_SIGNAL
 
 /***********************************************************************\
 * Name   : debugThreadDumpAllStackTraces
