@@ -2637,7 +2637,7 @@ void Job_end(JobNode *jobNode)
   Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
-void Job_abort(JobNode *jobNode)
+void Job_abort(JobNode *jobNode, const char *abortedByInfo)
 {
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -2666,6 +2666,9 @@ void Job_abort(JobNode *jobNode)
                                                        );
       }
     }
+
+    // set abort-by info
+    String_setCString(jobNode->abortedByInfo,abortedByInfo);
   }
   else if (Job_isActive(jobNode->jobState))
   {

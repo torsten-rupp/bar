@@ -2980,7 +2980,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
 
   if (indexHandle != NULL)
   {
-    // update storage
+    // update index storage
     error = Index_updateStorage(indexHandle,
                                 storageId,
                                 hostName,

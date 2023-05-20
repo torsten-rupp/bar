@@ -3208,7 +3208,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
     ProgressInfo_step(progressInfo);
   }
 
-  // update/add entries to newest entries
+  // update/add newest entries
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
     if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)

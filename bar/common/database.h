@@ -353,14 +353,14 @@ typedef struct DatabaseNode
     struct
     {
       // pending reads
-      DatabaseThreadInfo pendingReads[32];
+      DatabaseThreadInfo        pendingReads[32];
       // reads
-      DatabaseThreadInfo reads[32];
+      DatabaseThreadInfo        reads[32];
       // pending read/writes
-      DatabaseThreadInfo pendingReadWrites[32];
+      DatabaseThreadInfo        pendingReadWrites[32];
       // read/write
-      ThreadId           readWriteLockedBy;
-      DatabaseThreadInfo readWrites[32];
+      ThreadId                  readWriteLockedBy;
+      DatabaseThreadInfo        readWrites[32];
       struct
       {
         DatabaseThreadInfo threadInfo;
@@ -375,7 +375,7 @@ typedef struct DatabaseNode
           void const *stackTrace[16];
           uint       stackTraceSize;
         #endif /* HAVE_BACKTRACE */
-      }                     lastTrigger;
+      }                         lastTrigger;
       // running transaction
       struct
       {
@@ -386,7 +386,7 @@ typedef struct DatabaseNode
           void const *stackTrace[16];
           uint       stackTraceSize;
         #endif /* HAVE_BACKTRACE */
-      }                     transaction;
+      }                         transaction;
       // history
       DatabaseHistoryThreadInfo history[32];
       uint                      historyIndex;

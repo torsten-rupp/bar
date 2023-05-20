@@ -6808,7 +6808,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
     {
       if (Job_isActive(jobNode->jobState))
       {
-        Job_abort(jobNode);
+        Job_abort(jobNode,NULL);
       }
     }
   }
@@ -11112,8 +11112,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     // abort job
     if (Job_isActive(jobNode->jobState))
     {
-      Job_abort(jobNode);
-      String_setCString(jobNode->abortedByInfo,getClientInfoString(clientInfo,s,sizeof(s)));
+      Job_abort(jobNode,getClientInfoString(clientInfo,s,sizeof(s)));
     }
   }
 
@@ -21448,7 +21447,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     {
       if (jobNode->masterIO == &clientInfo->io)
       {
-        Job_abort(jobNode);
+        Job_abort(jobNode,NULL);
         jobNode->masterIO = NULL;
       }
     }

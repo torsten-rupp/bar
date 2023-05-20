@@ -314,12 +314,12 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                      uint32      userId,
                                      uint32      groupId,
                                      uint32      permission
-                             3478       )
+                                    )
 {
-  Errors              error;
+  Errors                  error;
   DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          newestEntryId;
-  uint64              newestTimeLastChanged;
+  DatabaseId              newestEntryId;
+  uint64                  newestTimeLastChanged;
 
   assert(indexHandle != NULL);
   assert(entryId != DATABASE_ID_NONE);
@@ -662,7 +662,6 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                            );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       break;
     }
 
@@ -689,7 +688,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                              );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         break;
       }
     }
@@ -697,7 +695,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     File_getDirectoryName(directoryName,directoryName);
   }
   String_delete(directoryName);
-if (error != ERROR_NONE) fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }

@@ -223,7 +223,7 @@ rest time
 - error correction codes
 - run pre/post command in standard mode (not only server)
 - libmount
-
+- BARControl: menu entries for Debian, XFCE
 
 
 

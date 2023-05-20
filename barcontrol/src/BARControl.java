@@ -2979,7 +2979,7 @@ if (false) {
         }
 
         Dialogs.run(dialog,
-                    true,
+                    false,
                     new DialogRunnable()
                     {
                       public void done(Object result)
