@@ -5260,7 +5260,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
         }
 
-        // update index database storage name and size
+        // update index storage name+size+newest entries
         if (error == ERROR_NONE)
         {
           error = Index_updateStorage(createInfo->indexHandle,
@@ -5271,7 +5271,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                       0,  // createDateTime
                                       storageSize,
                                       NULL,  // comment
-                                      TRUE  // update newest entries
+                                      TRUE  // updateNewest
                                      );
         }
 

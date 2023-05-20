@@ -1542,13 +1542,14 @@ void Job_end(JobNode *jobNode);
 /***********************************************************************\
 * Name   : Job_abort
 * Purpose: abort job
-* Input  : jobNode - job node
+* Input  : jobNode       - job node
+*          abortedByInfo - abort-by info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_abort(JobNode *jobNode);
+void Job_abort(JobNode *jobNode, const char *abortedByInfo);
 
 /***********************************************************************\
 * Name   : Job_reset

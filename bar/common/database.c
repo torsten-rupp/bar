@@ -1934,6 +1934,15 @@ LOCAL Errors sqlite3StatementPrepare(DatabaseStatementHandle *databaseStatementH
                     sqlString
                    );
   }
+  else if ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
+  {
+    error = ERRORX_(DATABASE_BUSY,
+                    sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                    "%s: %s",
+                    sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),
+                    sqlString
+                   );
+  }
   else if (sqliteResult != SQLITE_OK)
   {
     error = ERRORX_(DATABASE,
@@ -7233,6 +7242,7 @@ LOCAL void formatParameters(String               sqlString,
 *          sqlString               - SQL string
 *          parameterCount          - number of parameters (values+
 *                                    filters)
+*          timeout                 - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -7241,10 +7251,15 @@ LOCAL void formatParameters(String               sqlString,
 LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
                               DatabaseHandle          *databaseHandle,
                               const char              *sqlString,
-                              uint                    parameterCount
+                              uint                    parameterCount,
+                              long                    timeout
                              )
 {
-  Errors error;
+  #define MAX_SLEEP_TIME 500L  // [ms]
+
+  Errors                        error;
+  TimeoutInfo                   timeoutInfo;
+  const DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
@@ -7275,37 +7290,56 @@ LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
   #endif /* not NDEBUG */
 
   error = ERROR_UNKNOWN;
-  switch (Database_getType(databaseHandle))
+  Misc_initTimeout(&timeoutInfo,timeout);
+  do
   {
-    case DATABASE_TYPE_SQLITE3:
-      {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
         error = sqlite3StatementPrepare(databaseStatementHandle,
                                         sqlString
                                        );
-      }
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
-        error = mariaDBPrepareStatement(databaseStatementHandle,
-                                        sqlString
-                                       );
-      #else /* HAVE_MARIADB */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MARIADB */
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-        error = postgresqlPrepareStatement(databaseStatementHandle,
-                                           sqlString,
-                                           parameterCount
-                                          );
-      #else /* HAVE_POSTGRESQL */
-        UNUSED_VARIABLE(parameterCount);
+        break;
+      case DATABASE_TYPE_MARIADB:
+        #if defined(HAVE_MARIADB)
+          error = mariaDBPrepareStatement(databaseStatementHandle,
+                                          sqlString
+                                         );
+        #else /* HAVE_MARIADB */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MARIADB */
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        #if defined(HAVE_POSTGRESQL)
+          error = postgresqlPrepareStatement(databaseStatementHandle,
+                                             sqlString,
+                                             parameterCount
+                                            );
+        #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(parameterCount);
 
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_POSTGRESQL */
-      break;
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_POSTGRESQL */
+        break;
+    }
+    if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+    {
+      // call busy handlers
+//TODO: lock list?
+      LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
+      {
+        assert(busyHandlerNode->function != NULL);
+        busyHandlerNode->function(busyHandlerNode->userData);
+      }
+
+      // wait a short time and try again
+      Misc_mdelay(Misc_getRestTimeout(&timeoutInfo,MAX_SLEEP_TIME));
+    }
   }
+  while (   (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+         && !Misc_isTimeout(&timeoutInfo)
+        );
+  Misc_doneTimeout(&timeoutInfo);
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
@@ -7620,9 +7654,11 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   assert(databaseStatementHandle->databaseHandle != NULL);
   assert(isReadLock(databaseStatementHandle->databaseHandle) || isReadWriteLock(databaseStatementHandle->databaseHandle));
 
-  done          = FALSE;
-  error         = ERROR_NONE;
+  // init variables
   Misc_initTimeout(&timeoutInfo,timeout);
+
+  done  = FALSE;
+  error = ERROR_NONE;
   do
   {
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
@@ -7807,6 +7843,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
     else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
     {
       // call busy handlers
+//TODO: lock list?
       LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
@@ -7826,20 +7863,23 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 
   if      (error != ERROR_NONE)
   {
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
   else if (Misc_isTimeout(&timeoutInfo))
   {
+    Misc_doneTimeout(&timeoutInfo);
     #ifndef NDEBUG
       return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
     #else
       return ERROR_DATABASE_TIMEOUT;
     #endif
   }
-  else
-  {
-    return ERROR_NONE;
-  }
+
+  // free resources
+  Misc_doneTimeout(&timeoutInfo);
+
+  return ERROR_NONE;
 
   #undef SLEEP_TIME
 }
@@ -7849,7 +7889,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 * Purpose: get next row
 * Input  : databaseStatementHandle - statement handle
 *          flags                   - flags; see DATABASE_FLAGS_...
-*          timeout                 - timeout [ms]
+*          timeout                 - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : TRUE if next row, FALSE end of data or error
 * Notes  : -
@@ -8290,7 +8330,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 *          databaseRowUserData - user data for row call-back
 *          changedRowCount     - number of changed rows (can be NULL)
 *          flags               - flags; see DATABASE_FLAGS_...
-*          timeout             - timeout [ms]
+*          timeout             - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -8415,7 +8455,6 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             }
             else
             {
-debugPrintStackTrace();
               error = ERROR_DATABASE_ENTRY_NOT_FOUND;
             }
 
@@ -10805,15 +10844,18 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
                          uint64               limit
                         )
 {
+  TimeoutInfo             timeoutInfo;
   String                  sqlString;
   uint                    parameterCount;
   Errors                  error;
   DatabaseStatementHandle databaseStatementHandle;
   DatabaseColumn          statementColumns[DATABASE_MAX_TABLE_COLUMNS];
   uint                    statementColumnCount;
-  TimeoutInfo             timeoutInfo;
 
   assert(databaseHandle != NULL);
+
+  // init variables
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
   sqlString      = String_new();
@@ -10920,11 +10962,13 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -10952,6 +10996,7 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
       {
         finalizeStatement(&databaseStatementHandle);
         String_delete(sqlString);
+        Misc_doneTimeout(&timeoutInfo);
         return error;
       }
     }
@@ -10964,12 +11009,11 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
   // execute statement
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
-// TODO:
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -10988,17 +11032,18 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
                                     Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                    );
   });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
   // free resources
   finalizeStatement(&databaseStatementHandle);
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 }
@@ -14075,7 +14120,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   error = prepareStatement(&fromDatabaseStatementHandle,
                            fromDatabaseHandle,
                            String_cString(sqlSelectString),
-                           selectParameterCount
+                           selectParameterCount,
+                           WAIT_FOREVER
                           );
   if (error != ERROR_NONE)
   {
@@ -14118,7 +14164,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   error = prepareStatement(&toDatabaseStatementHandle,
                            toDatabaseHandle,
                            String_cString(sqlInsertString),
-                           parameterMapCount
+                           parameterMapCount,
+                           WAIT_FOREVER
                           );
   if (error != ERROR_NONE)
   {
@@ -16038,7 +16085,7 @@ Errors Database_execute(DatabaseHandle *databaseHandle,
       else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
       {
         // execute registered busy handlers
-  //TODO: lock list?
+//TODO: lock list?
         LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
         {
           assert(busyHandlerNode->function != NULL);
@@ -16102,6 +16149,9 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
          || (filter != NULL)
         );
 
+  // init variables
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+
   // create SQL string
   sqlString      = String_new();
   parameterCount = 0;
@@ -16133,6 +16183,12 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           String_setCString(sqlString,"INSERT");
         }
       #else /* HAVE_MARIADB */
+        UNUSED_VARIABLE(conflictColumns);
+        UNUSED_VARIABLE(conflictColumnCount);
+        UNUSED_VARIABLE(filter);
+
+        Misc_doneTimeout(&timeoutInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
@@ -16141,6 +16197,12 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
       #if defined(HAVE_POSTGRESQL)
         String_setCString(sqlString,"INSERT");
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(conflictColumns);
+        UNUSED_VARIABLE(conflictColumnCount);
+        UNUSED_VARIABLE(filter);
+
+        Misc_doneTimeout(&timeoutInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -16174,6 +16236,12 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
+        UNUSED_VARIABLE(conflictColumns);
+        UNUSED_VARIABLE(conflictColumnCount);
+        UNUSED_VARIABLE(filter);
+
+        Misc_doneTimeout(&timeoutInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
@@ -16213,6 +16281,9 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
         UNUSED_VARIABLE(conflictColumns);
         UNUSED_VARIABLE(conflictColumnCount);
         UNUSED_VARIABLE(filter);
+
+        Misc_doneTimeout(&timeoutInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -16228,11 +16299,13 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16245,6 +16318,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
   switch (Database_getType(databaseHandle))
@@ -16273,6 +16347,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           {
             finalizeStatement(&databaseStatementHandle);
             String_delete(sqlString);
+            Misc_doneTimeout(&timeoutInfo);
             return error;
           }
           error = bindFilters(&databaseStatementHandle,
@@ -16283,19 +16358,22 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           {
             finalizeStatement(&databaseStatementHandle);
             String_delete(sqlString);
+            Misc_doneTimeout(&timeoutInfo);
             return error;
           }
         }
       #else /* HAVE_POSTGRESQL */
         UNUSED_VARIABLE(filters);
         UNUSED_VARIABLE(filterCount);
+
+        Misc_doneTimeout(&timeoutInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
   }
 
   // execute statement
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -16311,11 +16389,11 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
                                 Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16330,6 +16408,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
 
   // free resources
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 }
@@ -16368,6 +16447,9 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   assert(fromColumnCount > 0);
   assert(toColumnCount == fromColumnCount);
 
+  // init variables
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+
   // create SQL string
   sqlString      = String_new();
   parameterCount = 0;
@@ -16399,6 +16481,8 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
           String_setCString(sqlString,"INSERT");
         }
       #else /* HAVE_MARIADB */
+        Misc_doneTimeout(&timeoutInfo);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
@@ -16470,11 +16554,13 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16489,12 +16575,12 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
     {
       finalizeStatement(&databaseStatementHandle);
       String_delete(sqlString);
+      Misc_doneTimeout(&timeoutInfo);
       return error;
     }
   }
 
   // execute statement
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -16510,11 +16596,11 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
                                 Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16523,6 +16609,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
 
   // free resources
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 }
@@ -16538,10 +16625,10 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        uint                 filterCount
                       )
 {
+  TimeoutInfo             timeoutInfo;
   String                  sqlString;
   uint                    parameterCount;
   DatabaseStatementHandle databaseStatementHandle;
-  TimeoutInfo             timeoutInfo;
   Errors                  error;
 
   assert(databaseHandle != NULL);
@@ -16549,6 +16636,9 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   assert(tableName != NULL);
   assert(values != NULL);
   assert(valueCount > 0);
+
+  // init variales
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string, count parameters
   sqlString      = String_newCString("UPDATE ");
@@ -16605,11 +16695,13 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16622,6 +16714,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
   if (filter != NULL)
@@ -16634,12 +16727,12 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
     {
       finalizeStatement(&databaseStatementHandle);
       String_delete(sqlString);
+      Misc_doneTimeout(&timeoutInfo);
       return error;
     }
   }
 
   // execute statement
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -16655,11 +16748,11 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                                 Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16668,6 +16761,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
 
   // free resources
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 }
@@ -16693,6 +16787,10 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 
 // TODO:
 (void)flags;
+
+  // init variables
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+
   // create SQL string
   sqlString      = String_newCString("DELETE FROM ");
   parameterCount = 0;
@@ -16732,11 +16830,13 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16750,12 +16850,12 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
     {
       finalizeStatement(&databaseStatementHandle);
       String_delete(sqlString);
+      Misc_doneTimeout(&timeoutInfo);
       return error;
     }
   }
 
   // execute statement
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -16771,11 +16871,11 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
                                 Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                );
   });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -16784,6 +16884,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 
   // free resources
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 }
@@ -16851,7 +16952,8 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
@@ -16935,10 +17037,10 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                             ulong            length
                            )
 {
+  TimeoutInfo             timeoutInfo;
   String                  sqlString;
   ulong                   i;
   DatabaseStatementHandle databaseStatementHandle;
-  TimeoutInfo             timeoutInfo;
   Errors                  error;
 
   assert(databaseHandle != NULL);
@@ -16950,6 +17052,9 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 
   if (length > 0L)
   {
+    // init variables
+    Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+
     // create SQL string
     sqlString = String_format(String_new(),"DELETE FROM %s WHERE %s IN (",tableName,columnName);
     for (i = 0; i < length; i++)
@@ -16969,15 +17074,16 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
     error = prepareStatement(&databaseStatementHandle,
                              databaseHandle,
                              String_cString(sqlString),
-                             0
+                             0,
+                             Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                             );
     if (error != ERROR_NONE)
     {
       String_delete(sqlString);
+      Misc_doneTimeout(&timeoutInfo);
       return error;
     }
 
-    Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
     DATABASE_DOX(error,
                  #ifndef NDEBUG
                    ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -16994,11 +17100,11 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                                   Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                  );
     });
-    Misc_doneTimeout(&timeoutInfo);
     if (error != ERROR_NONE)
     {
       finalizeStatement(&databaseStatementHandle);
       String_delete(sqlString);
+      Misc_doneTimeout(&timeoutInfo);
       return error;
     }
 
@@ -17007,6 +17113,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 
     // free resources
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
   }
 
   return ERROR_NONE;
@@ -17048,16 +17155,19 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                           )
 #endif /* NDEBUG */
 {
+  TimeoutInfo timeoutInfo;
   String      sqlString;
   uint        parameterCount;
   Errors      error;
-  TimeoutInfo timeoutInfo;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(tableName != NULL);
   assert((columnCount == 0) || (columns != NULL));
+
+  // init variables
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
   sqlString      = String_newCString("SELECT ");
@@ -17152,11 +17262,13 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   error = prepareStatement(databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -17171,6 +17283,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
     {
       finalizeStatement(databaseStatementHandle);
       String_delete(sqlString);
+      Misc_doneTimeout(&timeoutInfo);
       return error;
     }
   }
@@ -17182,6 +17295,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   {
     finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -17199,18 +17313,17 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
     #endif
     finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
   // execute statement (Note: rows are returned via Database_getNextRow())
-  Misc_initTimeout(&timeoutInfo,databaseStatementHandle->databaseHandle->timeout);
   error = executePreparedStatement(databaseStatementHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    flags,
                                    Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
-                                   );
-  Misc_doneTimeout(&timeoutInfo);
+                                  );
   if (error != ERROR_NONE)
   {
     #ifndef NDEBUG
@@ -17220,11 +17333,13 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
     #endif /* not NDEBUG */
     finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
   // free resources
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   DEBUG_ADD_RESOURCE_TRACE(databaseStatementHandle,DatabaseStatementHandle);
 
@@ -17501,6 +17616,9 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
+  // init variables
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+
   // create SQL string
   sqlString      = String_new();
   parameterCount = 0;
@@ -17606,11 +17724,13 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
-                           parameterCount
+                           parameterCount,
+                           Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                           );
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
@@ -17638,6 +17758,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
       {
         finalizeStatement(&databaseStatementHandle);
         String_delete(sqlString);
+        Misc_doneTimeout(&timeoutInfo);
         return error;
       }
     }
@@ -17650,12 +17771,11 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
   // execute statement
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
-// TODO:
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -17674,17 +17794,18 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                                     Misc_getRestTimeout(&timeoutInfo,MAX_ULONG)
                                    );
   });
-  Misc_doneTimeout(&timeoutInfo);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
     String_delete(sqlString);
+    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
 
   // free resources
   finalizeStatement(&databaseStatementHandle);
   String_delete(sqlString);
+  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 }
@@ -18720,7 +18841,7 @@ void Database_debugPrintInfo(void)
           }
         }
         fprintf(stderr,
-                "  lock state summary: pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
+                "  222lock state summary: pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
                 databaseNode->pendingReadCount,
                 databaseNode->readCount,
                 databaseNode->pendingReadWriteCount,
@@ -19000,8 +19121,8 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
             debugDumpStackTrace(stderr,
                                 4,
                                 DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                                databaseHandle->debug.current.stackTrace,
-                                databaseHandle->debug.current.stackTraceSize,
+                                databaseHandle->databaseNode->debug.reads[i].stackTrace,
+                                databaseHandle->databaseNode->debug.reads[i].stackTraceSize,
                                 0
                                );
           #endif /* HAVE_BACKTRACE */
@@ -19026,8 +19147,8 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
             debugDumpStackTrace(stderr,
                                 4,
                                 DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                                databaseHandle->debug.current.stackTrace,
-                                databaseHandle->debug.current.stackTraceSize,
+                                databaseHandle->databaseNode->debug.readWrites[i].stackTrace,
+                                databaseHandle->databaseNode->debug.readWrites[i].stackTraceSize,
                                 0
                                );
           #endif /* HAVE_BACKTRACE */

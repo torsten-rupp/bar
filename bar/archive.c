@@ -16042,7 +16042,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                  );
   }
 
-  // update hostName/userName/created date/time/size/comment/newest entries
+  // update index storage hostName+userName+created date/time+size+comment+newest entries
   if (error == ERROR_NONE)
   {
     error = Index_updateStorage(indexHandle,

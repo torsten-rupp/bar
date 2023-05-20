@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-05-08 04:07+0200\n"
+"POT-Creation-Date: 2023-05-20 08:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -957,35 +957,39 @@ msgstr ""
 msgid "parse index id failed"
 msgstr ""
 
-#: errors.def:1011
+#: errors.def:1014
+msgid "database is locked"
+msgstr ""
+
+#: errors.def:1018
 msgid "database busy"
 msgstr ""
 
-#: errors.def:1012
+#: errors.def:1019
 msgid "database operation interrupted"
 msgstr ""
 
-#: errors.def:1016
+#: errors.def:1023
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1020
+#: errors.def:1027
 msgid "database entry not found"
 msgstr ""
 
-#: errors.def:1023
+#: errors.def:1030
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1024
+#: errors.def:1031
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1025
+#: errors.def:1032
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1026
+#: errors.def:1033
 msgid "instance is not a slave"
 msgstr ""
 

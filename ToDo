@@ -220,7 +220,7 @@ rest time
 - win32: postresql client library
 - run pre/post command in standard mode (not only server)
 - libmount
-
+- BARControl: menu entries for Debian, XFCE
 
 
 
