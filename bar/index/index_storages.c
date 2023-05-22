@@ -2264,9 +2264,9 @@ UNUSED_VARIABLE(progressInfo);
         totalSpecialCount   = 0;
       }
 
+      // get entry ids to purge
       Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
-      // get entry ids to purge
       error = Database_get(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                            {

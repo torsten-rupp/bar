@@ -4299,7 +4299,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                  );
 
           // add FTS entry
-// TODO: do this wit a trigger again?
+// TODO: do this with a trigger again?
           if (error == ERROR_NONE)
           {
             assert(entryId != DATABASE_ID_NONE);

@@ -1492,10 +1492,13 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   error = Database_getUInt(databaseHandle,
                            &n,
                            "fileEntries \
+                              LEFT JOIN entries ON entries.id=fileEntries.entryId \
                               LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
                            ",
                            "COUNT(fileEntries.id)",
-                           "entryFragments.id IS NULL",
+                           "    entries.deletedFlag=FALSE \
+                            AND entryFragments.id IS NULL \
+                           ",
                            DATABASE_FILTERS
                            (
                            ),
@@ -1515,10 +1518,13 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   error = Database_getUInt(databaseHandle,
                            &n,
                            "imageEntries \
+                              LEFT JOIN entries ON entries.id=imageEntries.entryId \
                               LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
                            ",
                            "COUNT(imageEntries.id)",
-                           "entryFragments.id IS NULL",
+                           "    entries.deletedFlag=FALSE \
+                            AND entryFragments.id IS NULL \
+                           ",
                            DATABASE_FILTERS
                            (
                            ),
@@ -1538,10 +1544,13 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   error = Database_getUInt(databaseHandle,
                            &n,
                            "hardlinkEntries \
+                              LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
                               LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
                            ",
                            "COUNT(hardlinkEntries.id)",
-                           "entryFragments.id IS NULL",
+                           "    entries.deletedFlag=FALSE \
+                            AND entryFragments.id IS NULL \
+                           ",
                            DATABASE_FILTERS
                            (
                            ),
