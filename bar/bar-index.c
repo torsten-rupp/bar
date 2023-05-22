@@ -1576,6 +1576,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
+                            AND entries.deletedFlag=FALSE \
                             AND fileEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1602,6 +1603,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
+                            AND entries.deletedFlag=FALSE \
                             AND imageEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1628,6 +1630,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
+                            AND entries.deletedFlag=FALSE \
                             AND directoryEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1654,6 +1657,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
+                            AND entries.deletedFlag=FALSE \
                             AND linkEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1680,6 +1684,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
+                            AND entries.deletedFlag=FALSE \
                             AND hardlinkEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1706,6 +1711,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
+                            AND entries.deletedFlag=FALSE \
                             AND specialEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -6421,10 +6427,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_getIds(databaseHandle,
                           &ids,
                           "fileEntries \
+                             LEFT JOIN entries ON entries.id=fileEntries.entryId \
                              LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
                           ",
                           "fileEntries.id",
-                          "entryFragments.id IS NULL",
+                          "    entries.deletedFlag=FALSE \
+                           AND entryFragments.id IS NULL \
+                          ",
                           DATABASE_FILTERS
                           (
                           ),
@@ -6451,10 +6460,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_getIds(databaseHandle,
                           &ids,
                           "imageEntries \
+                             LEFT JOIN entries ON entries.id=fileEntries.entryId \
                              LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
                           ",
                           "imageEntries.id",
-                          "entryFragments.id IS NULL",
+                          "    entries.deletedFlag=FALSE \
+                           AND entryFragments.id IS NULL \
+                          ",
                           DATABASE_FILTERS
                           (
                           ),
@@ -6481,10 +6493,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_getIds(databaseHandle,
                           &ids,
                           "hardlinkEntries \
+                             LEFT JOIN entries ON entries.id=fileEntries.entryId \
                              LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
                           ",
                           "hardlinkEntries.id",
-                          "entryFragments.id IS NULL",
+                          "    entries.deletedFlag=FALSE \
+                           AND entryFragments.id IS NULL \
+                          ",
                           DATABASE_FILTERS
                           (
                           ),
@@ -6513,6 +6528,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
+                           AND entries.deletedFlag=FALSE \
                            AND fileEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -6556,6 +6572,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
+                           AND entries.deletedFlag=FALSE \
                            AND imageEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -6599,6 +6616,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
+                           AND entries.deletedFlag=FALSE \
                            AND directoryEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -6642,6 +6660,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
+                           AND entries.deletedFlag=FALSE \
                            AND linkEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -6685,6 +6704,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
+                           AND entries.deletedFlag=FALSE \
                            AND hardlinkEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -6728,6 +6748,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
+                           AND entries.deletedFlag=FALSE \
                            AND specialEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS

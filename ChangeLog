@@ -1,6 +1,7 @@
-2023-xx-xx 0.22h
+2023-xx-xx 0.23
   * bar-index: fixed wrong counted lost entries without
     fragments
+  * BARControl: added option --info
 
 2023-04-16 0.22g
   * BARControl: fixed update job sate in dry-mode (issue #2,
