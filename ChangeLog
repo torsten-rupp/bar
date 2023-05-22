@@ -1,4 +1,6 @@
 2023-xx-xx 0.23
+  * bar-index: fixed wrong counted lost entries without
+    fragments
   * BARControl: added option --info
 
 2023-02-15 0.22f

@@ -5452,7 +5452,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                  // find in storage list
                                  if (StringList_find(&createInfo->storageFileList,storageSpecifier.archiveName) == NULL)
                                  {
-                                   Storage_delete(&createInfo->storageInfo,storageName);
+                                   (void)Storage_delete(&createInfo->storageInfo,storageName);
                                  }
                                }
 
