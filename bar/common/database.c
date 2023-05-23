@@ -7881,7 +7881,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 *          flags                   - flags; see DATABASE_FLAGS_...
 *          timeout                 - timeout [ms] or WAIT_FOREVER
 * Output : -
-* Return : TRUE if next row, FALSE end of data or error
+* Return : ERROR_NONE on next row, error code otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -7900,21 +7900,21 @@ struct {
 } PQprintOpt;
 #endif
 
-LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                      uint                    flags,
-                      long                    timeout
-                     )
+LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
+                        uint                    flags,
+                        long                    timeout
+                       )
 {
   #define SLEEP_TIME 500L
 
-  uint n;
-  bool result;
+  uint   n;
+  Errors error;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
 
-  n      = 0;
-  result = FALSE;
+  n     = 0;
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -7948,7 +7948,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
               );
 
-        if (sqliteResult == SQLITE_ROW)
+        if      (sqliteResult == SQLITE_ROW)
         {
           assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
           for (i = 0; i < databaseStatementHandle->resultCount; i++)
@@ -8041,7 +8041,19 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
             }
           }
 
-          result = TRUE;
+          error = ERROR_NONE;
+        }
+        else if (sqliteResult == SQLITE_DONE)
+        {
+          error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+        }
+        else
+        {
+          error = ERRORX_(DATABASE,
+                          sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                          "%s",
+                          sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                         );
         }
       }
       break;
@@ -8135,14 +8147,21 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 mysql_free_result(mysqlMetaData);
               }
 
-              result = TRUE;
+              error = ERROR_NONE;
               break;
             case 1:
               // error
+              error = ERRORX_(DATABASE,
+                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                              "%s",
+                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
+                             );
               break;
             case MYSQL_NO_DATA:
+              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
               break;
             case MYSQL_DATA_TRUNCATED:
+              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
               break;
           }
         }
@@ -8255,10 +8274,14 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
               }
               UNUSED_VARIABLE(tail);
 
-              result = TRUE;
+              error = ERROR_NONE;
             }
 
             databaseStatementHandle->postgresql.rowIndex++;
+          }
+          else
+          {
+            error = ERROR_DATABASE_ENTRY_NOT_FOUND;
           }
         }
       #else /* HAVE_POSTGRESQL */
@@ -8267,8 +8290,9 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
-  return result;
+  return error;
 
   #undef SLEEP_TIME
 }
@@ -8430,7 +8454,8 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
           if (databaseRowFunction != NULL)
           {
             // step
-            if (getNextRow(databaseStatementHandle,flags,timeout))
+            error = getNextRow(databaseStatementHandle,flags,timeout);
+            if (error == ERROR_NONE)
             {
               do
               {
@@ -8438,14 +8463,10 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
                                             databaseStatementHandle->resultCount,
                                             databaseRowUserData
                                            );
+                if (error == ERROR_NONE) error = getNextRow(databaseStatementHandle,flags,timeout);
               }
-              while (   (error == ERROR_NONE)
-                     && getNextRow(databaseStatementHandle,flags,timeout)
-                    );
-            }
-            else
-            {
-              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+              while (error == ERROR_NONE);
+              if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
             }
 
             // get number of changes
@@ -8469,7 +8490,8 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             if (databaseRowFunction != NULL)
             {
               // step
-              if (getNextRow(databaseStatementHandle,flags,timeout))
+              error = getNextRow(databaseStatementHandle,flags,timeout);
+              if (error == ERROR_NONE)
               {
                 do
                 {
@@ -8477,14 +8499,10 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
                                               databaseStatementHandle->resultCount,
                                               databaseRowUserData
                                              );
+                  if (error == ERROR_NONE) error = getNextRow(databaseStatementHandle,flags,timeout);
                 }
-                while (   (error == ERROR_NONE)
-                       && getNextRow(databaseStatementHandle,flags,timeout)
-                      );
-              }
-              else
-              {
-                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+                while (error == ERROR_NONE);
+                if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
               }
 
               // get number of changes
@@ -8514,7 +8532,8 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             if (databaseRowFunction != NULL)
             {
               // step
-              if (getNextRow(databaseStatementHandle,flags,timeout))
+              error = getNextRow(databaseStatementHandle,flags,timeout);
+              if (error == ERROR_NONE)
               {
                 do
                 {
@@ -8522,15 +8541,11 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
                                               databaseStatementHandle->resultCount,
                                               databaseRowUserData
                                              );
+                  if (error == ERROR_NONE) error = getNextRow(databaseStatementHandle,flags,timeout);
                 }
-                while (   (error == ERROR_NONE)
-                       && getNextRow(databaseStatementHandle,flags,timeout)
-                      );
-              }
-              else
-              {
-                error = ERROR_DATABASE_ENTRY_NOT_FOUND;
-              }
+                while (error == ERROR_NONE);
+                if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+            }
 
               // get number of changes
               if (changedRowCount != NULL)
@@ -17340,7 +17355,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                          ...
                         )
 {
-  bool    result;
+  Errors  error;
   va_list arguments;
   union
   {
@@ -17364,10 +17379,9 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
 
-  result = FALSE;
-
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-  if (getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT))
+  error = getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT);
+  if (error == ERROR_NONE)
   {
     assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
 
@@ -17473,12 +17487,10 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           break;
       }
     }
-
-    result = TRUE;
   }
   DATABASE_DEBUG_TIME_END(databaseStatementHandle);
 
-  return result;
+  return error == ERROR_NONE;
 }
 
 #ifdef NDEBUG
