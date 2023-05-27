@@ -1668,7 +1668,7 @@ class Dialogs
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
             row++;
 
-            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);           
+            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
             text.setText(buffer.toString());
             text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,120));
             row++;
@@ -3003,7 +3003,7 @@ class Dialogs
               label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4));
               row++;
             }
-            
+
             if (extendedMessage != null)
             {
               // get extened message (limit to 80 characters per line)
@@ -4611,6 +4611,7 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
+  private static Object lastFile = null;
   public static <T extends File> String file(final Shell            parentShell,
                                              final FileDialogTypes  type,
                                              String                 title,
@@ -5243,7 +5244,7 @@ class Dialogs
       }
     }
 
-    String      result;
+    T           result;
     Pane        pane;
     int         row1,row2;
     Composite   composite;
@@ -5867,11 +5868,8 @@ class Dialogs
               fileGeometry = dialog.getSize();
               close(dialog,
                     (widgetName != null)
-                      ? listDirectory.getAbsolutePath(listDirectory.newFileInstance(widgetPath.getText(),
-                                                                                    widgetName.getText()
-                                                                                   )
-                                                     )
-                      : listDirectory.getAbsolutePath(listDirectory.newFileInstance(widgetPath.getText()))
+                      ? listDirectory.newFileInstance(widgetPath.getText(),widgetName.getText())
+                      : listDirectory.newFileInstance(widgetPath.getText())
                    );
             }
           }
@@ -5994,10 +5992,8 @@ class Dialogs
           T file = (T)widgetPath.getData();
           close(dialog,
                 (widgetName != null)
-                  ? listDirectory.getAbsolutePath(listDirectory.newFileInstance(file.getAbsolutePath(),
-                                                  widgetName.getText())
-                                                 )
-                  : listDirectory.getAbsolutePath(file)
+                  ? listDirectory.newFileInstance(file.getAbsolutePath(),widgetName.getText())
+                  : file
                );
         }
       });
@@ -6074,6 +6070,14 @@ class Dialogs
       updater.updateShortcutList(widgetShortcutList,shortcutList);
 
       // update path, name
+      if (oldFile == null)
+      {
+        oldFile = (T)lastFile;
+      }
+      if (oldFile == null)
+      {
+        oldFile = listDirectory.getDefaultRoot();
+      }
       if (oldFile != null)
       {
         if (widgetName != null)
@@ -6144,14 +6148,17 @@ class Dialogs
         widgetPath.setFocus();
         widgetPath.setSelection(new Point(0,widgetPath.getText().length()));
       }
-      result = (String)run(dialog,null);
+      result = (T)run(dialog,null);
     }
     else
     {
       result = null;
     }
 
-    return result;
+    // save last selected file
+    if (result != null) lastFile = result;
+
+    return (result != null) ? listDirectory.getAbsolutePath(result) : null;
   }
 
   /** open a file dialog
@@ -6224,7 +6231,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getDefaultRoot();
+                  : (T)null;
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,listDirectory);
   }
 
@@ -6267,7 +6274,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getDefaultRoot();
+                  : (T)null;
     return file(parentShell,type,title,oldFile,flags,listDirectory);
   }
 
@@ -6306,7 +6313,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getDefaultRoot();
+                  : (T)null;
     return file(parentShell,type,title,oldFile,listDirectory);
   }
 

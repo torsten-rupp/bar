@@ -612,65 +612,65 @@ class URIParts implements Cloneable
         break;
       case FTP:
         buffer.append("ftp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           buffer.append('/');
         }
         break;
       case SCP:
         buffer.append("scp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
           buffer.append('/');
         }
         break;
       case SFTP:
         buffer.append("sftp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
           buffer.append('/');
         }
         break;
       case WEBDAV:
         buffer.append("webdav://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           buffer.append('/');
         }
         break;
       case CD:
         buffer.append("cd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -678,7 +678,7 @@ class URIParts implements Cloneable
         break;
       case DVD:
         buffer.append("dvd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -686,7 +686,7 @@ class URIParts implements Cloneable
         break;
       case BD:
         buffer.append("bd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -694,7 +694,7 @@ class URIParts implements Cloneable
         break;
       case DEVICE:
         buffer.append("device://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -740,49 +740,49 @@ class URIParts implements Cloneable
         break;
       case FTP:
         buffer.append("ftp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           buffer.append('/');
         }
         break;
       case SCP:
         buffer.append("scp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("")) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!loginName.isEmpty()) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
           buffer.append('/');
         }
         break;
       case SFTP:
         buffer.append("sftp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("")) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!loginName.isEmpty()) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
           buffer.append('/');
         }
         break;
       case WEBDAV:
         buffer.append("webdav://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("")) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!loginName.isEmpty()) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           buffer.append('/');
         }
         break;
       case CD:
         buffer.append("cd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -790,7 +790,7 @@ class URIParts implements Cloneable
         break;
       case DVD:
         buffer.append("dvd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -798,7 +798,7 @@ class URIParts implements Cloneable
         break;
       case BD:
         buffer.append("bd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -806,7 +806,7 @@ class URIParts implements Cloneable
         break;
       case DEVICE:
         buffer.append("device://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');

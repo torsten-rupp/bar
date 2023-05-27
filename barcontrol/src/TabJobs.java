@@ -939,6 +939,14 @@ public class TabJobs
       this.pattern   = pattern;
     }
 
+    /** create entry data
+     * @param entryType entry type
+     */
+    EntryData(EntryTypes entryType)
+    {
+      this(entryType,(String)null);
+    }
+
     /** clone entry data object
      * @return cloned object
      */
@@ -10754,7 +10762,7 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false) && !entryData.pattern.equals("");
+    return (Boolean)Dialogs.run(dialog,false) && !entryData.pattern.isEmpty();
   }
 
   /** add include entry
@@ -10900,7 +10908,7 @@ throw new Error("NYI");
   {
     if (selectedJobData != null)
     {
-      EntryData entryData = new EntryData(EntryTypes.FILE,"");
+      EntryData entryData = new EntryData(EntryTypes.FILE);
       if (includeEdit(entryData,BARControl.tr("Add new include pattern"),BARControl.tr("Add")))
       {
         includeListAdd(entryData);
@@ -11182,7 +11190,7 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
+    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].isEmpty();
   }
 
   /** add exclude pattern
@@ -11681,7 +11689,7 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false) && !mountData.name.equals("");
+    return (Boolean)Dialogs.run(dialog,false) && !mountData.name.isEmpty();
   }
 
   /** add mount data
@@ -11966,7 +11974,7 @@ throw new Error("NYI");
                                    PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
                                    String       pattern     = valueMap.getString("pattern"                       );
 
-                                   if (!pattern.equals(""))
+                                   if (!pattern.isEmpty())
                                    {
                                      sourceHashSet.add(pattern);
                                      deltaSource.set(pattern);
@@ -12319,7 +12327,7 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
+    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].isEmpty();
   }
 
   /** add compress exclude pattern
@@ -13991,20 +13999,20 @@ throw new Error("NYI");
         widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
         widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"});
-        widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
-        if (widgetYear.getText().equals("")) widgetYear.setText("*");
+        widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().isEmpty()) widgetYear.setText("*");
+        if (widgetYear.getText().isEmpty()) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
 
         widgetMonth = Widgets.newOptionMenu(subComposite);
         widgetMonth.setToolTipText(BARControl.tr("Month to execute job. Leave to '*' for each month."));
         widgetMonth.setItems(new String[]{"*","01","02","03","04","05","06","07","08","09","10","11","12"});
-        widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
+        widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().isEmpty()) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
 
         widgetDay = Widgets.newOptionMenu(subComposite);
         widgetDay.setToolTipText(BARControl.tr("Day to execute job. Leave to '*' for each day."));
         widgetDay.setItems(new String[]{"*","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
-        widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
+        widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().isEmpty()) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
       }
 
@@ -14079,14 +14087,14 @@ throw new Error("NYI");
         widgetHour.setEnabled(scheduleData.archiveType != ArchiveTypes.CONTINUOUS);
         widgetHour.setToolTipText(BARControl.tr("Hour to execute job. Leave to '*' for every hour."));
         widgetHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
-        widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
+        widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().isEmpty()) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
         widgetMinute = Widgets.newOptionMenu(subComposite);
         widgetMinute.setEnabled(scheduleData.archiveType != ArchiveTypes.CONTINUOUS);
         widgetMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
         widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
-        widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
+        widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().isEmpty()) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
 
@@ -14120,14 +14128,14 @@ throw new Error("NYI");
         widgetBeginHour.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetBeginHour.setToolTipText(BARControl.tr("Begin hour where continuous storage is active."));
         widgetBeginHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
-        widgetBeginHour.setText(scheduleData.getBeginHour()); if (widgetBeginHour.getText().equals("")) widgetBeginHour.setText("*");
+        widgetBeginHour.setText(scheduleData.getBeginHour()); if (widgetBeginHour.getText().isEmpty()) widgetBeginHour.setText("*");
         Widgets.layout(widgetBeginHour,0,2,TableLayoutData.W);
 
         widgetBeginMinute = Widgets.newOptionMenu(subComposite);
         widgetBeginMinute.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetBeginMinute.setToolTipText(BARControl.tr("Begin minute where continuous storage is active."));
         widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
-        widgetBeginMinute.setText(scheduleData.getBeginMinute()); if (widgetBeginMinute.getText().equals("")) widgetBeginMinute.setText("*");
+        widgetBeginMinute.setText(scheduleData.getBeginMinute()); if (widgetBeginMinute.getText().isEmpty()) widgetBeginMinute.setText("*");
         Widgets.layout(widgetBeginMinute,0,3,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,"..");
@@ -14137,14 +14145,14 @@ throw new Error("NYI");
         widgetEndHour.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetEndHour.setToolTipText(BARControl.tr("End hour where continuous storage is active."));
         widgetEndHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
-        widgetEndHour.setText(scheduleData.getEndHour()); if (widgetEndHour.getText().equals("")) widgetEndHour.setText("*");
+        widgetEndHour.setText(scheduleData.getEndHour()); if (widgetEndHour.getText().isEmpty()) widgetEndHour.setText("*");
         Widgets.layout(widgetEndHour,0,5,TableLayoutData.W);
 
         widgetEndMinute = Widgets.newOptionMenu(subComposite);
         widgetEndMinute.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetEndMinute.setToolTipText(BARControl.tr("End minute where continuous storage is active."));
         widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
-        widgetEndMinute.setText(scheduleData.getEndMinute()); if (widgetEndMinute.getText().equals("")) widgetEndMinute.setText("*");
+        widgetEndMinute.setText(scheduleData.getEndMinute()); if (widgetEndMinute.getText().isEmpty()) widgetEndMinute.setText("*");
         Widgets.layout(widgetEndMinute,0,6,TableLayoutData.W);
       }
 
