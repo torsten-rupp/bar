@@ -2489,7 +2489,7 @@ void ServerIO_clientActionResult(ServerIO   *serverIO,
       StringMap_move(resultNode->resultMap,resultMap);
     }
 
-    Semaphore_signalModified(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+    Semaphore_signalModified(&serverIO->resultList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
 }
 

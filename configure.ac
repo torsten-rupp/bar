@@ -897,8 +897,6 @@ AC_SUBST(XGETTEXT)                           dnl xgettext command
 AC_SUBST(MSGMERGE)                           dnl msgmerge command
 AC_SUBST(MSGFMT)                             dnl msgfmt command
 
-AC_SUBST(MYSQL)                              dnl mysql command
-
 AC_SUBST(JAVA_DATA_MODEL)                    dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                         dnl java flags
 AC_SUBST(JAVAC_FLAGS)                        dnl java compiler flags
@@ -918,6 +916,7 @@ AC_SUBST(KEYTOOL)                            dnl Java keytool
 
 AC_SUBST(UNOCONV)                            dnl OO conversion tool
 AC_SUBST(TXT2MAN)                            dnl text-to-man page tool
+AC_SUBST(CONVERT)                            dnl convert tool
 
 AC_SUBST(ATTR)                               dnl attr command
 AC_SUBST(TIME)                               dnl time command
@@ -1477,6 +1476,7 @@ AC_PATH_PROGS(TXT2MAN,txt2man)
 if test -z "$TXT2MAN"; then
   AC_MSG_WARN([No 'txt2man' tool found. Cannot create man page. Please check PATH.])
 fi
+AC_PATH_PROGS(CONVERT,convert)
 
 AC_PATH_PROGS(SUDO,sudo,,/usr/bin)
 AC_PATH_PROGS(ATTR,attr,,/usr/bin)

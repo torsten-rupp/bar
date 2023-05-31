@@ -6868,6 +6868,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   uint       lineNb;
   String     line;
   String     name,value;
+  bool       headerLineFlag;
   StringList commentList;
   long       nextIndex;
 
@@ -6908,7 +6909,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
 // TODO:
   // skip header
-  bool headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+  headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
   if (headerLineFlag)
   {
     if (String_startsWithCString(line,"# ----"))

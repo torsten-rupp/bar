@@ -2587,7 +2587,7 @@ LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
         }
         else
         {
-          error = ERRORX_(DELETE_FILE,0,"%s",curl_multi_strerror(curlCode));
+          error = ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
         }
         curl_slist_free_all(curlSList);
         String_delete(ftpCommand);

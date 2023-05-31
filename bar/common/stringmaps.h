@@ -583,13 +583,14 @@ void* const *StringMap_valueArray(const StringMap stringMap);
 /***********************************************************************\
 * Name   : StringMap_parseEnumNumber
 * Purpose: parse number as enum-value
-* Input  : name - number as string
+* Input  : name     - number as string
+*          userData - user data (not used)
 * Output : value - enum value
 * Return : TRUE if parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool StringMap_parseEnumNumber(const char *name, uint *value);
+bool StringMap_parseEnumNumber(const char *name, uint *value, void *userData);
 
 #ifndef NDEBUG
 

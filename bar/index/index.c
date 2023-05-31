@@ -423,7 +423,7 @@ LOCAL void busyHandler(void *userData)
         break;
     }
 
-    SEMAPHORE_LOCKED_DO(&indexOpenLock,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&indexOpenLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       error = ERROR_NONE;
 
@@ -2875,12 +2875,14 @@ const char *Index_typeToString(IndexTypes indexType, const char *defaultValue)
   return name;
 }
 
-bool Index_parseType(const char *name, IndexTypes *indexType)
+bool Index_parseType(const char *name, IndexTypes *indexType, void *userData)
 {
   uint i;
 
   assert(name != NULL);
   assert(indexType != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   i = 0;
   while (   (i < SIZE_OF_ARRAY(INDEX_TYPES))
@@ -3431,7 +3433,7 @@ void Index_setBusyHandler(IndexHandle              *indexHandle,
   indexHandle->busyHandlerUserData = busyHandlerUserData;
 }
 
-bool Index_isLockPending(IndexHandle *indexHandle, SemaphoreLockTypes lockType)
+bool Index_isLockPending(IndexHandle *indexHandle, DatabaseLockTypes lockType)
 {
   assert(indexHandle != NULL);
 

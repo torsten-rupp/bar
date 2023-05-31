@@ -4147,7 +4147,7 @@ void Crypt_dumpHash(const CryptHash *cryptHash)
 
   assert(cryptHash != NULL);
 
-  fprintf(stderr,"'%s':\n",Crypt_algorithmToString(cryptHash->cryptHashAlgorithm,NULL));
+  fprintf(stderr,"'%s':\n",Crypt_hashAlgorithmToString(cryptHash->cryptHashAlgorithm,NULL));
   hashData = Crypt_getHash(cryptHash,NULL,0,&hashLength);
   if (hashData != NULL)
   {

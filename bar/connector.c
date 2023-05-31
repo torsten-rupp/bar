@@ -1645,6 +1645,27 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 
 LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  /***********************************************************************\
+  * Name   : parseFileSystemType
+  * Purpose: parse file system type
+  * Input  : name     - name
+  *          userData - user data (not used)
+  * Output : value - value
+  * Return : TRUE iff parsed
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseFileSystemType(const char *name, uint *value, void *userData);
+  bool parseFileSystemType(const char *name, uint *value, void *userData)
+  {
+    assert(name != NULL);
+    assert(value != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    return FileSystem_parseFileSystemType(name,value);
+  }
+
   IndexId         uuidId,entityId,storageId;
   String          name;
   FileSystemTypes fileSystemType;
@@ -1686,7 +1707,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
     String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,CALLBACK_((StringMapParseEnumFunction)FileSystem_parseFileSystemType,NULL),FILE_SYSTEM_TYPE_NONE))
+  if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,CALLBACK_((StringMapParseEnumFunction)parseFileSystemType,NULL),FILE_SYSTEM_TYPE_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
@@ -2246,6 +2267,27 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
 
 LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  /***********************************************************************\
+  * Name   : parseFileSpecialType
+  * Purpose: parse special file type
+  * Input  : name     - name
+  *          userData - user data (not used)
+  * Output : value - value
+  * Return : TRUE iff parsed
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseFileSpecialType(const char *name, uint *value, void *userData);
+  bool parseFileSpecialType(const char *name, uint *value, void *userData)
+  {
+    assert(name != NULL);
+    assert(value != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    return File_parseFileSpecialType(name,value);
+  }
+
   IndexId          uuidId,entityId,storageId;
   String           name;
   FileSpecialTypes specialType;
@@ -2290,7 +2332,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
     String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"specialType",&specialType,CALLBACK_((StringMapParseEnumFunction)File_parseFileSpecialType,NULL),FILE_SPECIAL_TYPE_OTHER))
+  if (!StringMap_getEnum(argumentMap,"specialType",&specialType,CALLBACK_((StringMapParseEnumFunction)parseFileSpecialType,NULL),FILE_SPECIAL_TYPE_OTHER))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
