@@ -2141,8 +2141,6 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
     uint64    startTimestamp,endTimestamp;
     CURLMcode curlmCode;
     int       runningHandles;
-    CURLcode  curlCode;
-    long      responseCode;
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
