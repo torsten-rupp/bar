@@ -139,9 +139,19 @@ void __FragmentList_init(const char   *__fileName__,
                         )
 #endif /* NDEBUG */
 {
+  auto void doneNode(FragmentNode *fragmentNode, void *userData);
+  void doneNode(FragmentNode *fragmentNode, void *userData)
+  {
+    assert(fragmentNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    FragmentList_doneNode(fragmentNode);
+  }
+
   assert(fragmentList != NULL);
 
-  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)FragmentList_doneNode,NULL));
+  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)doneNode,NULL));
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);

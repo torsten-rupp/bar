@@ -6702,9 +6702,9 @@ fprintf(stderr,"%s, %d: %x trigger RW %p %"PRIu64" %d\n",__FILE__,__LINE__,Threa
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE bool begin(DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType, long timeout)
+LOCAL_INLINE bool begin(DatabaseHandle *databaseHandle, DatabaseLockTypes lockType, long timeout)
 #else /* not NDEBUG */
-LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType, long timeout)
+LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes lockType, long timeout)
 #endif /* NDEBUG */
 {
   bool locked;
@@ -6739,9 +6739,9 @@ LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHa
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE void end(DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
+LOCAL_INLINE void end(DatabaseHandle *databaseHandle, DatabaseLockTypes lockType)
 #else /* not NDEBUG */
-LOCAL_INLINE void __end(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
+LOCAL_INLINE void __end(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes lockType)
 #endif /* NDEBUG */
 {
   assert(databaseHandle != NULL);
@@ -10064,7 +10064,6 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
   uint   i;
 
   assert(databaseStatementHandle != NULL);
-  assert(filters != NULL);
   assertx((databaseStatementHandle->parameterIndex+filterCount) <= databaseStatementHandle->parameterCount,
           "invalid filter count: given %u, expected %u",
           databaseStatementHandle->parameterIndex+filterCount,
@@ -12817,6 +12816,8 @@ Errors Database_getTableList(StringList     *tableList,
         #if defined(HAVE_MARIADB)
           error = mariaDBGetTableList(tableList,databaseHandle,databaseName);
         #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(databaseName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -12824,6 +12825,8 @@ Errors Database_getTableList(StringList     *tableList,
         #if defined(HAVE_POSTGRESQL)
           error = postgresqlGetTableList(tableList,databaseHandle,databaseName);
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(databaseName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -12865,6 +12868,8 @@ Errors Database_getViewList(StringList     *viewList,
         #if defined(HAVE_MARIADB)
           error = mariaDBGetViewList(viewList,databaseHandle,databaseName);
         #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(databaseName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -12872,6 +12877,8 @@ Errors Database_getViewList(StringList     *viewList,
         #if defined(HAVE_POSTGRESQL)
           error = postgresqlGetViewList(viewList,databaseHandle,databaseName);
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(databaseName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -12914,6 +12921,7 @@ Errors Database_getIndexList(StringList     *indexList,
           error = mariaDBGetIndexList(indexList,databaseHandle,tableName);
         #else /* HAVE_MARIADB */
           UNUSED_VARIABLE(tableName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -12921,6 +12929,8 @@ Errors Database_getIndexList(StringList     *indexList,
         #if defined(HAVE_POSTGRESQL)
           error = postgresqlGetIndexList(indexList,databaseHandle,tableName);
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(tableName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -12962,6 +12972,8 @@ Errors Database_getTriggerList(StringList     *triggerList,
         #if defined(HAVE_MARIADB)
           error = mariaDBGetTriggerList(triggerList,databaseHandle,databaseName);
         #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(databaseName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -12969,6 +12981,8 @@ Errors Database_getTriggerList(StringList     *triggerList,
         #if defined(HAVE_POSTGRESQL)
           error = postgresqlGetTriggerList(triggerList,databaseHandle,databaseName);
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(databaseName);
+
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -13044,8 +13058,8 @@ Errors Database_getTriggerList(StringList     *triggerList,
   #endif /* not NDEBUG */
 }
 
-bool Database_isLockPending(DatabaseHandle     *databaseHandle,
-                            SemaphoreLockTypes lockType
+bool Database_isLockPending(DatabaseHandle    *databaseHandle,
+                            DatabaseLockTypes lockType
                            )
 {
   bool pendingFlag;

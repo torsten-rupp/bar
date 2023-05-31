@@ -1022,7 +1022,13 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 // filter macros
 #define DATABASE_FILTERS(...) \
-  (DatabaseFilter[]){__VA_ARGS__}, \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    (DatabaseFilter[]){__VA_ARGS__}, \
+  ) \
+  ( \
+    NULL, \
+  ) \
   ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2)
 
 /***********************************************************************\
@@ -1080,22 +1086,22 @@ LOCAL_INLINE DatabaseFilterArray __DatabaseFilterArray(void *data, ulong length,
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
 * Purpose: execute block with database locked
-* Input  : databaseHandle    - database handle
-*          semaphoreLockType - lock type; see SemaphoreLockTypes
-*          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
+* Input  : databaseHandle - database handle
+*          lockType       - lock type; see DatabaseLockTypes
+*          timeout        - timeout [ms] or NO_WAIT, WAIT_FOREVER
 * Output : -
 * Return : -
 * Notes  : usage:
-*            DATABASE_LOCKED_DO(databaseHandle,SEMAPHORE_LOCK_TYPE_READ,1000)
+*            DATABASE_LOCKED_DO(databaseHandle,DATABASE_LOCK_TYPE_READ,1000)
 *            {
 *              ...
 *            }
 \***********************************************************************/
 
-#define DATABASE_LOCKED_DO(databaseHandle,semaphoreLockType,timeout) \
-  for (bool __databaseLock ## __COUNTER__ = Database_lock(databaseHandle,semaphoreLockType,timeout); \
+#define DATABASE_LOCKED_DO(databaseHandle,lockType,timeout) \
+  for (bool __databaseLock ## __COUNTER__ = Database_lock(databaseHandle,lockType,timeout); \
        __databaseLock ## __COUNTER__; \
-       Database_unlock(databaseHandle,semaphoreLockType), __databaseLock ## __COUNTER__ = FALSE \
+       Database_unlock(databaseHandle,lockType), __databaseLock ## __COUNTER__ = FALSE \
       )
 
 /***********************************************************************\
@@ -1700,14 +1706,14 @@ INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
 * Name   : Database_isLockPending
 * Purpose: check if database lock is pending
 * Input  : databaseHandle - database handle
-*          lockType       - lock type; see SEMAPHORE_LOCK_TYPE_*
+*          lockType       - lock type; see DATABASE_LOCK_TYPE_*
 * Output : -
 * Return : TRUE iff locked
 * Notes  : -
 \***********************************************************************/
 
-bool Database_isLockPending(DatabaseHandle     *databaseHandle,
-                            SemaphoreLockTypes lockType
+bool Database_isLockPending(DatabaseHandle    *databaseHandle,
+                            DatabaseLockTypes lockType
                            );
 
 /***********************************************************************\

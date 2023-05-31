@@ -409,18 +409,20 @@ const char *Index_typeToString(IndexTypes indexType, const char *defaultValue);
 /***********************************************************************\
 * Name   : Index_parseType
 * Purpose: parse index type string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : indexType - index type
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool Index_parseType(const char *name, IndexTypes *indexType);
+bool Index_parseType(const char *name, IndexTypes *indexType, void *userData);
 
 /***********************************************************************\
 * Name   : Index_parseEntitySortMode
 * Purpose: parse index entity sort mode string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : indexEntitySortMode - index entry sort mode
 * Return : TRUE iff parsed
 * Notes  : -
@@ -443,7 +445,8 @@ bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexSt
 /***********************************************************************\
 * Name   : Index_parseEntrySortMode
 * Purpose: parse index entry sort mode string
-* Input  : name - name
+* Input  : name     - name
+*          userData - user data (not used)
 * Output : indexEntrySortMode - index entry sort mode
 * Return : TRUE iff parsed
 * Notes  : -
@@ -607,14 +610,14 @@ void Index_setBusyHandler(IndexHandle              *indexHandle,
 /***********************************************************************\
 * Name   : Index_isLockPending
 * Purpose: check if another thread is pending for index lock
-* Input  : lockType - lock type; see SEMAPHORE_LOCK_TYPE_*
+* Input  : lockType - lock type; see DATABASE_LOCK_TYPE_*
 * Output : -
 * Return : TRUE iff another thread is pending for index lock, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Index_isLockPending(IndexHandle *indexHandle, SemaphoreLockTypes lockType);
+bool Index_isLockPending(IndexHandle *indexHandle, DatabaseLockTypes lockType);
 
 /***********************************************************************\
 * Name   : Index_interrupt

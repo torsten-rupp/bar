@@ -1751,10 +1751,12 @@ void* const *StringMap_valueArray(const StringMap stringMap)
   return valueArray;
 }
 
-bool StringMap_parseEnumNumber(const char *name, uint *value)
+bool StringMap_parseEnumNumber(const char *name, uint *value, void *userData)
 {
   assert(name != NULL);
   assert(value != NULL);
+  
+  UNUSED_VARIABLE(userData);
 
   (*value) = (uint)atoi(name);
 

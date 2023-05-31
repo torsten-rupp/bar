@@ -459,14 +459,19 @@ LOCAL Errors getContinuousVersion(uint                    *continuousVersion,
   }
 
   // get database version
+//xxxxx
   error = Database_getUInt(&databaseHandle,
                            continuousVersion,
                            "meta",
                            "value",
                            "name='version'",
+#if 1
                            DATABASE_FILTERS
                            (
                            ),
+#else
+(DatabaseFilter[]){},((0)/2),
+#endif
                            NULL  // group
                           );
   if (error != ERROR_NONE)

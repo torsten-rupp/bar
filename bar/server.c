@@ -1243,8 +1243,8 @@ LOCAL void pairingThreadCode(void)
   * Notes  : -
   \***********************************************************************/
 
-  auto void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS, bool slaveInsecureTLS);
-  void updateSlaveState(const SlaveNode *slaveNode, ServerStates slaveState, bool slaveTLS, bool slaveInsecureTLS)
+  auto void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState, bool slaveTLS, bool slaveInsecureTLS);
+  void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState, bool slaveTLS, bool slaveInsecureTLS)
   {
     JobNode *jobNode;
 
@@ -5360,7 +5360,7 @@ LOCAL void jobThreadCode(void)
     HALT_INSUFFICIENT_MEMORY();
   }
   jobNode       = NULL;
-  archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
+  archiveType   = ARCHIVE_TYPE_UNKNOWN;
   startDateTime = 0LL;
 
   while (!isQuit())
@@ -17145,7 +17145,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPE_NONE))
+  else if (StringMap_getEnumSet(argumentMap,"indexTypeSet",(uint64*)&indexTypeSet,CALLBACK_((StringMapParseEnumFunction)Index_parseType,NULL),INDEX_TYPESET_ALL,"|",INDEX_TYPE_NONE))
   {
     indexTypeAny = FALSE;
   }
@@ -17831,32 +17831,32 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     } \
     while (0)
 
-  String                name;
-  IndexTypes            entryType;
-  bool                  newestOnly;
-  bool                  selectedOnly;
-  bool                  fragmentsCount;
-  uint64                offset;
-  uint64                limit;
-  IndexStorageSortModes sortMode;
-  DatabaseOrdering      ordering;
-  IndexId               prevUUIDId;
-  String                jobName;
-  String                hostName;
-  String                entryName;
-  FileSystemTypes       fileSystemType;
-  String                destinationName;
-  Errors                error;
-  IndexQueryHandle      indexQueryHandle;
-  IndexId               uuidId,entityId,entryId;
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes          archiveType;
-  uint64                size;
-  uint64                timeModified;
-  uint32                userId,groupId;
-  uint32                permission;
-  uint                  fragmentCount;
-  const JobNode         *jobNode;
+  String              name;
+  IndexTypes          entryType;
+  bool                newestOnly;
+  bool                selectedOnly;
+  bool                fragmentsCount;
+  uint64              offset;
+  uint64              limit;
+  IndexEntrySortModes sortMode;
+  DatabaseOrdering    ordering;
+  IndexId             prevUUIDId;
+  String              jobName;
+  String              hostName;
+  String              entryName;
+  FileSystemTypes     fileSystemType;
+  String              destinationName;
+  Errors              error;
+  IndexQueryHandle    indexQueryHandle;
+  IndexId             uuidId,entityId,entryId;
+  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes        archiveType;
+  uint64              size;
+  uint64              timeModified;
+  uint32              userId,groupId;
+  uint32              permission;
+  uint                fragmentCount;
+  const JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
