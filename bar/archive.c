@@ -15808,7 +15808,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // add to index database
           indexAddSpecial(&archiveHandle,
                           fileName,
-                          fileInfo.type,
+                          fileInfo.specialType,
                           fileInfo.timeLastAccess,
                           fileInfo.timeModified,
                           fileInfo.timeLastChanged,

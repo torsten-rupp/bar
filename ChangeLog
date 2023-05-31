@@ -1,4 +1,5 @@
-2023-xx-xx 0.23
+2023-06-01 0.23
+  * fixed wrong database entry for special files (type)
   * bar-index: fixed wrong counted lost entries without
     fragments
   * BARControl: added option --info
