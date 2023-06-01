@@ -18840,15 +18840,15 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_MARIADB */
             break;
           case DATABASE_TYPE_POSTGRESQL:
-            #if defined(HAVE_MARIADB)
+            #if defined(HAVE_POSTGRESQL)
               fprintf(stderr,
                       "  opened 'postgresql:%s:%s': %u\n",
                       String_cString(databaseNode->databaseSpecifier.postgresql.serverName),
                       String_cString(databaseNode->databaseSpecifier.postgresql.userName),
                       databaseNode->openCount
                      );
-            #else /* HAVE_MARIADB */
-            #endif /* HAVE_MARIADB */
+            #else /* HAVE_POSTGRESQL */
+            #endif /* HAVE_POSTGRESQL */
             break;
             break;
         }
