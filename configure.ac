@@ -1472,11 +1472,14 @@ AC_PATH_PROGS(UNOCONV,unoconv)
 if test -z "$UNOCONV"; then
   AC_MSG_WARN([No 'unoconv' tool found. Cannot create PDF manual. Please check PATH or create PDF manual manually in OO.])
 fi
+AC_PATH_PROGS(CONVERT,convert)
+if test -z "$CONVERT"; then
+  AC_MSG_WARN([No 'convert' tool found. Cannot create distribution and PDF manual. Please check PATH.])
+fi
 AC_PATH_PROGS(TXT2MAN,txt2man)
 if test -z "$TXT2MAN"; then
   AC_MSG_WARN([No 'txt2man' tool found. Cannot create man page. Please check PATH.])
 fi
-AC_PATH_PROGS(CONVERT,convert)
 
 AC_PATH_PROGS(SUDO,sudo,,/usr/bin)
 AC_PATH_PROGS(ATTR,attr,,/usr/bin)

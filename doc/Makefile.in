@@ -3,7 +3,7 @@
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
 # $Revision: 10654 $
 # $Author: torsten $
-# Contents: Makefile for bar
+# Contents: Makefile for bar documentation
 # Systems: all
 #
 # ----------------------------------------------------------------------------
@@ -13,23 +13,23 @@
 
 #---------------------------------- settings ---------------------------------
 
-PLATFORM        = @PLATFORM@
+PLATFORM = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR             = $(abspath @srcdir@)
+SOURCE_DIR = $(abspath @srcdir@)
 
 #--------------------------------- tool chain --------------------------------
 
-TXT2MAN      = @TXT2MAN@
-UNOCONV      = @UNOCONV@
+TXT2MAN = @TXT2MAN@
+UNOCONV = @UNOCONV@
 
 #---------------------------------- commands----------------------------------
 
 CAT          = cat
 CD           = cd
 CHMOD        = chmod
-CONVERT      = convert
+CONVERT      = @CONVERT@
 CP           = cp
 DIFF         = diff
 DOCKER       = @DOCKER@
@@ -80,37 +80,49 @@ functionPrintResult = \
 
 # convert images
 images/%.png: images/%.xcf
+ifneq ($(CONVERT),)
 	$(CONVERT) $^ -layers flatten $@
+else
+	@$(ECHO) "ERROR: no 'convert' command - cannot generate documentation"; false
+endif
 
 images/%-small.png: images/%.xcf
+ifneq ($(CONVERT),)
 	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
+else
+	@$(ECHO) "ERROR: no 'convert' command - cannot generate documentation"; false
+endif
 
 images/%-large.png: images/%.xcf
+ifneq ($(CONVERT),)
 	$(CONVERT) $^ -delete 1--1 $@
+else
+	@$(ECHO) "ERROR: no 'convert' command - cannot generate documentation"; false
+endif
 
 #--------------------------------- objects -----------------------------------
 
-DOC                  = $(if $(TXT2MAN),bar.7) \
-                       $(if $(UNOCONV),backup-archiver.pdf) \
-
-DOC_IMAGES           = images/archivename-editor.png \
-                       images/entries.png \
-                       images/images.png \
-                       images/filters+mounts.png \
-                       images/restore-dialog.png \
-                       images/restore.png \
-                       images/schedule.png \
-                       images/persistence.png \
-                       images/scripts.png \
-                       images/server-commands.png \
-                       images/server-general.png \
-                       images/server-servers.png \
-                       images/server-verbosity+log.png \
-                       images/status.png \
-                       images/storage.png \
-
-DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
-DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
+DOC              = $(if $(TXT2MAN),bar.7) \
+                   $(if $(UNOCONV),backup-archiver.pdf) \
+								 
+DOC_IMAGES       = images/archivename-editor.png \
+                   images/entries.png \
+                   images/images.png \
+                   images/filters+mounts.png \
+                   images/restore-dialog.png \
+                   images/restore.png \
+                   images/schedule.png \
+                   images/persistence.png \
+                   images/scripts.png \
+                   images/server-commands.png \
+                   images/server-general.png \
+                   images/server-servers.png \
+                   images/server-verbosity+log.png \
+                   images/status.png \
+                   images/storage.png \
+								 
+DOC_IMAGES_SMALL = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
+DOC_IMAGES_LARGE = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
 
 #------------------------------ dependencies ---------------------------------
 
@@ -141,6 +153,9 @@ help:
 	@$(ECHO) "  man"
 	@$(ECHO) "  showman"
 
+.PHONY: images
+images: $(DOC_IMAGES)
+
 # create man-page
 .PHONY: man clean_man showman
 man: \
@@ -152,7 +167,7 @@ ifneq ($(TXT2MAN),)
 	$(INSTALL) -d $(@D)
 	$(CAT) $(SOURCE_DIR)/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
 else
-	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
+	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."; false
 endif
 
 showman: doc/bar.7
@@ -173,7 +188,7 @@ ifneq ($(UNOCONV),)
          fi; \
         )
 else
-	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
+	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."; false
 endif
 
 .PHONY: pdf
@@ -190,7 +205,7 @@ ifneq ($(DIRECTORY),)
                    -t $(DIRECTORY)/doc \
                    Makefile.in
 else
-	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+	@$(ECHO) "Please call 'make dist' from top-level directory to create a distribution."; false
 endif
 
 # end of file

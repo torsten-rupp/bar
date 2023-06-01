@@ -71,7 +71,6 @@ GIT                    = @GIT@
 CAT                    = cat
 CD                     = cd
 CHMOD                  = chmod
-CONVERT                = convert
 CP                     = cp
 DIFF                   = diff
 DOCKER                 = @DOCKER@
@@ -131,16 +130,6 @@ functionPrintResult = \
 
 #---------------------------------- rules ------------------------------------
 
-# convert images
-doc/images/%.png: doc/images/%.xcf
-	$(CONVERT) $^ -layers flatten $@
-
-doc/images/%-small.png: doc/images/%.xcf
-	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
-
-doc/images/%-large.png: doc/images/%.xcf
-	$(CONVERT) $^ -delete 1--1 $@
-
 #--------------------------------- objects -----------------------------------
 
 TARGETS              = bar/bar@EXEEXT@ \
@@ -154,28 +143,6 @@ TARGETS              = bar/bar@EXEEXT@ \
                          barcontrol/barcontrol \
                          barcontrol/barcontrol.cmd \
                        ) \
-
-DOC                  = $(if $(TXT2MAN),doc/bar.7) \
-                       $(if $(UNOCONV),doc/backup-archiver.pdf) \
-
-DOC_IMAGES           = doc/images/archivename-editor.png \
-                       doc/images/entries.png \
-                       doc/images/images.png \
-                       doc/images/filters+mounts.png \
-                       doc/images/restore-dialog.png \
-                       doc/images/restore.png \
-                       doc/images/schedule.png \
-                       doc/images/persistence.png \
-                       doc/images/scripts.png \
-                       doc/images/server-commands.png \
-                       doc/images/server-general.png \
-                       doc/images/server-servers.png \
-                       doc/images/server-verbosity+log.png \
-                       doc/images/status.png \
-                       doc/images/storage.png \
-
-DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
-DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
 
 OTHER_SOURCES        = errors.pl \
                        errors.def \
@@ -554,6 +521,7 @@ memcheck_extended:
 
 .PHONY: distribution dist clean_distribution clean_dist
 distribution dist:
+	$(MAKE) -C doc images
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
 

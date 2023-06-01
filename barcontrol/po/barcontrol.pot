@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-05-27 09:43+0200\n"
+"POT-Creation-Date: 2023-06-01 10:26+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1940,36 +1940,36 @@ msgstr ""
 msgid "Password encryption fail"
 msgstr ""
 
-#: src/BARServer.java:5382 src/BARServer.java:5504
+#: src/BARServer.java:5374 src/BARServer.java:5496
 msgid "No result from server"
 msgstr ""
 
-#: src/BARServer.java:5388
+#: src/BARServer.java:5380
 msgid "Invalid response from server: expected SESSION"
 msgstr ""
 
-#: src/BARServer.java:5392
+#: src/BARServer.java:5384
 msgid "Invalid response from server: expected parameters"
 msgstr ""
 
-#: src/BARServer.java:5397
+#: src/BARServer.java:5389
 msgid "No session id"
 msgstr ""
 
-#: src/BARServer.java:5466
+#: src/BARServer.java:5458
 msgid "Init password cipher fail"
 msgstr ""
 
-#: src/BARServer.java:5512
+#: src/BARServer.java:5504
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:5520
+#: src/BARServer.java:5512
 msgid "Invalid response from server: no command id"
 msgstr ""
 
-#: src/BARServer.java:5532
+#: src/BARServer.java:5524
 msgid "Invalid response from server: parameters"
 msgstr ""
 
@@ -3865,6 +3865,7 @@ msgid "Pre-script"
 msgstr ""
 
 #: src/TabJobs.java:7553
+#, java-printf-format
 msgid ""
 "Command or script to execute before start of job.\n"
 "\n"
@@ -3901,6 +3902,7 @@ msgid ""
 msgstr ""
 
 #: src/TabJobs.java:7740
+#, java-printf-format
 msgid ""
 "Command or script to execute before start of job on slave.\n"
 "\n"
@@ -5811,6 +5813,7 @@ msgid "Quit BARControl program."
 msgstr ""
 
 #: src/TabStatus.java:2817
+#, java-printf-format
 msgid "Pause [%3dmin]"
 msgstr ""
 
