@@ -4282,22 +4282,20 @@ throw new Error("NYI");
     /** create remote file
      * @param absolutePath absolute path
      * @param fileType file type
-     * @param dateTime last modified date/time
-     */
-/*    public RemoteFile(String absolutePath, FileTypes fileType, long dateTime)
-    {
-      this(absolutePath,fileType,dateTime,false);
-    }
-*/
-
-    /** create remote file
-     * @param absolutePath absolute path
-     * @param fileType file type
      * @param hiddenFlag true iff hidden file
      */
     public RemoteFile(String absolutePath, FileTypes fileType, boolean hiddenFlag)
     {
       this(absolutePath,fileType,0,hiddenFlag);
+    }
+
+    /** create remote file
+     * @param absolutePath absolute path
+     * @param fileType file type
+     */
+    public RemoteFile(String absolutePath, FileTypes fileType)
+    {
+      this(absolutePath,fileType,0,false);
     }
 
     /** create remote file
@@ -4318,15 +4316,6 @@ throw new Error("NYI");
     {
       this(absolutePath,FileTypes.DIRECTORY,0,dateTime,hiddenFlag);
     }
-
-    /** create remote file
-     * @param absolutePath absolute path
-     * @param dateTime last modified date/time
-     */
-/*    public RemoteFile(String absolutePath, long dateTime)
-    {
-      this(absolutePath,FileTypes.DIRECTORY,dateTime,false);
-    }*/
 
     /** create remote file
      * @param absolutePath absolute path
@@ -4508,8 +4497,8 @@ throw new Error("NYI");
           default:
             break;
         }
-        dateTime   = valueMap.getLong   ("dateTime");
-        hiddenFlag = valueMap.getBoolean("hidden");
+        dateTime   = valueMap.getLong   ("dateTime",0L);
+        hiddenFlag = valueMap.getBoolean("hidden",  false);
       }
       catch (IOException exception)
       {
@@ -4644,14 +4633,13 @@ throw new Error("NYI");
                                        {
                                          FileTypes fileType   = valueMap.getEnum   ("fileType",FileTypes.class);
                                          String    name       = valueMap.getString ("name"                    );
-                                         long      dateTime   = valueMap.getLong   ("dateTime"                );
-                                         boolean   hiddenFlag = valueMap.getBoolean("hidden",  false          );
-                                         boolean   noDumpFlag = valueMap.getBoolean("noDump",  false          );
+                                         long      dateTime   = valueMap.getLong   ("dateTime", 0L            );
+                                         boolean   hiddenFlag = valueMap.getBoolean("hidden",   false         );
+                                         boolean   noDumpFlag = valueMap.getBoolean("noDump",   false         );
                                          switch (fileType)
                                          {
                                            case FILE:
                                              {
-
                                                long size = valueMap.getLong("size");
 
                                                file = new RemoteFile(name,FileTypes.FILE,size,dateTime,hiddenFlag);
@@ -4668,7 +4656,6 @@ throw new Error("NYI");
                                              {
                                                FileTypes destinationFileType = valueMap.getEnum   ("destinationFileType",FileTypes.class);
 
-//                                               file = new RemoteFile(name,FileTypes.LINK,dateTime);
                                                file = new RemoteFile(name,destinationFileType,dateTime,hiddenFlag);
                                              }
                                              break;
@@ -4682,6 +4669,11 @@ throw new Error("NYI");
                                            case SPECIAL:
                                              {
                                                file = new RemoteFile(name,FileTypes.SPECIAL,dateTime,hiddenFlag);
+                                             }
+                                             break;
+                                           case UNKNOWN:
+                                             {
+                                               file = new RemoteFile(name,FileTypes.UNKNOWN);
                                              }
                                              break;
                                          }

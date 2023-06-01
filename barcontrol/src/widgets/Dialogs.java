@@ -1668,7 +1668,7 @@ class Dialogs
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
             row++;
 
-            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);           
+            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
             text.setText(buffer.toString());
             text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,120));
             row++;
@@ -3003,7 +3003,7 @@ class Dialogs
               label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4));
               row++;
             }
-            
+
             if (extendedMessage != null)
             {
               // get extened message (limit to 80 characters per line)
@@ -5127,13 +5127,26 @@ class Dialogs
                   TableItem tableItem = new TableItem(table,SWT.NONE,index);
                   tableItem.setData(file);
                   tableItem.setText(0,file.getName());
+                  if (file.isFile())      tableItem.setImage(0,imageFile);
                   if (file.isDirectory()) tableItem.setImage(0,imageDirectory);
 // TODO:
 //                  else if file.isSymbolicLink()) tableItem.setText(0,imageLink);
-                  else                    tableItem.setImage(0,imageFile);
-                  tableItem.setText(1,simpleDateFormat.format(new Date(file.lastModified())));
-                  if (file.isDirectory()) tableItem.setText(2,"");
-                  else                    tableItem.setText(2,Long.toString(file.length()));
+                  if (file.isFile() || file.isDirectory())
+                  {
+                    tableItem.setText(1,simpleDateFormat.format(new Date(file.lastModified())));
+                  }
+                  else
+                  {
+                    tableItem.setText(1,"");
+                  }
+                  if (file.isFile())
+                  {
+                    tableItem.setText(2,Long.toString(file.length()));
+                  }
+                  else
+                  {
+                    tableItem.setText(2,"");
+                  }
                 }
               }
               listDirectory.close();
