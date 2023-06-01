@@ -1810,14 +1810,6 @@ fprintf(stderr,"\n");
 
 Errors Continuous_initAll(void)
 {
-  ulong n;
-
-  // check number of possible notifies
-  n = getMaxNotifyWatches();
-  if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
-  n = getMaxNotifyInstances();
-  if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
-
   return ERROR_NONE;
 }
 
@@ -1834,6 +1826,7 @@ Errors Continuous_init(const char *databaseURI)
 {
   bool           createFlag;
   Errors         error;
+  ulong          n;
   DatabaseHandle databaseHandle;
   uint           continuousVersion;
 
@@ -1850,6 +1843,12 @@ Errors Continuous_init(const char *databaseURI)
                   CALLBACK_(NULL,NULL),  // dictionaryFreeFunction
                   CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
+
+  // check number of possible notifies
+  n = getMaxNotifyWatches();
+  if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+  n = getMaxNotifyInstances();
+  if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
 
   // init inotify
   #if   defined(PLATFORM_LINUX)
