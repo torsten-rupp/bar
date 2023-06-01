@@ -111,7 +111,7 @@ if test $helpFlag -eq 1; then
   exit 0
 fi
 
-# enable traciing
+# enable tracing
 if test $debugFlag -eq 1; then
   set -x
 fi
@@ -138,25 +138,41 @@ if test -z "$setupName"; then
   exit 1
 fi
 
+# extract wine tools (if archive exists)
+wineDir=""
+if test -f /wine.tar.bz2; then \
+  wineDir=`mktemp -d /tmp/wine-XXXXXX`; \
+  (cd $wineDir; tar xjf /wine.tar.bz2); \
+  export WINEPREFIX=$wineDir/.wine; \
+fi
+
 # get tools
 wine=`which wine`
 if test -z "$wine"; then
   echo >&2 ERROR: wine not found!
+  if test -n "$wineDir"; then
+    rm -rf $wineDir; 
+  fi
   exit 1
 fi
 wineboot=`which wineboot`
 if test -z "$wineboot"; then
   echo >&2 ERROR: wineboot not found!
+  if test -n "$wineDir"; then
+    rm -rf $wineDir; 
+  fi
   exit 1
 fi
 winepath=`which winepath`
 if test -z "$winepath"; then
   echo >&2 ERROR: winepath not found!
+  if test -n "$wineDir"; then
+    rm -rf $wineDir; 
+  fi
   exit 1
 fi
 
 # get ISCC
-set +x
 iscc1=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
 iscc2=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
 if   test -f "$iscc1"; then
@@ -167,6 +183,9 @@ else
   echo >&2 "ERROR: ISCC.exe not found in:"
   echo >&2 "         `dirname $iscc1`"
   echo >&2 "         `dirname $iscc2`"
+  if test -n "$wineDir"; then
+    rm -rf $wineDir; 
+  fi
   exit 1
 fi
 
@@ -178,7 +197,6 @@ fi
 tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 
 (
-set -x
   set -e
 
   cd $tmpDir
@@ -237,5 +255,8 @@ fi
 
 # clean-up
 rm -rf $tmpDir
+if test -n "$wineDir"; then
+  rm -rf $wineDir; 
+fi
 
 exit $rc

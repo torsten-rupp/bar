@@ -750,7 +750,7 @@ dnl usage: AC_PROG_ISCC(<variable>)
 AC_DEFUN([AC_PROG_ISCC],
 [
   AC_REQUIRE([AC_PROG_WINE])
-  AC_REQUIRE([WINE_C_DRIVE])
+  AC_REQUIRE([AC_WINE_C_DRIVE])
   AC_CACHE_CHECK(
     [ISCC],
     ac_cv_prog_iscc,
@@ -1504,10 +1504,11 @@ if test -z "$KILLALL"; then
 fi
 AC_PATH_PROGS(WINE,wine)
 AC_PATH_PROGS(WINEPATH,winepath)
+AC_PROVIDE(AC_PROG_WINE)
 AC_PROVIDE(AC_PROG_WINEPATH)
 if test -n "$WINE" -a -n "$WINEPATH"; then
   AC_WINE_C_DRIVE(WINE_C_DRIVE)
-  AC_PATH_PROGS(ISCC,iscc.exe)
+  AC_PROG_ISCC(ISCC)
   if test -z "$ISCC"; then
     AC_MSG_WARN([No 'ISCC.exe' tool found. Cannot create Win32 setup program.])
   fi
