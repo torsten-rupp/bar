@@ -1374,17 +1374,17 @@ fi
 if test $ENABLE_MARIADB = "yes"; then
   AC_PATH_PROGS(MYSQL,mysql)
   if test -z "$MYSQL"; then
-    AC_MSG_ERROR([Cannot find a 'mysql' in PATH. Please check your PATH environment variable.])
+    AC_MSG_WARN([No 'mysql' command found in path - tests with MariaDB cannot be executed.])
   fi
 fi
 if test $ENABLE_POSTGRESQL = "yes"; then
   AC_PATH_PROGS(PSQL,psql)
   if test -z "$PSQL"; then
-    AC_MSG_ERROR([Cannot find a 'psql' in PATH. Please check your PATH environment variable.])
+    AC_MSG_WARN([No 'psql' command found in path - tests with PostgreSQL cannot be executed.])
   fi
   AC_PATH_PROGS(CREATEDB,createdb)
   if test -z "$CREATEDB"; then
-    AC_MSG_ERROR([Cannot find a 'createdb' in PATH. Please check your PATH environment variable.])
+    AC_MSG_WARN([No 'createdb' command found in path - tests with PostgreSQL cannot be executed.])
   fi
 fi
 

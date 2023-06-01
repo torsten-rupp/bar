@@ -421,7 +421,9 @@ TEST_INDEX_DATABASE                  =  $(TEST_INDEX_DATABASE_SQLITE)
 # supported databases
 MIN_TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE)
 SMOKE_TEST_INDEX_DATABASES           ?= $(TEST_INDEX_DATABASE_SQLITE)
-TEST_INDEX_DATABASES                 ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MARIADB) $(TEST_INDEX_DATABASE_POSTGRESQL)
+TEST_INDEX_DATABASES                 ?= $(TEST_INDEX_DATABASE_SQLITE) \
+                                        $(if $(MYSQL),$(TEST_INDEX_DATABASE_MARIADB)) \
+                                        $(if $(PSQL)$(CREATEDB),$(TEST_INDEX_DATABASE_POSTGRESQL))
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
