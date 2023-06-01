@@ -5128,13 +5128,26 @@ class Dialogs
                   TableItem tableItem = new TableItem(table,SWT.NONE,index);
                   tableItem.setData(file);
                   tableItem.setText(0,file.getName());
+                  if (file.isFile())      tableItem.setImage(0,imageFile);
                   if (file.isDirectory()) tableItem.setImage(0,imageDirectory);
 // TODO:
 //                  else if file.isSymbolicLink()) tableItem.setText(0,imageLink);
-                  else                    tableItem.setImage(0,imageFile);
-                  tableItem.setText(1,simpleDateFormat.format(new Date(file.lastModified())));
-                  if (file.isDirectory()) tableItem.setText(2,"");
-                  else                    tableItem.setText(2,Long.toString(file.length()));
+                  if (file.isFile() || file.isDirectory())
+                  {
+                    tableItem.setText(1,simpleDateFormat.format(new Date(file.lastModified())));
+                  }
+                  else
+                  {
+                    tableItem.setText(1,"");
+                  }
+                  if (file.isFile())
+                  {
+                    tableItem.setText(2,Long.toString(file.length()));
+                  }
+                  else
+                  {
+                    tableItem.setText(2,"");
+                  }
                 }
               }
               listDirectory.close();

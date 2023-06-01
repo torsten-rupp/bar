@@ -9374,8 +9374,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         error = File_readDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
         {
-          error = File_getInfo(&fileInfo,name);
-          if (error == ERROR_NONE)
+          if (File_getInfo(&fileInfo,name) == ERROR_NONE)
           {
             switch (fileInfo.type)
             {
@@ -9474,6 +9473,13 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 // skipped
                 break;
             }
+          }
+          else
+          {
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                "fileType=UNKNOWN name=%'S",
+                                name
+                               );
           }
         }
       }
