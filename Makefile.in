@@ -167,10 +167,6 @@ SCRIPTS              = scripts/barserver-SuSE \
 
 all: \
   $(TARGETS) \
-  $(DOC) \
-  $(DOC_IMAGES) \
-  $(DOC_IMAGES_SMALL) \
-  $(DOC_IMAGES_LARGE) \
 
 clean: \
   clean_keys \
@@ -374,6 +370,9 @@ $(KEY_FILES):
 # ----------------------------------------------------------------------------
 # create documentation
 
+DOC_IMAGES := $(addprefix doc/,$(shell $(MAKE) --no-print-directory -s -C doc print_images))
+DOC_MAN    := $(addprefix doc/,$(shell $(MAKE) --no-print-directory -s -C doc print_man))
+
 .PHONY: doc clean_doc showman pdf
 doc:
 	@$(MAKE) -C doc
@@ -383,7 +382,7 @@ clean_doc:
 
 # create man-page
 .PHONY: man clean_man showman
-man doc/bar.7:
+man:
 	@$(MAKE) -C doc man
 
 clean_man:
@@ -445,9 +444,9 @@ install_scripts: \
 
 # install man-page
 install_man: \
-  doc/bar.7
+  $(DOC_MAN)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
-	$(INSTALL) -m 644 doc/bar.7 "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
+	$(INSTALL) -m 644 -t "$(DESTDIR)$(INSTALL_MAN_DIR)/man7" $(DOC_MAN)
 
 # install keys
 # Note: prefix is used for temporary installations
@@ -475,11 +474,11 @@ uninstall:
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"; \
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"; \
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"; \
-          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/\"; \
+          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
           ) \
           $(RMF) "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           $(RMF) "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"; \
         fi
 
 # ----------------------------------------------------------------------------
@@ -521,12 +520,14 @@ memcheck_extended:
 
 .PHONY: distribution dist clean_distribution clean_dist
 distribution dist:
-	$(MAKE) -C doc images
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
 
 clean_distribution clean_dist:
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
+
+$(DOC_IMAGES):
+	$(MAKE) -C doc images
 
 # create distribution
 $(DISTRIBUTION_NAME).tar.bz2: \
@@ -564,10 +565,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   doc/backup-archiver.odt \
   doc/backup-archiver.pdf \
   doc/*.txt \
-  $(DOC) \
   $(DOC_IMAGES) \
-  $(DOC_IMAGES_SMALL) \
-  $(DOC_IMAGES_LARGE) \
   \
   packages/*
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
@@ -633,11 +631,11 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    doc/backup-archiver.odt \
                    doc/backup-archiver.pdf \
                    doc/*.txt \
-                   doc/bar.7
+                   $(DOC_MAN)
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc/images
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/doc/images \
-                   doc/images/*.png
+                   $(DOC_IMAGES)
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages
 	$(INSTALL) -m 664 \

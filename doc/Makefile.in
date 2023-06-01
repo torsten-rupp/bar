@@ -102,8 +102,11 @@ endif
 
 #--------------------------------- objects -----------------------------------
 
-DOC              = $(if $(TXT2MAN),bar.7) \
-                   $(if $(UNOCONV),backup-archiver.pdf) \
+DOC_MAN          = bar.7 \
+
+DOC_PDF          = backup-archiver.pdf \
+
+DOC              = $(DOC_MAN) $(DOC_PDF)
 								 
 DOC_IMAGES       = images/archivename-editor.png \
                    images/entries.png \
@@ -149,12 +152,29 @@ help:
 	@$(ECHO) "  clean "
 	@$(ECHO) "  distclean"
 	@$(ECHO) ""
+	@$(ECHO) "  images"
 	@$(ECHO) "  doc"
 	@$(ECHO) "  man"
 	@$(ECHO) "  showman"
 
-.PHONY: images
+.PHONY: images image_small images_large
 images: $(DOC_IMAGES)
+
+.PHONY: print_images
+print_images:
+	$(ECHO) $(DOC_IMAGES)
+
+image_small : $(DOC_IMAGES_SMALL)
+
+.PHONY: print_images_small
+print_images_small:
+	$(ECHO) $(DOC_IMAGES_SMALL)
+
+images_large: $(DOC_IMAGES_LARGE)
+
+.PHONY: print_images_large
+print_images_large:
+	$(ECHO) $(DOC_IMAGES_LARGE)
 
 # create man-page
 .PHONY: man clean_man showman
@@ -170,8 +190,12 @@ else
 	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."; false
 endif
 
-showman: doc/bar.7
-	$(NROFF) -man doc/bar.7
+.PHONY: print_man
+print_man:
+	$(ECHO) $(DOC_MAN)
+
+showman: bar.7
+	$(NROFF) -man bar.7
 
 # create manual
 backup-archiver.pdf: \

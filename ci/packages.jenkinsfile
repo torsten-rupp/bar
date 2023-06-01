@@ -62,21 +62,11 @@ def build()
     {
       if (params.PACKAGE_WIN32)
       {
-//      docker.image(DOCKER_IMAGE_NAME_WIN32).inside("-u 0:0")
         docker.image(DOCKER_IMAGE_NAME_WIN32).inside
         {
           script
           {
-            // build with prepared wine setup or normal
-            sh 'if test -f /wine.tar.bz2; then \
-                  wineDir=`mktemp -d /tmp/wine-XXXXXX`; \
-                  (cd $wineDir; tar xjf /wine.tar.bz2); \
-                  WINEPREFIX=$wineDir/.wine make build_win32; \
-                  rm -rf $wineDir; \
-                else \
-                  make build_win32; \
-                fi \
-               ';
+            sh "make build_win32";
           }
         }
       }
