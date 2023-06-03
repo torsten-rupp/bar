@@ -95,6 +95,33 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : fragmentNodeDone
+* Purpose: done fragment node
+* Input  : fragmentNode - fragment node
+*          userData     - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void fragmentNodeDone(FragmentNode *fragmentNode, void *userData)
+{
+  assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
+
+  UNUSED_VARIABLE(userData);
+
+  List_done(&fragmentNode->rangeList);
+  if (fragmentNode->userData != NULL)
+  {
+    free(fragmentNode->userData);
+  }
+  String_delete(fragmentNode->name);
+}
+
+/***********************************************************************\
 * Name   : printSpaces
 * Purpose: print spaces
 * Input  : outputHandle - output file handle
@@ -139,19 +166,10 @@ void __FragmentList_init(const char   *__fileName__,
                         )
 #endif /* NDEBUG */
 {
-  auto void doneNode(FragmentNode *fragmentNode, void *userData);
-  void doneNode(FragmentNode *fragmentNode, void *userData)
-  {
-    assert(fragmentNode != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    FragmentList_doneNode(fragmentNode);
-  }
 
   assert(fragmentList != NULL);
 
-  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)doneNode,NULL));
+  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)fragmentNodeDone,NULL));
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);

@@ -1645,7 +1645,7 @@ LOCAL void schedulerThreadCode(void)
   \***********************************************************************/
 
   auto void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData);
-  auto void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData)
+  void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData)
   {
     assert(jobScheduleNode != NULL);
 
