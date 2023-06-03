@@ -12,11 +12,11 @@ TEST_STEPS = ["basic",
               "signatures",
               "split",
               "convert",
-//TODO: still do not work              "image",
+              "image",
               "storage_file",
 // TODO: instable
 //              "storage_ftp",
-              "storage_scp",
+//              "storage_scp",
 // TODO: instable
 //              "storage_sftp",
               "storage_webdav",

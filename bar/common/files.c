@@ -260,6 +260,20 @@ LOCAL void debugFileInit(void)
   List_init(&debugOpenFileList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   List_init(&debugClosedFileList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 }
+
+/***********************************************************************\
+* Name   : debugGetEmulateBlockDevice
+* Purpose: get emulated block device file name
+* Input  : -
+* Output : -
+* Return : emulated block device file name or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
+{
+  return getenv(DEVICE_DEBUG_EMULATE_BLOCK_DEVICE);
+}
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -3798,8 +3812,7 @@ bool File_isDeviceCString(const char *fileName)
   assert(fileName != NULL);
 
   #ifndef NDEBUG
-    debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+    debugEmulateBlockDevice = debugGetEmulateBlockDevice();
     if (debugEmulateBlockDevice != NULL)
     {
       stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
@@ -3999,7 +4012,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   #ifndef NDEBUG
     const char       *debugEmulateBlockDevice;
     CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName;
+    const char       *emulateDeviceName,*emulateFileName;
   #endif /* not NDEBUG */
 
   assert(fileInfo != NULL);
@@ -4007,10 +4020,55 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   assert(!stringIsEmpty(fileName));
 
   // get file meta data
-  if (LSTAT(fileName,&fileStat) != 0)
-  {
-    return getLastError(ERROR_CODE_IO,fileName);
-  }
+  #ifndef NDEBUG
+    debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+      if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+          && stringEquals(fileName,emulateDeviceName)
+         )
+      {
+        // emulate block device
+        if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+        {
+          if (LSTAT(emulateFileName,&fileStat) != 0)
+          {
+            return getLastError(ERROR_CODE_IO,emulateFileName);
+          }
+        }
+        else
+        {
+          if (LSTAT(emulateDeviceName,&fileStat) != 0)
+          {
+            return getLastError(ERROR_CODE_IO,emulateDeviceName);
+          }
+        }
+      }
+      else
+      {
+        // use block device
+        if (LSTAT(fileName,&fileStat) != 0)
+        {
+          return getLastError(ERROR_CODE_IO,fileName);
+        }
+      }
+      stringTokenizerDone(&stringTokenizer);
+    }
+    else
+    {
+      // use block device
+      if (LSTAT(fileName,&fileStat) != 0)
+      {
+        return getLastError(ERROR_CODE_IO,fileName);
+      }
+    }
+  #else /* NDEBUG */
+    if (LSTAT(fileName,&fileStat) != 0)
+    {
+      return getLastError(ERROR_CODE_IO,fileName);
+    }
+  #endif /* not NDEBUG */
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
   fileInfo->timeLastChanged = fileStat.st_ctime;
@@ -4037,8 +4095,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   if      (S_ISREG(fileStat.st_mode))
   {
     #ifndef NDEBUG
-      debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
       if (debugEmulateBlockDevice != NULL)
       {
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");

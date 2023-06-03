@@ -98,6 +98,20 @@
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : debugGetEmulateBlockDevice
+* Purpose: get emulated block device file name
+* Input  : -
+* Output : -
+* Return : emulated block device file name or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
+{
+  return getenv(DEVICE_DEBUG_EMULATE_BLOCK_DEVICE);
+}
+
 #if 0
 //TODO: remove?
 /***********************************************************************\
@@ -293,8 +307,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
   {
     case DEVICE_OPEN_READ:
       #ifndef NDEBUG
-        debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
         if (debugEmulateBlockDevice != NULL)
         {
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
@@ -335,8 +348,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
     case DEVICE_OPEN_WRITE:
 // TODO:
       #ifndef NDEBUG
-        debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
         if (debugEmulateBlockDevice != NULL)
         {
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
@@ -898,8 +910,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
   #if   defined(PLATFORM_LINUX)
     // check if character or block device
     #ifndef NDEBUG
-      debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
       if (debugEmulateBlockDevice != NULL)
       {
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
@@ -979,8 +990,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
 
     // get device type
     #ifndef NDEBUG
-      debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
       if (debugEmulateBlockDevice != NULL)
       {
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
@@ -1013,8 +1023,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
     {
       // get block size, total size
       #ifndef NDEBUG
-        debugEmulateBlockDevice = getenv("DEBUG_EMULATE_BLOCK_DEVICE");
-
+        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
         if (debugEmulateBlockDevice != NULL)
         {
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");

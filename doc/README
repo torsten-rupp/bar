@@ -123,7 +123,7 @@ Install the following development packages (or newer versions):
 2)
 
 Download the additional packages with supplied script
-'download-third-party-packages.sh' (wget, svn, patch,unzip, xz
+'download-third-party-packages.sh' (wget, svn, patch, unzip, xz
 utilities are required):
 
   download-third-party-packages.sh
@@ -143,8 +143,8 @@ Test BAR with:
 
   make test
 
-For the image tests some commands are executed with sudo. Create a file
-/etc/sudores.d/bar with:
+For the file and image tests some commands are executed with sudo.
+Create a file /etc/sudores.d/bar with:
 
 --- cut ---
 # allow BAR tests
@@ -157,8 +157,6 @@ Cmnd_Alias BAR_LOSETUP=\
   /sbin/losetup /dev/loop[01] test/dev0[ab].dat
 Cmnd_Alias BAR_CHMOD=\
   /bin/chmod o+rw /dev/loop[01]
-Cmnd_Alias BAR_DD=\
-  /bin/dd if=/dev/loop[01] of=-
 Cmnd_Alias BAR_MKFS=\
   /sbin/mkfs -t * /dev/loop[01]
 Cmnd_Alias BAR_MOUNT=\
@@ -177,7 +175,6 @@ Cmnd_Alias BAR_UMOUNT_TEST_DEV=\
 ALL ALL=NOPASSWD:\
   BAR_LOSETUP,\
   BAR_CHMOD,\
-  BAR_DD,\
   BAR_MKFS,\
   BAR_MOUNT,\
   BAR_UMOUNT,\

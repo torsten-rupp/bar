@@ -261,22 +261,22 @@ endif
 
 # supported crypt algorithms
 ifeq ($(MIN_TEST_CRYPT_NAMES),)
-	MIN_TEST_CRYPT_NAMES = none
-	ifeq (@HAVE_GCRYPT@,1)
-		MIN_TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
-	endif
+  MIN_TEST_CRYPT_NAMES = none
+  ifeq (@HAVE_GCRYPT@,1)
+    MIN_TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
+  endif
 endif
 ifeq ($(SMOKE_TEST_CRYPT_NAMES),)
-	SMOKE_TEST_CRYPT_NAMES = none
-	ifeq (@HAVE_GCRYPT@,1)
-		SMOKE_TEST_CRYPT_NAMES += AES256
-	endif
+  SMOKE_TEST_CRYPT_NAMES = none
+  ifeq (@HAVE_GCRYPT@,1)
+    SMOKE_TEST_CRYPT_NAMES += AES256
+  endif
 endif
 ifeq ($(TEST_CRYPT_NAMES),)
-	TEST_CRYPT_NAMES = none
-	ifeq (@HAVE_GCRYPT@,1)
-		TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
-	endif
+  TEST_CRYPT_NAMES = none
+  ifeq (@HAVE_GCRYPT@,1)
+    TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
+  endif
 endif
 
 # additional options
@@ -715,12 +715,12 @@ functionExec = \
 # helper function for test files
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
-  $(if $(TEST_FILE_PATH),$(SUDO) $(RMRF) $(TEST_FILE_PATH);) \
-  $(if $(TEST_FTP_FILE_PATH),$(SUDO) $(RMRF) $(TEST_FTP_FILE_PATH);) \
-  $(if $(TEST_SSH_FILE_PATH),$(SUDO) $(RMRF) $(TEST_SSH_FILE_PATH);) \
-  $(if $(TEST_SCP_FILE_PATH),$(SUDO) $(RMRF) $(TEST_SCP_FILE_PATH);) \
-  $(if $(TEST_SFTP_FILE_PATH),$(SUDO) $(RMRF) $(TEST_SFTP_FILE_PATH);) \
-  $(if $(TEST_WEBDAV_FILE_PATH),$(SUDO) $(RMRF) $(TEST_WEBDAV_FILE_PATH);) \
+  $(if $(TEST_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_FILE_PATH);) \
+  $(if $(TEST_FTP_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_FTP_FILE_PATH);) \
+  $(if $(TEST_SSH_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_SSH_FILE_PATH);) \
+  $(if $(TEST_SCP_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_SCP_FILE_PATH);) \
+  $(if $(TEST_SFTP_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_SFTP_FILE_PATH);) \
+  $(if $(TEST_WEBDAV_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_WEBDAV_FILE_PATH);) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases
@@ -833,14 +833,6 @@ functionDeviceUmount = \
     $(SYNC); \
     $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
     $(SUDO) -n $(LOSETUP) -d $1; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to dump content of device to file
-# call functionTestDeviceDump,<loop device>,<file>
-functionTestDeviceDump = \
-  ( \
-    $(ECHO) $(SUDO) -n $(DD) if=$1 of=- \> $2; \
-    ($(SUDO) -n $(DD) if=$1 of=-) >$2 2>/dev/null; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to wait for process, kill process
@@ -4277,7 +4269,8 @@ test_image_operations_raw:  \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_base
+          test_image_operations_base \
+          test_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4286,12 +4279,13 @@ test_image_operations_raw:  \
 	@$(call functionCreateFileRandom,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
 	$(MAKE) \
-          IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
+          IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE0=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          test_image_operations_delta \
+          test_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -4306,7 +4300,7 @@ test_image_operations_ext: \
 test_image_operations_ext2: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT2@,)
-	# ext2
+	# ext2 (Note: ext2 filesystems cannot be compared on binary level, thus no image diff)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
@@ -4326,8 +4320,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4386,8 +4379,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4446,8 +4438,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4505,8 +4496,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4553,7 +4543,7 @@ endif
 test_image_operations_ext3: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT3@,)
-	# ext3
+	# ext3 (Note: ext filesystems cannot be compared on binary level, thus no image diff)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
@@ -4573,8 +4563,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4632,8 +4621,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4691,8 +4679,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4750,8 +4737,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4798,7 +4784,7 @@ endif
 test_image_operations_ext4: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT4@,)
-	# ext4
+	# ext4 (Note: ext filesystems cannot be compared on binary level, thus no image diff)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionTestDeviceReset)
 	@
@@ -4818,8 +4804,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4877,8 +4862,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4936,8 +4920,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4995,8 +4978,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          test_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5496,18 +5478,10 @@ test_image_operations_diff_image:
 	@$(call functionInfoHeader,test image operation diff image)
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,IMAGE1)
-	@$(call functionVerifyParameter,DEVICE0)
-	@$(call functionVerifyParameter,DEVICE1)
 	@#
 	@#
-	@$(call functionTestDeviceDump,$(DEVICE0),$(DUMP0))
+	$(DIFF) $(IMAGE0) $(IMAGE1)
 	@#
-	@$(call functionTestDeviceDump,$(DEVICE1),$(DUMP1))
-	@#
-	$(DIFF) $(DUMP0) $(DUMP1)
-	@#
-	@$(RMF) $(DUMP0) $(DUMP1)
-	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
 test_image_operations_create: \
