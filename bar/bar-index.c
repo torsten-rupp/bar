@@ -122,7 +122,7 @@ LOCAL bool       createAggregatesDirectoryContentFlag = FALSE;  // re-create agg
 LOCAL bool       createAggregatesEntitiesFlag         = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesStoragesFlag         = FALSE;  // re-create aggregates storages data
 LOCAL bool       cleanOrphanedFlag                    = FALSE;  // execute clean orphaned entries
-LOCAL bool       cleanDuplicateEntriesFlag                  = FALSE;  // execute clean duplicate entries
+LOCAL bool       cleanDuplicateEntriesFlag            = FALSE;  // execute clean duplicate entries
 LOCAL bool       purgeDeletedFlag                     = FALSE;  // execute purge deleted storages
 LOCAL bool       vacuumFlag                           = FALSE;  // execute vacuum
 LOCAL bool       showStoragesFlag                     = FALSE;  // show storages of job
@@ -6493,7 +6493,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_getIds(databaseHandle,
                           &ids,
                           "hardlinkEntries \
-                             LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                             LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
                              LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
                           ",
                           "hardlinkEntries.id",
