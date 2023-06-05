@@ -58,7 +58,6 @@ def tests()
 
       stage("Distribution")
       {
-//        docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
         docker.image(DOCKER_IMAGE_NAME).inside('')
         {
           script
@@ -107,7 +106,6 @@ def tests()
               {
                 case "SMOKE":
                 default:
-//                  docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
                   docker.image(DOCKER_IMAGE_NAME).inside('')
                   {
                     // start services
@@ -128,7 +126,6 @@ def tests()
                   }
                   break;
                 case "FULL":
-//                  docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
                   docker.image(DOCKER_IMAGE_NAME).inside('')
                   {
                     // start services
@@ -163,7 +160,6 @@ def tests()
           {
             if (params.VALGRIND)
             {
-//              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               docker.image(DOCKER_IMAGE_NAME).inside('')
               {
                 // start services
@@ -195,7 +191,6 @@ def tests()
           {
             if (params.CODE_COVERAGE)
             {
-//              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               docker.image(DOCKER_IMAGE_NAME).inside('')
               {
                 // start services
@@ -237,7 +232,6 @@ def tests()
           {
             if (params.PROFILING)
             {
-//              docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
               docker.image(DOCKER_IMAGE_NAME).inside('')
               {
                 // start services
