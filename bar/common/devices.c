@@ -715,9 +715,12 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
 bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
 {
   #if   defined(PLATFORM_LINUX)
+    #define PREFIX "/dev/"
+    #define BUFFER_SIZE 256-strlen(PREFIX)
+
     uint        i,j;
     struct stat fileStat;
-    char        buffer[256];
+    char        buffer[BUFFER_SIZE];
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -753,9 +756,9 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
       if (j > i)
       {
         // parse and get device name
-        if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %256s %*",buffer))
+        if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %" STRINGIFY(BUFFER_SIZE) "s %*",buffer))
         {
-          stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),"/dev/");
+          stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),PREFIX);
           stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
           if (stat(deviceListHandle->deviceName,&fileStat) == 0)
           {
