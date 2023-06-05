@@ -2972,10 +2972,10 @@ static inline char* stringAppend(char *string, ulong stringSize, const char *sou
 
   assert(stringSize > 0);
 
-  if (string != NULL)
+  if ((string != NULL) && (source != NULL))
   {
     n = strlen(string);
-    if ((source != NULL) && (stringSize > (n+1)))
+    if (stringSize > (n+1))
     {
       strncat(string,source,stringSize-(n+1));
     }
