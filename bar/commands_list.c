@@ -3441,9 +3441,7 @@ NULL, // masterSocketHandle
         }
 
         // start remote BAR in batch mode, check protocol version
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable) ? String_cString(globalOptions.remoteBARExecutable) : "bar");
-fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
         error = Network_execute(&networkExecuteHandle,
                                 &socketHandle,
                                 NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
@@ -3451,7 +3449,6 @@ fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                );
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //TODO: remove
 #if 0
           printError("cannot execute remote BAR program '%s' (error: %s)!",
