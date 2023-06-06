@@ -748,7 +748,7 @@ functionCleanTestDatabase = \
   esac
 
 functionDoneTestFiles = \
-  $(CHMOD) o-w $(INTERMEDIATE_DIR)
+  $(CHMOD) o-w $(INTERMEDIATE_DIR) || true
 
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
