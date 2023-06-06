@@ -15,10 +15,10 @@ TEST_STEPS = ["basic",
               "image",
               "storage_file",
 // TODO: instable
-//              "storage_ftp",
-//              "storage_scp",
+              "storage_ftp",
+              "storage_scp",
 // TODO: instable
-//              "storage_sftp",
+              "storage_sftp",
               "storage_webdav",
               "storage_webdavs",
               "index",
