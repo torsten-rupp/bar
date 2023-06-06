@@ -6232,11 +6232,16 @@ test_server_operations_batch: \
             \
             $(call functionServerCommandBatch,INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
             \
+            $(call functionServerCommandBatch,INDEX_STORAGE_LIST_INFO name='' indexStateSet='*' indexModeSet='*'); \
             $(call functionServerCommandBatch,INDEX_STORAGE_LIST_INFO name='*' indexStateSet='*' indexModeSet='*'); \
             $(call functionServerCommandBatch,INDEX_STORAGE_LIST_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
             $(call functionServerCommandBatch,INDEX_STORAGE_LIST entityId=* name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
             $(call functionServerCommandBatch,INDEX_STORAGE_LIST entityId=* name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
             \
+            $(call functionServerCommandBatch,INDEX_ENTRY_LIST_INFO name='' indexType='*' newestOnly=no); \
+            $(call functionServerCommandBatch,INDEX_ENTRY_LIST_INFO name='*' indexType='*' newestOnly=no); \
+            $(call functionServerCommandBatch,INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=no); \
+            $(call functionServerCommandBatch,INDEX_ENTRY_LIST_INFO name='' indexType='*' newestOnly=yes); \
             $(call functionServerCommandBatch,INDEX_ENTRY_LIST_INFO name='*' indexType='*' newestOnly=yes); \
             $(call functionServerCommandBatch,INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=yes); \
             $(call functionServerCommandBatch,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
@@ -6505,11 +6510,16 @@ ifneq ($(SOCAT),)
             \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
             \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='' indexStateSet='*' indexModeSet='*'); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='*' indexStateSet='*' indexModeSet='*'); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
             \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='' indexType='*' newestOnly=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='*' indexType='*' newestOnly=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='' indexType='*' newestOnly=yes); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='*' indexType='*' newestOnly=yes); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_INFO name='test*' indexType='*' newestOnly=yes); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
