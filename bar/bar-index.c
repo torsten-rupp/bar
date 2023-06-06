@@ -1212,7 +1212,7 @@ LOCAL String getPostgreSQLFTSTokens(String tokens, ConstString text)
     spaceFlag = FALSE;
     STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
     {
-      if (codepoint < 128)
+      if (!isCharUTF8(codepoint))
       {
         if      (isalnum((int)codepoint))
         {
@@ -2225,7 +2225,7 @@ LOCAL String getFTSMatchString(String         string,
           addedPatternFlag = FALSE;
           STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
-            if (isalnum(codepoint) || (codepoint >= 128))
+            if (isalnum(codepoint) || isCharUTF8(codepoint))
             {
               if (addedPatternFlag)
               {
@@ -2270,7 +2270,7 @@ LOCAL String getFTSMatchString(String         string,
           addedPatternFlag = FALSE;
           STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
-            if (isalnum(codepoint) || (codepoint >= 128))
+            if (isalnum(codepoint) || isCharUTF8(codepoint))
             {
               if (addedPatternFlag)
               {
@@ -2324,7 +2324,7 @@ LOCAL String getFTSMatchString(String         string,
             addedPatternFlag = FALSE;
             STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
             {
-              if (isalnum(codepoint) || (codepoint >= 128))
+              if (isalnum(codepoint) || isCharUTF8(codepoint))
               {
                 if (addedPatternFlag)
                 {

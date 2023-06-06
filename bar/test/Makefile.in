@@ -617,6 +617,11 @@ help_output:
         ifeq (@HAVE_POSTGRESQL@,1)
 	@$(ECHO) "    postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)"
         endif
+	@$(ECHO) ""
+	@$(ECHO) "TEST_LOGIN_NAME"
+	@$(ECHO) "TEST_PASSWORD"
+	@$(ECHO) "TEST_(FTP|SSH|SCP|SFTP|WEBDAV)_LOGIN_NAME"
+	@$(ECHO) "TEST_(FTP|SSH|SCP|SFTP|WEBDAV)_PASSWORD"
 
 # ----------------------------------------------------------------------------
 
