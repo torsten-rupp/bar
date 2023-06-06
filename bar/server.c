@@ -22582,7 +22582,7 @@ Errors Server_socket(void)
                         String string;
 
                         string = StringMap_debugToString(String_new(),argumentMap);
-                        fprintf(stderr,"DEBUG: received command #%u %s: %s\n",id,String_cString(name),String_cString(string));
+                        fprintf(stderr,"DEBUG: received command #%u %s %s\n",id,String_cString(name),String_cString(string));
                         String_delete(string);
                       }
                     #endif /* not DEBUG */

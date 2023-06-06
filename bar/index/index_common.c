@@ -193,7 +193,7 @@ String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text)
     spaceFlag = FALSE;
     STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
     {
-      if (codepoint < 128)
+      if (!isCharUTF8(codepoint))
       {
         if      (isalnum((int)codepoint))
         {
@@ -224,6 +224,7 @@ String IndexCommon_getFTSMatchString(String         string,
                                      ConstString    patternText
                                     )
 {
+  String          pattern;
   StringTokenizer stringTokenizer;
   ConstString     token;
   bool            addedTextFlag,addedPatternFlag;
@@ -235,6 +236,9 @@ String IndexCommon_getFTSMatchString(String         string,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+  // init variables
+  pattern = String_new();
+
   String_clear(string);
 
   if (!String_isEmpty(patternText))
@@ -242,8 +246,6 @@ String IndexCommon_getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_formatAppend(string,"%s MATCH '",tableName);
-
         String_initTokenizer(&stringTokenizer,
                              patternText,
                              STRING_BEGIN,
@@ -257,21 +259,23 @@ String IndexCommon_getFTSMatchString(String         string,
           addedPatternFlag = FALSE;
           STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
-            if (isalnum(codepoint) || (codepoint >= 128))
+            if (isalnum(codepoint) || isCharUTF8(codepoint))
             {
+              // add text character
               if (addedPatternFlag)
               {
-                String_appendChar(string,' ');
+                String_appendChar(pattern,' ');
                 addedPatternFlag = FALSE;
               }
-              String_appendCharUTF8(string,codepoint);
+              String_appendCharUTF8(pattern,codepoint);
               addedTextFlag = TRUE;
             }
             else
             {
+              // add pattern
               if (addedTextFlag && !addedPatternFlag)
               {
-                String_appendChar(string,'*');
+                String_appendChar(pattern,'*');
                 addedTextFlag    = FALSE;
                 addedPatternFlag = TRUE;
               }
@@ -279,16 +283,15 @@ String IndexCommon_getFTSMatchString(String         string,
           }
           if (addedTextFlag && !addedPatternFlag)
           {
-            String_appendChar(string,'*');
+            String_appendChar(pattern,'*');
           }
         }
         String_doneTokenizer(&stringTokenizer);
 
-        String_formatAppend(string,"'");
+        if (!String_isEmpty(pattern)) String_appendFormat(string,"%s MATCH '%S'",tableName,pattern);
+
         break;
       case DATABASE_TYPE_MARIADB:
-        String_formatAppend(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
-
         String_initTokenizer(&stringTokenizer,
                              patternText,
                              STRING_BEGIN,
@@ -302,21 +305,23 @@ String IndexCommon_getFTSMatchString(String         string,
           addedPatternFlag = FALSE;
           STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
           {
-            if (isalnum(codepoint) || (codepoint >= 128))
+            if (isalnum(codepoint) || isCharUTF8(codepoint))
             {
+              // add text character
               if (addedPatternFlag)
               {
-                String_appendChar(string,' ');
+                String_appendChar(pattern,' ');
                 addedPatternFlag = FALSE;
               }
-              String_appendCharUTF8(string,codepoint);
+              String_appendCharUTF8(pattern,codepoint);
               addedTextFlag = TRUE;
             }
             else
             {
+              // add pattern
               if (addedTextFlag && !addedPatternFlag)
               {
-                String_appendChar(string,'*');
+                String_appendChar(pattern,'*');
                 addedTextFlag    = FALSE;
                 addedPatternFlag = TRUE;
               }
@@ -324,18 +329,16 @@ String IndexCommon_getFTSMatchString(String         string,
           }
           if (addedTextFlag && !addedPatternFlag)
           {
-            String_appendChar(string,'*');
+            String_appendChar(pattern,'*');
           }
         }
         String_doneTokenizer(&stringTokenizer);
 
-        String_formatAppend(string,"' IN BOOLEAN MODE)");
+        if (!String_isEmpty(pattern)) String_appendFormat(string,"MATCH(%s.%s) AGAINST('%S' IN BOOLEAN MODE)",tableName,columnName,pattern);
         break;
       case DATABASE_TYPE_POSTGRESQL:
         {
           bool firstTokenFlag;
-
-          String_formatAppend(string,"%s.%s @@ to_tsquery('",tableName,columnName);
 
           String_initTokenizer(&stringTokenizer,
                                patternText,
@@ -349,28 +352,30 @@ String IndexCommon_getFTSMatchString(String         string,
           {
             if (!firstTokenFlag)
             {
-              String_appendCString(string," & ");
+              String_appendCString(pattern," & ");
             }
 
             addedTextFlag    = FALSE;
             addedPatternFlag = FALSE;
             STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
             {
-              if (isalnum(codepoint) || (codepoint >= 128))
+              if (isalnum(codepoint) || isCharUTF8(codepoint))
               {
+                // add text character
                 if (addedPatternFlag)
                 {
-                  String_appendCString(string," & ");
+                  String_appendCString(pattern," & ");
                   addedPatternFlag = FALSE;
                 }
-                String_appendCharUTF8(string,codepoint);
+                String_appendCharUTF8(pattern,codepoint);
                 addedTextFlag = TRUE;
               }
               else
               {
+                // add pattern
                 if (addedTextFlag && !addedPatternFlag)
                 {
-                  String_appendCString(string,":*");
+                  String_appendCString(pattern,":*");
                   addedTextFlag    = FALSE;
                   addedPatternFlag = TRUE;
                 }
@@ -378,18 +383,21 @@ String IndexCommon_getFTSMatchString(String         string,
             }
             if (addedTextFlag && !addedPatternFlag)
             {
-              String_appendCString(string,":*");
+              String_appendCString(pattern,":*");
             }
 
             firstTokenFlag = FALSE;
           }
           String_doneTokenizer(&stringTokenizer);
-
-          String_formatAppend(string,"')");
+          
+          if (!String_isEmpty(pattern)) String_appendFormat(string,"%s.%s @@ to_tsquery('%S')",tableName,columnName,pattern);
         }
         break;
     }
   }
+  
+  // free resources
+  String_delete(pattern);
 
   return string;
 }
