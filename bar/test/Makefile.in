@@ -357,7 +357,7 @@ TEST_EMULATION                       =
 TEST_FTP_HOST                        ?= $(TEST_HOST)
 TEST_FTP_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
 TEST_FTP_PASSWORD                    ?= $(TEST_PASSWORD)
-TEST_FTP_FILE_PATH                   ?= /var/www/intermediate
+TEST_FTP_FILE_PATH                   ?= $(HOME)/intermediate
 
 TEST_SSH_HOST                        ?= $(TEST_HOST)
 TEST_SSH_PORT                        ?= 22
@@ -365,7 +365,7 @@ TEST_SSH_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
 TEST_SSH_PASSWORD                    ?= $(TEST_PASSWORD)
 TEST_SSH_PUBLIC_KEY                  ?= $(HOME)/.ssh/id_rsa.pub
 TEST_SSH_PRIVATE_KEY                 ?= $(HOME)/.ssh/id_rsa
-TEST_SSH_FILE_PATH                   ?= /var/www/intermediate
+TEST_SSH_FILE_PATH                   ?= $(HOME)/intermediate
 
 TEST_SCP_HOST                        ?= $(TEST_HOST)
 TEST_SCP_PORT                        ?= 22
@@ -373,7 +373,7 @@ TEST_SCP_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
 TEST_SCP_PASSWORD                    ?= $(TEST_SSH_PASSWORD)
 TEST_SCP_PUBLIC_KEY                  ?= $(TEST_SSH_PUBLIC_KEY)
 TEST_SCP_PRIVATE_KEY                 ?= $(TEST_SSH_PRIVATE_KEY)
-TEST_SCP_FILE_PATH                   ?= /var/www/intermediate
+TEST_SCP_FILE_PATH                   ?= $(HOME)/intermediate
 
 TEST_SFTP_HOST                       ?= $(TEST_HOST)
 TEST_SFTP_PORT                       ?= 22
@@ -381,7 +381,7 @@ TEST_SFTP_LOGIN_NAME                 ?= $(TEST_LOGIN_NAME)
 TEST_SFTP_PASSWORD                   ?= $(TEST_SSH_PASSWORD)
 TEST_SFTP_PUBLIC_KEY                 ?= $(TEST_SSH_PUBLIC_KEY)
 TEST_SFTP_PRIVATE_KEY                ?= $(TEST_SSH_PRIVATE_KEY)
-TEST_SFTP_FILE_PATH                  ?= /var/www/intermediate
+TEST_SFTP_FILE_PATH                  ?= $(HOME)/intermediate
 
 TEST_WEBDAV_HOST                     ?= $(TEST_HOST)
 TEST_WEBDAV_LOGIN_NAME               ?= $(TEST_LOGIN_NAME)
