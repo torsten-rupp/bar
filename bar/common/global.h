@@ -3572,6 +3572,20 @@ static inline ulong charUTF8Length(Codepoint codepoint)
 }
 
 /***********************************************************************\
+* Name   : isCharUTF8
+* Purpose: check if UTF8 character
+* Input  : codepoint - codepoint
+* Output : -
+* Return : TRUE iff UTF8 character
+* Notes  : -
+\***********************************************************************/
+
+static inline bool isCharUTF8(Codepoint codepoint)
+{
+  return codepoint >= 128;
+}
+
+/***********************************************************************\
 * Name   : charUTF8
 * Purpose: convert codepoint to UTF8 character as string
 * Input  : codepoint - codepoint
