@@ -1399,6 +1399,8 @@ test4 test_asymmetric_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 4: asymmetric crypt)
+	echo -n "TEST_KEY_CRYPT_PUBLIC:"; cat $(TEST_KEY_CRYPT_PUBLIC); echo
+	echo -n "TEST_KEY_CRYPT_PRIVATE:"; cat $(TEST_KEY_CRYPT_PRIVATE); echo
 	for crypt in $(TEST_CRYPT_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
