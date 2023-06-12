@@ -18636,12 +18636,13 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String           pattern;
+  String           name;
   PatternTypes     patternType;
   bool             forceRefresh;
   int              progressSteps;
   StorageSpecifier storageSpecifier;
   JobOptions       jobOptions;
+  Pattern          pattern;
   bool             foundFlag;
   String           printableStorageName;
   bool             updateRequestedFlag;
@@ -18652,12 +18653,12 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get pattern type, pattern, force refresh, progress steps
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
+  // get name, pattern type, force refresh, progress steps
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
-    String_delete(pattern);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
+    String_delete(name);
     return;
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
@@ -18668,7 +18669,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(pattern);
+    String_delete(name);
     return;
   }
 
@@ -18676,17 +18677,29 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   Storage_initSpecifier(&storageSpecifier);
   Job_initOptions(&jobOptions);
 
-  // parse storage specifier
-  error = Storage_parseName(&storageSpecifier,pattern);
+  // init pattern
+  error = Pattern_init(&pattern,name,PATTERN_TYPE_GLOB,PATTERN_FLAG_NONE);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_PATTERN,String_cString(name));
     Job_doneOptions(&jobOptions);
     Storage_doneSpecifier(&storageSpecifier);
-    String_delete(pattern);
+    String_delete(name);
     return;
   }
 
+  // parse storage specifier
+  error = Storage_parseName(&storageSpecifier,name);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
+    Pattern_done(&pattern);
+    Job_doneOptions(&jobOptions);
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(name);
+    return;
+  }
+  
   foundFlag           = FALSE;
   updateRequestedFlag = FALSE;
 
@@ -18793,9 +18806,10 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      Pattern_done(&pattern);
       Job_doneOptions(&jobOptions);
       Storage_doneSpecifier(&storageSpecifier);
-      String_delete(pattern);
+      String_delete(name);
       return;
     }
   }
@@ -18814,109 +18828,116 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                              UNUSED_VARIABLE(fileInfo);
                              UNUSED_VARIABLE(userData);
 
-                             error = Storage_parseName(&storageSpecifier,storageName);
-                             if (error == ERROR_NONE)
+                             if (Pattern_match(&pattern,storageName,0,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
                              {
-                               if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
+                               error = Storage_parseName(&storageSpecifier,storageName);
+                               if (error == ERROR_NONE)
                                {
-                                 if (Storage_init(&storageInfo,
-                                                  NULL, // masterIO
-                                                  &storageSpecifier,
-                                                  &jobOptions,
-                                                  &globalOptions.indexDatabaseMaxBandWidthList,
-                                                  SERVER_CONNECTION_PRIORITY_LOW,
-                                                  CALLBACK_(NULL,NULL),  // updateStatusInfo
-                                                  CALLBACK_(NULL,NULL),  // getNamePassword
-                                                  CALLBACK_(NULL,NULL),  // requestVolume
-                                                  CALLBACK_(NULL,NULL),  // isPause
-                                                  CALLBACK_(NULL,NULL),  // isAborted
-                                                  NULL  // logHandle
-                                                 ) == ERROR_NONE
-                                    )
+                                 if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
                                  {
-                                   if (   Storage_isFile(&storageInfo,NULL)
-                                       && Storage_isReadable(&storageInfo,NULL)
+                                   if (Storage_init(&storageInfo,
+                                                    NULL, // masterIO
+                                                    &storageSpecifier,
+                                                    &jobOptions,
+                                                    &globalOptions.indexDatabaseMaxBandWidthList,
+                                                    SERVER_CONNECTION_PRIORITY_LOW,
+                                                    CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                                    CALLBACK_(NULL,NULL),  // getNamePassword
+                                                    CALLBACK_(NULL,NULL),  // requestVolume
+                                                    CALLBACK_(NULL,NULL),  // isPause
+                                                    CALLBACK_(NULL,NULL),  // isAborted
+                                                    NULL  // logHandle
+                                                   ) == ERROR_NONE
                                       )
                                    {
-                                     printableStorageName = Storage_getPrintableName(NULL,&storageSpecifier,NULL);
-
-                                     error = Index_findStorageByName(indexHandle,
-                                                                     &storageSpecifier,
-                                                                     NULL,  // findArchiveName
-                                                                     NULL,  // uuidId
-                                                                     NULL,  // entityId
-                                                                     NULL,  // jobUUID
-                                                                     NULL,  // scheduleUUID
-                                                                     &storageId,
-                                                                     NULL,  // createdDateTime
-                                                                     NULL,  // size
-                                                                     NULL,  // indexState
-                                                                     NULL,  // indexMode
-                                                                     NULL,  // lastCheckedDateTime
-                                                                     NULL,  // errorMessage
-                                                                     NULL,  // totalEntryCount
-                                                                     NULL  // totalEntrySize
-                                                                    );
-                                     if       (error == ERROR_NONE)
+                                     if (   Storage_isFile(&storageInfo,NULL)
+                                         && Storage_isReadable(&storageInfo,NULL)
+                                        )
                                      {
-                                       if (forceRefresh)
-                                       {
-                                         error = Index_setStorageState(indexHandle,
-                                                                       storageId,
-                                                                       INDEX_STATE_UPDATE_REQUESTED,
-                                                                       Misc_getCurrentDateTime(),
-                                                                       NULL  // errorMessage
+                                       printableStorageName = Storage_getPrintableName(NULL,&storageSpecifier,NULL);
+
+                                       error = Index_findStorageByName(indexHandle,
+                                                                       &storageSpecifier,
+                                                                       NULL,  // findArchiveName
+                                                                       NULL,  // uuidId
+                                                                       NULL,  // entityId
+                                                                       NULL,  // jobUUID
+                                                                       NULL,  // scheduleUUID
+                                                                       &storageId,
+                                                                       NULL,  // createdDateTime
+                                                                       NULL,  // size
+                                                                       NULL,  // indexState
+                                                                       NULL,  // indexMode
+                                                                       NULL,  // lastCheckedDateTime
+                                                                       NULL,  // errorMessage
+                                                                       NULL,  // totalEntryCount
+                                                                       NULL  // totalEntrySize
                                                                       );
+                                       if       (error == ERROR_NONE)
+                                       {
+                                         if (forceRefresh)
+                                         {
+                                           error = Index_setStorageState(indexHandle,
+                                                                         storageId,
+                                                                         INDEX_STATE_UPDATE_REQUESTED,
+                                                                         Misc_getCurrentDateTime(),
+                                                                         NULL  // errorMessage
+                                                                        );
+                                           if (error == ERROR_NONE)
+                                           {
+                                             ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
+                                                                 storageId,
+                                                                 printableStorageName
+                                                                );
+
+                                             updateRequestedFlag = TRUE;
+                                           }
+                                         }
+                                       }
+                                       else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+                                       {
+                                         error = Index_newStorage(indexHandle,
+                                                                  INDEX_ID_NONE, // uuidId
+                                                                  INDEX_ID_NONE, // entityId
+                                                                  NULL,  // hostName
+                                                                  NULL,  // userName
+                                                                  storageName,
+                                                                  0LL,  // createdDateTime
+                                                                  0LL,  // size
+                                                                  INDEX_STATE_UPDATE_REQUESTED,
+                                                                  INDEX_MODE_MANUAL,
+                                                                  &storageId
+                                                                 );
                                          if (error == ERROR_NONE)
                                          {
                                            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
                                                                storageId,
                                                                printableStorageName
                                                               );
-
                                            updateRequestedFlag = TRUE;
                                          }
                                        }
                                      }
-                                     else if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-                                     {
-                                       error = Index_newStorage(indexHandle,
-                                                                INDEX_ID_NONE, // uuidId
-                                                                INDEX_ID_NONE, // entityId
-                                                                NULL,  // hostName
-                                                                NULL,  // userName
-                                                                storageName,
-                                                                0LL,  // createdDateTime
-                                                                0LL,  // size
-                                                                INDEX_STATE_UPDATE_REQUESTED,
-                                                                INDEX_MODE_MANUAL,
-                                                                &storageId
-                                                               );
-                                       if (error == ERROR_NONE)
-                                       {
-                                         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
-                                                             storageId,
-                                                             printableStorageName
-                                                            );
-                                         updateRequestedFlag = TRUE;
-                                       }
-                                     }
-                                   }
 
-                                   Storage_done(&storageInfo);
+                                     Storage_done(&storageInfo);
+                                   }
                                  }
                                }
-                             }
 
-                             if (error == ERROR_NONE)
-                             {
-                               foundFlag = TRUE;
+                               if (error == ERROR_NONE)
+                               {
+                                 foundFlag = TRUE;
 
-                               return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
+                                 return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
+                               }
+                               else
+                               {
+                                 return error;
+                               }
                              }
                              else
                              {
-                               return error;
+                               return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
                              }
                            },NULL),
                            CALLBACK_INLINE(void,(ulong doneCount, ulong totalCount, void *userData),
@@ -18934,9 +18955,10 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      Pattern_done(&pattern);
       Job_doneOptions(&jobOptions);
       Storage_doneSpecifier(&storageSpecifier);
-      String_delete(pattern);
+      String_delete(name);
       return;
     }
   }
@@ -18957,9 +18979,10 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // free resources
+  Pattern_done(&pattern);
   Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(pattern);
+  String_delete(name);
 }
 
 /***********************************************************************\
