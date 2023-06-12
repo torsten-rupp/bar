@@ -6,6 +6,8 @@
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
+  * BARControl: fixed option --index-database-add: match
+    pattern
 
 2023-04-16 0.22g
   * BARControl: fixed update job sate in dry-mode (issue #2,
