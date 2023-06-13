@@ -597,7 +597,6 @@ LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
       if (error != ERROR_NONE)
       {
         String_delete(parentDirectoryName);
-        Semaphore_unlock(&restoreInfo->namesDictionaryLock);
         return error;
       }
 
@@ -609,11 +608,9 @@ LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
       if (error != ERROR_NONE)
       {
         String_delete(parentDirectoryName);
-        Semaphore_unlock(&restoreInfo->namesDictionaryLock);
         return error;
       }
     }
-
   }
 
   // free resources
