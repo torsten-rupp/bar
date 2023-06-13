@@ -122,19 +122,14 @@ def build()
 }
 
 // main
-/*
-properties([gitLabConnection('GitLab-DMZ'),
-            [$class: 'BuildDiscarderProperty',
-             strategy: [$class: 'LogRotator',
-                        artifactDaysToKeepStr: '3',
-                        artifactNumToKeepStr: '3',
-                        daysToKeepStr: '3',
-                        numToKeepStr: '3'
-                       ]
-            ]
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '',
+                                      artifactNumToKeepStr: '',
+                                      daysToKeepStr: '5',
+                                      numToKeepStr: '3'
+                                     )
+                          )
            ]
           )
-*/
 
 try
 {
