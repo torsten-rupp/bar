@@ -1449,6 +1449,7 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
   assert(certificate != NULL);
   assert(fileName != NULL);
 
+  // open file
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -1460,7 +1461,7 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
   if (dataLength == 0LL)
   {
     (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_CERTIFICATE;
+    return ERROR_READ_CERTIFICATE_FAIL;
   }
 
   // allocate memory
@@ -1486,6 +1487,8 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
 
   // close file
   (void)File_close(&fileHandle);
+
+// TODO: decode base64?
 
   // set certificate data
   if (certificate->data != NULL) free(certificate->data);
@@ -1513,8 +1516,8 @@ LOCAL Errors readCertificateFile(Certificate *certificate, ConstString fileName)
 }
 
 /***********************************************************************\
-* Name   : readKeyFileCString
-* Purpose: read public/private key file
+* Name   : readBase64KeyFileCString
+* Purpose: read public/private key file and decode base64
 * Input  : key      - key variable
 *          fileName - file name
 * Output : -
@@ -1522,12 +1525,14 @@ LOCAL Errors readCertificateFile(Certificate *certificate, ConstString fileName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
+LOCAL Errors readBase64KeyFileCString(Key *key, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
   uint       dataLength;
   char       *data;
+  uint       keyDataLength;
+  char       *keyData;
 
   assert(key != NULL);
   assert(fileName != NULL);
@@ -1544,7 +1549,7 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
   if (dataLength == 0LL)
   {
     (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_KEY;
+    return ERROR_READ_KEY_FAIL;
   }
 
   // allocate secure memory
@@ -1556,11 +1561,7 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
   }
 
   // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
+  error = File_read(&fileHandle,data,dataLength,NULL);
   if (error != ERROR_NONE)
   {
     freeSecure(data);
@@ -1571,11 +1572,111 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
   // close file
   (void)File_close(&fileHandle);
 
+  // decode base64
+  keyDataLength = Misc_base64DecodeLengthBuffer(data,dataLength);
+  if (keyDataLength <= 0)
+  {
+    freeSecure(data);
+    return ERROR_INVALID_KEY;
+  }
+  keyData = allocSecure(keyDataLength);
+  if (keyData == NULL)
+  {
+    freeSecure(data);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+  if (!Misc_base64DecodeBuffer(keyData,keyDataLength,NULL,data,dataLength))
+  {
+    freeSecure(keyData);
+    freeSecure(data);
+    return ERROR_INVALID_KEY;
+  }
+
   // set key data
-  Configuration_setKey(key,fileName,data,dataLength);
+  Configuration_setKey(key,fileName,keyData,keyDataLength);
 
   // free resources
+  freeSecure(keyData);
   freeSecure(data);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : readBase64KeyFile
+* Purpose: read public/private key file and decode base64
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readBase64KeyFile(Key *key, ConstString fileName)
+{
+  return readBase64KeyFileCString(key,String_cString(fileName));
+}
+
+/***********************************************************************\
+* Name   : readKeyFileCString
+* Purpose: read public/private key file
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint       keyDataLength;
+  char       *keyData;
+
+  assert(key != NULL);
+  assert(fileName != NULL);
+
+  // open file
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get data size
+  keyDataLength = File_getSize(&fileHandle);
+  if (keyDataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_READ_KEY_FAIL;
+  }
+
+  // allocate secure memory
+  keyData = (char*)allocSecure((size_t)keyDataLength);
+  if (keyData == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,keyData,keyDataLength,NULL);
+  if (error != ERROR_NONE)
+  {
+    freeSecure(keyData);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set key data
+  Configuration_setKey(key,fileName,keyData,keyDataLength);
+
+  // free resources
+  freeSecure(keyData);
 
   return ERROR_NONE;
 }
@@ -2358,11 +2459,13 @@ LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *na
 * Notes  : -
 \***********************************************************************/
 
-//TODO: rename? cmdOptionCertificateParse
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   Certificate *certificate = (Certificate*)variable;
   Errors      error;
+  FileHandle  fileHandle;
+  uint        dataLength;
+  void        *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2371,12 +2474,54 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readCertificateFileCString(certificate,value);
+  error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    stringSet(errorMessage,errorMessageSize,Error_getText(ERROR_READ_CERTIFICATE_FAIL));
+    return FALSE;
+  }
+
+  // allocate memory
+  data = malloc((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    stringSet(errorMessage,errorMessageSize,Error_getText(ERROR_INSUFFICIENT_MEMORY));
+    return FALSE;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    (void)File_close(&fileHandle);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
+    return FALSE;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set certificate data
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->type   = CERTIFICATE_TYPE_FILE;
+  String_setCString(certificate->fileName,value);
+  certificate->data   = data;
+  certificate->length = dataLength;
 
   return TRUE;
 }
@@ -2392,8 +2537,11 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  Key    *key = (Key*)variable;
-  Errors error;
+  Key        *key = (Key*)variable;
+  Errors     error;
+  FileHandle fileHandle;
+  uint       dataLength;
+  void       *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2402,12 +2550,50 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readKeyFileCString(key,value);
+  // open file
+  error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
     return FALSE;
   }
+
+  // get data size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    stringSet(errorMessage,errorMessageSize,Error_getText(ERROR_READ_KEY_FAIL));
+    return FALSE;
+  }
+
+  // allocate secure memory
+  data = (char*)allocSecure((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    stringSet(errorMessage,errorMessageSize,Error_getText(ERROR_INSUFFICIENT_MEMORY));
+    return FALSE;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,data,dataLength,NULL);
+  if (error != ERROR_NONE)
+  {
+    freeSecure(data);
+    (void)File_close(&fileHandle);
+    stringSet(errorMessage,errorMessageSize,Error_getText(error));
+    return FALSE;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set key data
+  Configuration_setKey(key,value,data,dataLength);
+
+  // free resources
+  freeSecure(data);
 
   return TRUE;
 }
@@ -2438,7 +2624,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
   if (File_existsCString(value))
   {
     // read key data from file
-    error = readKeyFileCString(key,value);
+    error = readBase64KeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -6256,7 +6442,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
   {
     // read key data from file
 
-    error = readKeyFileCString(key,value);
+    error = readBase64KeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));

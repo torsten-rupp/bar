@@ -344,7 +344,7 @@ typedef struct
   }      type;
   String fileName;
 
-  void *data;                                                 // data
+  void *data;                                                 // data (binary)
   uint length;                                                // length of data
 } Certificate;
 
@@ -359,7 +359,7 @@ typedef struct
   }      type;
   String fileName;
 
-  void *data;                                                 // data
+  void *data;                                                 // data (binary)
   uint length;                                                // length of data
 } Key;
 extern const Key KEY_NONE;
@@ -368,7 +368,7 @@ extern const Key KEY_NONE;
 typedef struct
 {
   CryptHashAlgorithms cryptHashAlgorithm;
-  void                *data;                                  // data
+  void                *data;                                  // data (binary)
   uint                length;                                 // length of data
 } Hash;
 extern const Hash HASH_NONE;

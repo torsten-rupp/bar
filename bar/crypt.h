@@ -1060,8 +1060,8 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 *          cryptSalt              - encryption salt (can be NULL)
 *          password               - password for encryption (can be
 *                                   NULL)
-* Output : encryptedKey           - encrypted key base64 encoded
-*          encryptedKeyLength     - length of encrypted key [bytes]
+* Output : encryptedKey           - encrypted key data (binary)
+*          encryptedKeyLength     - length of encrypted key data [bytes]
 * Return : ERROR_NONE or error code
 * Notes  : encryptedKey must be freed with freeSecure()!
 \***********************************************************************/
@@ -1079,7 +1079,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
 * Name   : Crypt_setPublicPrivateKeyData
 * Purpose: decrypt public/private key and set key data
 * Input  : cryptKey               - crypt key
-*          encryptedKeyData       - encrypted key base64 encoded
+*          encryptedKeyData       - encrypted key (binary)
 *          encryptedKeyDataLength - length of encrypted key
 *          cryptMode              - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType     - key derive type; see
@@ -1294,22 +1294,23 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_getSignature
 * Purpose: get signature for data
-* Input  : privateKey         - private signature key
+* Input  : maxSignatureLength - size of signature data buffer
+*          privateKey         - private signature key
 *          buffer             - data to sign
 *          bufferLength       - length of data
-*          maxSignatureLength - size of signature data buffer
 * Output : signature       - signagure data
 *          signatureLength - signature data length
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_getSignature(CryptKey *privateKey,
-                          void     *buffer,
-                          uint     bufferLength,
-                          void     *signature,
-                          uint     maxSignatureLength,
-                          uint     *signatureLength
+Errors Crypt_getSignature(void           *signature,
+                          uint           maxSignatureLength,
+                          uint           *signatureLength,
+                          const CryptKey *privateKey,
+                          const void     *buffer,
+                          uint           bufferLength
+
                          );
 
 /***********************************************************************\
@@ -1325,12 +1326,12 @@ Errors Crypt_getSignature(CryptKey *privateKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_verifySignature(CryptKey             *publicKey,
-                             const void           *buffer,
-                             uint                 bufferLength,
-                             const void           *signature,
+Errors Crypt_verifySignature(const void           *signature,
                              uint                 signatureLength,
-                             CryptSignatureStates *cryptSignatureState
+                             CryptSignatureStates *cryptSignatureState,
+                             const CryptKey       *publicKey,
+                             const void           *buffer,
+                             uint                 bufferLength
                             );
 
 /*---------------------------------------------------------------------*/
