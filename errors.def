@@ -95,12 +95,14 @@ ERROR NO_RESPONSE                      TR("no response from remote program")
 ERROR INVALID_RESPONSE                 TR("invalid response from remote program")
 
 // --- TLS/SSL ----------------------------------------------------------
-ERROR INIT_TLS                         TR("initialize TLS (SSL) failed")
-ERROR NO_TLS_CA                        TR("no TLS (SSL) certificate authority file")
-ERROR NO_TLS_CERTIFICATE               TR("no TLS (SSL) certificate file")
-ERROR NO_TLS_KEY                       TR("no or unreadable TLS (SSL) key file")
-ERROR INVALID_TLS_CA                   TR("invalid TLS (SSL) certificate authority")
-ERROR INVALID_TLS_CERTIFICATE          TR("invalid TLS (SSL) certificate")
+ERROR INIT_TLS                         TR("initialize (TLS/SSL) failed")
+ERROR NO_TLS_CA                        TR("no (TLS/SSL) certificate authority file")
+ERROR NO_TLS_CERTIFICATE               TR("no (TLS/SSL) certificate file")
+ERROR NO_TLS_KEY                       TR("no (TLS/SSL) key file")
+ERROR INVALID_TLS_CA                   TR("invalid (TLS/SSL) certificate authority")
+ERROR INVALID_TLS_CERTIFICATE          TR("invalid (TLS/SSL) certificate")
+ERROR READ_CERTIFICATE_FAIL            TR("read (TLS/SSL) certificate fail")
+ERROR CORRUPT_CERTIFICATE              TR("corrupt (TLS/SSL) certificate")
 ERROR TLS_CERTIFICATE_EXPIRED
   stringSet(errorText,sizeof(errorText),TR("TLS (SSL) certificate expired"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -368,6 +370,13 @@ ERROR READ_KEY_FAIL
 
 ERROR INVALID_KEY
   stringSet(errorText,sizeof(errorText),TR("invalid key"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR CORRUPT_KEY
+  stringSet(errorText,sizeof(errorText),TR("corrupt key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);

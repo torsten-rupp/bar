@@ -2685,6 +2685,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   }
   else
   {
+    String base64Data;
+
     // output encryption public key to stdout
     error = Crypt_getPublicPrivateKeyData(&publicKey,
                                           &data,
@@ -2703,9 +2705,12 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("crypt-public-key = base64:");
-    bytesWritten = fwrite(data,1,dataLength,stdout);
-    printf("\n");
+
+    base64Data = Misc_base64Encode(String_new(),data,dataLength);
+
+    printf("crypt-public-key = base64:%s\n",String_cString(base64Data));
+
+    String_delete(base64Data);
     freeSecure(data);
 
     // output encryption private key to stdout
@@ -2726,9 +2731,12 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("crypt-private-key = base64:");
-    bytesWritten = fwrite(data,1,dataLength,stdout);
-    printf("\n");
+
+    base64Data = Misc_base64Encode(String_new(),data,dataLength);
+
+    printf("crypt-private-key = base64:%s\n",String_cString(base64Data));
+
+    String_delete(base64Data);
     freeSecure(data);
   }
   Crypt_doneKey(&privateKey);
@@ -2881,6 +2889,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
   else
   {
+    String base64Data;
+
     // output signature public key to stdout
     error = Crypt_getPublicPrivateKeyData(&publicKey,
                                           &data,
@@ -2899,9 +2909,12 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-public-key = base64:");
-    bytesWritten = fwrite(data,1,dataLength,stdout);
-    printf("\n");
+
+    base64Data = Misc_base64Encode(String_new(),data,dataLength);
+
+    printf("signature-public-key = base64:%s\n",String_cString(base64Data));
+
+    String_delete(base64Data);
     freeSecure(data);
 
     // output signature private key to stdout
@@ -2922,9 +2935,12 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-private-key = base64:");
-    bytesWritten = fwrite(data,1,dataLength,stdout);
-    printf("\n");
+
+    base64Data = Misc_base64Encode(String_new(),data,dataLength);
+
+    printf("signature-private-key = base64:%s\n",String_cString(base64Data));
+
+    String_delete(base64Data);
     freeSecure(data);
   }
   Crypt_doneKey(&privateKey);

@@ -2899,12 +2899,12 @@ TODO: support dynamic hash length?
                                          );
     if (error == ERROR_NONE)
     {
-      error = Crypt_getSignature(&privateSignatureKey,
-                                 hash,
-                                 hashLength,
-                                 signature,
+      error = Crypt_getSignature(signature,
                                  sizeof(signature),
-                                 &signatureLength
+                                 &signatureLength,
+                                 &privateSignatureKey,
+                                 hash,
+                                 hashLength
                                 );
     }
     Crypt_doneKey(&privateSignatureKey);
@@ -2913,7 +2913,7 @@ TODO: support dynamic hash length?
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    assert(signatureLength < sizeof(signature));
+    assert(signatureLength <= sizeof(signature));
 
     // init signature chunk
     error = Chunk_init(&chunkSignature.info,
@@ -13199,12 +13199,12 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                        );
   if (error == ERROR_NONE)
   {
-    error = Crypt_verifySignature(&publicSignatureKey,
-                                  hash,
-                                  hashLength,
-                                  chunkSignature.value.data,
+    error = Crypt_verifySignature(chunkSignature.value.data,
                                   chunkSignature.value.length,
-                                  cryptSignatureState
+                                  cryptSignatureState,
+                                  &publicSignatureKey,
+                                  hash,
+                                  hashLength
                                  );
   }
   Crypt_doneKey(&publicSignatureKey);
@@ -15116,12 +15116,12 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
                                            );
       if (error == ERROR_NONE)
       {
-        error = Crypt_verifySignature(&publicSignatureKey,
-                                      hash,
-                                      hashLength,
-                                      chunkSignature.value.data,
+        error = Crypt_verifySignature(chunkSignature.value.data,
                                       chunkSignature.value.length,
-                                      &cryptSignatureState
+                                      &cryptSignatureState,
+                                      &publicSignatureKey,
+                                      hash,
+                                      hashLength
                                      );
       }
       Crypt_doneKey(&publicSignatureKey);

@@ -357,7 +357,7 @@ TEST_EMULATION                       =
 TEST_FTP_HOST                        ?= $(TEST_HOST)
 TEST_FTP_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
 TEST_FTP_PASSWORD                    ?= $(TEST_PASSWORD)
-TEST_FTP_FILE_PATH                   ?= $(HOME)/intermediate
+TEST_FTP_FILE_PATH                   ?=
 
 TEST_SSH_HOST                        ?= $(TEST_HOST)
 TEST_SSH_PORT                        ?= 22
@@ -365,7 +365,7 @@ TEST_SSH_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
 TEST_SSH_PASSWORD                    ?= $(TEST_PASSWORD)
 TEST_SSH_PUBLIC_KEY                  ?= $(HOME)/.ssh/id_rsa.pub
 TEST_SSH_PRIVATE_KEY                 ?= $(HOME)/.ssh/id_rsa
-TEST_SSH_FILE_PATH                   ?= $(HOME)/intermediate
+TEST_SSH_FILE_PATH                   ?=
 
 TEST_SCP_HOST                        ?= $(TEST_HOST)
 TEST_SCP_PORT                        ?= 22
@@ -373,7 +373,7 @@ TEST_SCP_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
 TEST_SCP_PASSWORD                    ?= $(TEST_SSH_PASSWORD)
 TEST_SCP_PUBLIC_KEY                  ?= $(TEST_SSH_PUBLIC_KEY)
 TEST_SCP_PRIVATE_KEY                 ?= $(TEST_SSH_PRIVATE_KEY)
-TEST_SCP_FILE_PATH                   ?= $(HOME)/intermediate
+TEST_SCP_FILE_PATH                   ?=
 
 TEST_SFTP_HOST                       ?= $(TEST_HOST)
 TEST_SFTP_PORT                       ?= 22
@@ -381,12 +381,12 @@ TEST_SFTP_LOGIN_NAME                 ?= $(TEST_LOGIN_NAME)
 TEST_SFTP_PASSWORD                   ?= $(TEST_SSH_PASSWORD)
 TEST_SFTP_PUBLIC_KEY                 ?= $(TEST_SSH_PUBLIC_KEY)
 TEST_SFTP_PRIVATE_KEY                ?= $(TEST_SSH_PRIVATE_KEY)
-TEST_SFTP_FILE_PATH                  ?= $(HOME)/intermediate
+TEST_SFTP_FILE_PATH                  ?=
 
 TEST_WEBDAV_HOST                     ?= $(TEST_HOST)
 TEST_WEBDAV_LOGIN_NAME               ?= $(TEST_LOGIN_NAME)
 TEST_WEBDAV_PASSWORD                 ?= $(TEST_PASSWORD)
-TEST_WEBDAV_FILE_PATH                ?= /var/www/intermediate
+TEST_WEBDAV_FILE_PATH                ?=
 
 TEST_OPTICAL_EMULATION               ?= $(TEST_EMULATION)
 TEST_OPTICAL_SLEEP_TIME              ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
@@ -2423,7 +2423,6 @@ endif
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=skip-existing --no-stop-on-attribute-error --no-fragments-check $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/zero128.dat -# data/sub_dir -# data/sub_dir.ext -# data/link.dat -# 'data/hardlink*.dat' -# data/fifo -# data/fifo.ext --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=rename --no-stop-on-attribute-error $(LOG))
-	ls -la $(INTERMEDIATE_DIR)/restore/data
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero128-0.dat
 	test -d $(INTERMEDIATE_DIR)/restore/data/sub_dir-0.ext
 	test -h $(INTERMEDIATE_DIR)/restore/data/link-0.dat
@@ -4047,7 +4046,7 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
-	@$(call functionCleanTestFiles)
+	$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-full.bar --full --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
