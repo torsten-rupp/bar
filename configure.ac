@@ -841,7 +841,6 @@ AC_SUBST(HAVE_PCRE)                          dnl "1" for pcre support, "" otherw
 AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" otherwise
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
-AC_SUBST(HAVE_BREAKPAD)                      dnl "1" for BreakPad support, "" otherwise
 AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
 AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
@@ -1001,7 +1000,6 @@ ENABLE_PCRE="yes"
 ENABLE_MARIADB="yes"
 ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
-ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -1218,11 +1216,6 @@ AC_ARG_ENABLE(
   pcre,
   AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
   [ENABLE_PCRE=$enableval]
-)
-AC_ARG_ENABLE(
-  crashdump,
-  AC_HELP_STRING([--disable-crashdump],[disable crash dump support]),
-  [ENABLE_BREAKPAD=$enableval]
 )
 AC_ARG_ENABLE(
   bfd,
@@ -4037,108 +4030,6 @@ case $host_os in
     ;;
 esac
 
-# compile/use breakpad
-if test $ENABLE_BREAKPAD = "yes"; then
-  if test -d breakpad -o -d "`readlink breakpad`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile breakpad library
-
-      cwd=`pwd`
-
-      AC_MSG_COMPILE([breakpad])
-      result=1
-      if test $result -eq 1; then
-        if test "$ENABLE_DEBUG" = "yes"; then
-          (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-          ) 1>$tmpFile 2>&1
-        else
-          (cd breakpad; CFLAGS="" CXXFLAGS="" LDFLAGS="" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-          ) 1>$tmpFile 2>&1
-        fi
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd breakpad; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd breakpad; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-
-        # fix broken install of breakpad: does not install all header files?
-        install -d $cwd/extern/include/breakpad
-        install -d $cwd/extern/include/breakpad/google_breakpad/processor
-        install -m 644 breakpad/src/google_breakpad/processor/*.h $cwd/extern/include/breakpad/google_breakpad/processor
-        install -d $cwd/extern/include/breakpad/client/linux/handler
-        install -m 644 breakpad/src/client/linux/handler/*.h $cwd/extern/include/breakpad/client/linux
-        install -d $cwd/extern/include/breakpad/client/linux/minidump_writer
-        install -m 644 breakpad/src/client/linux/minidump_writer/*.h $cwd/extern/include/breakpad/client/linux/minidump_writer
-        install -d $cwd/extern/include/breakpad/client/linux/dump_writer_common
-        install -m 644 breakpad/src/client/linux/dump_writer_common/*.h $cwd/extern/include/breakpad/client/linux/dump_writer_common
-        install -m 644 breakpad/src/third_party/libdisasm/libdisasm.a $cwd/extern/lib
-# 1>$tmpFile 2>&1
-#find $cwd/extern/include/breakpad -type f -name '*.h'
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
-    fi
-
-    if test $result -eq 1; then
-      CC_INCLUDES="$CC_INCLUDES $cwd/extern/include/breakpad"
-      if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES breakpad_client"
-      else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
-      fi
-      HAVE_BREAKPAD=1
-      AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
-
-      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/extern/bin)
-    fi
-  else
-    dnl search for installed breakpad library
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
-    else
-      if test -z "$HAVE_BREAKPAD"; then
-        AC_SEARCH_STATIC_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[static breakpad installed])])
-      fi
-      if test -z "$HAVE_BREAKPAD"; then
-        AC_SEARCH_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
-      fi
-    fi
-
-    AC_PATH_PROGS(DUMP_SYMS,dump_syms)
-  fi
-
-  if test -z "$HAVE_BREAKPAD"; then
-    if test ! \( -d breakpad -o -d "`readlink breakpad`" \); then
-      AC_MSG_WARN([breakpad not compiled: breakpad package missing])
-    fi
-  fi
-fi
-
 # compile/use binutils
 if test $ENABLE_BFD = "yes"; then
   if test -d binutils -o -d "`readlink binutils`"; then
@@ -4939,7 +4830,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo ""
                     echo "  Debug version        : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  Thread crash handlers: `if test "$ENABLE_DEBUG_THREAD_CRASH_HANDLERS" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  Crash dump support   : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  Stacktrace support   : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
                     echo "  Install directory    : $INSTALL_DIR"
@@ -5001,7 +4891,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_POSTGRESQL=$HAVE_POSTGRESQL
 
                    HAVE_BFD=$HAVE_BFD
-                   HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 

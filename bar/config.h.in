@@ -67,9 +67,6 @@
 /* BLKSSZGET available */
 #undef HAVE_BLKSSZGET
 
-/* breakpad installed */
-#undef HAVE_BREAKPAD
-
 /* bzip2 installed */
 #undef HAVE_BZ2
 
@@ -343,6 +340,9 @@
 /* Define to 1 if you have the <mariadb/mysql.h> header file. */
 #undef HAVE_MARIADB_MYSQL_H
 
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
 /* minor() available */
 #undef HAVE_MINOR
 
@@ -531,9 +531,6 @@
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
-
-/* Define to 1 if you have the <stdio.h> header file. */
-#undef HAVE_STDIO_H
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
@@ -778,9 +775,7 @@
 /* The size of `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P
 
-/* Define to 1 if all of the C90 standard headers exist (not just the ones
-   required in a freestanding environment). This macro is provided for
-   backward compatibility; new code need not use it. */
+/* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
 /* TLS directory */

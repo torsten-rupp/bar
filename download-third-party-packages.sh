@@ -59,7 +59,6 @@ ICU_VERSION=58.3
 MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.1.0
 BINUTILS_VERSION=2.35
-BREAKPAD_REVISION=1430
 PTHREAD_W32_VERSION=2-9-1
 EPM_VERSION=4.2
 
@@ -1686,38 +1685,6 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $breakpadFlag -eq 1; then
-    # breakpad
-    (
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get breakpad..."
-     fileName="breakpad"
-     if test ! -d $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/breakpad; then
-         $LN -s $localDirectory/breakpad $fileName
-         result=1
-       else
-         $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
-         $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' $fileName -r$BREAKPAD_REVISION >/dev/null
-         $ECHO "done"
-       fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/breakpad breakpad)
-    fi
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-  fi
-
   if test $epmFlag -eq 1; then
     # epm
     (
@@ -2126,15 +2093,6 @@ else
       $RMF pthreads-w32-*
     )
     $RMF $workingDirectory/pthreads-w32
-  fi
-
-  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
-    # breakpad
-    (
-      cd "$destinationDirectory"
-      $RMRF breakpad
-    )
-    $RMF $workingDirectory/breakpad
   fi
 
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then

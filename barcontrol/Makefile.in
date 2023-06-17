@@ -365,6 +365,7 @@ $(SOURCE_DIR)/po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
 
 $(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
+	tail -20 po/barcontrol.pot
 	$(MSGMERGE) -U $@ po/barcontrol.pot
 	$(TOUCH) $@
 
