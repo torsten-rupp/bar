@@ -501,7 +501,6 @@ COMMON_SOURCES              = common/arrays.c \
                               common/global.c \
                               common/hashtables.c \
                               common/lists.c \
-                              common/minidump.cpp \
                               common/misc.c \
                               common/msgqueues.c \
                               common/network.c \
@@ -523,7 +522,7 @@ COMMON_SOURCES_OTHER        = common/arrays.c \
                               common/filesystems_fat.c \
                               common/filesystems_reiserfs.c \
 
-COMMON_SOURCES_FILTER       = $(if @HAVE_BREAKPAD@,,common/minidump.cpp) \
+COMMON_SOURCES_FILTER       = \
 
 COMMON_HEADERS              = $(patsubst %.c,  %.h,$(filter %.c,  $(COMMON_SOURCES))) \
                               $(patsubst %.cpp,%.h,$(filter %.cpp,$(COMMON_SOURCES))) \
