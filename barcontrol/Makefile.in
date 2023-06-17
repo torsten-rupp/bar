@@ -359,25 +359,29 @@ i18n po: \
   $(SOURCE_DIR)/po/german.po \
   $(SOURCE_DIR)/po/japanese.po
 
+.NOTPARALLEL: $(SOURCE_DIR)/po/barcontrol.pot
 $(SOURCE_DIR)/po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
 	$(INSTALL) -d $(@D)
 	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ src/*.java
 
+.NOTPARALLEL: $(SOURCE_DIR)/po/german.po
 $(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
-	tail -20 po/barcontrol.pot
 	$(MSGMERGE) -U $@ po/barcontrol.pot
 	$(TOUCH) $@
 
+.NOTPARALLEL: $(SOURCE_DIR)/po/japanese.po
 $(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
 	$(MSGMERGE) -U $@ po/barcontrol.pot
 	$(TOUCH) $@
 
+.NOTPARALLEL: classes/app/i18n/Messages_de.class
 classes/app/i18n/Messages_de.class: $(SOURCE_DIR)/po/german.po
 	$(INSTALL) -d classes
 	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l de $(SOURCE_DIR)/po/german.po
 
+.NOTPARALLEL: classes/app/i18n/Messages_jp.class
 classes/app/i18n/Messages_jp.class: $(SOURCE_DIR)/po/japanese.po
 	$(INSTALL) -d classes
 	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l jp $(SOURCE_DIR)/po/japanese.po
