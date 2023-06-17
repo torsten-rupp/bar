@@ -10832,11 +10832,25 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
 }
 
 /***********************************************************************\
-* Name   : _
-* Purpose:
-* Input  : -
-* Output : -
-* Return : -
+* Name   : databaseGet
+* Purpose: get values from database
+* Input  : databaseHandle - database handle
+*          databaseRowFunction - row function callback
+*          databaseRowUserData - user data for row function callback
+*          changedRowCount     - number of changed rows
+*          tableNames          - select table names
+*          tableNameCount      - select table names count
+*          flags               - database flags; see DATABASE_FLAG_...
+*          columns             - columns
+*          columnCount         - column count
+*          filter              - SQL filter expression
+*          filters             - filter values
+*          filterCount         - filter values count
+*          groupBy             - SQL group by expression
+*          orderBy             - SQL order by expression
+*          limit               - limit or DATABASDE_UNLIMITED
+* Output : changedRowCount     - number of changed rows
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 

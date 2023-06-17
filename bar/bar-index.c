@@ -1483,7 +1483,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned entry fragments check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1511,7 +1511,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned file entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  image entries without fragments...   ");
@@ -1537,7 +1537,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned image entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (uint64)n;
   printInfo("  hardlink entries without fragments...");
@@ -1563,7 +1563,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned hardlink entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1592,7 +1592,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned file entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without image entry...       ");
@@ -1619,7 +1619,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned image entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without directory entry...   ");
@@ -1646,7 +1646,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned directory entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without link entry...        ");
@@ -1673,7 +1673,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned link entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without hardlink entry...    ");
@@ -1700,7 +1700,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned hardlink entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without special entry...     ");
@@ -1727,7 +1727,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned special entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1750,7 +1750,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("storages name check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1775,7 +1775,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("invalid storages check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1807,7 +1807,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned entities check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1835,7 +1835,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!",Error_getText(error));
+        printError("orphaned FTS entries check fail (error: %s)!",Error_getText(error));
       }
       totalCount += (ulong)n;
 
@@ -1860,7 +1860,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!",Error_getText(error));
+        printError("orphaned FTS storages check fail (error: %s)!",Error_getText(error));
       }
       totalCount += (ulong)n;
       break;
@@ -1888,7 +1888,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!",Error_getText(error));
+        printError("orphaned FTS entries check fail (error: %s)!",Error_getText(error));
       }
       totalCount += (ulong)n;
 
@@ -1913,7 +1913,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned check fail (error: %s)!",Error_getText(error));
+        printError("orphaned FTS storages fail (error: %s)!",Error_getText(error));
       }
       totalCount += (ulong)n;
       break;
@@ -1940,7 +1940,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!",Error_getText(error));
+    printError("orphaned newest entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 

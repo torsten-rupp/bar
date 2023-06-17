@@ -1589,7 +1589,6 @@ LOCAL Errors readBase64KeyFileCString(Key *key, const char *fileName)
   {
     freeSecure(keyData);
     freeSecure(data);
-debugPrintStackTrace();
     return ERROR_INVALID_KEY;
   }
 
