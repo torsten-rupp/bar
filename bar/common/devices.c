@@ -779,10 +779,12 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
                              String           deviceName
                             )
 {
+  #define DEVICE_PREFIX "/dev/"
+
   #if   defined(PLATFORM_LINUX)
     uint        i,j;
     struct stat fileStat;
-    char        buffer[256];
+    char        buffer[256-stringLength(DEVICE_PREFIX)];
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 

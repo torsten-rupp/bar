@@ -2763,7 +2763,18 @@ static inline char* stringSet(char *string, ulong stringSize, const char *source
   {
     if (source != NULL)
     {
+      /* Note: gcc 9.x generate a false positive warning "specified bound depends
+               on the length of the source argument" if stringSize depend on string
+               even a code like this is correct:
+
+               n = strlen(s)+1;
+               t = malloc(n);
+               strncpy(t,s,n-1); t[n-1] = '\0';
+      */
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wstringop-overflow"
       strncpy(string,source,stringSize-1); string[stringSize-1] = NUL;
+      #pragma GCC diagnostic pop
     }
     else
     {

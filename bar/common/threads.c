@@ -93,7 +93,7 @@ typedef struct
   LOCAL StackTraceThreadInfo debugThreadStackTraceThreads[256];
   LOCAL uint                 debugThreadStackTraceThreadCount   = 0;
 
-  #ifdef HAVE_SIGQUIT
+  #if defined(STACKTRACE_ON_SIGNAL) && defined(HAVE_SIGQUIT)
     LOCAL pthread_mutex_t      debugThreadStackTraceLock          = PTHREAD_MUTEX_INITIALIZER;
     LOCAL pthread_cond_t       debugThreadStackTraceDone          = PTHREAD_COND_INITIALIZER;
     LOCAL bool                 debugThreadStackTraceRun           = FALSE;
@@ -378,7 +378,7 @@ LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_SIGQUIT
+#if defined(STACKTRACE_ON_SIGNAL) && defined(HAVE_SIGQUIT)
 LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                                          uint                           skipFrameCount,
                                          const char                     *reason

@@ -3513,13 +3513,14 @@ Errors File_renameCString(const char *oldFileName,
     else
     {
       // create temporary file
-      fileName = (char*)malloc(stringLength(newFileName)+7+1);
+      uint n = stringLength(newFileName)+7+1;
+      fileName = (char*)malloc(n);
       if (fileName == NULL)
       {
         return ERROR_INSUFFICIENT_MEMORY;
       }
-      stringSet(fileName,stringLength(newFileName)+7+1,newFileName);
-      stringAppend(fileName,stringLength(newFileName)+7+1,"-XXXXXX");
+      stringSet(fileName,n,newFileName);
+      stringAppend(fileName,n,"-XXXXXX");
 
       #ifdef HAVE_MKSTEMP
         handle = mkstemp(fileName);

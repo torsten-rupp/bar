@@ -3051,15 +3051,18 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
   * Name   : freeEntryNode
   * Purpose: free entry node
   * Input  : entryNode - entry node
+  *          userData  - user data (not used)
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  auto void freeEntryNode(EntryNode *entryNode);
-  void freeEntryNode(EntryNode *entryNode)
+  auto void freeEntryNode(EntryNode *entryNode, void *userData);
+  void freeEntryNode(EntryNode *entryNode, void *userData)
   {
     assert(entryNode != NULL);
+
+    UNUSED_VARIABLE(userData);
 
     String_delete(entryNode->name);
   }
@@ -3364,15 +3367,18 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
   * Name   : freeEntryNode
   * Purpose: free entry node
   * Input  : entryNode - entry node
+  *          userData  - user data (not used)
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  auto void freeEntryNode(EntryNode *entryNode);
-  void freeEntryNode(EntryNode *entryNode)
+  auto void freeEntryNode(EntryNode *entryNode, void *userData);
+  void freeEntryNode(EntryNode *entryNode, void *userData)
   {
     assert(entryNode != NULL);
+
+    UNUSED_VARIABLE(userData);
 
     String_delete(entryNode->name);
   }
