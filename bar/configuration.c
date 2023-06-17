@@ -2697,6 +2697,104 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseSSHKey
+* Purpose: command line option call back for get TLS key data
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseSSHKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  Key    *key = (Key*)variable;
+  Errors error;
+  uint   dataLength;
+  void   *data;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  if (File_existsCString(value))
+  {
+    // read key data from file
+    error = readKeyFileCString(key,value);
+    if (error != ERROR_NONE)
+    {
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
+      return FALSE;
+    }
+  }
+  else if (stringStartsWith(value,"base64:"))
+  {
+    // decode base64 encoded key data
+
+    // get key data length
+    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    if (dataLength == 0)
+    {
+      stringSet(errorMessage,errorMessageSize,"decode base64 fail");
+      return FALSE;
+    }
+
+    // allocate key memory
+    data = allocSecure(dataLength);
+    if (data == NULL)
+    {
+      stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
+      return FALSE;
+    }
+
+    // decode base64
+    if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
+    {
+      stringSet(errorMessage,errorMessageSize,"decode base64 fail");
+      freeSecure(data);
+      return FALSE;
+    }
+
+    // set key data
+    Configuration_setKey(key,NULL,data,dataLength);
+
+    // free resources
+    freeSecure(data);
+  }
+  else
+  {
+    // get plain key data
+// TODO: output a warnign?
+
+    // get key data length
+    dataLength = stringLength(value);
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = allocSecure(dataLength);
+      if (data == NULL)
+      {
+        stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
+        return FALSE;
+      }
+
+      // copy data
+      memCopyFast(data,dataLength,value,dataLength);
+
+      // set key data
+      Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
+    }
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseArchiveFileModeOverwrite
 * Purpose: command line option call back for archive file mode overwrite
 * Input  : -
@@ -6425,10 +6523,10 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperat
 
 LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  Key        *key = (Key*)variable;
-  Errors     error;
-  uint       dataLength;
-  void       *data;
+  Key    *key = (Key*)variable;
+  Errors error;
+  uint   dataLength;
+  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -6443,6 +6541,106 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
     // read key data from file
 
     error = readBase64KeyFileCString(key,value);
+    if (error != ERROR_NONE)
+    {
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
+      return FALSE;
+    }
+  }
+  else if (stringStartsWith(value,"base64:"))
+  {
+    // decode base64 encoded key data
+
+    // get key data length
+    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = allocSecure(dataLength);
+      if (data == NULL)
+      {
+        stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
+        return FALSE;
+      }
+
+      // decode base64
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[7]))
+      {
+        stringSet(errorMessage,errorMessageSize,"decode base64 fail");
+        freeSecure(data);
+        return FALSE;
+      }
+
+      // set key data
+      Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
+    }
+  }
+  else
+  {
+    // get plain key data
+
+    // get key data length
+    dataLength = stringLength(value);
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = allocSecure(dataLength);
+      if (data == NULL)
+      {
+        stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
+        return FALSE;
+      }
+
+      // copy data
+      memCopyFast(data,dataLength,value,dataLength);
+
+      // set key data
+      Configuration_setKey(key,NULL,data,dataLength);
+
+      // free resources
+      freeSecure(data);
+    }
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueSSHKeyParse
+* Purpose: config value option call back for parsing key
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : read from file or decode base64 data
+\***********************************************************************/
+
+LOCAL bool configValueSSHKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  Key    *key = (Key*)variable;
+  Errors error;
+  uint   dataLength;
+  void   *data;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (File_existsCString(value))
+  {
+    // read key data from file
+
+    error = readKeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -7774,8 +7972,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("ssh-login-name",                    0,  0,2,globalOptions.defaultSSHServer.ssh.loginName,                                                                     "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                      0,  0,2,&globalOptions.defaultSSHServer.ssh.password,        cmdOptionParsePassword,NULL,1,                               "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,globalOptions.defaultSSHServer.ssh.port,             0,65535,NULL,                                                "ssh port"                                                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&globalOptions.defaultSSHServer.ssh.publicKey,       cmdOptionParseKey,NULL,1,                                    "ssh public key","file name|data"                                          ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&globalOptions.defaultSSHServer.ssh.privateKey,      cmdOptionParseKey,NULL,1,                                    "ssh private key","file name|data"                                         ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&globalOptions.defaultSSHServer.ssh.publicKey,       cmdOptionParseSSHKey,NULL,1,                                    "ssh public key","file name|data"                                       ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&globalOptions.defaultSSHServer.ssh.privateKey,      cmdOptionParseSSHKey,NULL,1,                                    "ssh private key","file name|data"                                      ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",               0,  1,2,globalOptions.defaultSSHServer.maxConnectionCount,   0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections"                                ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",              0,  0,2,defaultSSHServer.maxStorageSize,                   0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ssh server"                              ),
@@ -8053,7 +8251,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1,                             "<name>"),
     CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
 //TODO: required to save?
-    CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
+    CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueSSHKeyParse,configValueKeyFormat,NULL),
   ),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
@@ -8337,8 +8535,8 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,                            "<name>"),
   CONFIG_VALUE_SPECIAL           ("ssh-password",                     &globalOptions.defaultSSHServer.ssh.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,65535,NULL,"<n>"),
-  CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &globalOptions.defaultSSHServer.ssh.publicKey,-1,                            configValueKeyParse,configValueKeyFormat,NULL),
-  CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &globalOptions.defaultSSHServer.ssh.privateKey,-1,                           configValueKeyParse,configValueKeyFormat,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &globalOptions.defaultSSHServer.ssh.publicKey,-1,                            configValueSSHKeyParse,configValueKeyFormat,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &globalOptions.defaultSSHServer.ssh.privateKey,-1,                           configValueSSHKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &globalOptions.defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
@@ -8346,8 +8544,8 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         ServerNode,server.ssh.port,                                               0,65535,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   ServerNode,server.ssh.loginName,                                          "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     ServerNode,server.ssh.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",                   ServerNode,server.ssh.publicKey,                                          configValueKeyParse,configValueKeyFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",                  ServerNode,server.ssh.privateKey,                                         configValueKeyParse,configValueKeyFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",                   ServerNode,server.ssh.publicKey,                                          configValueSSHKeyParse,configValueKeyFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",                  ServerNode,server.ssh.privateKey,                                         configValueSSHKeyParse,configValueKeyFormat,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",              ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",             ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",            ServerNode,server.writePreProcessCommand,                                 "<command>"),
@@ -8409,7 +8607,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //TODO: deprecated, use server-cert
   CONFIG_VALUE_SPECIAL           ("server-cert-file",                 &globalOptions.serverCert,-1,                                  configValueCertificateParse,configValueCertificateFormat,NULL),
 //TODO: deprecated, use server-key
-  CONFIG_VALUE_SPECIAL           ("server-key-file",                  &globalOptions.serverKey,-1,                                   configValueKeyParse,configValueKeyFormat,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-key-file",                  &globalOptions.serverKey,-1,                                   configValueSSHKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("server-password",                  &globalOptions.serverPasswordHash,-1,                          configValueHashDataParse,configValueHashDataFormat,NULL),
   CONFIG_VALUE_INTEGER           ("server-max-connections",           &globalOptions.serverMaxConnections,-1,                        0,65535,NULL,"<n>"),
   CONFIG_VALUE_SPACE(),
@@ -8524,10 +8722,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL,"<n>"),
   CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ,"<name>"),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueSSHKeyParse,configValueKeyFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueSSHKeyParse,configValueKeyFormat,NULL),
 
   CONFIG_VALUE_SPACE(),
 
